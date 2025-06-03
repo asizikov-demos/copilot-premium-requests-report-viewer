@@ -12,6 +12,7 @@ interface CSVUploaderProps {
 export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPrivacyDialog, setShowPrivacyDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (file: File) => {
@@ -165,8 +166,76 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
               How to obtain this report file
             </a>
           </div>
+          <div className="text-xs text-blue-500 mt-1">
+            <button
+              onClick={() => setShowPrivacyDialog(true)}
+              className="underline hover:text-blue-700 bg-transparent border-none p-0 cursor-pointer"
+            >
+              Privacy Information
+            </button>
+          </div>
         </div>
       </div>
+      
+      {/* Privacy Dialog */}
+      {showPrivacyDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6 relative">
+            <button
+              onClick={() => setShowPrivacyDialog(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 focus:outline-none"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            
+            <div className="pr-8">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Privacy Information</h3>
+              
+              <div className="space-y-3 text-sm text-gray-700">
+                <p>
+                  <strong>Your data is completely secure:</strong> This is a front-end only application. 
+                  No data leaves your browser and nothing is sent to any external servers.
+                </p>
+                
+                <p>
+                  All CSV processing and analysis happens locally in your browser, ensuring your 
+                  usage data remains private and secure.
+                </p>
+                
+                <p>
+                  <strong>Open Source:</strong> This application is open source and available for review at:
+                </p>
+                
+                <div className="bg-gray-50 p-3 rounded border">
+                  <a
+                    href="https://github.com/asizikov-demos/copilot-premium-requests-report-viewer"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 underline break-all"
+                  >
+                    github.com/asizikov-demos/copilot-premium-requests-report-viewer
+                  </a>
+                </div>
+                
+                <p>
+                  You can review the source code, copy it, or modify it according to your needs.
+                </p>
+              </div>
+              
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => setShowPrivacyDialog(false)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Got it
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
