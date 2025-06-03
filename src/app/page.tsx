@@ -7,11 +7,13 @@ import { CSVData } from '@/types/csv';
 
 export default function Home() {
   const [csvData, setCsvData] = useState<CSVData[]>([]);
+  const [filename, setFilename] = useState<string>('');
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [error, setError] = useState<string>('');
 
-  const handleDataLoad = (data: CSVData[]) => {
+  const handleDataLoad = (data: CSVData[], filename: string) => {
     setCsvData(data);
+    setFilename(filename);
     setIsDataLoaded(true);
     setError('');
   };
@@ -23,6 +25,7 @@ export default function Home() {
 
   const handleReset = () => {
     setCsvData([]);
+    setFilename('');
     setIsDataLoaded(false);
     setError('');
   };
@@ -60,7 +63,7 @@ export default function Home() {
         {!isDataLoaded ? (
           <CSVUploader onDataLoad={handleDataLoad} onError={handleError} />
         ) : (
-          <DataAnalysis csvData={csvData} onReset={handleReset} />
+          <DataAnalysis csvData={csvData} filename={filename} onReset={handleReset} />
         )}
       </div>
     </main>

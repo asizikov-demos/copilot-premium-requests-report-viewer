@@ -5,7 +5,7 @@ import Papa from 'papaparse';
 import { CSVData } from '@/types/csv';
 
 interface CSVUploaderProps {
-  onDataLoad: (data: CSVData[]) => void;
+  onDataLoad: (data: CSVData[], filename: string) => void;
   onError: (error: string) => void;
 }
 
@@ -50,7 +50,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
           return;
         }
 
-        onDataLoad(data);
+        onDataLoad(data, file.name);
         setIsLoading(false);
       },
       error: (error) => {
