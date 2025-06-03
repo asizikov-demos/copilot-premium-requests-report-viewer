@@ -5,14 +5,32 @@ import { UserSummary } from '@/utils/dataAnalysis';
 interface UsersOverviewProps {
   userData: UserSummary[];
   allModels: string[];
+  selectedPlan: 'business' | 'enterprise';
   onBack: () => void;
 }
 
-export function UsersOverview({ userData, allModels, onBack }: UsersOverviewProps) {
+export function UsersOverview({ userData, allModels, selectedPlan, onBack }: UsersOverviewProps) {
+  const planInfo = {
+    business: {
+      name: 'Copilot Business',
+      monthlyQuota: 300
+    },
+    enterprise: {
+      name: 'Copilot Enterprise', 
+      monthlyQuota: 1000
+    }
+  };
+
+  const currentQuota = planInfo[selectedPlan].monthlyQuota;
   return (
     <div className="bg-white shadow rounded-lg overflow-hidden h-full flex flex-col">
       <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
-        <h3 className="text-lg font-medium text-gray-900">Users Overview</h3>
+        <div>
+          <h3 className="text-lg font-medium text-gray-900">Users Overview</h3>
+          <p className="text-sm text-gray-500 mt-1">
+            {planInfo[selectedPlan].name} - {currentQuota} premium requests/month
+          </p>
+        </div>
         <button
           onClick={onBack}
           className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -56,8 +74,17 @@ export function UsersOverview({ userData, allModels, onBack }: UsersOverviewProp
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
                   {user.totalRequests.toFixed(2)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold text-blue-600">
+                <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${
+                  user.totalRequestsWithMultipliers > currentQuota 
+                    ? 'text-red-600' 
+                    : 'text-blue-600'
+                }`}>
                   {user.totalRequestsWithMultipliers.toFixed(2)}
+                  {user.totalRequestsWithMultipliers > currentQuota && (
+                    <span className="ml-2 text-xs text-red-500">
+                      (Exceeds quota by {(user.totalRequestsWithMultipliers - currentQuota).toFixed(2)})
+                    </span>
+                  )}
                 </td>
                 {allModels.map((model) => (
                   <td

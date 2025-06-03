@@ -65,6 +65,7 @@ export function DataAnalysis({ csvData, onReset }: DataAnalysisProps) {
               <UsersOverview 
                 userData={userData}
                 allModels={allModels}
+                selectedPlan={selectedPlan}
                 onBack={() => setShowUsersOverview(false)}
               />
             </div>
