@@ -155,6 +155,16 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
           <div className="text-xs text-gray-400">
             Expected format: Timestamp, User, Model, Requests Used, Exceeds Monthly Quota, Total Monthly Quota
           </div>
+          <div className="text-xs text-blue-500 mt-1">
+            <a
+              href="https://docs.github.com/en/enterprise-cloud@latest/copilot/managing-copilot/monitoring-usage-and-entitlements/monitoring-your-copilot-usage-and-entitlements"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-blue-700"
+            >
+              How to obtain this report file
+            </a>
+          </div>
         </div>
       </div>
     </div>

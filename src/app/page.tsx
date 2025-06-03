@@ -35,7 +35,7 @@ export default function Home() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Copilot Premium Requests Viewer
+            GitHub Copilot Premium Requests Viewer
           </h1>
           <p className="text-gray-600">
             Upload your CSV file to analyze user requests and quota usage

@@ -21,6 +21,8 @@ Timestamp,User,Model,Requests Used,Exceeds Monthly Quota,Total Monthly Quota
 2025-06-03T11:03:55Z,userabc,gpt-4.1-2025-04-14,1.00,false,Unlimited
 ```
 
+For instructions on how to obtain this report file, see the [GitHub Copilot usage and entitlements documentation](https://docs.github.com/en/enterprise-cloud@latest/copilot/managing-copilot/monitoring-usage-and-entitlements/monitoring-your-copilot-usage-and-entitlements).
+
 ## Technologies Used
 
 - **Next.js 15** with App Router
