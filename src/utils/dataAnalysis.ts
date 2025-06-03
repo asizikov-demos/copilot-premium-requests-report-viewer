@@ -105,3 +105,55 @@ export function analyzeUserData(data: ProcessedData[]): UserSummary[] {
   return Array.from(userMap.values())
     .sort((a, b) => b.totalRequests - a.totalRequests);
 }
+
+export interface DailyCumulativeData {
+  date: string;
+  [user: string]: string | number; // Dynamic user columns
+}
+
+export function generateDailyCumulativeData(data: ProcessedData[]): DailyCumulativeData[] {
+  if (data.length === 0) return [];
+
+  // Sort data by timestamp
+  const sortedData = [...data].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  
+  // Get unique users
+  const users = Array.from(new Set(data.map(d => d.user))).sort();
+  
+  // Get date range
+  const startDate = new Date(sortedData[0].timestamp);
+  const endDate = new Date(sortedData[sortedData.length - 1].timestamp);
+  
+  // Initialize user cumulative totals
+  const userTotals = new Map<string, number>();
+  users.forEach(user => userTotals.set(user, 0));
+  
+  const result: DailyCumulativeData[] = [];
+  
+  // Iterate through each day
+  for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
+    const dateStr = date.toISOString().split('T')[0];
+    
+    // Find all requests for this day
+    const dayRequests = sortedData.filter(d => 
+      d.timestamp.toISOString().split('T')[0] === dateStr
+    );
+    
+    // Add requests to cumulative totals
+    dayRequests.forEach(request => {
+      const currentTotal = userTotals.get(request.user) || 0;
+      const requestsWithMultiplier = request.requestsUsed * getModelMultiplier(request.model);
+      userTotals.set(request.user, currentTotal + requestsWithMultiplier);
+    });
+    
+    // Create data point for this day
+    const dataPoint: DailyCumulativeData = { date: dateStr };
+    users.forEach(user => {
+      dataPoint[user] = userTotals.get(user) || 0;
+    });
+    
+    result.push(dataPoint);
+  }
+  
+  return result;
+}

@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { CSVData } from '@/types/csv';
-import { processCSVData, analyzeData, analyzeUserData } from '@/utils/dataAnalysis';
+import { processCSVData, analyzeData, analyzeUserData, generateDailyCumulativeData } from '@/utils/dataAnalysis';
 import { UsersOverview } from './UsersOverview';
 
 interface DataAnalysisProps {
@@ -18,13 +18,14 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
   const [selectedPlan, setSelectedPlan] = useState<CopilotPlan>('business');
   const [showUsersOverview, setShowUsersOverview] = useState(false);
   
-  const { analysis, userData, allModels } = useMemo(() => {
+  const { analysis, userData, allModels, dailyCumulativeData } = useMemo(() => {
     const processedData = processCSVData(csvData);
     const analysis = analyzeData(processedData);
     const userData = analyzeUserData(processedData);
     const allModels = Array.from(new Set(processedData.map(d => d.model))).sort();
+    const dailyCumulativeData = generateDailyCumulativeData(processedData);
     
-    return { analysis, userData, allModels };
+    return { analysis, userData, allModels, dailyCumulativeData };
   }, [csvData]);
 
   const chartData = analysis.requestsByModel.map(item => ({
@@ -67,6 +68,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                 userData={userData}
                 allModels={allModels}
                 selectedPlan={selectedPlan}
+                dailyCumulativeData={dailyCumulativeData}
                 onBack={() => setShowUsersOverview(false)}
               />
             </div>

@@ -1,15 +1,39 @@
 'use client';
 
-import { UserSummary } from '@/utils/dataAnalysis';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { UserSummary, DailyCumulativeData } from '@/utils/dataAnalysis';
 
 interface UsersOverviewProps {
   userData: UserSummary[];
   allModels: string[];
   selectedPlan: 'business' | 'enterprise';
+  dailyCumulativeData: DailyCumulativeData[];
   onBack: () => void;
 }
 
-export function UsersOverview({ userData, allModels, selectedPlan, onBack }: UsersOverviewProps) {
+// Generate colors for user lines
+const generateUserColors = (users: string[]): Record<string, string> => {
+  const colors = [
+    '#3B82F6', // blue-500
+    '#EF4444', // red-500
+    '#10B981', // emerald-500
+    '#F59E0B', // amber-500
+    '#8B5CF6', // violet-500
+    '#06B6D4', // cyan-500
+    '#84CC16', // lime-500
+    '#F97316', // orange-500
+    '#EC4899', // pink-500
+    '#6366F1', // indigo-500
+  ];
+  
+  const result: Record<string, string> = {};
+  users.forEach((user, index) => {
+    result[user] = colors[index % colors.length];
+  });
+  return result;
+};
+
+export function UsersOverview({ userData, allModels, selectedPlan, dailyCumulativeData, onBack }: UsersOverviewProps) {
   const planInfo = {
     business: {
       name: 'Copilot Business',
@@ -22,6 +46,11 @@ export function UsersOverview({ userData, allModels, selectedPlan, onBack }: Use
   };
 
   const currentQuota = planInfo[selectedPlan].monthlyQuota;
+  
+  // Get users for chart
+  const chartUsers = userData.map(u => u.user);
+  const userColors = generateUserColors(chartUsers);
+
   return (
     <div className="bg-white shadow rounded-lg overflow-hidden h-full flex flex-col">
       <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
@@ -39,8 +68,62 @@ export function UsersOverview({ userData, allModels, selectedPlan, onBack }: Use
         </button>
       </div>
       
+      {/* Premium Request Quota Consumption Chart - Sticky */}
+      <div className="px-6 py-4 bg-white border-b border-gray-200 sticky top-0 z-10 flex-shrink-0">
+        <h4 className="text-lg font-medium text-gray-900 mb-4">Premium Request Quota Consumption</h4>
+        <div className="h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={dailyCumulativeData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis 
+                dataKey="date" 
+                stroke="#6b7280"
+                fontSize={12}
+                tickFormatter={(value) => {
+                  const date = new Date(value);
+                  return `${date.getMonth() + 1}/${date.getDate()}`;
+                }}
+              />
+              <YAxis stroke="#6b7280" fontSize={12} />
+              <Tooltip 
+                labelFormatter={(label) => {
+                  const date = new Date(label);
+                  return date.toLocaleDateString();
+                }}
+                formatter={(value: number, name: string) => [
+                  `${value.toFixed(1)} requests`,
+                  name
+                ]}
+              />
+              {/* Quota reference line */}
+              <ReferenceLine 
+                y={currentQuota} 
+                stroke="#ef4444" 
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                label={{ value: `${currentQuota} quota limit`, position: "insideTopRight" }}
+              />
+              {/* User lines */}
+              {chartUsers.map((user) => (
+                <Line
+                  key={user}
+                  type="monotone"
+                  dataKey={user}
+                  stroke={userColors[user]}
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 5 }}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+      
+      {/* Scrollable Table Area */}
       <div className="flex-1 overflow-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+        <div className="border-t border-gray-200">
+          <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50 sticky top-0 z-20">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky left-0 z-30 min-w-40 border-r border-gray-200">
@@ -98,6 +181,7 @@ export function UsersOverview({ userData, allModels, selectedPlan, onBack }: Use
             ))}
           </tbody>
         </table>
+        </div>
       </div>
       
       {userData.length === 0 && (
