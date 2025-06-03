@@ -1,36 +1,76 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Copilot Premium Requests Viewer
+
+A Next.js application for analyzing CSV data containing user request analytics and quota information from GitHub Copilot Premium usage.
+
+## Features
+
+- **CSV Upload**: Drag-and-drop or click to upload CSV files
+- **Data Validation**: Automatic validation of CSV structure and required columns
+- **Analytics Dashboard**: 
+  - Time frame analysis (first to last date)
+  - Total unique users count
+  - Users exceeding monthly quota count
+  - Interactive chart showing total requests by model
+  - Detailed data table
+
+## Expected CSV Format
+
+```csv
+Timestamp,User,Model,Requests Used,Exceeds Monthly Quota,Total Monthly Quota
+2025-06-03T11:05:27Z,userabc,gpt-4.1-2025-04-14,1.00,false,Unlimited
+2025-06-03T11:03:55Z,userabc,gpt-4.1-2025-04-14,1.00,false,Unlimited
+```
+
+## Technologies Used
+
+- **Next.js 15** with App Router
+- **TypeScript** for type safety
+- **Tailwind CSS** for styling
+- **Recharts** for data visualization
+- **PapaParse** for CSV parsing
 
 ## Getting Started
 
-First, run the development server:
-
+1. Install dependencies:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Run the development server:
+```bash
+npm run dev
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Upload a CSV file using the provided interface
 
-## Learn More
+## Sample Data
 
-To learn more about Next.js, take a look at the following resources:
+A sample CSV file (`sample-data.csv`) is included in the project root for testing purposes.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+├── app/
+│   └── page.tsx          # Main application page
+├── components/
+│   ├── CSVUploader.tsx   # File upload component
+│   └── DataAnalysis.tsx  # Analytics dashboard component
+├── types/
+│   └── csv.ts           # TypeScript type definitions
+└── utils/
+    └── dataAnalysis.ts  # Data processing utilities
+```
 
-## Deploy on Vercel
+## Development
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Components are built with accessibility and responsiveness in mind
+- Error handling for file operations and data validation
+- TypeScript interfaces for type safety
+- Tailwind CSS for consistent styling
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+
+MIT
