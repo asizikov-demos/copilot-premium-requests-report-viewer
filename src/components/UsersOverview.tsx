@@ -60,6 +60,13 @@ export function UsersOverview({ userData, allModels, selectedPlan, dailyCumulati
 
   const currentQuota = planInfo[selectedPlan].monthlyQuota;
   
+  // Calculate total overage cost
+  const totalOverageRequests = userData.reduce((total, user) => {
+    const overage = Math.max(0, user.totalRequests - currentQuota);
+    return total + overage;
+  }, 0);
+  const totalOverageCost = totalOverageRequests * 0.04;
+  
   // Handle sorting
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -100,9 +107,16 @@ export function UsersOverview({ userData, allModels, selectedPlan, dailyCumulati
       <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 flex-shrink-0">
         <div className="flex-1">
           <h3 className="text-lg font-medium text-gray-900">Users Overview</h3>
-          <p className="text-sm text-gray-500 mt-1">
-            {planInfo[selectedPlan].name} - {currentQuota} premium requests/month
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-6 mt-1">
+            <p className="text-sm text-gray-500">
+              {planInfo[selectedPlan].name} - {currentQuota} premium requests/month
+            </p>
+            {totalOverageRequests > 0 && (
+              <p className="text-sm text-red-600 font-medium">
+                Overage cost: ${totalOverageCost.toFixed(2)} ({totalOverageRequests.toFixed(1)} requests × $0.04)
+              </p>
+            )}
+          </div>
         </div>
         
         <div className="flex flex-col sm:flex-row gap-2">
