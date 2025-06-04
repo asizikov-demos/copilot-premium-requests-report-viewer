@@ -153,7 +153,11 @@ export function UsersOverview({ userData, allModels, selectedPlan, dailyCumulati
                     return `${date.getMonth() + 1}/${date.getDate()}`;
                   }}
                 />
-                <YAxis stroke="#6b7280" fontSize={12} />
+                <YAxis 
+                  stroke="#6b7280" 
+                  fontSize={12}
+                  domain={[0, (dataMax: number) => Math.max(currentQuota, dataMax)]}
+                />
                 <Tooltip 
                   labelFormatter={(label) => {
                     const date = new Date(label);
