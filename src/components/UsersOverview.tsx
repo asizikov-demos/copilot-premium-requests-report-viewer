@@ -37,6 +37,8 @@ const generateUserColors = (users: string[]): Record<string, string> => {
 export function UsersOverview({ userData, allModels, selectedPlan, dailyCumulativeData, onBack }: UsersOverviewProps) {
   const [showChart, setShowChart] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [sortBy, setSortBy] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -57,6 +59,36 @@ export function UsersOverview({ userData, allModels, selectedPlan, dailyCumulati
   };
 
   const currentQuota = planInfo[selectedPlan].monthlyQuota;
+  
+  // Handle sorting
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortDirection('desc');
+    }
+  };
+
+  // Sort userData based on current sort settings
+  const sortedUserData = [...userData].sort((a, b) => {
+    if (!sortBy) return 0;
+    
+    let aValue: number;
+    let bValue: number;
+    
+    if (sortBy === 'totalRequests') {
+      aValue = a.totalRequests;
+      bValue = b.totalRequests;
+    } else {
+      // It's a model column
+      aValue = a.modelBreakdown[sortBy] || 0;
+      bValue = b.modelBreakdown[sortBy] || 0;
+    }
+    
+    const comparison = aValue - bValue;
+    return sortDirection === 'asc' ? comparison : -comparison;
+  });
   
   // Get users for chart
   const chartUsers = userData.map(u => u.user);
@@ -164,7 +196,7 @@ export function UsersOverview({ userData, allModels, selectedPlan, dailyCumulati
           {/* Mobile Summary Cards */}
           {isMobile && (
             <div className="p-4 space-y-3 sm:hidden">
-              {userData.slice(0, 5).map((user, index) => (
+              {sortedUserData.slice(0, 5).map((user, index) => (
                 <div key={user.user} className="bg-gray-50 rounded-lg p-4 border">
                   <div className="flex justify-between items-start mb-2">
                     <h5 className="font-medium text-gray-900 truncate flex-1 mr-2">
@@ -188,12 +220,12 @@ export function UsersOverview({ userData, allModels, selectedPlan, dailyCumulati
                 </div>
               ))}
               
-              {userData.length > 5 && (
+              {sortedUserData.length > 5 && (
                 <button 
                   onClick={() => setShowChart(false)}
                   className="w-full text-center py-3 text-blue-600 text-sm font-medium border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100"
                 >
-                  View Full Table ({userData.length - 5} more users)
+                  View Full Table ({sortedUserData.length - 5} more users)
                 </button>
               )}
             </div>
@@ -207,22 +239,46 @@ export function UsersOverview({ userData, allModels, selectedPlan, dailyCumulati
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky left-0 z-30 min-w-40 border-r border-gray-200">
                   User
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 min-w-32">
-                  Total Requests
+                <th 
+                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-32 cursor-pointer hover:bg-gray-100 select-none ${
+                    sortBy === 'totalRequests' ? 'bg-gray-200' : 'bg-gray-50'
+                  }`}
+                  onClick={() => handleSort('totalRequests')}
+                >
+                  <div className="flex items-center justify-between">
+                    Total Requests
+                    <span className="ml-1">
+                      {sortBy === 'totalRequests' ? (
+                        sortDirection === 'desc' ? '↓' : '↑'
+                      ) : '↕'}
+                    </span>
+                  </div>
                 </th>
                 {allModels.map((model) => (
                   <th
                     key={model}
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 min-w-32"
+                    className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-32 cursor-pointer hover:bg-gray-100 select-none ${
+                      sortBy === model ? 'bg-gray-200' : 'bg-gray-50'
+                    }`}
                     title={model}
+                    onClick={() => handleSort(model)}
                   >
-                    {model.length > 20 ? `${model.substring(0, 20)}...` : model}
+                    <div className="flex items-center justify-between">
+                      <span>
+                        {model.length > 20 ? `${model.substring(0, 20)}...` : model}
+                      </span>
+                      <span className="ml-1">
+                        {sortBy === model ? (
+                          sortDirection === 'desc' ? '↓' : '↑'
+                        ) : '↕'}
+                      </span>
+                    </div>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {userData.map((user, index) => (
+              {sortedUserData.map((user, index) => (
                 <tr key={user.user} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                   <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 z-10 border-r border-gray-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                     <div className="max-w-32 truncate" title={user.user}>
