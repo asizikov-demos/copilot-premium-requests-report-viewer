@@ -132,9 +132,6 @@ export function UsersOverview({ userData, allModels, selectedPlan, dailyCumulati
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 min-w-32">
                 Total Requests
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 min-w-40">
-                Total Requests with Multipliers
-              </th>
               {allModels.map((model) => (
                 <th
                   key={model}
@@ -154,18 +151,15 @@ export function UsersOverview({ userData, allModels, selectedPlan, dailyCumulati
                     {user.user}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
-                  {user.totalRequests.toFixed(2)}
-                </td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${
-                  user.totalRequestsWithMultipliers > currentQuota 
+                <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold ${
+                  user.totalRequests > currentQuota 
                     ? 'text-red-600' 
                     : 'text-blue-600'
                 }`}>
-                  {user.totalRequestsWithMultipliers.toFixed(2)}
-                  {user.totalRequestsWithMultipliers > currentQuota && (
+                  {user.totalRequests.toFixed(2)}
+                  {user.totalRequests > currentQuota && (
                     <span className="ml-2 text-xs text-red-500">
-                      (Exceeds quota by {(user.totalRequestsWithMultipliers - currentQuota).toFixed(2)})
+                      (Exceeds quota by {(user.totalRequests - currentQuota).toFixed(2)})
                     </span>
                   )}
                 </td>

@@ -1,24 +1,9 @@
 import { CSVData, ProcessedData, AnalysisResults } from '@/types/csv';
-import multipliersData from './multipliers.json';
 
 export interface UserSummary {
   user: string;
   totalRequests: number;
-  totalRequestsWithMultipliers: number;
   modelBreakdown: Record<string, number>;
-}
-
-interface ModelMultiplier {
-  multiplier: number;
-  name: string;
-  prefix: string;
-}
-
-function getModelMultiplier(modelName: string): number {
-  const model = multipliersData.models.find((m: ModelMultiplier) => 
-    modelName.toLowerCase().startsWith(m.prefix.toLowerCase())
-  );
-  return model ? model.multiplier : 1;
 }
 
 export function processCSVData(rawData: CSVData[]): ProcessedData[] {
@@ -87,14 +72,12 @@ export function analyzeUserData(data: ProcessedData[]): UserSummary[] {
       userMap.set(row.user, {
         user: row.user,
         totalRequests: 0,
-        totalRequestsWithMultipliers: 0,
         modelBreakdown: {}
       });
     }
 
     const userSummary = userMap.get(row.user)!;
     userSummary.totalRequests += row.requestsUsed;
-    userSummary.totalRequestsWithMultipliers += row.requestsUsed * getModelMultiplier(row.model);
     
     if (!userSummary.modelBreakdown[row.model]) {
       userSummary.modelBreakdown[row.model] = 0;
@@ -142,8 +125,7 @@ export function generateDailyCumulativeData(data: ProcessedData[]): DailyCumulat
     // Add requests to cumulative totals
     dayRequests.forEach(request => {
       const currentTotal = userTotals.get(request.user) || 0;
-      const requestsWithMultiplier = request.requestsUsed * getModelMultiplier(request.model);
-      userTotals.set(request.user, currentTotal + requestsWithMultiplier);
+      userTotals.set(request.user, currentTotal + request.requestsUsed);
     });
     
     // Create data point for this day
