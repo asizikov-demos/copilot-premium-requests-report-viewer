@@ -47,23 +47,57 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
 
   return (
     <div className="w-full max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-2xl font-bold text-gray-900">Data Analysis Results</h2>
+      {/* Header - Mobile Optimized */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Data Analysis Results</h2>
         <button
           onClick={onReset}
-          className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
           Upload New File
         </button>
       </div>
 
-      {/* Main Layout */}
-      <div className={`grid grid-cols-1 lg:grid-cols-4 gap-8 ${showUsersOverview ? 'min-h-0' : ''}`}>
-        {/* Main Content Area */}
-        <div className={`lg:col-span-3 space-y-8 ${showUsersOverview ? 'min-h-0' : ''}`}>
+      {/* Mobile Navigation Pills */}
+      <div className="lg:hidden mb-6">
+        <div className="flex flex-wrap gap-2 p-4 bg-gray-50 rounded-lg">
+          <button
+            onClick={() => setShowUsersOverview(false)}
+            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+              !showUsersOverview 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-white text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            📊 Overview
+          </button>
+          <button
+            onClick={() => setShowUsersOverview(true)}
+            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+              showUsersOverview 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-white text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            👥 Users ({analysis.totalUniqueUsers})
+          </button>
+        </div>
+      </div>
+
+      {/* Responsive Layout */}
+      <div className={`${
+        showUsersOverview 
+          ? 'block' // Full width for users table
+          : 'grid grid-cols-1 xl:grid-cols-4 gap-8'
+      }`}>
+        {/* Main Content */}
+        <div className={`${
+          showUsersOverview 
+            ? 'w-full' 
+            : 'xl:col-span-3 space-y-8'
+        }`}>
           {showUsersOverview ? (
-            <div className="h-[calc(100vh-16rem)]">
+            <div className="min-h-[80vh]">
               <UsersOverview 
                 userData={userData}
                 allModels={allModels}
@@ -225,39 +259,41 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
           )}
         </div>
 
-        {/* Information Panel */}
-        <div className="lg:col-span-1">
-          <div className="bg-white shadow rounded-lg p-6 sticky top-6">
-            {/* Plan Selector */}
-            <div className="mb-6">
-              <label htmlFor="plan-selector" className="block text-sm font-medium text-gray-700 mb-2">
-                Plan Type
-              </label>
-              <select
-                id="plan-selector"
-                value={selectedPlan}
-                onChange={(e) => setSelectedPlan(e.target.value as CopilotPlan)}
-                className="block w-full pl-3 pr-10 py-2 text-base text-black border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-              >
-                <option value="business">Copilot Business</option>
-                <option value="enterprise">Copilot Enterprise</option>
-              </select>
-            </div>
+        {/* Info Panel - Hidden on mobile when showing users */}
+        {!showUsersOverview && (
+          <div className="xl:col-span-1">
+            <div className="bg-white shadow rounded-lg p-4 sm:p-6 sticky top-6">
+              {/* Plan Selector */}
+              <div className="mb-6">
+                <label htmlFor="plan-selector" className="block text-sm font-medium text-gray-700 mb-2">
+                  Plan Type
+                </label>
+                <select
+                  id="plan-selector"
+                  value={selectedPlan}
+                  onChange={(e) => setSelectedPlan(e.target.value as CopilotPlan)}
+                  className="block w-full pl-3 pr-10 py-2 text-base text-black border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                >
+                  <option value="business">Copilot Business</option>
+                  <option value="enterprise">Copilot Enterprise</option>
+                </select>
+              </div>
 
-            {/* Information Block */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Information</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="text-sm font-medium text-gray-700">Monthly Quota:</span>
-                  <span className="text-sm font-semibold text-blue-600">
-                    {planInfo[selectedPlan].monthlyQuota} premium requests
-                  </span>
+              {/* Information Block */}
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Information</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <span className="text-sm font-medium text-gray-700">Monthly Quota:</span>
+                    <span className="text-sm font-semibold text-blue-600">
+                      {planInfo[selectedPlan].monthlyQuota} premium requests
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

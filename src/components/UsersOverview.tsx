@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { UserSummary, DailyCumulativeData } from '@/utils/dataAnalysis';
 
@@ -34,6 +35,16 @@ const generateUserColors = (users: string[]): Record<string, string> => {
 };
 
 export function UsersOverview({ userData, allModels, selectedPlan, dailyCumulativeData, onBack }: UsersOverviewProps) {
+  const [showChart, setShowChart] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const planInfo = {
     business: {
       name: 'Copilot Business',
@@ -53,130 +64,198 @@ export function UsersOverview({ userData, allModels, selectedPlan, dailyCumulati
 
   return (
     <div className="bg-white shadow rounded-lg overflow-hidden h-full flex flex-col">
-      <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
-        <div>
+      {/* Enhanced Header */}
+      <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 flex-shrink-0">
+        <div className="flex-1">
           <h3 className="text-lg font-medium text-gray-900">Users Overview</h3>
           <p className="text-sm text-gray-500 mt-1">
             {planInfo[selectedPlan].name} - {currentQuota} premium requests/month
           </p>
         </div>
-        <button
-          onClick={onBack}
-          className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          ← Back to Summary
-        </button>
-      </div>
-      
-      {/* Premium Request Quota Consumption Chart - Sticky */}
-      <div className="px-6 py-4 bg-white border-b border-gray-200 sticky top-0 z-10 flex-shrink-0">
-        <h4 className="text-lg font-medium text-gray-900 mb-4">Premium Request Quota Consumption</h4>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={dailyCumulativeData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis 
-                dataKey="date" 
-                stroke="#6b7280"
-                fontSize={12}
-                tickFormatter={(value) => {
-                  const date = new Date(value);
-                  return `${date.getMonth() + 1}/${date.getDate()}`;
-                }}
-              />
-              <YAxis stroke="#6b7280" fontSize={12} />
-              <Tooltip 
-                labelFormatter={(label) => {
-                  const date = new Date(label);
-                  return date.toLocaleDateString();
-                }}
-                formatter={(value: number, name: string) => [
-                  `${value.toFixed(1)} requests`,
-                  name
-                ]}
-              />
-              {/* Quota reference line */}
-              <ReferenceLine 
-                y={currentQuota} 
-                stroke="#ef4444" 
-                strokeWidth={2}
-                strokeDasharray="5 5"
-                label={{ value: `${currentQuota} quota limit`, position: "insideTopRight" }}
-              />
-              {/* User lines */}
-              {chartUsers.map((user) => (
-                <Line
-                  key={user}
-                  type="monotone"
-                  dataKey={user}
-                  stroke={userColors[user]}
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
+        
+        <div className="flex flex-col sm:flex-row gap-2">
+          {/* Mobile Chart Toggle */}
+          {isMobile && (
+            <button
+              onClick={() => setShowChart(!showChart)}
+              className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+            >
+              {showChart ? '📋 Show Table' : '📈 Show Chart'}
+            </button>
+          )}
+          
+          <button
+            onClick={onBack}
+            className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            ← Back to Summary
+          </button>
         </div>
       </div>
       
-      {/* Scrollable Table Area */}
-      <div className="flex-1 overflow-auto">
-        <div className="border-t border-gray-200">
-          <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50 sticky top-0 z-20">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky left-0 z-30 min-w-40 border-r border-gray-200">
-                User
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 min-w-32">
-                Total Requests
-              </th>
-              {allModels.map((model) => (
-                <th
-                  key={model}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 min-w-32"
-                  title={model}
-                >
-                  {model.length > 20 ? `${model.substring(0, 20)}...` : model}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {userData.map((user, index) => (
-              <tr key={user.user} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 z-10 border-r border-gray-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                  <div className="max-w-32 truncate" title={user.user}>
-                    {user.user}
-                  </div>
-                </td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold ${
-                  user.totalRequests > currentQuota 
-                    ? 'text-red-600' 
-                    : 'text-blue-600'
-                }`}>
-                  {user.totalRequests.toFixed(2)}
-                  {user.totalRequests > currentQuota && (
-                    <span className="ml-2 text-xs text-red-500">
-                      (Exceeds quota by {(user.totalRequests - currentQuota).toFixed(2)})
+      {/* Conditional Chart - Collapsible on Mobile */}
+      {(!isMobile || showChart) && (
+        <div className="px-4 sm:px-6 py-4 bg-white border-b border-gray-200 flex-shrink-0 relative z-30">
+          <div className="flex justify-between items-center mb-4">
+            <h4 className="text-lg font-medium text-gray-900">Premium Request Quota Consumption</h4>
+            {isMobile && (
+              <button
+                onClick={() => setShowChart(false)}
+                className="text-gray-400 hover:text-gray-600"
+                aria-label="Hide chart"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          <div className="h-64 sm:h-80 relative z-30">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={dailyCumulativeData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="date" 
+                  stroke="#6b7280"
+                  fontSize={12}
+                  tickFormatter={(value) => {
+                    const date = new Date(value);
+                    return `${date.getMonth() + 1}/${date.getDate()}`;
+                  }}
+                />
+                <YAxis stroke="#6b7280" fontSize={12} />
+                <Tooltip 
+                  labelFormatter={(label) => {
+                    const date = new Date(label);
+                    return date.toLocaleDateString();
+                  }}
+                  formatter={(value: number, name: string) => [
+                    `${value.toFixed(1)} requests`,
+                    name
+                  ]}
+                />
+                {/* Quota reference line */}
+                <ReferenceLine 
+                  y={currentQuota} 
+                  stroke="#ef4444" 
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  label={{ value: `${currentQuota} quota limit`, position: "insideTopRight" }}
+                />
+                {/* User lines */}
+                {chartUsers.map((user) => (
+                  <Line
+                    key={user}
+                    type="monotone"
+                    dataKey={user}
+                    stroke={userColors[user]}
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    activeDot={{ r: 5 }}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+      
+      {/* Enhanced Table with Mobile Optimizations */}
+      {(!isMobile || !showChart) && (
+        <div className="flex-1 overflow-auto">
+          {/* Mobile Summary Cards */}
+          {isMobile && (
+            <div className="p-4 space-y-3 sm:hidden">
+              {userData.slice(0, 5).map((user, index) => (
+                <div key={user.user} className="bg-gray-50 rounded-lg p-4 border">
+                  <div className="flex justify-between items-start mb-2">
+                    <h5 className="font-medium text-gray-900 truncate flex-1 mr-2">
+                      {user.user}
+                    </h5>
+                    <span className={`text-sm font-semibold ${
+                      user.totalRequests > currentQuota ? 'text-red-600' : 'text-blue-600'
+                    }`}>
+                      {user.totalRequests.toFixed(1)}
                     </span>
+                  </div>
+                  {user.totalRequests > currentQuota && (
+                    <div className="text-xs text-red-500 mb-2">
+                      Exceeds quota by {(user.totalRequests - currentQuota).toFixed(1)}
+                    </div>
                   )}
-                </td>
+                  <div className="text-xs text-gray-500">
+                    Top model: {Object.entries(user.modelBreakdown)
+                      .sort(([,a], [,b]) => b - a)[0]?.[0] || 'None'}
+                  </div>
+                </div>
+              ))}
+              
+              {userData.length > 5 && (
+                <button 
+                  onClick={() => setShowChart(false)}
+                  className="w-full text-center py-3 text-blue-600 text-sm font-medium border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100"
+                >
+                  View Full Table ({userData.length - 5} more users)
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Desktop Table */}
+          <div className="hidden sm:block border-t border-gray-200">
+            <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50 sticky top-0 z-20">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky left-0 z-30 min-w-40 border-r border-gray-200">
+                  User
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 min-w-32">
+                  Total Requests
+                </th>
                 {allModels.map((model) => (
-                  <td
-                    key={`${user.user}-${model}`}
-                    className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                  <th
+                    key={model}
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 min-w-32"
+                    title={model}
                   >
-                    {user.modelBreakdown[model]?.toFixed(2) || '0.00'}
-                  </td>
+                    {model.length > 20 ? `${model.substring(0, 20)}...` : model}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {userData.map((user, index) => (
+                <tr key={user.user} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 z-10 border-r border-gray-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                    <div className="max-w-32 truncate" title={user.user}>
+                      {user.user}
+                    </div>
+                  </td>
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold ${
+                    user.totalRequests > currentQuota 
+                      ? 'text-red-600' 
+                      : 'text-blue-600'
+                  }`}>
+                    {user.totalRequests.toFixed(2)}
+                    {user.totalRequests > currentQuota && (
+                      <span className="ml-2 text-xs text-red-500">
+                        (Exceeds quota by {(user.totalRequests - currentQuota).toFixed(2)})
+                      </span>
+                    )}
+                  </td>
+                  {allModels.map((model) => (
+                    <td
+                      key={`${user.user}-${model}`}
+                      className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                    >
+                      {user.modelBreakdown[model]?.toFixed(2) || '0.00'}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          </div>
         </div>
-      </div>
+      )}
       
       {userData.length === 0 && (
         <div className="px-6 py-8 text-center text-gray-500 flex-shrink-0">

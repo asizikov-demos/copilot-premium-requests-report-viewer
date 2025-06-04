@@ -37,9 +37,6 @@ export default function Home() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             GitHub Copilot Premium Requests Viewer
           </h1>
-          <p className="text-gray-600">
-            Upload your CSV file to analyze user requests and quota usage
-          </p>
         </div>
 
         {error && (
