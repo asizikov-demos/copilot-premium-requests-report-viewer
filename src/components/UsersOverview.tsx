@@ -200,7 +200,7 @@ export function UsersOverview({ userData, allModels, selectedPlan, dailyCumulati
           {/* Mobile Summary Cards */}
           {isMobile && (
             <div className="p-4 space-y-3 sm:hidden">
-              {sortedUserData.slice(0, 5).map((user, index) => (
+              {sortedUserData.slice(0, 5).map((user) => (
                 <div key={user.user} className="bg-gray-50 rounded-lg p-4 border">
                   <div className="flex justify-between items-start mb-2">
                     <h5 className="font-medium text-gray-900 truncate flex-1 mr-2">
