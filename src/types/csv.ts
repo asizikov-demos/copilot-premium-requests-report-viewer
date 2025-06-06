@@ -28,3 +28,28 @@ export interface AnalysisResults {
     totalRequests: number;
   }>;
 }
+
+export interface PowerUserScore {
+  user: string;
+  totalScore: number;
+  totalRequests: number;
+  breakdown: {
+    diversityScore: number;
+    specialFeaturesScore: number;
+    visionScore: number;
+    balanceScore: number;
+  };
+  modelUsage: {
+    light: number;
+    medium: number;
+    heavy: number;
+    special: number;
+    vision: number;
+    uniqueModels: number;
+  };
+}
+
+export interface PowerUsersAnalysis {
+  powerUsers: PowerUserScore[];
+  totalQualifiedUsers: number;
+}

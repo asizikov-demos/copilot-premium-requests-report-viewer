@@ -3,8 +3,9 @@
 import { useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { CSVData } from '@/types/csv';
-import { processCSVData, analyzeData, analyzeUserData, generateDailyCumulativeData } from '@/utils/dataAnalysis';
+import { processCSVData, analyzeData, analyzeUserData, generateDailyCumulativeData, analyzePowerUsers } from '@/utils/dataAnalysis';
 import { UsersOverview } from './UsersOverview';
+import { PowerUsersOverview } from './PowerUsersOverview';
 
 interface DataAnalysisProps {
   csvData: CSVData[];
@@ -17,15 +18,17 @@ type CopilotPlan = 'business' | 'enterprise';
 export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) {
   const [selectedPlan, setSelectedPlan] = useState<CopilotPlan>('business');
   const [showUsersOverview, setShowUsersOverview] = useState(false);
+  const [showPowerUsers, setShowPowerUsers] = useState(false);
   
-  const { analysis, userData, allModels, dailyCumulativeData } = useMemo(() => {
+  const { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis } = useMemo(() => {
     const processedData = processCSVData(csvData);
     const analysis = analyzeData(processedData);
     const userData = analyzeUserData(processedData);
     const allModels = Array.from(new Set(processedData.map(d => d.model))).sort();
     const dailyCumulativeData = generateDailyCumulativeData(processedData);
+    const powerUsersAnalysis = analyzePowerUsers(processedData);
     
-    return { analysis, userData, allModels, dailyCumulativeData };
+    return { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis };
   }, [csvData]);
 
   const chartData = analysis.requestsByModel.map(item => ({
@@ -62,9 +65,12 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
       <div className="lg:hidden mb-6">
         <div className="flex flex-wrap gap-2 p-4 bg-gray-50 rounded-lg">
           <button
-            onClick={() => setShowUsersOverview(false)}
+            onClick={() => {
+              setShowUsersOverview(false);
+              setShowPowerUsers(false);
+            }}
             className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              !showUsersOverview 
+              !showUsersOverview && !showPowerUsers
                 ? 'bg-blue-600 text-white' 
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
@@ -72,27 +78,43 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
             📊 Overview
           </button>
           <button
-            onClick={() => setShowUsersOverview(true)}
+            onClick={() => {
+              setShowUsersOverview(true);
+              setShowPowerUsers(false);
+            }}
             className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              showUsersOverview 
+              showUsersOverview && !showPowerUsers
                 ? 'bg-blue-600 text-white' 
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
           >
             👥 Users ({analysis.totalUniqueUsers})
           </button>
+          <button
+            onClick={() => {
+              setShowUsersOverview(false);
+              setShowPowerUsers(true);
+            }}
+            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+              showPowerUsers
+                ? 'bg-blue-600 text-white' 
+                : 'bg-white text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            ⭐ Power Users ({powerUsersAnalysis.powerUsers.length})
+          </button>
         </div>
       </div>
 
       {/* Responsive Layout */}
       <div className={`${
-        showUsersOverview 
+        showUsersOverview || showPowerUsers
           ? 'block' // Full width for users table
           : 'grid grid-cols-1 xl:grid-cols-4 gap-8'
       }`}>
         {/* Main Content */}
         <div className={`${
-          showUsersOverview 
+          showUsersOverview || showPowerUsers
             ? 'w-full' 
             : 'xl:col-span-3 space-y-8'
         }`}>
@@ -104,6 +126,14 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                 selectedPlan={selectedPlan}
                 dailyCumulativeData={dailyCumulativeData}
                 onBack={() => setShowUsersOverview(false)}
+              />
+            </div>
+          ) : showPowerUsers ? (
+            <div className="min-h-[80vh]">
+              <PowerUsersOverview 
+                powerUsers={powerUsersAnalysis.powerUsers}
+                totalQualifiedUsers={powerUsersAnalysis.totalQualifiedUsers}
+                onBack={() => setShowPowerUsers(false)}
               />
             </div>
           ) : (
@@ -163,25 +193,38 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                   </div>
                 </button>
 
-                <div className="bg-white overflow-hidden shadow rounded-lg">
+                <button
+                  onClick={() => setShowPowerUsers(true)}
+                  className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 w-full text-left"
+                >
                   <div className="p-5">
                     <div className="flex items-center">
                       <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                          <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                          <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                           </svg>
                         </div>
                       </div>
                       <div className="ml-5 w-0 flex-1">
                         <dl>
-                          <dt className="text-sm font-medium text-gray-500 truncate">Users Exceeding Quota</dt>
-                          <dd className="text-lg font-medium text-gray-900">{analysis.usersExceedingQuota}</dd>
+                          <dt className="text-sm font-medium text-gray-500 truncate">Power Users</dt>
+                          <dd className="text-lg font-medium text-gray-900">
+                            {powerUsersAnalysis.powerUsers.length} / {powerUsersAnalysis.totalQualifiedUsers}
+                          </dd>
+                          <dd className="text-xs text-gray-500">
+                            Top users with diverse usage
+                          </dd>
                         </dl>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
                       </div>
                     </div>
                   </div>
-                </div>
+                </button>
               </div>
 
               {/* Chart */}
@@ -256,11 +299,11 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                 </div>
               </div>
             </>
-          )}
+            )}
         </div>
 
         {/* Info Panel - Hidden on mobile when showing users */}
-        {!showUsersOverview && (
+        {!showUsersOverview && !showPowerUsers && (
           <div className="xl:col-span-1">
             <div className="bg-white shadow rounded-lg p-4 sm:p-6 sticky top-6">
               {/* Plan Selector */}

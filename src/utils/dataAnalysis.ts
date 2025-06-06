@@ -1,9 +1,130 @@
-import { CSVData, ProcessedData, AnalysisResults } from '@/types/csv';
+import { CSVData, ProcessedData, AnalysisResults, PowerUserScore, PowerUsersAnalysis } from '@/types/csv';
 
 export interface UserSummary {
   user: string;
   totalRequests: number;
   modelBreakdown: Record<string, number>;
+}
+
+// Model classification constants
+const MODEL_CATEGORIES = {
+  light: ['gemini-2.0-flash', 'o3-mini', 'o-4-mini'],
+  heavy: ['claude-opus-4', 'claude-3.7-sonnet-thinking', 'o3', 'o4', 'gpt-4.5'],
+  special: ['Code Review', 'Padawan']
+};
+
+function categorizeModel(modelName: string): 'light' | 'medium' | 'heavy' | 'special' {
+  const lowerModel = modelName.toLowerCase();
+  
+  // Check special models first
+  if (MODEL_CATEGORIES.special.some(special => lowerModel.includes(special.toLowerCase()))) {
+    return 'special';
+  }
+  
+  // Check heavy models
+  if (MODEL_CATEGORIES.heavy.some(heavy => lowerModel.includes(heavy.toLowerCase()))) {
+    return 'heavy';
+  }
+  
+  // Check light models
+  if (MODEL_CATEGORIES.light.some(light => lowerModel.includes(light.toLowerCase()))) {
+    return 'light';
+  }
+  
+  // Default to medium
+  return 'medium';
+}
+
+function isVisionModel(modelName: string): boolean {
+  return modelName.toLowerCase().includes('-vision');
+}
+
+function calculatePowerUserScore(userSummary: UserSummary): PowerUserScore {
+  const models = Object.keys(userSummary.modelBreakdown);
+  const totalRequests = userSummary.totalRequests;
+  
+  // Categorize model usage
+  let lightRequests = 0;
+  let mediumRequests = 0;
+  let heavyRequests = 0;
+  let specialRequests = 0;
+  let visionRequests = 0;
+  let uniqueModels = 0;
+  
+  models.forEach(model => {
+    const requests = userSummary.modelBreakdown[model];
+    const category = categorizeModel(model);
+    
+    switch (category) {
+      case 'light':
+        lightRequests += requests;
+        uniqueModels++;
+        break;
+      case 'medium':
+        mediumRequests += requests;
+        uniqueModels++;
+        break;
+      case 'heavy':
+        heavyRequests += requests;
+        uniqueModels++;
+        break;
+      case 'special':
+        specialRequests += requests;
+        break;
+    }
+    
+    if (isVisionModel(model)) {
+      visionRequests += requests;
+    }
+  });
+  
+  // Calculate scores
+  const diversityScore = Math.min(uniqueModels / 4, 1) * 30;
+  
+  const specialFeaturesScore = Math.min(
+    (models.some(m => m.toLowerCase().includes('code review')) ? 10 : 0) +
+    (models.some(m => m.toLowerCase().includes('padawan')) ? 10 : 0),
+    20
+  );
+  
+  const visionScore = Math.min((visionRequests / totalRequests) / 0.2, 1) * 15;
+  
+  const heavyRatio = heavyRequests / totalRequests;
+  let balanceScore = 0;
+  if (heavyRatio >= 0.2 && heavyRatio <= 0.4) {
+    balanceScore = 35; // Optimal range
+  } else if (heavyRatio < 0.1 || heavyRatio > 0.6) {
+    balanceScore = 0; // Poor balance
+  } else {
+    // Linear decrease outside optimal range
+    if (heavyRatio < 0.2) {
+      balanceScore = 35 * (heavyRatio / 0.2);
+    } else {
+      balanceScore = 35 * (1 - (heavyRatio - 0.4) / 0.2);
+    }
+  }
+  
+  const totalScore = diversityScore + specialFeaturesScore + visionScore + balanceScore;
+  
+  return {
+    user: userSummary.user,
+    totalScore: Math.round(totalScore * 100) / 100,
+    totalRequests,
+    breakdown: {
+      diversityScore: Math.round(diversityScore * 100) / 100,
+      specialFeaturesScore: Math.round(specialFeaturesScore * 100) / 100,
+      visionScore: Math.round(visionScore * 100) / 100,
+      balanceScore: Math.round(balanceScore * 100) / 100,
+    },
+    modelUsage: {
+      light: Math.round(lightRequests * 100) / 100,
+      medium: Math.round(mediumRequests * 100) / 100,
+      heavy: Math.round(heavyRequests * 100) / 100,
+      special: Math.round(specialRequests * 100) / 100,
+      vision: Math.round(visionRequests * 100) / 100,
+      uniqueModels,
+    },
+  };
 }
 
 export function processCSVData(rawData: CSVData[]): ProcessedData[] {
@@ -138,4 +259,24 @@ export function generateDailyCumulativeData(data: ProcessedData[]): DailyCumulat
   }
   
   return result;
+}
+
+export function analyzePowerUsers(data: ProcessedData[]): PowerUsersAnalysis {
+  const userSummaries = analyzeUserData(data);
+  
+  // Filter users with 20+ requests
+  const qualifiedUsers = userSummaries.filter(user => user.totalRequests >= 20);
+  
+  // Calculate power user scores
+  const powerUserScores = qualifiedUsers.map(calculatePowerUserScore);
+  
+  // Sort by total score and take top 20
+  const topPowerUsers = powerUserScores
+    .sort((a, b) => b.totalScore - a.totalScore)
+    .slice(0, 20);
+  
+  return {
+    powerUsers: topPowerUsers,
+    totalQualifiedUsers: qualifiedUsers.length,
+  };
 }
