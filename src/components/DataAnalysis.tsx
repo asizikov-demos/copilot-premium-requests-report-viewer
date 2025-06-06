@@ -49,7 +49,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto">
+    <div className="w-full mx-auto">
       {/* Header - Mobile Optimized */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Data Analysis Results</h2>
@@ -110,13 +110,13 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
       <div className={`${
         showUsersOverview || showPowerUsers
           ? 'block' // Full width for users table
-          : 'grid grid-cols-1 xl:grid-cols-4 gap-8'
+          : 'grid grid-cols-1 xl:grid-cols-4 2xl:grid-cols-5 gap-8'
       }`}>
         {/* Main Content */}
         <div className={`${
           showUsersOverview || showPowerUsers
             ? 'w-full' 
-            : 'xl:col-span-3 space-y-8'
+            : 'xl:col-span-3 2xl:col-span-4 space-y-8'
         }`}>
           {showUsersOverview ? (
             <div className="min-h-[80vh]">
@@ -305,7 +305,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
 
         {/* Info Panel - Hidden on mobile when showing users */}
         {!showUsersOverview && !showPowerUsers && (
-          <div className="xl:col-span-1">
+          <div className="xl:col-span-1 2xl:col-span-1">
             <div className="bg-white shadow rounded-lg p-4 sm:p-6 sticky top-6">
               {/* Plan Selector */}
               <div className="mb-6">
