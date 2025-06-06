@@ -3,9 +3,12 @@
 import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { UserSummary, DailyCumulativeData } from '@/utils/dataAnalysis';
+import { ProcessedData } from '@/types/csv';
+import { UserConsumptionModal } from './UserConsumptionModal';
 
 interface UsersOverviewProps {
   userData: UserSummary[];
+  processedData: ProcessedData[]; // Add this for modal
   allModels: string[];
   selectedPlan: 'business' | 'enterprise';
   dailyCumulativeData: DailyCumulativeData[];
@@ -34,11 +37,12 @@ const generateUserColors = (users: string[]): Record<string, string> => {
   return result;
 };
 
-export function UsersOverview({ userData, allModels, selectedPlan, dailyCumulativeData, onBack }: UsersOverviewProps) {
+export function UsersOverview({ userData, processedData, allModels, selectedPlan, dailyCumulativeData, onBack }: UsersOverviewProps) {
   const [showChart, setShowChart] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [selectedUser, setSelectedUser] = useState<string | null>(null);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -215,9 +219,13 @@ export function UsersOverview({ userData, allModels, selectedPlan, dailyCumulati
           {isMobile && (
             <div className="p-4 space-y-3 sm:hidden">
               {sortedUserData.slice(0, 5).map((user) => (
-                <div key={user.user} className="bg-gray-50 rounded-lg p-4 border">
+                <button
+                  key={user.user}
+                  onClick={() => setSelectedUser(user.user)}
+                  className="w-full bg-gray-50 rounded-lg p-4 border hover:bg-gray-100 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
                   <div className="flex justify-between items-start mb-2">
-                    <h5 className="font-medium text-gray-900 truncate flex-1 mr-2">
+                    <h5 className="font-medium text-blue-600 truncate flex-1 mr-2">
                       {user.user}
                     </h5>
                     <span className={`text-sm font-semibold ${
@@ -235,7 +243,7 @@ export function UsersOverview({ userData, allModels, selectedPlan, dailyCumulati
                     Top model: {Object.entries(user.modelBreakdown)
                       .sort(([,a], [,b]) => b - a)[0]?.[0] || 'None'}
                   </div>
-                </div>
+                </button>
               ))}
               
               {sortedUserData.length > 5 && (
@@ -298,10 +306,14 @@ export function UsersOverview({ userData, allModels, selectedPlan, dailyCumulati
             <tbody className="bg-white divide-y divide-gray-200">
               {sortedUserData.map((user, index) => (
                 <tr key={user.user} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 z-10 border-r border-gray-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                    <div className="max-w-32 truncate" title={user.user}>
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium sticky left-0 z-10 border-r border-gray-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                    <button
+                      onClick={() => setSelectedUser(user.user)}
+                      className="max-w-32 truncate text-left text-blue-600 hover:text-blue-800 hover:underline cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded"
+                      title={`View ${user.user}'s consumption details`}
+                    >
                       {user.user}
-                    </div>
+                    </button>
                   </td>
                   <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold ${
                     user.totalRequests > currentQuota 
@@ -335,6 +347,17 @@ export function UsersOverview({ userData, allModels, selectedPlan, dailyCumulati
         <div className="px-6 py-8 text-center text-gray-500 flex-shrink-0">
           No user data available
         </div>
+      )}
+      
+      {/* User Consumption Modal */}
+      {selectedUser && (
+        <UserConsumptionModal
+          user={selectedUser}
+          processedData={processedData}
+          selectedPlan={selectedPlan}
+          currentQuota={currentQuota}
+          onClose={() => setSelectedUser(null)}
+        />
       )}
     </div>
   );

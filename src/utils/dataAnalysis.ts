@@ -280,3 +280,93 @@ export function analyzePowerUsers(data: ProcessedData[]): PowerUsersAnalysis {
     totalQualifiedUsers: qualifiedUsers.length,
   };
 }
+
+// Generate daily model breakdown data for a specific user
+export function generateUserDailyModelData(data: ProcessedData[], userName: string): import('@/types/csv').UserDailyData[] {
+  // Filter data for the specific user
+  const userData = data.filter(d => d.user === userName);
+  
+  if (userData.length === 0) return [];
+
+  // Sort ALL data by timestamp to get the full date range from the CSV
+  const allSortedData = [...data].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  
+  // Get the FULL date range from the entire CSV file (not just this user)
+  const startDate = new Date(allSortedData[0].timestamp);
+  const endDate = new Date(allSortedData[allSortedData.length - 1].timestamp);
+  
+  // Sort user data by timestamp
+  const sortedUserData = [...userData].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  
+  // Get ALL models used by this user across all days
+  const userModels = Array.from(new Set(userData.map(d => d.model))).sort();
+  
+  // Track cumulative total across all days
+  let cumulativeTotal = 0;
+  
+  const result: import('@/types/csv').UserDailyData[] = [];
+  
+  // Iterate through EVERY day in the full CSV date range
+  for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
+    const dateStr = date.toISOString().split('T')[0];
+    
+    // Find all requests for this specific day for this user
+    const dayRequests = sortedUserData.filter(d => 
+      d.timestamp.toISOString().split('T')[0] === dateStr
+    );
+    
+    // Initialize daily model breakdown with zeros for ALL models
+    const dailyByModel: Record<string, number> = {};
+    userModels.forEach(model => {
+      dailyByModel[model] = 0;
+    });
+    
+    // Calculate actual requests per model for this day
+    let dailyTotal = 0;
+    dayRequests.forEach(request => {
+      dailyByModel[request.model] += request.requestsUsed;
+      dailyTotal += request.requestsUsed;
+    });
+    
+    // Update cumulative total (running sum)
+    cumulativeTotal += dailyTotal;
+    
+    // Create data point for this day
+    const dataPoint: import('@/types/csv').UserDailyData = { 
+      date: dateStr,
+      totalCumulative: cumulativeTotal,
+      ...dailyByModel
+    };
+    
+    result.push(dataPoint);
+  }
+  
+  return result;
+}
+
+/* 
+Example usage verification:
+Input: Full CSV date range is Day1 to Day5, but user "TestUser" only has data on Day1, Day3, Day5:
+Day1: Model1=10, Model2=3, Model4=5 → dailyTotal=18, cumulative=18
+Day2: (no requests, but day exists in CSV) → dailyTotal=0, cumulative=18
+Day3: Model1=5, Model3=10 → dailyTotal=15, cumulative=33
+Day4: (no requests, but day exists in CSV) → dailyTotal=0, cumulative=33
+Day5: Model2=2 → dailyTotal=2, cumulative=35
+
+Expected output (ALL days from CSV range):
+[
+  { date: "day1", Model1: 10, Model2: 3, Model3: 0, Model4: 5, totalCumulative: 18 },
+  { date: "day2", Model1: 0, Model2: 0, Model3: 0, Model4: 0, totalCumulative: 18 },
+  { date: "day3", Model1: 5, Model2: 0, Model3: 10, Model4: 0, totalCumulative: 33 },
+  { date: "day4", Model1: 0, Model2: 0, Model3: 0, Model4: 0, totalCumulative: 33 },
+  { date: "day5", Model1: 0, Model2: 2, Model3: 0, Model4: 0, totalCumulative: 35 }
+]
+
+Chart will show:
+- Day1: stacked bar with Model1(10) + Model2(3) + Model4(5) = 18 total height
+- Day2: no bar (height 0)
+- Day3: stacked bar with Model1(5) + Model3(10) = 15 total height  
+- Day4: no bar (height 0)
+- Day5: bar with Model2(2) = 2 total height
+- Black line: 18 → 18 → 33 → 33 → 35 (cumulative)
+*/

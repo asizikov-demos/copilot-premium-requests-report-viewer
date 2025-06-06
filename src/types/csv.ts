@@ -53,3 +53,19 @@ export interface PowerUsersAnalysis {
   powerUsers: PowerUserScore[];
   totalQualifiedUsers: number;
 }
+
+// User-specific daily data for individual user charts
+export interface UserDailyData {
+  date: string;
+  [model: string]: string | number; // Dynamic model columns for stacked bars
+  totalCumulative: number; // Running total for line chart
+}
+
+// Props for the new modal component
+export interface UserConsumptionModalProps {
+  user: string;
+  processedData: ProcessedData[]; // Raw data filtered for this user
+  selectedPlan: 'business' | 'enterprise';
+  currentQuota: number;
+  onClose: () => void;
+}

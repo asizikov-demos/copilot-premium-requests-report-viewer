@@ -20,7 +20,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
   const [showUsersOverview, setShowUsersOverview] = useState(false);
   const [showPowerUsers, setShowPowerUsers] = useState(false);
   
-  const { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis } = useMemo(() => {
+  const { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, processedData } = useMemo(() => {
     const processedData = processCSVData(csvData);
     const analysis = analyzeData(processedData);
     const userData = analyzeUserData(processedData);
@@ -28,7 +28,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
     const dailyCumulativeData = generateDailyCumulativeData(processedData);
     const powerUsersAnalysis = analyzePowerUsers(processedData);
     
-    return { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis };
+    return { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, processedData };
   }, [csvData]);
 
   const chartData = analysis.requestsByModel.map(item => ({
@@ -122,6 +122,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
             <div className="min-h-[80vh]">
               <UsersOverview 
                 userData={userData}
+                processedData={processedData}
                 allModels={allModels}
                 selectedPlan={selectedPlan}
                 dailyCumulativeData={dailyCumulativeData}
