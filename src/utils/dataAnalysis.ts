@@ -9,7 +9,7 @@ export interface UserSummary {
 // Model classification constants
 const MODEL_CATEGORIES = {
   light: ['gemini-2.0-flash', 'o3-mini', 'o-4-mini'],
-  heavy: ['claude-opus-4', 'claude-3.7-sonnet-thinking', 'o3', 'o4', 'gpt-4.5'],
+  heavy: ['claude-opus-4', 'claude-3.7-sonnet-thought', 'o3', 'o4', 'gpt-4.5'],
   special: ['Code Review', 'Padawan']
 };
 
