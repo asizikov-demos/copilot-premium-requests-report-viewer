@@ -5,6 +5,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { UserSummary, DailyCumulativeData } from '@/utils/dataAnalysis';
 import { ProcessedData } from '@/types/csv';
 import { UserConsumptionModal } from './UserConsumptionModal';
+import { calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
+import { PRICING } from '@/constants/pricing';
 
 interface UsersOverviewProps {
   userData: UserSummary[];
@@ -66,10 +68,10 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
   
   // Calculate total overage cost
   const totalOverageRequests = userData.reduce((total, user) => {
-    const overage = Math.max(0, user.totalRequests - currentQuota);
+    const overage = calculateOverageRequests(user.totalRequests, currentQuota);
     return total + overage;
   }, 0);
-  const totalOverageCost = totalOverageRequests * 0.04;
+  const totalOverageCost = calculateOverageCost(totalOverageRequests);
   
   // Handle sorting
   const handleSort = (column: string) => {
@@ -117,7 +119,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
             </p>
             {totalOverageRequests > 0 && (
               <p className="text-sm text-red-600 font-medium">
-                Overage cost: ${totalOverageCost.toFixed(2)} ({totalOverageRequests.toFixed(1)} requests × $0.04)
+                Overage cost: ${totalOverageCost.toFixed(2)} ({totalOverageRequests.toFixed(1)} requests × ${PRICING.OVERAGE_RATE_PER_REQUEST.toFixed(2)})
               </p>
             )}
           </div>

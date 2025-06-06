@@ -5,6 +5,13 @@ import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Respons
 import { createPortal } from 'react-dom';
 import { UserConsumptionModalProps } from '@/types/csv';
 import { generateUserDailyModelData } from '@/utils/dataAnalysis';
+import { 
+  getUserData, 
+  calculateUserTotalRequests, 
+  calculateOverageRequests, 
+  calculateOverageCost 
+} from '@/utils/userCalculations';
+import { PRICING } from '@/constants/pricing';
 
 // Generate colors for model bars
 const generateModelColors = (models: string[]): Record<string, string> => {
@@ -44,13 +51,31 @@ export function UserConsumptionModal({
     return generateUserDailyModelData(processedData, user);
   }, [processedData, user]);
 
-  // Get models used by this user
-  const userModels = useMemo(() => {
-    const userData = processedData.filter(d => d.user === user);
-    return Array.from(new Set(userData.map(d => d.model))).sort();
+  // Get filtered user data (single source of truth)
+  const userData = useMemo(() => {
+    return getUserData(processedData, user);
   }, [processedData, user]);
 
+  // Get models used by this user
+  const userModels = useMemo(() => {
+    return Array.from(new Set(userData.map(d => d.model))).sort();
+  }, [userData]);
+
   const modelColors = useMemo(() => generateModelColors(userModels), [userModels]);
+
+  // Calculate user's total requests using shared utility
+  const userTotalRequests = useMemo(() => {
+    return calculateUserTotalRequests(processedData, user);
+  }, [processedData, user]);
+
+  // Calculate overage requests and cost using shared utilities
+  const overageRequests = useMemo(() => {
+    return calculateOverageRequests(userTotalRequests, currentQuota);
+  }, [userTotalRequests, currentQuota]);
+
+  const overageCost = useMemo(() => {
+    return calculateOverageCost(overageRequests);
+  }, [overageRequests]);
 
   useEffect(() => {
     setMounted(true);
@@ -156,9 +181,19 @@ export function UserConsumptionModal({
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
           <div>
             <h2 className="text-xl font-semibold text-gray-900">{user}</h2>
-            <p className="text-sm text-gray-500">
-              {planInfo[selectedPlan].name} - Daily Usage Overview
-            </p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-6 mt-1">
+              <p className="text-sm text-gray-500">
+                {planInfo[selectedPlan].name} - Daily Usage Overview
+              </p>
+              <p className="text-sm text-gray-500">
+                Total requests: {userTotalRequests.toFixed(1)} / {currentQuota} quota
+              </p>
+              {overageRequests > 0 && (
+                <p className="text-sm text-red-600 font-medium" role="alert">
+                  Overage cost: ${overageCost.toFixed(2)} ({overageRequests.toFixed(1)} requests × ${PRICING.OVERAGE_RATE_PER_REQUEST.toFixed(2)})
+                </p>
+              )}
+            </div>
           </div>
           <button
             onClick={onClose}

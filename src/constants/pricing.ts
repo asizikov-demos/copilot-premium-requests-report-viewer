@@ -1,0 +1,5 @@
+export const PRICING = {
+  OVERAGE_RATE_PER_REQUEST: 0.04,
+  BUSINESS_QUOTA: 300,
+  ENTERPRISE_QUOTA: 1000,
+} as const;
