@@ -160,7 +160,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
               </button>
             )}
           </div>
-          <div className="h-64 sm:h-80 relative z-30">
+          <div className="h-64 sm:h-80 2xl:h-96 relative z-30">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={dailyCumulativeData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
