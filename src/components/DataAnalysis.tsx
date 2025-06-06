@@ -231,7 +231,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
               {/* Chart */}
               <div className="bg-white shadow rounded-lg p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-6">Total Requests by Model</h3>
-                <div className="h-96">
+                <div className="h-96 2xl:h-[32rem]">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={chartData}

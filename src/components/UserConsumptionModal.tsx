@@ -219,7 +219,7 @@ export function UserConsumptionModal({
               </div>
               
               {/* Chart */}
-              <div className="h-96 w-full">
+              <div className="h-96 2xl:h-[32rem] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={userDailyData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
