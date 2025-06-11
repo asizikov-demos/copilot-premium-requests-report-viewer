@@ -157,7 +157,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                           <dd className="text-sm text-gray-600">
                             {analysis.timeFrame.start} to {analysis.timeFrame.end}
                           </dd>
-                          <dd className="mt-1 text-sm text-gray-600 truncate">
+                          <dd className="mt-1 text-sm text-gray-600 truncate" title={filename}>
                             {filename}
                           </dd>
                         </dl>
