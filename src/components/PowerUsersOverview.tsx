@@ -56,89 +56,97 @@ function ScoreBreakdownDialog({ user, onClose }: ScoreDialogProps) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-96 overflow-y-auto">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Power User Score Breakdown: {user.user}
-            </h3>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl overflow-hidden">
+        <div className="flex flex-col h-full">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Power User Score Breakdown: {user.user}
+              </h3>
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
           
-          <div className="space-y-4">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-medium text-gray-700">Total Score</span>
-                <span className="text-2xl font-bold text-blue-600">{user.totalScore}/100</span>
-              </div>
-              <div className="text-sm text-gray-700">
-                Based on {Math.round(user.totalRequests * 100) / 100} total requests
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <h4 className="font-medium text-gray-900">Score Components</h4>
-                
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Model Diversity (30%)</span>
-                  <span className="font-medium text-gray-800">{user.breakdown.diversityScore}/30</span>
+          <div className="p-6 overflow-y-auto max-h-[calc(100vh-12rem)]">
+            <div className="space-y-6">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-medium text-gray-700">Total Score</span>
+                  <span className="text-2xl font-bold text-blue-600">{user.totalScore}/100</span>
                 </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Special Features (20%)</span>
-                  <span className="font-medium text-gray-800">{user.breakdown.specialFeaturesScore}/20</span>
-                </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Vision Models (15%)</span>
-                  <span className="font-medium text-gray-800">{user.breakdown.visionScore}/15</span>
-                </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Balance Score (35%)</span>
-                  <span className="font-medium text-gray-800">{user.breakdown.balanceScore}/35</span>
+                <div className="text-sm text-gray-700">
+                  Based on {Math.round(user.totalRequests * 100) / 100} total requests
                 </div>
               </div>
               
-              <div className="space-y-3">
-                <h4 className="font-medium text-gray-900">Model Usage</h4>
-                
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Unique Models</span>
-                  <span className="font-medium text-gray-800">{user.modelUsage.uniqueModels}</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-900">Score Components</h4>
+                  
+                  <div className="bg-white rounded-lg shadow-sm p-4 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Model Diversity (30%)</span>
+                      <span className="font-medium text-gray-800">{user.breakdown.diversityScore}/30</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Special Features (20%)</span>
+                      <span className="font-medium text-gray-800">{user.breakdown.specialFeaturesScore}/20</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Vision Models (15%)</span>
+                      <span className="font-medium text-gray-800">{user.breakdown.visionScore}/15</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Balance Score (35%)</span>
+                      <span className="font-medium text-gray-800">{user.breakdown.balanceScore}/35</span>
+                    </div>
+                  </div>
                 </div>
                 
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Light Models</span>
-                  <span className="font-medium text-gray-800">{user.modelUsage.light}</span>
-                </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Medium Models</span>
-                  <span className="font-medium text-gray-800">{user.modelUsage.medium}</span>
-                </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Heavy Models</span>
-                  <span className="font-medium text-gray-800">{user.modelUsage.heavy}</span>
-                </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Special Features</span>
-                  <span className="font-medium text-gray-800">{user.modelUsage.special}</span>
-                </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Vision Models</span>
-                  <span className="font-medium text-gray-800">{user.modelUsage.vision}</span>
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-900">Model Usage</h4>
+                  
+                  <div className="bg-white rounded-lg shadow-sm p-4 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Unique Models</span>
+                      <span className="font-medium text-gray-800">{user.modelUsage.uniqueModels}</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Light Models</span>
+                      <span className="font-medium text-gray-800">{user.modelUsage.light}</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Medium Models</span>
+                      <span className="font-medium text-gray-800">{user.modelUsage.medium}</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Heavy Models</span>
+                      <span className="font-medium text-gray-800">{user.modelUsage.heavy}</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Special Features</span>
+                      <span className="font-medium text-gray-800">{user.modelUsage.special}</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Vision Models</span>
+                      <span className="font-medium text-gray-800">{user.modelUsage.vision}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
