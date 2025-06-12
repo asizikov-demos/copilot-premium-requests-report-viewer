@@ -16,7 +16,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (file: File) => {
-    if (!file.name.toLowerCase().endsWith('.csv')) {
+    if (!file || !file.name.toLowerCase().endsWith('.csv')) {
       onError('Please select a CSV file');
       return;
     }
