@@ -158,7 +158,7 @@ export function PowerUsersOverview({ powerUsers, totalQualifiedUsers, minRequest
   const [selectedUser, setSelectedUser] = useState<PowerUserScore | null>(null);
   const [inputValue, setInputValue] = useState(minRequestsThreshold.toString());
   const [isValidInput, setIsValidInput] = useState(true);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync input value when prop changes
   useEffect(() => {
