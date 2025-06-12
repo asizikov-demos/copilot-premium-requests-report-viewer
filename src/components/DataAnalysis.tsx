@@ -7,6 +7,9 @@ import { processCSVData, analyzeData, analyzeUserData, generateDailyCumulativeDa
 import { UsersOverview } from './UsersOverview';
 import { PowerUsersOverview } from './PowerUsersOverview';
 
+// Constants
+const DEFAULT_MIN_REQUESTS = 20;
+
 interface DataAnalysisProps {
   csvData: CSVData[];
   filename: string;
@@ -19,6 +22,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
   const [selectedPlan, setSelectedPlan] = useState<CopilotPlan>('business');
   const [showUsersOverview, setShowUsersOverview] = useState(false);
   const [showPowerUsers, setShowPowerUsers] = useState(false);
+  const [minRequestsThreshold, setMinRequestsThreshold] = useState(DEFAULT_MIN_REQUESTS);
   
   const { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, processedData } = useMemo(() => {
     const processedData = processCSVData(csvData);
@@ -26,10 +30,10 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
     const userData = analyzeUserData(processedData);
     const allModels = Array.from(new Set(processedData.map(d => d.model))).sort();
     const dailyCumulativeData = generateDailyCumulativeData(processedData);
-    const powerUsersAnalysis = analyzePowerUsers(processedData);
+    const powerUsersAnalysis = analyzePowerUsers(processedData, minRequestsThreshold);
     
     return { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, processedData };
-  }, [csvData]);
+  }, [csvData, minRequestsThreshold]);
 
   const chartData = analysis.requestsByModel.map(item => ({
     model: item.model.length > 20 ? `${item.model.substring(0, 20)}...` : item.model,
@@ -134,7 +138,9 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
               <PowerUsersOverview 
                 powerUsers={powerUsersAnalysis.powerUsers}
                 totalQualifiedUsers={powerUsersAnalysis.totalQualifiedUsers}
+                minRequestsThreshold={minRequestsThreshold}
                 onBack={() => setShowPowerUsers(false)}
+                onThresholdChange={setMinRequestsThreshold}
               />
             </div>
           ) : (

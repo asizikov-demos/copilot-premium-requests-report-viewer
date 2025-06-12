@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { PowerUserScore } from '@/types/csv';
 
-interface PowerUsersOverviewProps {
-  powerUsers: PowerUserScore[];
-  totalQualifiedUsers: number;
-  onBack: () => void;
-}
+// Constants
+const DEFAULT_MIN_REQUESTS = 20;
+const MAX_MIN_REQUESTS = 10000;
+const DEBOUNCE_DELAY = 300;
+const MAX_POWER_USERS_DISPLAYED = 20;
 
 interface ScoreDialogProps {
   user: PowerUserScore | null;
@@ -43,12 +43,9 @@ function Tooltip({ children, content }: TooltipProps) {
 interface PowerUsersOverviewProps {
   powerUsers: PowerUserScore[];
   totalQualifiedUsers: number;
+  minRequestsThreshold: number;
   onBack: () => void;
-}
-
-interface ScoreDialogProps {
-  user: PowerUserScore | null;
-  onClose: () => void;
+  onThresholdChange: (threshold: number) => void;
 }
 
 function ScoreBreakdownDialog({ user, onClose }: ScoreDialogProps) {
@@ -157,8 +154,47 @@ function ScoreBreakdownDialog({ user, onClose }: ScoreDialogProps) {
   );
 }
 
-export function PowerUsersOverview({ powerUsers, totalQualifiedUsers, onBack }: PowerUsersOverviewProps) {
+export function PowerUsersOverview({ powerUsers, totalQualifiedUsers, minRequestsThreshold, onBack, onThresholdChange }: PowerUsersOverviewProps) {
   const [selectedUser, setSelectedUser] = useState<PowerUserScore | null>(null);
+  const [inputValue, setInputValue] = useState(minRequestsThreshold.toString());
+  const [isValidInput, setIsValidInput] = useState(true);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync input value when prop changes
+  useEffect(() => {
+    setInputValue(minRequestsThreshold.toString());
+  }, [minRequestsThreshold]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Debounced threshold change handler
+  const debouncedThresholdChange = useCallback((value: string) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    timeoutRef.current = setTimeout(() => {
+      const numValue = parseInt(value, 10);
+      if (!isNaN(numValue) && numValue >= DEFAULT_MIN_REQUESTS && numValue <= MAX_MIN_REQUESTS) {
+        onThresholdChange(numValue);
+        setIsValidInput(true);
+      } else {
+        setIsValidInput(false);
+      }
+    }, DEBOUNCE_DELAY);
+  }, [onThresholdChange]);
+
+  const handleInputChange = (value: string) => {
+    setInputValue(value);
+    debouncedThresholdChange(value);
+  };
 
   return (
     <div className="space-y-6">
@@ -166,11 +202,45 @@ export function PowerUsersOverview({ powerUsers, totalQualifiedUsers, onBack }: 
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Power Users Overview</h2>
           <p className="text-sm text-gray-600 mt-1">
-            Top 20 power users out of {totalQualifiedUsers} qualified users (20+ requests)
+            Top {MAX_POWER_USERS_DISPLAYED} power users out of {totalQualifiedUsers} qualified users ({minRequestsThreshold}+ requests)
           </p>
         </div>
         
-        <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 items-end sm:items-center">
+          <div className="relative flex items-center gap-2">
+            <label htmlFor="threshold" className="text-xs text-gray-600 whitespace-nowrap">
+              Min Requests Threshold
+            </label>
+            <div className="relative flex items-center gap-1">
+              <input
+                id="threshold"
+                type="number"
+                min={DEFAULT_MIN_REQUESTS}
+                max={MAX_MIN_REQUESTS}
+                value={inputValue}
+                onChange={(e) => handleInputChange(e.target.value)}
+                className={`w-20 px-2 py-1 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-600 ${
+                  isValidInput 
+                    ? 'border-gray-300' 
+                    : 'border-red-300 bg-red-50'
+                }`}
+              />
+              {minRequestsThreshold !== DEFAULT_MIN_REQUESTS && (
+                <button
+                  onClick={() => handleInputChange(DEFAULT_MIN_REQUESTS.toString())}
+                  className="text-xs text-blue-600 hover:text-blue-800 px-1"
+                  title={`Reset to default (${DEFAULT_MIN_REQUESTS})`}
+                >
+                  ↺
+                </button>
+              )}
+              {!isValidInput && (
+                <div className="absolute top-full left-0 mt-1 text-xs text-red-600 whitespace-nowrap">
+                  Must be {DEFAULT_MIN_REQUESTS}–{MAX_MIN_REQUESTS.toLocaleString()}
+                </div>
+              )}
+            </div>
+          </div>
           <button
             onClick={onBack}
             className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -231,10 +301,10 @@ export function PowerUsersOverview({ powerUsers, totalQualifiedUsers, onBack }: 
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {Math.round(user.totalRequests * 100) / 100}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {user.modelUsage.uniqueModels}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -244,7 +314,7 @@ export function PowerUsersOverview({ powerUsers, totalQualifiedUsers, onBack }: 
                           D: {user.breakdown.diversityScore}
                         </span>
                       </Tooltip>
-                      <Tooltip content="Special: Score for using Code Review and Padawan features (0-20 points)">
+                      <Tooltip content="Special: Score for using Code Review, Spark and Padawan features (0-20 points)">
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 cursor-help">
                           S: {user.breakdown.specialFeaturesScore}
                         </span>
