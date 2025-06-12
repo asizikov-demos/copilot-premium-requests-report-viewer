@@ -1,5 +1,9 @@
 import { CSVData, ProcessedData, AnalysisResults, PowerUserScore, PowerUsersAnalysis } from '@/types/csv';
 
+// Constants
+const DEFAULT_MIN_REQUESTS = 20;
+const MAX_POWER_USERS_DISPLAYED = 20;
+
 export interface UserSummary {
   user: string;
   totalRequests: number;
@@ -261,19 +265,19 @@ export function generateDailyCumulativeData(data: ProcessedData[]): DailyCumulat
   return result;
 }
 
-export function analyzePowerUsers(data: ProcessedData[]): PowerUsersAnalysis {
+export function analyzePowerUsers(data: ProcessedData[], minRequestsThreshold: number = DEFAULT_MIN_REQUESTS): PowerUsersAnalysis {
   const userSummaries = analyzeUserData(data);
   
-  // Filter users with 20+ requests
-  const qualifiedUsers = userSummaries.filter(user => user.totalRequests >= 20);
+  // Filter users with configurable minimum requests
+  const qualifiedUsers = userSummaries.filter(user => user.totalRequests >= minRequestsThreshold);
   
   // Calculate power user scores
   const powerUserScores = qualifiedUsers.map(calculatePowerUserScore);
   
-  // Sort by total score and take top 20
+  // Sort by total score and take top users
   const topPowerUsers = powerUserScores
     .sort((a, b) => b.totalScore - a.totalScore)
-    .slice(0, 20);
+    .slice(0, MAX_POWER_USERS_DISPLAYED);
   
   return {
     powerUsers: topPowerUsers,
