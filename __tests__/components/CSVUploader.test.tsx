@@ -75,7 +75,6 @@ describe('CSVUploader', () => {
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
     
     const hiddenInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    console.log('Found input element:', hiddenInput);
 
     // Use fireEvent instead of userEvent for file upload
     fireEvent.change(hiddenInput, {
