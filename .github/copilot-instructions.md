@@ -25,7 +25,7 @@ This is a Next.js TypeScript application for analyzing CSV data containing user 
 The CSV data follows this format:
 ```
 Timestamp,User,Model,Requests Used,Exceeds Monthly Quota,Total Monthly Quota
-2025-06-03T11:05:27Z,TJGriff,gpt-4.1-2025-04-14,1.00,false,Unlimited
+2025-06-03T11:05:27Z,USerA,gpt-4.1-2025-04-14,1.00,false,Unlimited
 ```
 
 ## Component Architecture

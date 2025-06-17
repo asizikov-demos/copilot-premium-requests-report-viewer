@@ -314,7 +314,7 @@ export function PowerUsersOverview({ powerUsers, totalQualifiedUsers, minRequest
                           D: {user.breakdown.diversityScore}
                         </span>
                       </Tooltip>
-                      <Tooltip content="Special: Score for using Code Review, Spark and Padawan features (0-20 points)">
+                      <Tooltip content="Special: Score for using Code Review, Spark and Coding Agent features (0-20 points)">
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 cursor-help">
                           S: {user.breakdown.specialFeaturesScore}
                         </span>

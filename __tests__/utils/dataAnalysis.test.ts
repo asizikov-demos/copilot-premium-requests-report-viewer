@@ -1,4 +1,11 @@
-import { processCSVData, analyzeData, analyzePowerUsers } from '@/utils/dataAnalysis';
+import { 
+  processCSVData, 
+  analyzeData, 
+  analyzePowerUsers, 
+  calculateSpecialFeaturesScore, 
+  SPECIAL_FEATURES_CONFIG, 
+  MAX_SPECIAL_FEATURES_SCORE 
+} from '@/utils/dataAnalysis';
 import { CSVData, ProcessedData } from '@/types/csv';
 import { validCSVData, powerUserCSVData } from '../fixtures/validCSVData';
 import { createMockCSVData, createMockCSVDataArray } from '../helpers/testUtils';
@@ -11,7 +18,7 @@ describe('CSV Data Processing', () => {
       expect(result).toHaveLength(4);
       expect(result[0]).toEqual({
         timestamp: new Date('2025-06-03T11:05:27Z'),
-        user: 'TJGriff',
+        user: 'USerA',
         model: 'gpt-4.1-2025-04-14',
         requestsUsed: 1.00,
         exceedsQuota: false,
@@ -121,7 +128,7 @@ describe('CSV Data Processing', () => {
       const processedData = processCSVData(validCSVData);
       const result = analyzeData(processedData);
       
-      expect(result.totalUniqueUsers).toBe(3); // TJGriff, JohnDoe, AliceSmith
+      expect(result.totalUniqueUsers).toBe(3); // USerA, JohnDoe, AliceSmith
       expect(result.usersExceedingQuota).toBe(1); // Only JohnDoe exceeds quota
       expect(result.requestsByModel).toHaveLength(4); // 4 different models
     });
@@ -264,6 +271,83 @@ describe('CSV Data Processing', () => {
       
       expect(result.powerUsers.length).toBeLessThanOrEqual(20);
       expect(result.totalQualifiedUsers).toBe(25);
+    });
+  });
+
+  describe('calculateSpecialFeaturesScore', () => {
+    it('should return 0 for no special features', () => {
+      const models = ['gpt-4', 'claude-3-sonnet', 'gemini-pro'];
+      const score = calculateSpecialFeaturesScore(models);
+      expect(score).toBe(0);
+    });
+
+    it('should calculate score for single special feature', () => {
+      const models = ['gpt-4', 'Code Review', 'claude-3'];
+      const score = calculateSpecialFeaturesScore(models);
+      expect(score).toBe(8); // code review score
+    });
+
+    it('should calculate score for multiple special features', () => {
+      const models = ['Code Review', 'Coding Agent', 'gpt-4'];
+      const score = calculateSpecialFeaturesScore(models);
+      expect(score).toBe(16); // code review (8) + coding agent (8)
+    });
+
+    it('should handle all special features', () => {
+      const models = ['Code Review', 'Coding Agent', 'Spark'];
+      const score = calculateSpecialFeaturesScore(models);
+      expect(score).toBe(20); // code review (8) + coding agent (8) + spark (4)
+    });
+
+    it('should handle Padawan as backward compatible name for Coding Agent', () => {
+      const models = ['Code Review', 'Padawan', 'Spark'];
+      const score = calculateSpecialFeaturesScore(models);
+      expect(score).toBe(20); // code review (8) + padawan/coding agent (8) + spark (4)
+    });
+
+    it('should cap score at maximum value', () => {
+      // Add extra models to test capping
+      const models = ['Code Review', 'Coding Agent', 'Spark', 'gpt-4', 'claude-3'];
+      const score = calculateSpecialFeaturesScore(models);
+      expect(score).toBe(20); // code review (8) + coding agent (8) + spark (4) = 20
+    });
+
+    it('should not count both Padawan and Coding Agent if somehow both present', () => {
+      // Edge case: if both old and new names appear, should only count once
+      const models = ['Padawan', 'Coding Agent', 'Code Review'];
+      const score = calculateSpecialFeaturesScore(models);
+      expect(score).toBe(16); // code review (8) + coding agent/padawan (8) - counted only once
+    });
+
+    it('should not duplicate scores for same feature type', () => {
+      const models = ['Code Review', 'Code Review', 'gpt-4'];
+      const score = calculateSpecialFeaturesScore(models);
+      expect(score).toBe(8); // only count code review once
+    });
+
+    it('should handle empty model list', () => {
+      const score = calculateSpecialFeaturesScore([]);
+      expect(score).toBe(0);
+    });
+
+    it('should handle exact model name matching only', () => {
+      // These are not actual special model names
+      const models = ['advanced-gpt-4', 'custom-spark-model', 'enhanced-agent'];
+      const score = calculateSpecialFeaturesScore(models);
+      expect(score).toBe(0); // No exact matches
+    });
+
+    it('should validate SPECIAL_FEATURES_CONFIG structure', () => {
+      expect(SPECIAL_FEATURES_CONFIG).toEqual([
+        { keyword: 'code review', score: 8, description: 'Code Review feature usage' },
+        { keyword: 'coding agent', score: 8, description: 'Coding Agent feature usage' },
+        { keyword: 'padawan', score: 8, description: 'Padawan feature usage' },
+        { keyword: 'spark', score: 4, description: 'Spark feature usage' }
+      ]);
+    });
+
+    it('should validate MAX_SPECIAL_FEATURES_SCORE constant', () => {
+      expect(MAX_SPECIAL_FEATURES_SCORE).toBe(20);
     });
   });
 });
