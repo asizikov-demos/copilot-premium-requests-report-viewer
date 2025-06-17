@@ -95,7 +95,7 @@ describe('CSVUploader', () => {
     parse.mockImplementation((file, config) => {
       setTimeout(() => {
         config.complete?.({
-          data: [{ Timestamp: '2025-06-03T11:05:27Z', User: 'TJGriff', Model: 'gpt-4.1-2025-04-14' }],
+          data: [{ Timestamp: '2025-06-03T11:05:27Z', User: 'USerA', Model: 'gpt-4.1-2025-04-14' }],
           errors: []
         });
       }, 0);
@@ -264,7 +264,7 @@ describe('CSVUploader', () => {
     parse.mockImplementation((file, config) => {
       setTimeout(() => {
         config.complete?.({
-          data: [{ User: 'TJGriff', Model: 'gpt-4.1-2025-04-14', 'Requests Used': '1.00' }],
+          data: [{ User: 'USerA', Model: 'gpt-4.1-2025-04-14', 'Requests Used': '1.00' }],
           errors: []
         });
       }, 0);
@@ -291,7 +291,7 @@ describe('CSVUploader', () => {
         config.complete?.({
           data: [{
             Timestamp: '2025-06-03T11:05:27Z',
-            User: 'TJGriff',
+            User: 'USerA',
             Model: 'gpt-4.1-2025-04-14',
             'Requests Used': '1.00',
             'Exceeds Monthly Quota': 'false',

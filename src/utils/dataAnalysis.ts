@@ -10,14 +10,42 @@ export interface UserSummary {
   modelBreakdown: Record<string, number>;
 }
 
-// Model classification constants
-const MODEL_CATEGORIES = {
+// Define proper types for model categories
+interface ModelCategories {
+  light: readonly string[];
+  heavy: readonly string[];
+  special: readonly string[];
+}
+
+interface SpecialFeatureConfig {
+  readonly keyword: string;
+  readonly score: number;
+  readonly description: string;
+}
+
+// Configuration for special features with scores
+// 'padawan' is a legacy name for 'coding agent'. it's kept for backward compatibility with old reports exported before the model was renamed.
+const SPECIAL_FEATURES_CONFIG: readonly SpecialFeatureConfig[] = [
+  { keyword: 'code review', score: 8, description: 'Code Review feature usage' },
+  { keyword: 'coding agent', score: 8, description: 'Coding Agent feature usage' },
+  { keyword: 'padawan', score: 8, description: 'Padawan feature usage' },
+  { keyword: 'spark', score: 4, description: 'Spark feature usage' }
+] as const;
+
+// Maximum possible special features score
+const MAX_SPECIAL_FEATURES_SCORE = 20;
+
+// Model classification with proper typing
+const MODEL_CATEGORIES: ModelCategories = {
   light: ['gemini-2.0-flash', 'o3-mini', 'o-4-mini'],
   heavy: ['claude-opus-4', 'claude-3.7-sonnet-thought', 'o3', 'o4', 'gpt-4.5'],
-  special: ['Code Review', 'Coding Agent', 'Padawan', 'Spark']
-};
+  special: SPECIAL_FEATURES_CONFIG.map(f => f.keyword)
+} as const;
 
-function categorizeModel(modelName: string): 'light' | 'medium' | 'heavy' | 'special' {
+// Type for model category
+type ModelCategory = 'light' | 'medium' | 'heavy' | 'special';
+
+function categorizeModel(modelName: string): ModelCategory {
   const lowerModel = modelName.toLowerCase();
   
   // Check special models first
@@ -41,6 +69,31 @@ function categorizeModel(modelName: string): 'light' | 'medium' | 'heavy' | 'spe
 
 function isVisionModel(modelName: string): boolean {
   return modelName.toLowerCase().includes('-vision');
+}
+
+function calculateSpecialFeaturesScore(models: string[]): number {
+  const modelSet = new Set(models.map(m => m.toLowerCase()));
+  
+  let totalScore = 0;
+  const usedFeatureTypes = new Set<string>();
+  
+  const featureGroups = [
+    { type: 'code_review', keywords: ['code review'], score: 8 },
+    { type: 'coding_agent', keywords: ['coding agent', 'padawan'], score: 8 }, // Padawan is legacy name for Coding Agent
+    { type: 'spark', keywords: ['spark'], score: 4 }
+  ];
+  
+  for (const group of featureGroups) {
+    const hasFeature = group.keywords.some(keyword => modelSet.has(keyword));
+    
+    if (hasFeature && !usedFeatureTypes.has(group.type)) {
+      totalScore += group.score;
+      usedFeatureTypes.add(group.type);
+    }
+  }
+  
+  // Cap at maximum score
+  return Math.min(totalScore, MAX_SPECIAL_FEATURES_SCORE);
 }
 
 function calculatePowerUserScore(userSummary: UserSummary): PowerUserScore {
@@ -85,11 +138,7 @@ function calculatePowerUserScore(userSummary: UserSummary): PowerUserScore {
   // Calculate scores
   const diversityScore = Math.min(uniqueModels / 4, 1) * 30;
   
-  const specialFeaturesScore = Math.min(
-    (models.some(m => m.toLowerCase().includes('code review')) ? 10 : 0) +
-    (models.some(m => m.toLowerCase().includes('padawan')) ? 10 : 0),
-    20
-  );
+  const specialFeaturesScore = calculateSpecialFeaturesScore(models);
   
   const visionScore = Math.min((visionRequests / totalRequests) / 0.2, 1) * 15;
   
@@ -152,7 +201,6 @@ export function analyzeData(data: ProcessedData[]): AnalysisResults {
     };
   }
 
-  // Sort data by timestamp
   const sortedData = [...data].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
   
   // Time frame
@@ -374,3 +422,6 @@ Chart will show:
 - Day5: bar with Model2(2) = 2 total height
 - Black line: 18 → 18 → 33 → 33 → 35 (cumulative)
 */
+
+// Export utility functions for testing
+export { calculateSpecialFeaturesScore, SPECIAL_FEATURES_CONFIG, MAX_SPECIAL_FEATURES_SCORE };

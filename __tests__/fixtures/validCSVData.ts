@@ -3,7 +3,7 @@ import { CSVData } from '@/types/csv';
 export const validCSVData: CSVData[] = [
   {
     Timestamp: '2025-06-03T11:05:27Z',
-    User: 'TJGriff',
+    User: 'USerA',
     Model: 'gpt-4.1-2025-04-14',
     'Requests Used': '1.00',
     'Exceeds Monthly Quota': 'false',
@@ -27,7 +27,7 @@ export const validCSVData: CSVData[] = [
   },
   {
     Timestamp: '2025-06-04T16:45:12Z',
-    User: 'TJGriff',
+    User: 'USerA',
     Model: 'o3-mini',
     'Requests Used': '1.25',
     'Exceeds Monthly Quota': 'false',
@@ -36,10 +36,10 @@ export const validCSVData: CSVData[] = [
 ];
 
 export const validCSVString = `Timestamp,User,Model,Requests Used,Exceeds Monthly Quota,Total Monthly Quota
-2025-06-03T11:05:27Z,TJGriff,gpt-4.1-2025-04-14,1.00,false,Unlimited
+2025-06-03T11:05:27Z,USerA,gpt-4.1-2025-04-14,1.00,false,Unlimited
 2025-06-03T14:22:15Z,JohnDoe,claude-3.7-sonnet-thought,2.50,true,100
 2025-06-04T09:15:30Z,AliceSmith,gemini-2.0-flash,0.75,false,Unlimited
-2025-06-04T16:45:12Z,TJGriff,o3-mini,1.25,false,Unlimited`;
+2025-06-04T16:45:12Z,USerA,o3-mini,1.25,false,Unlimited`;
 
 export const powerUserCSVData: CSVData[] = [
   {
