@@ -4,7 +4,9 @@ import {
   analyzePowerUsers, 
   calculateSpecialFeaturesScore, 
   SPECIAL_FEATURES_CONFIG, 
-  MAX_SPECIAL_FEATURES_SCORE 
+  MAX_SPECIAL_FEATURES_SCORE,
+  containsJune2025Data,
+  filterEarlyJune2025
 } from '@/utils/dataAnalysis';
 import { CSVData, ProcessedData } from '@/types/csv';
 import { validCSVData, powerUserCSVData } from '../fixtures/validCSVData';
@@ -348,6 +350,95 @@ describe('CSV Data Processing', () => {
 
     it('should validate MAX_SPECIAL_FEATURES_SCORE constant', () => {
       expect(MAX_SPECIAL_FEATURES_SCORE).toBe(20);
+    });
+  });
+
+  describe('Date Filtering Functions', () => {
+    const createTestDataForDate = (dateString: string): ProcessedData => ({
+      timestamp: new Date(dateString),
+      user: 'TestUser',
+      model: 'test-model',
+      requestsUsed: 1.0,
+      exceedsQuota: false,
+      totalQuota: '100'
+    });
+
+    describe('containsJune2025Data', () => {
+      it('should return true when data contains June 2025', () => {
+        const data = [
+          createTestDataForDate('2025-05-15T10:00:00Z'), // May 2025
+          createTestDataForDate('2025-06-10T10:00:00Z'), // June 2025
+          createTestDataForDate('2025-07-15T10:00:00Z')  // July 2025
+        ];
+        
+        expect(containsJune2025Data(data)).toBe(true);
+      });
+
+      it('should return false when data does not contain June 2025', () => {
+        const data = [
+          createTestDataForDate('2025-05-15T10:00:00Z'), // May 2025
+          createTestDataForDate('2025-07-15T10:00:00Z'), // July 2025
+          createTestDataForDate('2024-06-15T10:00:00Z')  // June 2024
+        ];
+        
+        expect(containsJune2025Data(data)).toBe(false);
+      });
+
+      it('should return false for empty data', () => {
+        expect(containsJune2025Data([])).toBe(false);
+      });
+    });
+
+    describe('filterEarlyJune2025', () => {
+      it('should filter out data from June 1-18, 2025', () => {
+        const data = [
+          createTestDataForDate('2025-06-01T10:00:00Z'), // Should be filtered
+          createTestDataForDate('2025-06-15T10:00:00Z'), // Should be filtered
+          createTestDataForDate('2025-06-18T10:00:00Z'), // Should be filtered (boundary)
+          createTestDataForDate('2025-06-19T10:00:00Z'), // Should be kept
+          createTestDataForDate('2025-06-25T10:00:00Z'), // Should be kept
+          createTestDataForDate('2025-05-15T10:00:00Z'), // Should be kept (different month)
+          createTestDataForDate('2025-07-15T10:00:00Z')  // Should be kept (different month)
+        ];
+
+        const filtered = filterEarlyJune2025(data);
+        
+        expect(filtered).toHaveLength(4);
+        expect(filtered.map(d => d.timestamp.toISOString())).toEqual([
+          '2025-06-19T10:00:00.000Z',
+          '2025-06-25T10:00:00.000Z',
+          '2025-05-15T10:00:00.000Z',
+          '2025-07-15T10:00:00.000Z'
+        ]);
+      });
+
+      it('should keep all data when no June 2025 data exists', () => {
+        const data = [
+          createTestDataForDate('2025-05-15T10:00:00Z'),
+          createTestDataForDate('2025-07-15T10:00:00Z'),
+          createTestDataForDate('2024-06-15T10:00:00Z')
+        ];
+
+        const filtered = filterEarlyJune2025(data);
+        expect(filtered).toHaveLength(3);
+        expect(filtered).toEqual(data);
+      });
+
+      it('should handle empty data', () => {
+        const filtered = filterEarlyJune2025([]);
+        expect(filtered).toEqual([]);
+      });
+
+      it('should correctly handle boundary dates', () => {
+        const data = [
+          createTestDataForDate('2025-06-18T23:59:59Z'), // Last moment of 18th - should be filtered
+          createTestDataForDate('2025-06-19T00:00:00Z')  // First moment of 19th - should be kept
+        ];
+
+        const filtered = filterEarlyJune2025(data);
+        expect(filtered).toHaveLength(1);
+        expect(filtered[0].timestamp.toISOString()).toBe('2025-06-19T00:00:00.000Z');
+      });
     });
   });
 });

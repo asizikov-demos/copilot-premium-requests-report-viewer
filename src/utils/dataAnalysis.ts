@@ -423,5 +423,29 @@ Chart will show:
 - Black line: 18 → 18 → 33 → 33 → 35 (cumulative)
 */
 
+// Helper function to check if CSV data contains June 2025 data
+export function containsJune2025Data(data: ProcessedData[]): boolean {
+  return data.some(row => {
+    const isoString = row.timestamp.toISOString();
+    return isoString.startsWith('2025-06-');
+  });
+}
+
+// Helper function to filter out early June 2025 data (1st-18th June 2025)
+export function filterEarlyJune2025(data: ProcessedData[]): ProcessedData[] {
+  return data.filter(row => {
+    const isoString = row.timestamp.toISOString();
+    
+    // Check if it's June 2025
+    if (!isoString.startsWith('2025-06-')) {
+      return true; // Keep all non-June 2025 data
+    }
+    
+    // Extract the day from the ISO string (YYYY-MM-DD format)
+    const day = parseInt(isoString.substring(8, 10), 10);
+    return day > 18; // Only keep data from 19th June onwards
+  });
+}
+
 // Export utility functions for testing
 export { calculateSpecialFeaturesScore, SPECIAL_FEATURES_CONFIG, MAX_SPECIAL_FEATURES_SCORE };
