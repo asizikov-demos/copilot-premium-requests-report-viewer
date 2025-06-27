@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { CSVData } from '@/types/csv';
-import { processCSVData, analyzeData, analyzeUserData, generateDailyCumulativeData, analyzePowerUsers } from '@/utils/dataAnalysis';
+import { processCSVData, analyzeData, analyzeUserData, generateDailyCumulativeData, analyzePowerUsers, containsJune2025Data, filterEarlyJune2025 } from '@/utils/dataAnalysis';
 import { UsersOverview } from './UsersOverview';
 import { PowerUsersOverview } from './PowerUsersOverview';
 
@@ -23,17 +23,23 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
   const [showUsersOverview, setShowUsersOverview] = useState(false);
   const [showPowerUsers, setShowPowerUsers] = useState(false);
   const [minRequestsThreshold, setMinRequestsThreshold] = useState(DEFAULT_MIN_REQUESTS);
+  const [excludeEarlyJune, setExcludeEarlyJune] = useState(false);
   
-  const { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, processedData } = useMemo(() => {
+  const { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, processedData, hasJune2025Data } = useMemo(() => {
     const processedData = processCSVData(csvData);
-    const analysis = analyzeData(processedData);
-    const userData = analyzeUserData(processedData);
-    const allModels = Array.from(new Set(processedData.map(d => d.model))).sort();
-    const dailyCumulativeData = generateDailyCumulativeData(processedData);
-    const powerUsersAnalysis = analyzePowerUsers(processedData, minRequestsThreshold);
+    const hasJune2025Data = containsJune2025Data(processedData);
     
-    return { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, processedData };
-  }, [csvData, minRequestsThreshold]);
+    // Apply early June filter if enabled
+    const filteredData = excludeEarlyJune ? filterEarlyJune2025(processedData) : processedData;
+    
+    const analysis = analyzeData(filteredData);
+    const userData = analyzeUserData(filteredData);
+    const allModels = Array.from(new Set(filteredData.map(d => d.model))).sort();
+    const dailyCumulativeData = generateDailyCumulativeData(filteredData);
+    const powerUsersAnalysis = analyzePowerUsers(filteredData, minRequestsThreshold);
+    
+    return { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, processedData: filteredData, hasJune2025Data };
+  }, [csvData, minRequestsThreshold, excludeEarlyJune]);
 
   const chartData = analysis.requestsByModel.map(item => ({
     model: item.model.length > 20 ? `${item.model.substring(0, 20)}...` : item.model,
@@ -328,6 +334,27 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                   <option value="enterprise">Copilot Enterprise</option>
                 </select>
               </div>
+
+              {/* Date Filter */}
+              {hasJune2025Data && (
+                <div className="mb-6">
+                  <div className="flex items-center">
+                    <input
+                      id="exclude-early-june"
+                      type="checkbox"
+                      checked={excludeEarlyJune}
+                      onChange={(e) => setExcludeEarlyJune(e.target.checked)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="exclude-early-june" className="ml-2 block text-sm text-gray-700">
+                      Exclude data before 19th of June
+                    </label>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Filters out requests from June 1-18, 2025. These requests were not billable.
+                  </p>
+                </div>
+              )}
 
               {/* Information Block */}
               <div>
