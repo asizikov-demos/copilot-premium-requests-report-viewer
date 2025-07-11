@@ -1,11 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { CSVData } from '@/types/csv';
-import { processCSVData, analyzeData, analyzeUserData, generateDailyCumulativeData, analyzePowerUsers, containsJune2025Data, filterEarlyJune2025 } from '@/utils/dataAnalysis';
+import { processCSVData, analyzeData, analyzeUserData, generateDailyCumulativeData, analyzePowerUsers, containsJune2025Data, filterEarlyJune2025, getAvailableMonths, hasMultipleMonths, filterBySelectedMonths } from '@/utils/dataAnalysis';
 import { UsersOverview } from './UsersOverview';
 import { PowerUsersOverview } from './PowerUsersOverview';
+import { PRICING } from '@/constants/pricing';
 
 // Constants
 const DEFAULT_MIN_REQUESTS = 20;
@@ -24,13 +25,19 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
   const [showPowerUsers, setShowPowerUsers] = useState(false);
   const [minRequestsThreshold, setMinRequestsThreshold] = useState(DEFAULT_MIN_REQUESTS);
   const [excludeEarlyJune, setExcludeEarlyJune] = useState(false);
+  const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
   
-  const { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, processedData, hasJune2025Data } = useMemo(() => {
+  const { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, processedData, hasJune2025Data, availableMonths, hasMultipleMonthsData } = useMemo(() => {
     const processedData = processCSVData(csvData);
     const hasJune2025Data = containsJune2025Data(processedData);
+    const availableMonths = getAvailableMonths(processedData);
+    const hasMultipleMonthsData = hasMultipleMonths(processedData);
     
     // Apply early June filter if enabled
-    const filteredData = excludeEarlyJune ? filterEarlyJune2025(processedData) : processedData;
+    let filteredData = excludeEarlyJune ? filterEarlyJune2025(processedData) : processedData;
+    
+    // Apply billing period filter if months are selected
+    filteredData = filterBySelectedMonths(filteredData, selectedMonths);
     
     const analysis = analyzeData(filteredData);
     const userData = analyzeUserData(filteredData);
@@ -38,8 +45,15 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
     const dailyCumulativeData = generateDailyCumulativeData(filteredData);
     const powerUsersAnalysis = analyzePowerUsers(filteredData, minRequestsThreshold);
     
-    return { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, processedData: filteredData, hasJune2025Data };
-  }, [csvData, minRequestsThreshold, excludeEarlyJune]);
+    return { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, processedData: filteredData, hasJune2025Data, availableMonths, hasMultipleMonthsData };
+  }, [csvData, minRequestsThreshold, excludeEarlyJune, selectedMonths]);
+
+  // Auto-select plan based on quota analysis
+  useEffect(() => {
+    if (analysis.quotaBreakdown.suggestedPlan) {
+      setSelectedPlan(analysis.quotaBreakdown.suggestedPlan);
+    }
+  }, [analysis.quotaBreakdown.suggestedPlan]);
 
   const chartData = analysis.requestsByModel.map(item => ({
     model: item.model.length > 20 ? `${item.model.substring(0, 20)}...` : item.model,
@@ -50,11 +64,11 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
   const planInfo = {
     business: {
       name: 'Copilot Business',
-      monthlyQuota: 300
+      monthlyQuota: PRICING.BUSINESS_QUOTA
     },
     enterprise: {
       name: 'Copilot Enterprise', 
-      monthlyQuota: 1000
+      monthlyQuota: PRICING.ENTERPRISE_QUOTA
     }
   };
 
@@ -356,16 +370,74 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                 </div>
               )}
 
+              {/* Billing Period Filter */}
+              {hasMultipleMonthsData && (
+                <div className="mb-6">
+                  <label htmlFor="billing-period" className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Billing Period
+                  </label>
+                  <select
+                    id="billing-period"
+                    multiple
+                    value={selectedMonths}
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.selectedOptions, option => option.value);
+                      setSelectedMonths(selected);
+                    }}
+                    className="block w-full pl-3 pr-10 py-2 text-base text-black border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                    size={Math.min(availableMonths.length, 4)}
+                  >
+                    {availableMonths.map(month => (
+                      <option key={month.value} value={month.value}>
+                        {month.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Hold Ctrl/Cmd to select multiple months. Leave empty to show all months.
+                  </p>
+                </div>
+              )}
+
               {/* Information Block */}
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Information</h3>
                 <div className="space-y-4">
+                  {/* Quota Breakdown */}
+                  {analysis.quotaBreakdown.mixed && (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <h4 className="text-sm font-medium text-amber-800 mb-2">Mixed License Types Detected</h4>
+                      <div className="text-xs text-amber-700 space-y-1">
+                        {analysis.quotaBreakdown.business.length > 0 && (
+                          <div>• Business ({PRICING.BUSINESS_QUOTA}): {analysis.quotaBreakdown.business.length} users</div>
+                        )}
+                        {analysis.quotaBreakdown.enterprise.length > 0 && (
+                          <div>• Enterprise ({PRICING.ENTERPRISE_QUOTA}): {analysis.quotaBreakdown.enterprise.length} users</div>
+                        )}
+                        {analysis.quotaBreakdown.unlimited.length > 0 && (
+                          <div>• Unlimited: {analysis.quotaBreakdown.unlimited.length} users</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <span className="text-sm font-medium text-gray-700">Monthly Quota:</span>
                     <span className="text-sm font-semibold text-blue-600">
-                      {planInfo[selectedPlan].monthlyQuota} premium requests
+                      {analysis.quotaBreakdown.mixed 
+                        ? `Mixed (${planInfo[selectedPlan].monthlyQuota} selected)`
+                        : `${planInfo[selectedPlan].monthlyQuota} premium requests`
+                      }
                     </span>
                   </div>
+                  
+                  {analysis.quotaBreakdown.suggestedPlan && !analysis.quotaBreakdown.mixed && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="text-xs text-blue-700">
+                        💡 Auto-selected {planInfo[analysis.quotaBreakdown.suggestedPlan].name} based on CSV quota data
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

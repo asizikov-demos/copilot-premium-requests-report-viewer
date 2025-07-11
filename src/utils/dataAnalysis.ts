@@ -1,4 +1,5 @@
 import { CSVData, ProcessedData, AnalysisResults, PowerUserScore, PowerUsersAnalysis } from '@/types/csv';
+import { PRICING } from '@/constants/pricing';
 
 // Constants
 const DEFAULT_MIN_REQUESTS = 20;
@@ -180,6 +181,16 @@ function calculatePowerUserScore(userSummary: UserSummary): PowerUserScore {
   };
 }
 
+// Parse quota value from string
+function parseQuotaValue(quotaString: string): number | 'unlimited' {
+  const trimmed = quotaString.trim().toLowerCase();
+  if (trimmed === 'unlimited') {
+    return 'unlimited';
+  }
+  const parsed = parseInt(trimmed, 10);
+  return isNaN(parsed) ? 'unlimited' : parsed;
+}
+
 export function processCSVData(rawData: CSVData[]): ProcessedData[] {
   return rawData.map(row => ({
     timestamp: new Date(row.Timestamp),
@@ -187,7 +198,8 @@ export function processCSVData(rawData: CSVData[]): ProcessedData[] {
     model: row.Model,
     requestsUsed: parseFloat(row['Requests Used']),
     exceedsQuota: row['Exceeds Monthly Quota'].toLowerCase() === 'true',
-    totalQuota: row['Total Monthly Quota']
+    totalQuota: row['Total Monthly Quota'],
+    quotaValue: parseQuotaValue(row['Total Monthly Quota'])
   }));
 }
 
@@ -197,7 +209,14 @@ export function analyzeData(data: ProcessedData[]): AnalysisResults {
       timeFrame: { start: '', end: '' },
       totalUniqueUsers: 0,
       usersExceedingQuota: 0,
-      requestsByModel: []
+      requestsByModel: [],
+      quotaBreakdown: {
+        unlimited: [],
+        business: [],
+        enterprise: [],
+        mixed: false,
+        suggestedPlan: null
+      }
     };
   }
 
@@ -209,14 +228,67 @@ export function analyzeData(data: ProcessedData[]): AnalysisResults {
     end: sortedData[sortedData.length - 1].timestamp.toISOString().split('T')[0]
   };
 
-  // Unique users
+  // Unique users and their quota analysis
+  const userQuotas = new Map<string, number | 'unlimited'>();
+  data.forEach(row => {
+    if (!userQuotas.has(row.user)) {
+      userQuotas.set(row.user, row.quotaValue);
+    }
+  });
+
   const uniqueUsers = new Set(data.map(row => row.user));
   const totalUniqueUsers = uniqueUsers.size;
 
-  // Users exceeding quota
-  const usersExceedingQuota = new Set(
-    data.filter(row => row.exceedsQuota).map(row => row.user)
-  ).size;
+  // Build quota breakdown
+  const unlimited: string[] = [];
+  const business: string[] = [];
+  const enterprise: string[] = [];
+
+  for (const [user, quota] of userQuotas) {
+    if (quota === 'unlimited') {
+      unlimited.push(user);
+    } else if (quota === PRICING.BUSINESS_QUOTA) {
+      business.push(user);
+    } else if (quota === PRICING.ENTERPRISE_QUOTA) {
+      enterprise.push(user);
+    }
+  }
+
+  const quotaTypes = [
+    unlimited.length > 0 ? 'unlimited' : null,
+    business.length > 0 ? 'business' : null,
+    enterprise.length > 0 ? 'enterprise' : null
+  ].filter(Boolean);
+
+  const mixed = quotaTypes.length > 1;
+  
+  // Determine suggested plan
+  let suggestedPlan: 'business' | 'enterprise' | null = null;
+  if (!mixed && unlimited.length === 0) {
+    if (business.length > 0 && enterprise.length === 0) {
+      suggestedPlan = 'business';
+    } else if (enterprise.length > 0 && business.length === 0) {
+      suggestedPlan = 'enterprise';
+    }
+  }
+
+  // Users exceeding quota (considering their actual quotas)
+  const usersExceedingQuota = new Set<string>();
+  const userTotalRequests = new Map<string, number>();
+  
+  // Calculate total requests per user
+  data.forEach(row => {
+    const current = userTotalRequests.get(row.user) || 0;
+    userTotalRequests.set(row.user, current + row.requestsUsed);
+  });
+
+  // Check who exceeds their actual quota
+  for (const [user, totalRequests] of userTotalRequests) {
+    const userQuota = userQuotas.get(user);
+    if (userQuota && userQuota !== 'unlimited' && totalRequests > userQuota) {
+      usersExceedingQuota.add(user);
+    }
+  }
 
   // Requests by model
   const modelRequests = new Map<string, number>();
@@ -232,8 +304,15 @@ export function analyzeData(data: ProcessedData[]): AnalysisResults {
   return {
     timeFrame,
     totalUniqueUsers,
-    usersExceedingQuota,
-    requestsByModel
+    usersExceedingQuota: usersExceedingQuota.size,
+    requestsByModel,
+    quotaBreakdown: {
+      unlimited,
+      business,
+      enterprise,
+      mixed,
+      suggestedPlan
+    }
   };
 }
 
@@ -445,6 +524,58 @@ export function filterEarlyJune2025(data: ProcessedData[]): ProcessedData[] {
     const day = parseInt(isoString.substring(8, 10), 10);
     return day > 18; // Only keep data from 19th June onwards
   });
+}
+
+// Helper function to get available months from the data
+export function getAvailableMonths(data: ProcessedData[]): { value: string; label: string }[] {
+  const monthsSet = new Set<string>();
+  
+  data.forEach(row => {
+    const date = row.timestamp;
+    const monthKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+    monthsSet.add(monthKey);
+  });
+  
+  const months = Array.from(monthsSet).sort();
+  
+  return months.map(monthKey => {
+    const [year, month] = monthKey.split('-');
+    const date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1));
+    const monthName = date.toLocaleDateString('en-US', { 
+      month: 'long', 
+      year: 'numeric',
+      timeZone: 'UTC'
+    });
+    
+    return {
+      value: monthKey,
+      label: monthName
+    };
+  });
+}
+
+// Helper function to check if data spans multiple months
+export function hasMultipleMonths(data: ProcessedData[]): boolean {
+  return getAvailableMonths(data).length > 1;
+}
+
+// Helper function to filter data by selected months
+export function filterBySelectedMonths(data: ProcessedData[], selectedMonths: string[]): ProcessedData[] {
+  if (selectedMonths.length === 0) {
+    return data; // If no months selected, return all data
+  }
+  
+  return data.filter(row => {
+    const date = row.timestamp;
+    const monthKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+    return selectedMonths.includes(monthKey);
+  });
+}
+
+// Helper function to get a user's quota value from processed data
+export function getUserQuotaValue(data: ProcessedData[], userName: string): number | 'unlimited' {
+  const userRecord = data.find(d => d.user === userName);
+  return userRecord?.quotaValue || 'unlimited';
 }
 
 // Export utility functions for testing

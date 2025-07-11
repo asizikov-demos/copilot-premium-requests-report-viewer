@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { UserSummary, DailyCumulativeData } from '@/utils/dataAnalysis';
+import { UserSummary, DailyCumulativeData, getUserQuotaValue } from '@/utils/dataAnalysis';
 import { ProcessedData } from '@/types/csv';
 import { UserConsumptionModal } from './UserConsumptionModal';
 import { calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
@@ -56,22 +56,35 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
   const planInfo = {
     business: {
       name: 'Copilot Business',
-      monthlyQuota: 300
+      monthlyQuota: PRICING.BUSINESS_QUOTA
     },
     enterprise: {
       name: 'Copilot Enterprise', 
-      monthlyQuota: 1000
+      monthlyQuota: PRICING.ENTERPRISE_QUOTA
     }
   };
 
   const currentQuota = planInfo[selectedPlan].monthlyQuota;
   
-  // Calculate total overage cost
+  // Calculate total overage cost considering user-specific quotas
   const totalOverageRequests = userData.reduce((total, user) => {
-    const overage = calculateOverageRequests(user.totalRequests, currentQuota);
+    const userQuota = getUserQuotaValue(processedData, user.user);
+    const effectiveQuota = userQuota === 'unlimited' ? Infinity : userQuota;
+    const overage = calculateOverageRequests(user.totalRequests, effectiveQuota);
     return total + overage;
   }, 0);
   const totalOverageCost = calculateOverageCost(totalOverageRequests);
+  
+  // Detect if we have mixed quota types for chart display
+  const quotaTypes = new Set<number>();
+  userData.forEach(user => {
+    const userQuota = getUserQuotaValue(processedData, user.user);
+    if (userQuota !== 'unlimited') {
+      quotaTypes.add(userQuota);
+    }
+  });
+  const hasMixedQuotas = quotaTypes.size > 1;
+  const hasMixedLicenses = quotaTypes.has(PRICING.BUSINESS_QUOTA) && quotaTypes.has(PRICING.ENTERPRISE_QUOTA);
   
   // Handle sorting
   const handleSort = (column: string) => {
@@ -115,7 +128,13 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
           <h3 className="text-lg font-medium text-gray-900">Users Overview</h3>
           <div className="flex flex-col sm:flex-row sm:items-center sm:gap-6 mt-1">
             <p className="text-sm text-gray-500">
-              {planInfo[selectedPlan].name} - {currentQuota} premium requests/month
+              {hasMixedLicenses ? (
+                <>
+                  Mixed Licenses - Business ({PRICING.BUSINESS_QUOTA}) & Enterprise ({PRICING.ENTERPRISE_QUOTA}) premium requests/month
+                </>
+              ) : (
+                `${planInfo[selectedPlan].name} - ${currentQuota} premium requests/month`
+              )}
             </p>
             {totalOverageRequests > 0 && (
               <p className="text-sm text-red-600 font-medium">
@@ -170,7 +189,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
                   fontSize={12}
                   tickFormatter={(value) => {
                     const date = new Date(value);
-                    return `${date.getMonth() + 1}/${date.getDate()}`;
+                    return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
                   }}
                 />
                 <YAxis 
@@ -181,21 +200,44 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
                 <Tooltip 
                   labelFormatter={(label) => {
                     const date = new Date(label);
-                    return date.toLocaleDateString();
+                    return date.toLocaleDateString('en-US', { timeZone: 'UTC' });
                   }}
                   formatter={(value: number, name: string) => [
                     `${value.toFixed(1)} requests`,
                     name
                   ]}
                 />
-                {/* Quota reference line */}
-                <ReferenceLine 
-                  y={currentQuota} 
-                  stroke="#ef4444" 
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  label={{ value: `${currentQuota} quota limit`, position: "insideTopRight" }}
-                />
+                {/* Quota reference lines */}
+                {hasMixedQuotas ? (
+                  <>
+                    {quotaTypes.has(PRICING.BUSINESS_QUOTA) && (
+                      <ReferenceLine 
+                        y={PRICING.BUSINESS_QUOTA} 
+                        stroke="#f97316" 
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        label={{ value: `${PRICING.BUSINESS_QUOTA} Business quota`, position: "insideTopRight" }}
+                      />
+                    )}
+                    {quotaTypes.has(PRICING.ENTERPRISE_QUOTA) && (
+                      <ReferenceLine 
+                        y={PRICING.ENTERPRISE_QUOTA} 
+                        stroke="#dc2626" 
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        label={{ value: `${PRICING.ENTERPRISE_QUOTA} Enterprise quota`, position: "insideTopRight" }}
+                      />
+                    )}
+                  </>
+                ) : (
+                  <ReferenceLine 
+                    y={currentQuota} 
+                    stroke="#ef4444" 
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    label={{ value: `${currentQuota} quota limit`, position: "insideTopRight" }}
+                  />
+                )}
                 {/* User lines */}
                 {chartUsers.map((user) => (
                   <Line
@@ -220,7 +262,12 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
           {/* Mobile Summary Cards */}
           {isMobile && (
             <div className="p-4 space-y-3 sm:hidden">
-              {sortedUserData.slice(0, 5).map((user) => (
+              {sortedUserData.slice(0, 5).map((user) => {
+                const userQuota = getUserQuotaValue(processedData, user.user);
+                const isOverQuota = userQuota !== 'unlimited' && user.totalRequests > userQuota;
+                const quotaDisplay = userQuota === 'unlimited' ? 'Unlimited' : `${userQuota}`;
+                
+                return (
                 <button
                   key={user.user}
                   onClick={() => setSelectedUser(user.user)}
@@ -231,14 +278,17 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
                       {user.user}
                     </h5>
                     <span className={`text-sm font-semibold ${
-                      user.totalRequests > currentQuota ? 'text-red-600' : 'text-blue-600'
+                      isOverQuota ? 'text-red-600' : 'text-blue-600'
                     }`}>
                       {user.totalRequests.toFixed(1)}
                     </span>
                   </div>
-                  {user.totalRequests > currentQuota && (
+                  <div className="text-xs text-gray-500 mb-1">
+                    Quota: {quotaDisplay}
+                  </div>
+                  {isOverQuota && (
                     <div className="text-xs text-red-500 mb-2">
-                      Exceeds quota by {(user.totalRequests - currentQuota).toFixed(1)}
+                      Exceeds quota by {(user.totalRequests - (userQuota as number)).toFixed(1)}
                     </div>
                   )}
                   <div className="text-xs text-gray-500">
@@ -246,7 +296,8 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
                       .sort(([,a], [,b]) => b - a)[0]?.[0] || 'None'}
                   </div>
                 </button>
-              ))}
+              )})}
+              
               
               {sortedUserData.length > 5 && (
                 <button 
@@ -266,6 +317,9 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky left-0 z-30 min-w-40 border-r border-gray-200">
                   User
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-24 bg-gray-50">
+                  Quota
                 </th>
                 <th 
                   className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-32 cursor-pointer hover:bg-gray-100 select-none ${
@@ -306,7 +360,12 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {sortedUserData.map((user, index) => (
+              {sortedUserData.map((user, index) => {
+                const userQuota = getUserQuotaValue(processedData, user.user);
+                const isOverQuota = userQuota !== 'unlimited' && user.totalRequests > userQuota;
+                const quotaDisplay = userQuota === 'unlimited' ? 'Unlimited' : userQuota.toString();
+                
+                return (
                 <tr key={user.user} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                   <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium sticky left-0 z-10 border-r border-gray-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                     <button
@@ -317,15 +376,18 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
                       {user.user}
                     </button>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {quotaDisplay}
+                  </td>
                   <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold ${
-                    user.totalRequests > currentQuota 
+                    isOverQuota 
                       ? 'text-red-600' 
                       : 'text-blue-600'
                   }`}>
                     {user.totalRequests.toFixed(2)}
-                    {user.totalRequests > currentQuota && (
+                    {isOverQuota && (
                       <span className="ml-2 text-xs text-red-500">
-                        (Exceeds quota by {(user.totalRequests - currentQuota).toFixed(2)})
+                        (Exceeds quota by {(user.totalRequests - (userQuota as number)).toFixed(2)})
                       </span>
                     )}
                   </td>
@@ -338,7 +400,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
                     </td>
                   ))}
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
           </div>
@@ -358,6 +420,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
           processedData={processedData}
           selectedPlan={selectedPlan}
           currentQuota={currentQuota}
+          userQuotaValue={getUserQuotaValue(processedData, selectedUser)}
           onClose={() => setSelectedUser(null)}
         />
       )}

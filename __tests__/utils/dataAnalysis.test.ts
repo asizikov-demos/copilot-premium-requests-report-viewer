@@ -6,7 +6,10 @@ import {
   SPECIAL_FEATURES_CONFIG, 
   MAX_SPECIAL_FEATURES_SCORE,
   containsJune2025Data,
-  filterEarlyJune2025
+  filterEarlyJune2025,
+  getAvailableMonths,
+  hasMultipleMonths,
+  filterBySelectedMonths
 } from '@/utils/dataAnalysis';
 import { CSVData, ProcessedData } from '@/types/csv';
 import { validCSVData, powerUserCSVData } from '../fixtures/validCSVData';
@@ -24,7 +27,8 @@ describe('CSV Data Processing', () => {
         model: 'gpt-4.1-2025-04-14',
         requestsUsed: 1.00,
         exceedsQuota: false,
-        totalQuota: 'Unlimited'
+        totalQuota: 'Unlimited',
+        quotaValue: 'unlimited'
       });
     });
 
@@ -99,7 +103,8 @@ describe('CSV Data Processing', () => {
         model: 'claude-3.7-sonnet-thought',
         requestsUsed: 2.50,
         exceedsQuota: true,
-        totalQuota: '100'
+        totalQuota: '100',
+        quotaValue: 100
       });
     });
 
@@ -122,7 +127,14 @@ describe('CSV Data Processing', () => {
         timeFrame: { start: '', end: '' },
         totalUniqueUsers: 0,
         usersExceedingQuota: 0,
-        requestsByModel: []
+        requestsByModel: [],
+        quotaBreakdown: {
+          unlimited: [],
+          business: [],
+          enterprise: [],
+          mixed: false,
+          suggestedPlan: null
+        }
       });
     });
 
@@ -131,7 +143,7 @@ describe('CSV Data Processing', () => {
       const result = analyzeData(processedData);
       
       expect(result.totalUniqueUsers).toBe(3); // USerA, JohnDoe, AliceSmith
-      expect(result.usersExceedingQuota).toBe(1); // Only JohnDoe exceeds quota
+      expect(result.usersExceedingQuota).toBe(0); // Nobody actually exceeds their quota (JohnDoe: 2.5/100, others unlimited)
       expect(result.requestsByModel).toHaveLength(4); // 4 different models
     });
 
@@ -360,7 +372,8 @@ describe('CSV Data Processing', () => {
       model: 'test-model',
       requestsUsed: 1.0,
       exceedsQuota: false,
-      totalQuota: '100'
+      totalQuota: '100',
+      quotaValue: 100
     });
 
     describe('containsJune2025Data', () => {
@@ -438,6 +451,94 @@ describe('CSV Data Processing', () => {
         const filtered = filterEarlyJune2025(data);
         expect(filtered).toHaveLength(1);
         expect(filtered[0].timestamp.toISOString()).toBe('2025-06-19T00:00:00.000Z');
+      });
+    });
+
+    describe('getAvailableMonths', () => {
+      it('should return available months from data', () => {
+        const data = [
+          createTestDataForDate('2025-06-15T10:00:00Z'),
+          createTestDataForDate('2025-07-15T10:00:00Z'),
+          createTestDataForDate('2025-06-20T10:00:00Z'),
+          createTestDataForDate('2025-08-15T10:00:00Z')
+        ];
+
+        const months = getAvailableMonths(data);
+        expect(months).toEqual([
+          { value: '2025-06', label: 'June 2025' },
+          { value: '2025-07', label: 'July 2025' },
+          { value: '2025-08', label: 'August 2025' }
+        ]);
+      });
+
+      it('should return empty array for no data', () => {
+        const months = getAvailableMonths([]);
+        expect(months).toEqual([]);
+      });
+
+      it('should handle single month', () => {
+        const data = [
+          createTestDataForDate('2025-06-15T10:00:00Z'),
+          createTestDataForDate('2025-06-20T10:00:00Z')
+        ];
+
+        const months = getAvailableMonths(data);
+        expect(months).toEqual([
+          { value: '2025-06', label: 'June 2025' }
+        ]);
+      });
+    });
+
+    describe('hasMultipleMonths', () => {
+      it('should return true for data spanning multiple months', () => {
+        const data = [
+          createTestDataForDate('2025-06-15T10:00:00Z'),
+          createTestDataForDate('2025-07-15T10:00:00Z')
+        ];
+
+        expect(hasMultipleMonths(data)).toBe(true);
+      });
+
+      it('should return false for data in single month', () => {
+        const data = [
+          createTestDataForDate('2025-06-15T10:00:00Z'),
+          createTestDataForDate('2025-06-20T10:00:00Z')
+        ];
+
+        expect(hasMultipleMonths(data)).toBe(false);
+      });
+
+      it('should return false for empty data', () => {
+        expect(hasMultipleMonths([])).toBe(false);
+      });
+    });
+
+    describe('filterBySelectedMonths', () => {
+      const testData = [
+        createTestDataForDate('2025-06-15T10:00:00Z'),
+        createTestDataForDate('2025-07-15T10:00:00Z'),
+        createTestDataForDate('2025-08-15T10:00:00Z'),
+        createTestDataForDate('2025-06-20T10:00:00Z')
+      ];
+
+      it('should filter by selected months', () => {
+        const filtered = filterBySelectedMonths(testData, ['2025-06', '2025-08']);
+        expect(filtered).toHaveLength(3);
+        expect(filtered.map(d => d.timestamp.toISOString())).toEqual([
+          '2025-06-15T10:00:00.000Z',
+          '2025-08-15T10:00:00.000Z',
+          '2025-06-20T10:00:00.000Z'
+        ]);
+      });
+
+      it('should return all data when no months selected', () => {
+        const filtered = filterBySelectedMonths(testData, []);
+        expect(filtered).toEqual(testData);
+      });
+
+      it('should return empty array when no data matches selected months', () => {
+        const filtered = filterBySelectedMonths(testData, ['2025-12']);
+        expect(filtered).toEqual([]);
       });
     });
   });

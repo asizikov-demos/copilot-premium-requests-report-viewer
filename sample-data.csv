@@ -1,0 +1,11 @@
+Timestamp,User,Model,Requests Used,Exceeds Monthly Quota,Total Monthly Quota
+2025-06-01T10:00:00Z,UserA,gpt-4.1-2025-04-14,5.00,false,Unlimited
+2025-06-15T11:00:00Z,UserB,claude-3.5-sonnet-2024-10-22,10.50,false,Unlimited
+2025-06-20T12:00:00Z,UserA,coding agent,2.00,false,Unlimited
+2025-07-01T10:00:00Z,UserC,gpt-4.1-2025-04-14,15.25,false,Unlimited
+2025-07-10T11:00:00Z,UserA,gemini-2.0-flash,8.00,false,Unlimited
+2025-07-15T12:00:00Z,UserB,claude-3.5-sonnet-2024-10-22,12.75,false,Unlimited
+2025-07-20T13:00:00Z,UserD,spark,3.50,false,Unlimited
+2025-08-01T10:00:00Z,UserA,gpt-4.1-2025-04-14,20.00,false,Unlimited
+2025-08-05T11:00:00Z,UserB,code review,5.00,false,Unlimited
+2025-08-10T12:00:00Z,UserC,o3-mini,7.25,false,Unlimited

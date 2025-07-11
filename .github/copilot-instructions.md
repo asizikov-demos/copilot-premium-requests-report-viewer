@@ -28,6 +28,21 @@ Timestamp,User,Model,Requests Used,Exceeds Monthly Quota,Total Monthly Quota
 2025-06-03T11:05:27Z,USerA,gpt-4.1-2025-04-14,1.00,false,Unlimited
 ```
 
+## Date Handling - CRITICAL
+**NEVER convert dates to local timezone.** This is a billing report and date accuracy is crucial:
+- Always treat timestamps exactly as they appear in the CSV
+- If a timestamp says "June 30th, 2025 at 23:59:59Z", it should be treated as June 30th, 2025
+- Billing periods start on the 1st day of the month and end on the last day of the month
+- Use UTC dates consistently throughout the application
+- When grouping by months/days, use the exact date from the timestamp without timezone conversion
+
+## Quota Types Support
+The application supports mixed quota types in the Total Monthly Quota column:
+- "Unlimited" - No quota limit
+- "300" - Business SKU (300 premium requests per month)
+- "1000" - Enterprise SKU (1000 premium requests per month)
+- Mixed environments are supported with appropriate UI indicators
+
 ## Component Architecture
 - Keep components small and focused on single responsibilities
 - Use proper TypeScript typing for all props and state
