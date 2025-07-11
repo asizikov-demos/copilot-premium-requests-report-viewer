@@ -131,6 +131,20 @@ export function UserConsumptionModal({
     enterprise: { name: 'Copilot Enterprise', monthlyQuota: 1000 }
   };
 
+  // Determine the user's actual plan based on their quota value
+  const userActualPlan = useMemo(() => {
+    if (userQuotaValue === 'unlimited') {
+      return 'unlimited';
+    } else if (userQuotaValue === 300) {
+      return 'business';
+    } else if (userQuotaValue === 1000) {
+      return 'enterprise';
+    } else {
+      // Fallback to closest match
+      return userQuotaValue < 650 ? 'business' : 'enterprise';
+    }
+  }, [userQuotaValue]);
+
   // Define proper types for tooltip data
   interface TooltipEntry {
     dataKey: string;
@@ -232,7 +246,10 @@ export function UserConsumptionModal({
             </button>
             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-6 mt-1">
               <p className="text-xs sm:text-sm text-gray-500 truncate">
-                {planInfo[selectedPlan].name} - Daily Usage Overview
+                {userActualPlan === 'unlimited' 
+                  ? 'Unlimited Plan' 
+                  : planInfo[userActualPlan as 'business' | 'enterprise'].name
+                } - Daily Usage Overview
               </p>
               <p className="text-xs sm:text-sm text-gray-500 truncate">
                 Total requests: {userTotalRequests.toFixed(1)} / {userQuotaValue === 'unlimited' ? 'Unlimited' : userQuotaValue} quota
