@@ -73,8 +73,6 @@ export interface UserDailyData {
 export interface UserConsumptionModalProps {
   user: string;
   processedData: ProcessedData[]; // Raw data filtered for this user
-  selectedPlan: 'business' | 'enterprise';
-  currentQuota: number;
   userQuotaValue: number | 'unlimited'; // User's actual quota from CSV
   onClose: () => void;
 }

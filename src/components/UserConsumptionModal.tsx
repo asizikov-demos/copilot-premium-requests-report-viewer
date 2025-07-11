@@ -40,8 +40,6 @@ const generateModelColors = (models: string[]): Record<string, string> => {
 export function UserConsumptionModal({ 
   user, 
   processedData, 
-  selectedPlan, 
-  currentQuota, 
   userQuotaValue,
   onClose 
 }: UserConsumptionModalProps) {

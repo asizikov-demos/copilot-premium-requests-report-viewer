@@ -418,8 +418,6 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
         <UserConsumptionModal
           user={selectedUser}
           processedData={processedData}
-          selectedPlan={selectedPlan}
-          currentQuota={currentQuota}
           userQuotaValue={getUserQuotaValue(processedData, selectedUser)}
           onClose={() => setSelectedUser(null)}
         />

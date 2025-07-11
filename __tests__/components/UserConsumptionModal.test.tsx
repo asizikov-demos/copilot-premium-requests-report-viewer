@@ -66,8 +66,6 @@ describe('UserConsumptionModal', () => {
         <UserConsumptionModal
           user="User1"
           processedData={processedData}
-          selectedPlan="business"
-          currentQuota={300}
           userQuotaValue={300}
           onClose={mockOnClose}
         />
@@ -89,8 +87,6 @@ describe('UserConsumptionModal', () => {
         <UserConsumptionModal
           user="User1"
           processedData={processedData}
-          selectedPlan="enterprise"
-          currentQuota={1000}
           userQuotaValue={1000}
           onClose={mockOnClose}
         />
@@ -112,8 +108,6 @@ describe('UserConsumptionModal', () => {
         <UserConsumptionModal
           user="User1"
           processedData={processedData}
-          selectedPlan="business"
-          currentQuota={300}
           userQuotaValue={300}
           onClose={mockOnClose}
         />
@@ -135,8 +129,6 @@ describe('UserConsumptionModal', () => {
         <UserConsumptionModal
           user="User1"
           processedData={processedData}
-          selectedPlan="business"
-          currentQuota={300}
           userQuotaValue="unlimited"
           onClose={mockOnClose}
         />
@@ -158,8 +150,6 @@ describe('UserConsumptionModal', () => {
         <UserConsumptionModal
           user="User1"
           processedData={processedData}
-          selectedPlan="business"
-          currentQuota={300}
           userQuotaValue={300}
           onClose={mockOnClose}
         />
@@ -181,8 +171,6 @@ describe('UserConsumptionModal', () => {
         <UserConsumptionModal
           user="User1"
           processedData={processedData}
-          selectedPlan="enterprise"
-          currentQuota={1000}
           userQuotaValue={1000}
           onClose={mockOnClose}
         />
