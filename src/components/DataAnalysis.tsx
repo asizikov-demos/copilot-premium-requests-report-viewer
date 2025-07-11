@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { CSVData } from '@/types/csv';
 import { processCSVData, analyzeData, analyzeUserData, generateDailyCumulativeData, analyzePowerUsers, containsJune2025Data, filterEarlyJune2025, getAvailableMonths, hasMultipleMonths, filterBySelectedMonths } from '@/utils/dataAnalysis';
@@ -46,6 +46,13 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
     
     return { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, processedData: filteredData, hasJune2025Data, availableMonths, hasMultipleMonthsData };
   }, [csvData, minRequestsThreshold, excludeEarlyJune, selectedMonths]);
+
+  // Auto-select plan based on quota analysis
+  useEffect(() => {
+    if (analysis.quotaBreakdown.suggestedPlan) {
+      setSelectedPlan(analysis.quotaBreakdown.suggestedPlan);
+    }
+  }, [analysis.quotaBreakdown.suggestedPlan]);
 
   const chartData = analysis.requestsByModel.map(item => ({
     model: item.model.length > 20 ? `${item.model.substring(0, 20)}...` : item.model,
@@ -395,12 +402,41 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Information</h3>
                 <div className="space-y-4">
+                  {/* Quota Breakdown */}
+                  {analysis.quotaBreakdown.mixed && (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <h4 className="text-sm font-medium text-amber-800 mb-2">Mixed License Types Detected</h4>
+                      <div className="text-xs text-amber-700 space-y-1">
+                        {analysis.quotaBreakdown.business.length > 0 && (
+                          <div>• Business (300): {analysis.quotaBreakdown.business.length} users</div>
+                        )}
+                        {analysis.quotaBreakdown.enterprise.length > 0 && (
+                          <div>• Enterprise (1000): {analysis.quotaBreakdown.enterprise.length} users</div>
+                        )}
+                        {analysis.quotaBreakdown.unlimited.length > 0 && (
+                          <div>• Unlimited: {analysis.quotaBreakdown.unlimited.length} users</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <span className="text-sm font-medium text-gray-700">Monthly Quota:</span>
                     <span className="text-sm font-semibold text-blue-600">
-                      {planInfo[selectedPlan].monthlyQuota} premium requests
+                      {analysis.quotaBreakdown.mixed 
+                        ? `Mixed (${planInfo[selectedPlan].monthlyQuota} selected)`
+                        : `${planInfo[selectedPlan].monthlyQuota} premium requests`
+                      }
                     </span>
                   </div>
+                  
+                  {analysis.quotaBreakdown.suggestedPlan && !analysis.quotaBreakdown.mixed && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="text-xs text-blue-700">
+                        💡 Auto-selected {planInfo[analysis.quotaBreakdown.suggestedPlan].name} based on CSV quota data
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

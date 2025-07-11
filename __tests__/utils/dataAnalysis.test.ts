@@ -27,7 +27,8 @@ describe('CSV Data Processing', () => {
         model: 'gpt-4.1-2025-04-14',
         requestsUsed: 1.00,
         exceedsQuota: false,
-        totalQuota: 'Unlimited'
+        totalQuota: 'Unlimited',
+        quotaValue: 'unlimited'
       });
     });
 
@@ -102,7 +103,8 @@ describe('CSV Data Processing', () => {
         model: 'claude-3.7-sonnet-thought',
         requestsUsed: 2.50,
         exceedsQuota: true,
-        totalQuota: '100'
+        totalQuota: '100',
+        quotaValue: 100
       });
     });
 
@@ -125,7 +127,14 @@ describe('CSV Data Processing', () => {
         timeFrame: { start: '', end: '' },
         totalUniqueUsers: 0,
         usersExceedingQuota: 0,
-        requestsByModel: []
+        requestsByModel: [],
+        quotaBreakdown: {
+          unlimited: [],
+          business: [],
+          enterprise: [],
+          mixed: false,
+          suggestedPlan: null
+        }
       });
     });
 
@@ -134,7 +143,7 @@ describe('CSV Data Processing', () => {
       const result = analyzeData(processedData);
       
       expect(result.totalUniqueUsers).toBe(3); // USerA, JohnDoe, AliceSmith
-      expect(result.usersExceedingQuota).toBe(1); // Only JohnDoe exceeds quota
+      expect(result.usersExceedingQuota).toBe(0); // Nobody actually exceeds their quota (JohnDoe: 2.5/100, others unlimited)
       expect(result.requestsByModel).toHaveLength(4); // 4 different models
     });
 
@@ -363,7 +372,8 @@ describe('CSV Data Processing', () => {
       model: 'test-model',
       requestsUsed: 1.0,
       exceedsQuota: false,
-      totalQuota: '100'
+      totalQuota: '100',
+      quotaValue: 100
     });
 
     describe('containsJune2025Data', () => {

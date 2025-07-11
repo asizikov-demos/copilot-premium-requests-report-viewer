@@ -14,9 +14,22 @@ export function calculateUserTotalRequests(
 }
 
 /**
- * Calculate overage requests for a user
+ * Calculate overage requests for a user based on their specific quota
  */
 export function calculateOverageRequests(
+  totalRequests: number, 
+  quota: number | 'unlimited'
+): number {
+  if (quota === 'unlimited') {
+    return 0;
+  }
+  return Math.max(0, totalRequests - quota);
+}
+
+/**
+ * Calculate overage requests for a user (legacy - maintains backward compatibility)
+ */
+export function calculateOverageRequestsLegacy(
   totalRequests: number, 
   quota: number
 ): number {

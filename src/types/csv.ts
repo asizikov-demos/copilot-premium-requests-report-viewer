@@ -14,6 +14,7 @@ export interface ProcessedData {
   requestsUsed: number;
   exceedsQuota: boolean;
   totalQuota: string;
+  quotaValue: number | 'unlimited'; // Parsed quota value
 }
 
 export interface AnalysisResults {
@@ -27,6 +28,13 @@ export interface AnalysisResults {
     model: string;
     totalRequests: number;
   }>;
+  quotaBreakdown: {
+    unlimited: string[];
+    business: string[]; // Users with 300 quota
+    enterprise: string[]; // Users with 1000 quota
+    mixed: boolean;
+    suggestedPlan: 'business' | 'enterprise' | null;
+  };
 }
 
 export interface PowerUserScore {
@@ -67,5 +75,6 @@ export interface UserConsumptionModalProps {
   processedData: ProcessedData[]; // Raw data filtered for this user
   selectedPlan: 'business' | 'enterprise';
   currentQuota: number;
+  userQuotaValue: number | 'unlimited'; // User's actual quota from CSV
   onClose: () => void;
 }

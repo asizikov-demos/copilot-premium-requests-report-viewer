@@ -42,6 +42,7 @@ export function UserConsumptionModal({
   processedData, 
   selectedPlan, 
   currentQuota, 
+  userQuotaValue,
   onClose 
 }: UserConsumptionModalProps) {
   const [mounted, setMounted] = useState(false);
@@ -68,10 +69,11 @@ export function UserConsumptionModal({
     return calculateUserTotalRequests(processedData, user);
   }, [processedData, user]);
 
-  // Calculate overage requests and cost using shared utilities
+  // Calculate overage requests and cost using user's actual quota
+  const effectiveQuota = userQuotaValue === 'unlimited' ? Infinity : userQuotaValue;
   const overageRequests = useMemo(() => {
-    return calculateOverageRequests(userTotalRequests, currentQuota);
-  }, [userTotalRequests, currentQuota]);
+    return calculateOverageRequests(userTotalRequests, effectiveQuota);
+  }, [userTotalRequests, effectiveQuota]);
 
   const overageCost = useMemo(() => {
     return calculateOverageCost(overageRequests);
@@ -233,9 +235,9 @@ export function UserConsumptionModal({
                 {planInfo[selectedPlan].name} - Daily Usage Overview
               </p>
               <p className="text-xs sm:text-sm text-gray-500 truncate">
-                Total requests: {userTotalRequests.toFixed(1)} / {currentQuota} quota
+                Total requests: {userTotalRequests.toFixed(1)} / {userQuotaValue === 'unlimited' ? 'Unlimited' : userQuotaValue} quota
               </p>
-              {overageRequests > 0 && (
+              {overageRequests > 0 && userQuotaValue !== 'unlimited' && (
                 <p className="text-xs sm:text-sm text-red-600 font-medium truncate" role="alert">
                   Overage cost: ${overageCost.toFixed(2)} ({overageRequests.toFixed(1)} × ${PRICING.OVERAGE_RATE_PER_REQUEST.toFixed(2)})
                 </p>
@@ -282,22 +284,27 @@ export function UserConsumptionModal({
                   <YAxis 
                     stroke="#6b7280" 
                     fontSize={12}
-                    domain={[0, (dataMax: number) => Math.max(currentQuota, dataMax)]}
+                    domain={[0, (dataMax: number) => {
+                      const quotaLimit = userQuotaValue === 'unlimited' ? 0 : userQuotaValue;
+                      return Math.max(quotaLimit, dataMax);
+                    }]}
                   />
                   <Tooltip content={<CustomTooltip />} />
                   
-                  {/* Quota reference line */}
-                  <ReferenceLine 
-                    y={currentQuota} 
-                    stroke="#ef4444" 
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
-                    label={{ 
-                      value: `${currentQuota} quota limit`, 
-                      position: "insideTopRight",
-                      style: { fontSize: '12px', fill: '#ef4444' }
-                    }}
-                  />
+                  {/* Quota reference line - only show if user has a numeric quota */}
+                  {userQuotaValue !== 'unlimited' && (
+                    <ReferenceLine 
+                      y={userQuotaValue} 
+                      stroke="#ef4444" 
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      label={{ 
+                        value: `${userQuotaValue} quota limit`, 
+                        position: "insideTopRight",
+                        style: { fontSize: '12px', fill: '#ef4444' }
+                      }}
+                    />
+                  )}
                   
                   {/* Stacked bars for each model */}
                   {userModels.map((model) => (

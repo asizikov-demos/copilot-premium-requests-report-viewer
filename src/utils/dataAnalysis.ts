@@ -180,6 +180,16 @@ function calculatePowerUserScore(userSummary: UserSummary): PowerUserScore {
   };
 }
 
+// Parse quota value from string
+function parseQuotaValue(quotaString: string): number | 'unlimited' {
+  const trimmed = quotaString.trim().toLowerCase();
+  if (trimmed === 'unlimited') {
+    return 'unlimited';
+  }
+  const parsed = parseInt(trimmed, 10);
+  return isNaN(parsed) ? 'unlimited' : parsed;
+}
+
 export function processCSVData(rawData: CSVData[]): ProcessedData[] {
   return rawData.map(row => ({
     timestamp: new Date(row.Timestamp),
@@ -187,7 +197,8 @@ export function processCSVData(rawData: CSVData[]): ProcessedData[] {
     model: row.Model,
     requestsUsed: parseFloat(row['Requests Used']),
     exceedsQuota: row['Exceeds Monthly Quota'].toLowerCase() === 'true',
-    totalQuota: row['Total Monthly Quota']
+    totalQuota: row['Total Monthly Quota'],
+    quotaValue: parseQuotaValue(row['Total Monthly Quota'])
   }));
 }
 
@@ -197,7 +208,14 @@ export function analyzeData(data: ProcessedData[]): AnalysisResults {
       timeFrame: { start: '', end: '' },
       totalUniqueUsers: 0,
       usersExceedingQuota: 0,
-      requestsByModel: []
+      requestsByModel: [],
+      quotaBreakdown: {
+        unlimited: [],
+        business: [],
+        enterprise: [],
+        mixed: false,
+        suggestedPlan: null
+      }
     };
   }
 
@@ -209,14 +227,67 @@ export function analyzeData(data: ProcessedData[]): AnalysisResults {
     end: sortedData[sortedData.length - 1].timestamp.toISOString().split('T')[0]
   };
 
-  // Unique users
+  // Unique users and their quota analysis
+  const userQuotas = new Map<string, number | 'unlimited'>();
+  data.forEach(row => {
+    if (!userQuotas.has(row.user)) {
+      userQuotas.set(row.user, row.quotaValue);
+    }
+  });
+
   const uniqueUsers = new Set(data.map(row => row.user));
   const totalUniqueUsers = uniqueUsers.size;
 
-  // Users exceeding quota
-  const usersExceedingQuota = new Set(
-    data.filter(row => row.exceedsQuota).map(row => row.user)
-  ).size;
+  // Build quota breakdown
+  const unlimited: string[] = [];
+  const business: string[] = [];
+  const enterprise: string[] = [];
+
+  for (const [user, quota] of userQuotas) {
+    if (quota === 'unlimited') {
+      unlimited.push(user);
+    } else if (quota === 300) {
+      business.push(user);
+    } else if (quota === 1000) {
+      enterprise.push(user);
+    }
+  }
+
+  const quotaTypes = [
+    unlimited.length > 0 ? 'unlimited' : null,
+    business.length > 0 ? 'business' : null,
+    enterprise.length > 0 ? 'enterprise' : null
+  ].filter(Boolean);
+
+  const mixed = quotaTypes.length > 1;
+  
+  // Determine suggested plan
+  let suggestedPlan: 'business' | 'enterprise' | null = null;
+  if (!mixed && unlimited.length === 0) {
+    if (business.length > 0 && enterprise.length === 0) {
+      suggestedPlan = 'business';
+    } else if (enterprise.length > 0 && business.length === 0) {
+      suggestedPlan = 'enterprise';
+    }
+  }
+
+  // Users exceeding quota (considering their actual quotas)
+  const usersExceedingQuota = new Set<string>();
+  const userTotalRequests = new Map<string, number>();
+  
+  // Calculate total requests per user
+  data.forEach(row => {
+    const current = userTotalRequests.get(row.user) || 0;
+    userTotalRequests.set(row.user, current + row.requestsUsed);
+  });
+
+  // Check who exceeds their actual quota
+  for (const [user, totalRequests] of userTotalRequests) {
+    const userQuota = userQuotas.get(user);
+    if (userQuota && userQuota !== 'unlimited' && totalRequests > userQuota) {
+      usersExceedingQuota.add(user);
+    }
+  }
 
   // Requests by model
   const modelRequests = new Map<string, number>();
@@ -232,8 +303,15 @@ export function analyzeData(data: ProcessedData[]): AnalysisResults {
   return {
     timeFrame,
     totalUniqueUsers,
-    usersExceedingQuota,
-    requestsByModel
+    usersExceedingQuota: usersExceedingQuota.size,
+    requestsByModel,
+    quotaBreakdown: {
+      unlimited,
+      business,
+      enterprise,
+      mixed,
+      suggestedPlan
+    }
   };
 }
 
@@ -487,6 +565,12 @@ export function filterBySelectedMonths(data: ProcessedData[], selectedMonths: st
     const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
     return selectedMonths.includes(monthKey);
   });
+}
+
+// Helper function to get a user's quota value from processed data
+export function getUserQuotaValue(data: ProcessedData[], userName: string): number | 'unlimited' {
+  const userRecord = data.find(d => d.user === userName);
+  return userRecord?.quotaValue || 'unlimited';
 }
 
 // Export utility functions for testing
