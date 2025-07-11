@@ -447,5 +447,47 @@ export function filterEarlyJune2025(data: ProcessedData[]): ProcessedData[] {
   });
 }
 
+// Helper function to get available months from the data
+export function getAvailableMonths(data: ProcessedData[]): { value: string; label: string }[] {
+  const monthsSet = new Set<string>();
+  
+  data.forEach(row => {
+    const date = row.timestamp;
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    monthsSet.add(monthKey);
+  });
+  
+  const months = Array.from(monthsSet).sort();
+  
+  return months.map(monthKey => {
+    const [year, month] = monthKey.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1);
+    const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    
+    return {
+      value: monthKey,
+      label: monthName
+    };
+  });
+}
+
+// Helper function to check if data spans multiple months
+export function hasMultipleMonths(data: ProcessedData[]): boolean {
+  return getAvailableMonths(data).length > 1;
+}
+
+// Helper function to filter data by selected months
+export function filterBySelectedMonths(data: ProcessedData[], selectedMonths: string[]): ProcessedData[] {
+  if (selectedMonths.length === 0) {
+    return data; // If no months selected, return all data
+  }
+  
+  return data.filter(row => {
+    const date = row.timestamp;
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    return selectedMonths.includes(monthKey);
+  });
+}
+
 // Export utility functions for testing
 export { calculateSpecialFeaturesScore, SPECIAL_FEATURES_CONFIG, MAX_SPECIAL_FEATURES_SCORE };

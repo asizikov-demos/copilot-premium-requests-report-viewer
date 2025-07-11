@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { CSVData } from '@/types/csv';
-import { processCSVData, analyzeData, analyzeUserData, generateDailyCumulativeData, analyzePowerUsers, containsJune2025Data, filterEarlyJune2025 } from '@/utils/dataAnalysis';
+import { processCSVData, analyzeData, analyzeUserData, generateDailyCumulativeData, analyzePowerUsers, containsJune2025Data, filterEarlyJune2025, getAvailableMonths, hasMultipleMonths, filterBySelectedMonths } from '@/utils/dataAnalysis';
 import { UsersOverview } from './UsersOverview';
 import { PowerUsersOverview } from './PowerUsersOverview';
 
@@ -24,13 +24,19 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
   const [showPowerUsers, setShowPowerUsers] = useState(false);
   const [minRequestsThreshold, setMinRequestsThreshold] = useState(DEFAULT_MIN_REQUESTS);
   const [excludeEarlyJune, setExcludeEarlyJune] = useState(false);
+  const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
   
-  const { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, processedData, hasJune2025Data } = useMemo(() => {
+  const { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, processedData, hasJune2025Data, availableMonths, hasMultipleMonthsData } = useMemo(() => {
     const processedData = processCSVData(csvData);
     const hasJune2025Data = containsJune2025Data(processedData);
+    const availableMonths = getAvailableMonths(processedData);
+    const hasMultipleMonthsData = hasMultipleMonths(processedData);
     
     // Apply early June filter if enabled
-    const filteredData = excludeEarlyJune ? filterEarlyJune2025(processedData) : processedData;
+    let filteredData = excludeEarlyJune ? filterEarlyJune2025(processedData) : processedData;
+    
+    // Apply billing period filter if months are selected
+    filteredData = filterBySelectedMonths(filteredData, selectedMonths);
     
     const analysis = analyzeData(filteredData);
     const userData = analyzeUserData(filteredData);
@@ -38,8 +44,8 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
     const dailyCumulativeData = generateDailyCumulativeData(filteredData);
     const powerUsersAnalysis = analyzePowerUsers(filteredData, minRequestsThreshold);
     
-    return { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, processedData: filteredData, hasJune2025Data };
-  }, [csvData, minRequestsThreshold, excludeEarlyJune]);
+    return { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, processedData: filteredData, hasJune2025Data, availableMonths, hasMultipleMonthsData };
+  }, [csvData, minRequestsThreshold, excludeEarlyJune, selectedMonths]);
 
   const chartData = analysis.requestsByModel.map(item => ({
     model: item.model.length > 20 ? `${item.model.substring(0, 20)}...` : item.model,
@@ -352,6 +358,35 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                   </div>
                   <p className="mt-1 text-xs text-gray-500">
                     Filters out requests from June 1-18, 2025. These requests were not billable.
+                  </p>
+                </div>
+              )}
+
+              {/* Billing Period Filter */}
+              {hasMultipleMonthsData && (
+                <div className="mb-6">
+                  <label htmlFor="billing-period" className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Billing Period
+                  </label>
+                  <select
+                    id="billing-period"
+                    multiple
+                    value={selectedMonths}
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.selectedOptions, option => option.value);
+                      setSelectedMonths(selected);
+                    }}
+                    className="block w-full pl-3 pr-10 py-2 text-base text-black border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                    size={Math.min(availableMonths.length, 4)}
+                  >
+                    {availableMonths.map(month => (
+                      <option key={month.value} value={month.value}>
+                        {month.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Hold Ctrl/Cmd to select multiple months. Leave empty to show all months.
                   </p>
                 </div>
               )}
