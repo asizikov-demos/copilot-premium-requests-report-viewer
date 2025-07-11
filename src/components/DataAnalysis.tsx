@@ -6,6 +6,7 @@ import { CSVData } from '@/types/csv';
 import { processCSVData, analyzeData, analyzeUserData, generateDailyCumulativeData, analyzePowerUsers, containsJune2025Data, filterEarlyJune2025, getAvailableMonths, hasMultipleMonths, filterBySelectedMonths } from '@/utils/dataAnalysis';
 import { UsersOverview } from './UsersOverview';
 import { PowerUsersOverview } from './PowerUsersOverview';
+import { PRICING } from '@/constants/pricing';
 
 // Constants
 const DEFAULT_MIN_REQUESTS = 20;
@@ -63,11 +64,11 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
   const planInfo = {
     business: {
       name: 'Copilot Business',
-      monthlyQuota: 300
+      monthlyQuota: PRICING.BUSINESS_QUOTA
     },
     enterprise: {
       name: 'Copilot Enterprise', 
-      monthlyQuota: 1000
+      monthlyQuota: PRICING.ENTERPRISE_QUOTA
     }
   };
 
@@ -408,10 +409,10 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                       <h4 className="text-sm font-medium text-amber-800 mb-2">Mixed License Types Detected</h4>
                       <div className="text-xs text-amber-700 space-y-1">
                         {analysis.quotaBreakdown.business.length > 0 && (
-                          <div>• Business (300): {analysis.quotaBreakdown.business.length} users</div>
+                          <div>• Business ({PRICING.BUSINESS_QUOTA}): {analysis.quotaBreakdown.business.length} users</div>
                         )}
                         {analysis.quotaBreakdown.enterprise.length > 0 && (
-                          <div>• Enterprise (1000): {analysis.quotaBreakdown.enterprise.length} users</div>
+                          <div>• Enterprise ({PRICING.ENTERPRISE_QUOTA}): {analysis.quotaBreakdown.enterprise.length} users</div>
                         )}
                         {analysis.quotaBreakdown.unlimited.length > 0 && (
                           <div>• Unlimited: {analysis.quotaBreakdown.unlimited.length} users</div>

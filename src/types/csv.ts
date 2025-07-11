@@ -30,8 +30,8 @@ export interface AnalysisResults {
   }>;
   quotaBreakdown: {
     unlimited: string[];
-    business: string[]; // Users with 300 quota
-    enterprise: string[]; // Users with 1000 quota
+    business: string[]; // Users with Business quota (300)
+    enterprise: string[]; // Users with Enterprise quota (1000)
     mixed: boolean;
     suggestedPlan: 'business' | 'enterprise' | null;
   };

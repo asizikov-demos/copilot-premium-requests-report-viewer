@@ -56,11 +56,11 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
   const planInfo = {
     business: {
       name: 'Copilot Business',
-      monthlyQuota: 300
+      monthlyQuota: PRICING.BUSINESS_QUOTA
     },
     enterprise: {
       name: 'Copilot Enterprise', 
-      monthlyQuota: 1000
+      monthlyQuota: PRICING.ENTERPRISE_QUOTA
     }
   };
 
@@ -84,7 +84,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
     }
   });
   const hasMixedQuotas = quotaTypes.size > 1;
-  const hasMixedLicenses = quotaTypes.has(300) && quotaTypes.has(1000);
+  const hasMixedLicenses = quotaTypes.has(PRICING.BUSINESS_QUOTA) && quotaTypes.has(PRICING.ENTERPRISE_QUOTA);
   
   // Handle sorting
   const handleSort = (column: string) => {
@@ -130,7 +130,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
             <p className="text-sm text-gray-500">
               {hasMixedLicenses ? (
                 <>
-                  Mixed Licenses - Business (300) & Enterprise (1000) premium requests/month
+                  Mixed Licenses - Business ({PRICING.BUSINESS_QUOTA}) & Enterprise ({PRICING.ENTERPRISE_QUOTA}) premium requests/month
                 </>
               ) : (
                 `${planInfo[selectedPlan].name} - ${currentQuota} premium requests/month`
@@ -210,22 +210,22 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
                 {/* Quota reference lines */}
                 {hasMixedQuotas ? (
                   <>
-                    {quotaTypes.has(300) && (
+                    {quotaTypes.has(PRICING.BUSINESS_QUOTA) && (
                       <ReferenceLine 
-                        y={300} 
+                        y={PRICING.BUSINESS_QUOTA} 
                         stroke="#f97316" 
                         strokeWidth={2}
                         strokeDasharray="5 5"
-                        label={{ value: "300 Business quota", position: "insideTopRight" }}
+                        label={{ value: `${PRICING.BUSINESS_QUOTA} Business quota`, position: "insideTopRight" }}
                       />
                     )}
-                    {quotaTypes.has(1000) && (
+                    {quotaTypes.has(PRICING.ENTERPRISE_QUOTA) && (
                       <ReferenceLine 
-                        y={1000} 
+                        y={PRICING.ENTERPRISE_QUOTA} 
                         stroke="#dc2626" 
                         strokeWidth={2}
                         strokeDasharray="5 5"
-                        label={{ value: "1000 Enterprise quota", position: "insideTopRight" }}
+                        label={{ value: `${PRICING.ENTERPRISE_QUOTA} Enterprise quota`, position: "insideTopRight" }}
                       />
                     )}
                   </>

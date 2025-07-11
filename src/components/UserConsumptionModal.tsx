@@ -127,17 +127,17 @@ export function UserConsumptionModal({
   };
 
   const planInfo = {
-    business: { name: 'Copilot Business', monthlyQuota: 300 },
-    enterprise: { name: 'Copilot Enterprise', monthlyQuota: 1000 }
+    business: { name: 'Copilot Business', monthlyQuota: PRICING.BUSINESS_QUOTA },
+    enterprise: { name: 'Copilot Enterprise', monthlyQuota: PRICING.ENTERPRISE_QUOTA }
   };
 
   // Determine the user's actual plan based on their quota value
   const userActualPlan = useMemo(() => {
     if (userQuotaValue === 'unlimited') {
       return 'unlimited';
-    } else if (userQuotaValue === 300) {
+    } else if (userQuotaValue === PRICING.BUSINESS_QUOTA) {
       return 'business';
-    } else if (userQuotaValue === 1000) {
+    } else if (userQuotaValue === PRICING.ENTERPRISE_QUOTA) {
       return 'enterprise';
     } else {
       // Fallback to closest match

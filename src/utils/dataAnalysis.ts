@@ -1,4 +1,5 @@
 import { CSVData, ProcessedData, AnalysisResults, PowerUserScore, PowerUsersAnalysis } from '@/types/csv';
+import { PRICING } from '@/constants/pricing';
 
 // Constants
 const DEFAULT_MIN_REQUESTS = 20;
@@ -246,9 +247,9 @@ export function analyzeData(data: ProcessedData[]): AnalysisResults {
   for (const [user, quota] of userQuotas) {
     if (quota === 'unlimited') {
       unlimited.push(user);
-    } else if (quota === 300) {
+    } else if (quota === PRICING.BUSINESS_QUOTA) {
       business.push(user);
-    } else if (quota === 1000) {
+    } else if (quota === PRICING.ENTERPRISE_QUOTA) {
       enterprise.push(user);
     }
   }
