@@ -84,6 +84,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
     }
   });
   const hasMixedQuotas = quotaTypes.size > 1;
+  const hasMixedLicenses = quotaTypes.has(300) && quotaTypes.has(1000);
   
   // Handle sorting
   const handleSort = (column: string) => {
@@ -127,7 +128,13 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
           <h3 className="text-lg font-medium text-gray-900">Users Overview</h3>
           <div className="flex flex-col sm:flex-row sm:items-center sm:gap-6 mt-1">
             <p className="text-sm text-gray-500">
-              {planInfo[selectedPlan].name} - {currentQuota} premium requests/month
+              {hasMixedLicenses ? (
+                <>
+                  Mixed Licenses - Business (300) & Enterprise (1000) premium requests/month
+                </>
+              ) : (
+                `${planInfo[selectedPlan].name} - ${currentQuota} premium requests/month`
+              )}
             </p>
             {totalOverageRequests > 0 && (
               <p className="text-sm text-red-600 font-medium">
