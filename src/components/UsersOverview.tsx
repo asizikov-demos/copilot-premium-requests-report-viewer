@@ -182,7 +182,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
                   fontSize={12}
                   tickFormatter={(value) => {
                     const date = new Date(value);
-                    return `${date.getMonth() + 1}/${date.getDate()}`;
+                    return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
                   }}
                 />
                 <YAxis 
@@ -193,7 +193,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
                 <Tooltip 
                   labelFormatter={(label) => {
                     const date = new Date(label);
-                    return date.toLocaleDateString();
+                    return date.toLocaleDateString('en-US', { timeZone: 'UTC' });
                   }}
                   formatter={(value: number, name: string) => [
                     `${value.toFixed(1)} requests`,

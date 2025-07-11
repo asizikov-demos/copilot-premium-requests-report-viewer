@@ -531,7 +531,7 @@ export function getAvailableMonths(data: ProcessedData[]): { value: string; labe
   
   data.forEach(row => {
     const date = row.timestamp;
-    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const monthKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
     monthsSet.add(monthKey);
   });
   
@@ -539,8 +539,12 @@ export function getAvailableMonths(data: ProcessedData[]): { value: string; labe
   
   return months.map(monthKey => {
     const [year, month] = monthKey.split('-');
-    const date = new Date(parseInt(year), parseInt(month) - 1);
-    const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1));
+    const monthName = date.toLocaleDateString('en-US', { 
+      month: 'long', 
+      year: 'numeric',
+      timeZone: 'UTC'
+    });
     
     return {
       value: monthKey,
@@ -562,7 +566,7 @@ export function filterBySelectedMonths(data: ProcessedData[], selectedMonths: st
   
   return data.filter(row => {
     const date = row.timestamp;
-    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const monthKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
     return selectedMonths.includes(monthKey);
   });
 }

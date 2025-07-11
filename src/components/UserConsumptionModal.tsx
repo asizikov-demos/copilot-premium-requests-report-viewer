@@ -148,7 +148,7 @@ export function UserConsumptionModal({
   const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
     if (active && payload && payload.length && label) {
       const date = new Date(label);
-      const formattedDate = date.toLocaleDateString();
+      const formattedDate = date.toLocaleDateString('en-US', { timeZone: 'UTC' });
       
       // Separate cumulative line from model bars
       const cumulativeData = payload.find((entry: TooltipEntry) => entry.dataKey === 'totalCumulative');
@@ -278,7 +278,7 @@ export function UserConsumptionModal({
                     fontSize={12}
                     tickFormatter={(value) => {
                       const date = new Date(value);
-                      return `${date.getMonth() + 1}/${date.getDate()}`;
+                      return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
                     }}
                   />
                   <YAxis 
