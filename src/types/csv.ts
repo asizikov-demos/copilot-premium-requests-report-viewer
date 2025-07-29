@@ -76,3 +76,29 @@ export interface UserConsumptionModalProps {
   userQuotaValue: number | 'unlimited'; // User's actual quota from CSV
   onClose: () => void;
 }
+
+// Coding Agent Adoption types
+export interface CodingAgentUser {
+  user: string;
+  totalRequests: number;
+  codingAgentRequests: number;
+  codingAgentPercentage: number;
+  quota: number | 'unlimited';
+  models: string[]; // coding agent models used
+}
+
+export interface CodingAgentAnalysis {
+  totalUsers: number;
+  totalUniqueUsers: number; // for percentage calculation
+  totalCodingAgentRequests: number;
+  adoptionRate: number; // percentage of total users
+  users: CodingAgentUser[];
+}
+
+export interface CodingAgentOverviewProps {
+  codingAgentUsers: CodingAgentUser[];
+  totalUniqueUsers: number;
+  adoptionRate: number;
+  processedData: ProcessedData[];
+  onBack: () => void;
+}

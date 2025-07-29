@@ -3,9 +3,10 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { CSVData } from '@/types/csv';
-import { processCSVData, analyzeData, analyzeUserData, generateDailyCumulativeData, analyzePowerUsers, containsJune2025Data, filterEarlyJune2025, getAvailableMonths, hasMultipleMonths, filterBySelectedMonths } from '@/utils/dataAnalysis';
+import { processCSVData, analyzeData, analyzeUserData, generateDailyCumulativeData, analyzePowerUsers, analyzeCodingAgentAdoption, containsJune2025Data, filterEarlyJune2025, getAvailableMonths, hasMultipleMonths, filterBySelectedMonths } from '@/utils/dataAnalysis';
 import { UsersOverview } from './UsersOverview';
 import { PowerUsersOverview } from './PowerUsersOverview';
+import { CodingAgentOverview } from './CodingAgentOverview';
 import { PRICING } from '@/constants/pricing';
 
 // Constants
@@ -23,11 +24,12 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
   const [selectedPlan, setSelectedPlan] = useState<CopilotPlan>('business');
   const [showUsersOverview, setShowUsersOverview] = useState(false);
   const [showPowerUsers, setShowPowerUsers] = useState(false);
+  const [showCodingAgentOverview, setShowCodingAgentOverview] = useState(false);
   const [minRequestsThreshold, setMinRequestsThreshold] = useState(DEFAULT_MIN_REQUESTS);
   const [excludeEarlyJune, setExcludeEarlyJune] = useState(false);
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
   
-  const { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, processedData, hasJune2025Data, availableMonths, hasMultipleMonthsData } = useMemo(() => {
+  const { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, codingAgentAnalysis, processedData, hasJune2025Data, availableMonths, hasMultipleMonthsData } = useMemo(() => {
     const processedData = processCSVData(csvData);
     const hasJune2025Data = containsJune2025Data(processedData);
     const availableMonths = getAvailableMonths(processedData);
@@ -44,8 +46,9 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
     const allModels = Array.from(new Set(filteredData.map(d => d.model))).sort();
     const dailyCumulativeData = generateDailyCumulativeData(filteredData);
     const powerUsersAnalysis = analyzePowerUsers(filteredData, minRequestsThreshold);
+    const codingAgentAnalysis = analyzeCodingAgentAdoption(filteredData);
     
-    return { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, processedData: filteredData, hasJune2025Data, availableMonths, hasMultipleMonthsData };
+    return { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, codingAgentAnalysis, processedData: filteredData, hasJune2025Data, availableMonths, hasMultipleMonthsData };
   }, [csvData, minRequestsThreshold, excludeEarlyJune, selectedMonths]);
 
   // Auto-select plan based on quota analysis
@@ -92,9 +95,10 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
             onClick={() => {
               setShowUsersOverview(false);
               setShowPowerUsers(false);
+              setShowCodingAgentOverview(false);
             }}
             className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              !showUsersOverview && !showPowerUsers
+              !showUsersOverview && !showPowerUsers && !showCodingAgentOverview
                 ? 'bg-blue-600 text-white' 
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
@@ -105,9 +109,10 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
             onClick={() => {
               setShowUsersOverview(true);
               setShowPowerUsers(false);
+              setShowCodingAgentOverview(false);
             }}
             className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              showUsersOverview && !showPowerUsers
+              showUsersOverview && !showPowerUsers && !showCodingAgentOverview
                 ? 'bg-blue-600 text-white' 
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
@@ -117,7 +122,22 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
           <button
             onClick={() => {
               setShowUsersOverview(false);
+              setShowPowerUsers(false);
+              setShowCodingAgentOverview(true);
+            }}
+            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+              showCodingAgentOverview
+                ? 'bg-blue-600 text-white' 
+                : 'bg-white text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            🤖 Coding Agent ({codingAgentAnalysis.totalUsers})
+          </button>
+          <button
+            onClick={() => {
+              setShowUsersOverview(false);
               setShowPowerUsers(true);
+              setShowCodingAgentOverview(false);
             }}
             className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
               showPowerUsers
@@ -132,13 +152,13 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
 
       {/* Responsive Layout */}
       <div className={`${
-        showUsersOverview || showPowerUsers
+        showUsersOverview || showPowerUsers || showCodingAgentOverview
           ? 'block' // Full width for users table
           : 'grid grid-cols-1 xl:grid-cols-4 2xl:grid-cols-5 gap-8'
       }`}>
         {/* Main Content */}
         <div className={`${
-          showUsersOverview || showPowerUsers
+          showUsersOverview || showPowerUsers || showCodingAgentOverview
             ? 'w-full' 
             : 'xl:col-span-3 2xl:col-span-4 space-y-8'
         }`}>
@@ -151,6 +171,16 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                 selectedPlan={selectedPlan}
                 dailyCumulativeData={dailyCumulativeData}
                 onBack={() => setShowUsersOverview(false)}
+              />
+            </div>
+          ) : showCodingAgentOverview ? (
+            <div className="min-h-[80vh]">
+              <CodingAgentOverview 
+                codingAgentUsers={codingAgentAnalysis.users}
+                totalUniqueUsers={codingAgentAnalysis.totalUniqueUsers}
+                adoptionRate={codingAgentAnalysis.adoptionRate}
+                processedData={processedData}
+                onBack={() => setShowCodingAgentOverview(false)}
               />
             </div>
           ) : showPowerUsers ? (
@@ -166,7 +196,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
           ) : (
             <>
               {/* Summary Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="bg-white overflow-hidden shadow rounded-lg">
                   <div className="p-5">
                     <div className="flex items-center">
@@ -209,6 +239,39 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                         <dl>
                           <dt className="text-sm font-medium text-gray-500 truncate">Total Unique Users</dt>
                           <dd className="text-lg font-medium text-gray-900">{analysis.totalUniqueUsers}</dd>
+                        </dl>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => setShowCodingAgentOverview(true)}
+                  className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 w-full text-left"
+                >
+                  <div className="p-5">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
+                          <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                          </svg>
+                        </div>
+                      </div>
+                      <div className="ml-5 w-0 flex-1">
+                        <dl>
+                          <dt className="text-sm font-medium text-gray-500 truncate">Coding Agent Adoption</dt>
+                          <dd className="text-lg font-medium text-gray-900">
+                            {codingAgentAnalysis.adoptionRate.toFixed(1)}% ({codingAgentAnalysis.totalUsers}/{codingAgentAnalysis.totalUniqueUsers})
+                          </dd>
+                          <dd className="text-xs text-gray-500">
+                            Users adopting coding agents
+                          </dd>
                         </dl>
                       </div>
                       <div className="flex-shrink-0">
@@ -330,7 +393,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
         </div>
 
         {/* Info Panel - Hidden on mobile when showing users */}
-        {!showUsersOverview && !showPowerUsers && (
+        {!showUsersOverview && !showPowerUsers && !showCodingAgentOverview && (
           <div className="xl:col-span-1 2xl:col-span-1">
             <div className="bg-white shadow rounded-lg p-4 sm:p-6 sticky top-6">
               {/* Plan Selector */}
