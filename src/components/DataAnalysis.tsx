@@ -215,7 +215,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                       </div>
                       <div className="ml-5 w-0 flex-1">
                         <dl>
-                          <dt className="text-sm font-medium text-gray-500 truncate">Insights</dt>
+                          <dt className="text-sm font-bold text-gray-500 truncate">Insights</dt>
                           <dd className="text-sm text-gray-600">
                             Coming soon...
                           </dd>
@@ -243,7 +243,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                       </div>
                       <div className="ml-5 w-0 flex-1">
                         <dl>
-                          <dt className="text-sm font-medium text-gray-500 truncate">Total Unique Users</dt>
+                          <dt className="text-sm font-bold text-gray-500 truncate">Total Unique Users</dt>
                           <dd className="text-lg font-medium text-gray-900">{analysis.totalUniqueUsers}</dd>
                         </dl>
                       </div>
@@ -271,7 +271,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                       </div>
                       <div className="ml-5 w-0 flex-1">
                         <dl>
-                          <dt className="text-sm font-medium text-gray-500 truncate">Coding Agent Adoption</dt>
+                          <dt className="text-sm font-bold text-gray-500 truncate">Coding Agent Adoption</dt>
                           <dd className="text-lg font-medium text-gray-900">
                             {codingAgentAnalysis.adoptionRate.toFixed(1)}% ({codingAgentAnalysis.totalUsers}/{codingAgentAnalysis.totalUniqueUsers})
                           </dd>
@@ -304,7 +304,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                       </div>
                       <div className="ml-5 w-0 flex-1">
                         <dl>
-                          <dt className="text-sm font-medium text-gray-500 truncate">Power Users</dt>
+                          <dt className="text-sm font-bold text-gray-500 truncate">Power Users</dt>
                           <dd className="text-lg font-medium text-gray-900">
                             {powerUsersAnalysis.powerUsers.length} / {powerUsersAnalysis.totalQualifiedUsers}
                           </dd>
