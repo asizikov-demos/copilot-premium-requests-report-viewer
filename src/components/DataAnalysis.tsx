@@ -7,6 +7,7 @@ import { processCSVData, analyzeData, analyzeUserData, generateDailyCumulativeDa
 import { UsersOverview } from './UsersOverview';
 import { PowerUsersOverview } from './PowerUsersOverview';
 import { CodingAgentOverview } from './CodingAgentOverview';
+import { Insights } from './Insights';
 import { PRICING } from '@/constants/pricing';
 
 // Constants
@@ -25,6 +26,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
   const [showUsersOverview, setShowUsersOverview] = useState(false);
   const [showPowerUsers, setShowPowerUsers] = useState(false);
   const [showCodingAgentOverview, setShowCodingAgentOverview] = useState(false);
+  const [showInsights, setShowInsights] = useState(false);
   const [minRequestsThreshold, setMinRequestsThreshold] = useState(DEFAULT_MIN_REQUESTS);
   const [excludeEarlyJune, setExcludeEarlyJune] = useState(false);
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
@@ -102,9 +104,10 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
               setShowUsersOverview(false);
               setShowPowerUsers(false);
               setShowCodingAgentOverview(false);
+              setShowInsights(false);
             }}
             className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              !showUsersOverview && !showPowerUsers && !showCodingAgentOverview
+              !showUsersOverview && !showPowerUsers && !showCodingAgentOverview && !showInsights
                 ? 'bg-blue-600 text-white' 
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
@@ -116,9 +119,10 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
               setShowUsersOverview(true);
               setShowPowerUsers(false);
               setShowCodingAgentOverview(false);
+              setShowInsights(false);
             }}
             className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              showUsersOverview && !showPowerUsers && !showCodingAgentOverview
+              showUsersOverview && !showPowerUsers && !showCodingAgentOverview && !showInsights
                 ? 'bg-blue-600 text-white' 
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
@@ -130,9 +134,10 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
               setShowUsersOverview(false);
               setShowPowerUsers(false);
               setShowCodingAgentOverview(true);
+              setShowInsights(false);
             }}
             className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              showCodingAgentOverview
+              showCodingAgentOverview && !showInsights
                 ? 'bg-blue-600 text-white' 
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
@@ -144,27 +149,43 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
               setShowUsersOverview(false);
               setShowPowerUsers(true);
               setShowCodingAgentOverview(false);
+              setShowInsights(false);
             }}
             className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              showPowerUsers
+              showPowerUsers && !showInsights
                 ? 'bg-blue-600 text-white' 
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
           >
             ⭐ Power Users ({powerUsersAnalysis.powerUsers.length})
           </button>
+          <button
+            onClick={() => {
+              setShowUsersOverview(false);
+              setShowPowerUsers(false);
+              setShowCodingAgentOverview(false);
+              setShowInsights(true);
+            }}
+            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+              showInsights
+                ? 'bg-blue-600 text-white' 
+                : 'bg-white text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            💡 Insights
+          </button>
         </div>
       </div>
 
       {/* Responsive Layout */}
       <div className={`${
-        showUsersOverview || showPowerUsers || showCodingAgentOverview
+        showUsersOverview || showPowerUsers || showCodingAgentOverview || showInsights
           ? 'block' // Full width for users table
           : 'grid grid-cols-1 xl:grid-cols-4 2xl:grid-cols-5 gap-8'
       }`}>
         {/* Main Content */}
         <div className={`${
-          showUsersOverview || showPowerUsers || showCodingAgentOverview
+          showUsersOverview || showPowerUsers || showCodingAgentOverview || showInsights
             ? 'w-full' 
             : 'xl:col-span-3 2xl:col-span-4 space-y-8'
         }`}>
@@ -199,11 +220,22 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                 onThresholdChange={setMinRequestsThreshold}
               />
             </div>
+          ) : showInsights ? (
+            <div className="min-h-[80vh]">
+              <Insights 
+                userData={userData}
+                processedData={processedData}
+                onBack={() => setShowInsights(false)}
+              />
+            </div>
           ) : (
             <>
               {/* Summary Stats */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="bg-white overflow-hidden shadow rounded-lg">
+                <button
+                  onClick={() => setShowInsights(true)}
+                  className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 w-full text-left"
+                >
                   <div className="p-5">
                     <div className="flex items-center">
                       <div className="flex-shrink-0">
@@ -217,16 +249,21 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                         <dl>
                           <dt className="text-sm font-bold text-gray-500 truncate">Insights</dt>
                           <dd className="text-sm text-gray-600">
-                            Coming soon...
+                            User consumption analysis
                           </dd>
                           <dd className="mt-1 text-xs text-gray-400">
-                            Advanced analytics
+                            Usage patterns & adoption
                           </dd>
                         </dl>
                       </div>
+                      <div className="flex-shrink-0">
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </button>
 
                 <button
                   onClick={() => setShowUsersOverview(true)}
@@ -399,7 +436,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
         </div>
 
         {/* Info Panel - Hidden on mobile when showing users */}
-        {!showUsersOverview && !showPowerUsers && !showCodingAgentOverview && (
+        {!showUsersOverview && !showPowerUsers && !showCodingAgentOverview && !showInsights && (
           <div className="xl:col-span-1 2xl:col-span-1">
             <div className="bg-white shadow rounded-lg p-4 sm:p-6 sticky top-6">
               {/* Plan Selector */}
