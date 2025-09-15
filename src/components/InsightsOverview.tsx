@@ -25,6 +25,78 @@ interface InsightsOverviewData {
   lowAdoptionUsers: UserConsumptionCategory[];
 }
 
+interface FeatureUtilizationStats {
+  codeReview: {
+    totalSessions: number;
+    averagePerUser: number;
+    userCount: number;
+  };
+  codingAgent: {
+    totalSessions: number;
+    averagePerUser: number;
+    userCount: number;
+  };
+  spark: {
+    totalSessions: number;
+    averagePerUser: number;
+    userCount: number;
+  };
+}
+
+function calculateFeatureUtilization(processedData: ProcessedData[]): FeatureUtilizationStats {
+  const codeReviewUsers = new Map<string, number>();
+  const codingAgentUsers = new Map<string, number>();
+  const sparkUsers = new Map<string, number>();
+  
+  let totalCodeReviewSessions = 0;
+  let totalCodingAgentSessions = 0;
+  let totalSparkSessions = 0;
+  
+  processedData.forEach(row => {
+    const modelLower = row.model.toLowerCase();
+    
+    if (modelLower.includes('code review')) {
+      totalCodeReviewSessions += row.requestsUsed;
+      const currentCount = codeReviewUsers.get(row.user) || 0;
+      codeReviewUsers.set(row.user, currentCount + row.requestsUsed);
+    }
+    
+    if (modelLower.includes('coding agent') || modelLower.includes('padawan')) {
+      totalCodingAgentSessions += row.requestsUsed;
+      const currentCount = codingAgentUsers.get(row.user) || 0;
+      codingAgentUsers.set(row.user, currentCount + row.requestsUsed);
+    }
+    
+    if (modelLower.includes('spark')) {
+      totalSparkSessions += row.requestsUsed;
+      const currentCount = sparkUsers.get(row.user) || 0;
+      sparkUsers.set(row.user, currentCount + row.requestsUsed);
+    }
+  });
+  
+  const codeReviewUserCount = codeReviewUsers.size;
+  const codingAgentUserCount = codingAgentUsers.size;
+  const sparkUserCount = sparkUsers.size;
+  
+  return {
+    codeReview: {
+      totalSessions: totalCodeReviewSessions,
+      averagePerUser: codeReviewUserCount > 0 ? totalCodeReviewSessions / codeReviewUserCount : 0,
+      userCount: codeReviewUserCount
+    },
+    codingAgent: {
+      totalSessions: totalCodingAgentSessions,
+      averagePerUser: codingAgentUserCount > 0 ? totalCodingAgentSessions / codingAgentUserCount : 0,
+      userCount: codingAgentUserCount
+    },
+    spark: {
+      totalSessions: totalSparkSessions,
+      averagePerUser: sparkUserCount > 0 ? totalSparkSessions / sparkUserCount : 0,
+      userCount: sparkUserCount
+    }
+  };
+}
+
 function categorizeUserConsumption(userData: UserSummary[], processedData: ProcessedData[]): InsightsOverviewData {
   // Create a map to get quota for each user
   const userQuotaMap = new Map<string, number | 'unlimited'>();
@@ -83,6 +155,11 @@ export function InsightsOverview({ userData, processedData, onBack }: InsightsOv
   const insightsData = useMemo(() => 
     categorizeUserConsumption(userData, processedData),
     [userData, processedData]
+  );
+
+  const featureUtilization = useMemo(() => 
+    calculateFeatureUtilization(processedData),
+    [processedData]
   );
 
   // Compute unutilized value (only for users with numeric quotas)
@@ -401,6 +478,101 @@ export function InsightsOverview({ userData, processedData, onBack }: InsightsOv
             )}
           </div>
         )}
+      </div>
+
+      {/* Feature Utilization Block */}
+      <div className="bg-white shadow rounded-lg overflow-hidden mt-8">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900">Feature Utilization</h3>
+          <p className="text-sm text-gray-600 mt-1">
+            Usage statistics for specialized Copilot features
+          </p>
+        </div>
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Code Review Sessions */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <h4 className="text-lg font-semibold text-blue-800">Code Review Sessions</h4>
+                  <div className="mt-2">
+                    <p className="text-2xl font-bold text-blue-900">
+                      {Math.round(featureUtilization.codeReview.totalSessions)} reviews
+                    </p>
+                    <p className="text-sm text-blue-600 mt-1">
+                      Average per user: {featureUtilization.codeReview.averagePerUser.toFixed(1)} reviews
+                    </p>
+                    <p className="text-xs text-blue-500 mt-1">
+                      {featureUtilization.codeReview.userCount} users
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Copilot Coding Agent Sessions */}
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <h4 className="text-lg font-semibold text-purple-800">Copilot Coding Agent Sessions</h4>
+                  <div className="mt-2">
+                    <p className="text-2xl font-bold text-purple-900">
+                      {Math.round(featureUtilization.codingAgent.totalSessions)} sessions
+                    </p>
+                    <p className="text-sm text-purple-600 mt-1">
+                      Average per user: {featureUtilization.codingAgent.averagePerUser.toFixed(1)} sessions
+                    </p>
+                    <p className="text-xs text-purple-500 mt-1">
+                      {featureUtilization.codingAgent.userCount} users
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Spark Sessions */}
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <h4 className="text-lg font-semibold text-orange-800">Spark Sessions</h4>
+                  <div className="mt-2">
+                    <p className="text-2xl font-bold text-orange-900">
+                      {Math.round(featureUtilization.spark.totalSessions)} sessions
+                    </p>
+                    <p className="text-sm text-orange-600 mt-1">
+                      Average per user: {featureUtilization.spark.averagePerUser.toFixed(1)} sessions
+                    </p>
+                    <p className="text-xs text-orange-500 mt-1">
+                      {featureUtilization.spark.userCount} users
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
