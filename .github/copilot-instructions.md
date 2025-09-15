@@ -20,6 +20,8 @@ This is a Next.js TypeScript application for analyzing CSV data containing user 
 - Use meaningful component and variable names
 - Include proper error handling for file operations
 - Ensure components are accessible and responsive
+- **ALWAYS use constants from `/src/constants/pricing.ts` instead of hardcoding values**
+- **NEVER duplicate pricing-related magic numbers - import from PRICING constants**
 
 ## Data Structure
 The CSV data follows this format:

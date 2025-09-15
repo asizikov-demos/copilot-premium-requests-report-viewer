@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { ProcessedData } from '@/types/csv';
 import { UserSummary } from '@/utils/dataAnalysis';
+import { PRICING } from '@/constants/pricing';
 
 interface InsightsProps {
   userData: UserSummary[];
@@ -83,6 +84,24 @@ export function Insights({ userData, processedData, onBack }: InsightsProps) {
     [userData, processedData]
   );
 
+  // Compute unutilized value (only for users with numeric quotas)
+  const { averageUnusedValueUSD, lowUnusedValueUSD } = useMemo(() => {
+    const calcUnusedValue = (users: UserConsumptionCategory[]) => {
+      let total = 0;
+      for (const u of users) {
+        if (typeof u.quota === 'number' && u.quota > 0) {
+          const unused = Math.max(0, u.quota - u.totalRequests);
+            total += unused * PRICING.OVERAGE_RATE_PER_REQUEST;
+        }
+      }
+      return total;
+    };
+    return {
+      averageUnusedValueUSD: calcUnusedValue(insightsData.averageUsers),
+      lowUnusedValueUSD: calcUnusedValue(insightsData.lowAdoptionUsers)
+    };
+  }, [insightsData, PRICING.OVERAGE_RATE_PER_REQUEST]);
+
   return (
     <div className="w-full">
       {/* Header */}
@@ -121,34 +140,56 @@ export function Insights({ userData, processedData, onBack }: InsightsProps) {
         </div>
 
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">~</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">~</span>
+                </div>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold text-yellow-800">Average Users</h3>
+                <p className="text-sm text-yellow-600">Moderate Usage (45-90%)</p>
+                <p className="text-2xl font-bold text-yellow-900 mt-2">
+                  {insightsData.averageUsers.length} users
+                </p>
               </div>
             </div>
-            <div className="ml-4">
-              <h3 className="text-lg font-semibold text-yellow-800">Average Users</h3>
-              <p className="text-sm text-yellow-600">Moderate Usage (45-90%)</p>
-              <p className="text-2xl font-bold text-yellow-900 mt-2">
-                {insightsData.averageUsers.length} users
+            <div className="text-right">
+              <h3 className="text-lg font-semibold text-yellow-800">Unutilized Value</h3>
+              <p className="text-sm font-bold text-yellow-900">
+                Total: ${averageUnusedValueUSD.toFixed(2)}
+              </p>
+              <p className="text-xs text-yellow-700">
+                Average per user: ${insightsData.averageUsers.length > 0 ? (averageUnusedValueUSD / insightsData.averageUsers.length).toFixed(2) : '0.00'}
               </p>
             </div>
           </div>
         </div>
 
         <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">!</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">!</span>
+                </div>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold text-red-800">Low Adoption Users</h3>
+                <p className="text-sm text-red-600">Under-utilized (under 45%)</p>
+                <p className="text-2xl font-bold text-red-900 mt-2">
+                  {insightsData.lowAdoptionUsers.length} users
+                </p>
               </div>
             </div>
-            <div className="ml-4">
-              <h3 className="text-lg font-semibold text-red-800">Low Adoption Users</h3>
-              <p className="text-sm text-red-600">Under-utilized (under 45%)</p>
-              <p className="text-2xl font-bold text-red-900 mt-2">
-                {insightsData.lowAdoptionUsers.length} users
+            <div className="text-right">
+              <h3 className="text-lg font-semibold text-red-800">Unutilized Value</h3>
+              <p className="text-sm font-bold text-red-900">
+                Total: ${lowUnusedValueUSD.toFixed(2)}
+              </p>
+              <p className="text-xs text-red-700">
+                Average per user: ${insightsData.lowAdoptionUsers.length > 0 ? (lowUnusedValueUSD / insightsData.lowAdoptionUsers.length).toFixed(2) : '0.00'}
               </p>
             </div>
           </div>
