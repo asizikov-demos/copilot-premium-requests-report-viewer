@@ -654,3 +654,117 @@ export function analyzeCodingAgentAdoption(data: ProcessedData[]): import('@/typ
     users: actualCodingAgentUsers
   };
 }
+
+// Weekly quota exhaustion analysis
+export interface WeeklyQuotaExhaustionBreakdown {
+  totalUsersExhausted: number; // total users who exhausted their included premium requests at any point
+  weeks: Array<{
+    weekNumber: number; // 1-based week index within the month
+    startDate: string; // YYYY-MM-DD (UTC) start of week
+    endDate: string;   // YYYY-MM-DD (UTC) end of week (clamped to month end)
+    usersExhaustedInWeek: number; // users whose first exhaustion event occurred in this week
+  }>;
+}
+
+/**
+ * Compute, for each user with a numeric (non-unlimited) quota, when they first reach/exceed their included premium request quota in a month,
+ * then aggregate counts per (non-overlapping) week of the calendar month.
+ * Weeks are defined as:
+ *   Week 1: Days 1-7
+ *   Week 2: Days 8-14
+ *   Week 3: Days 15-21
+ *   Week 4: Days 22-28
+ *   Week 5: Days 29-end (if needed)
+ * The function treats data strictly in UTC (timestamps already parsed as Date objects) and is non-cumulative per week; a user is counted only in the week they first exhaust.
+ */
+export function computeWeeklyQuotaExhaustion(
+  data: ProcessedData[]
+): WeeklyQuotaExhaustionBreakdown {
+  if (data.length === 0) {
+    return { totalUsersExhausted: 0, weeks: [] };
+  }
+
+  // Group data by user and month (YYYY-MM). We only need per-month analysis; UI will likely pick the current filtered dataset (possibly single month).
+  // If multiple months are present, we'll merge counts across months by aligning week numbers relative to each month separately.
+  // However, requirement context suggests focusing on currently filtered billing period selection; thus we just process provided data.
+
+  // Build per-user chronological request sums
+  const userEntries = new Map<string, ProcessedData[]>();
+  data.forEach(row => {
+    if (!userEntries.has(row.user)) userEntries.set(row.user, []);
+    userEntries.get(row.user)!.push(row);
+  });
+
+  // For each user, sort by timestamp and accumulate requests until reaching their quota (if numeric). Record first exhaustion date.
+  interface ExhaustionRecord { user: string; exhaustionDate: Date; monthKey: string; }
+  const records: ExhaustionRecord[] = [];
+
+  for (const [user, rows] of userEntries.entries()) {
+    // Determine the user's numeric quota (first row's value). If unlimited, skip.
+    const quotaValue = rows[0].quotaValue;
+    if (quotaValue === 'unlimited' || typeof quotaValue !== 'number') continue;
+
+    const sorted = rows.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+    let cumulative = 0;
+    let exhausted = false;
+    for (const r of sorted) {
+      cumulative += r.requestsUsed;
+      if (!exhausted && cumulative >= quotaValue) {
+        exhausted = true;
+        const monthKey = `${r.timestamp.getUTCFullYear()}-${String(r.timestamp.getUTCMonth() + 1).padStart(2, '0')}`;
+        records.push({ user, exhaustionDate: r.timestamp, monthKey });
+        break; // Only first exhaustion date matters
+      }
+    }
+  }
+
+  if (records.length === 0) {
+    return { totalUsersExhausted: 0, weeks: [] };
+  }
+
+  // We build week buckets per month then merge by week label "monthKey-weekNumber" to remain explicit if multiple months provided.
+  interface WeekBucketKey { monthKey: string; weekNumber: number; startDate: string; endDate: string; }
+  const weekMap = new Map<string, { key: WeekBucketKey; users: Set<string> }>();
+
+  for (const rec of records) {
+    const d = rec.exhaustionDate;
+    const day = d.getUTCDate();
+    // Determine week number (1-based)
+    let weekNumber: number;
+    if (day <= 7) weekNumber = 1; else if (day <= 14) weekNumber = 2; else if (day <= 21) weekNumber = 3; else if (day <= 28) weekNumber = 4; else weekNumber = 5;
+
+    // Compute week start and end within month
+    const year = d.getUTCFullYear();
+    const month = d.getUTCMonth(); // 0-based
+    const monthKey = rec.monthKey;
+    const weekStartDay = weekNumber === 1 ? 1 : (weekNumber - 1) * 7 + 1; // 1,8,15,22,29
+    const weekEndDay = weekNumber < 5 ? weekStartDay + 6 : new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+
+    const startDate = new Date(Date.UTC(year, month, weekStartDay)).toISOString().split('T')[0];
+    const endDate = new Date(Date.UTC(year, month, weekEndDay)).toISOString().split('T')[0];
+
+    const mapKey = `${monthKey}-W${weekNumber}`;
+    if (!weekMap.has(mapKey)) {
+      weekMap.set(mapKey, { key: { monthKey, weekNumber, startDate, endDate }, users: new Set() });
+    }
+    weekMap.get(mapKey)!.users.add(rec.user);
+  }
+
+  // Sort weeks by month then week number
+  const weekEntries = Array.from(weekMap.values()).sort((a, b) => {
+    if (a.key.monthKey === b.key.monthKey) return a.key.weekNumber - b.key.weekNumber;
+    return a.key.monthKey.localeCompare(b.key.monthKey);
+  });
+
+  const weeks = weekEntries.map(entry => ({
+    weekNumber: entry.key.weekNumber,
+    startDate: entry.key.startDate,
+    endDate: entry.key.endDate,
+    usersExhaustedInWeek: entry.users.size
+  }));
+
+  return {
+    totalUsersExhausted: records.length,
+    weeks
+  };
+}

@@ -3,7 +3,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { CSVData } from '@/types/csv';
-import { processCSVData, analyzeData, analyzeUserData, generateDailyCumulativeData, analyzePowerUsers, analyzeCodingAgentAdoption, containsJune2025Data, filterEarlyJune2025, getAvailableMonths, hasMultipleMonths, filterBySelectedMonths } from '@/utils/dataAnalysis';
+import { processCSVData, analyzeData, analyzeUserData, generateDailyCumulativeData, analyzePowerUsers, analyzeCodingAgentAdoption, containsJune2025Data, filterEarlyJune2025, getAvailableMonths, hasMultipleMonths, filterBySelectedMonths, computeWeeklyQuotaExhaustion } from '@/utils/dataAnalysis';
 import { UsersOverview } from './UsersOverview';
 import { PowerUsersOverview } from './PowerUsersOverview';
 import { CodingAgentOverview } from './CodingAgentOverview';
@@ -29,7 +29,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
   const [excludeEarlyJune, setExcludeEarlyJune] = useState(false);
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
   
-  const { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, codingAgentAnalysis, processedData, hasJune2025Data, availableMonths, hasMultipleMonthsData } = useMemo(() => {
+  const { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, codingAgentAnalysis, processedData, hasJune2025Data, availableMonths, hasMultipleMonthsData, weeklyExhaustion } = useMemo(() => {
     const processedData = processCSVData(csvData);
     const hasJune2025Data = containsJune2025Data(processedData);
     const availableMonths = getAvailableMonths(processedData);
@@ -47,8 +47,9 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
     const dailyCumulativeData = generateDailyCumulativeData(filteredData);
     const powerUsersAnalysis = analyzePowerUsers(filteredData, minRequestsThreshold);
     const codingAgentAnalysis = analyzeCodingAgentAdoption(filteredData);
+    const weeklyExhaustion = computeWeeklyQuotaExhaustion(filteredData);
     
-    return { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, codingAgentAnalysis, processedData: filteredData, hasJune2025Data, availableMonths, hasMultipleMonthsData };
+    return { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, codingAgentAnalysis, processedData: filteredData, hasJune2025Data, availableMonths, hasMultipleMonthsData, weeklyExhaustion };
   }, [csvData, minRequestsThreshold, excludeEarlyJune, selectedMonths]);
 
   // Auto-select plan based on quota analysis
@@ -499,6 +500,22 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                       <div className="text-xs text-blue-700">
                         💡 Auto-selected {planInfo[analysis.quotaBreakdown.suggestedPlan].name} based on CSV quota data
                       </div>
+                    </div>
+                  )}
+
+                  {/* Weekly Exhaustion Breakdown */}
+                  {weeklyExhaustion.weeks.length > 0 && (
+                    <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                      <h4 className="text-sm font-medium text-gray-800 mb-2">Weekly Quota Exhaustion</h4>
+                      <p className="text-xs text-gray-600 mb-2">Users are counted in the week they first exhausted their included premium requests (non-cumulative).</p>
+                      <ul className="space-y-1 text-xs text-gray-700">
+                        <li className="font-medium">Total users exhausted: {weeklyExhaustion.totalUsersExhausted}</li>
+                        {weeklyExhaustion.weeks.map(w => (
+                          <li key={`${w.weekNumber}-${w.startDate}`}>
+                            Week {w.weekNumber} ({w.startDate} – {w.endDate}): {w.usersExhaustedInWeek}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   )}
                 </div>
