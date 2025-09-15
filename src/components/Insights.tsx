@@ -43,10 +43,14 @@ function categorizeUserConsumption(userData: UserSummary[], processedData: Proce
       consumptionPercentage = (userSummary.totalRequests / quota) * 100;
     }
 
+    // New bands:
+    // Power: >= 90%
+    // Average: 45% - <90%
+    // Low: <45%
     let category: 'power' | 'average' | 'low' = 'low';
-    if (consumptionPercentage >= 95) {
+    if (consumptionPercentage >= 90) {
       category = 'power';
-    } else if (consumptionPercentage >= 50) {
+    } else if (consumptionPercentage >= 45) {
       category = 'average';
     }
 
@@ -108,7 +112,7 @@ export function Insights({ userData, processedData, onBack }: InsightsProps) {
             </div>
             <div className="ml-4">
               <h3 className="text-lg font-semibold text-green-800">Power Users</h3>
-              <p className="text-sm text-green-600">Exhausted Quota (above 95%)</p>
+              <p className="text-sm text-green-600">High Usage (90%+ of quota)</p>
               <p className="text-2xl font-bold text-green-900 mt-2">
                 {insightsData.powerUsers.length} users
               </p>
@@ -125,7 +129,7 @@ export function Insights({ userData, processedData, onBack }: InsightsProps) {
             </div>
             <div className="ml-4">
               <h3 className="text-lg font-semibold text-yellow-800">Average Users</h3>
-              <p className="text-sm text-yellow-600">Moderate Usage (50-95%)</p>
+              <p className="text-sm text-yellow-600">Moderate Usage (45-90%)</p>
               <p className="text-2xl font-bold text-yellow-900 mt-2">
                 {insightsData.averageUsers.length} users
               </p>
@@ -142,7 +146,7 @@ export function Insights({ userData, processedData, onBack }: InsightsProps) {
             </div>
             <div className="ml-4">
               <h3 className="text-lg font-semibold text-red-800">Low Adoption Users</h3>
-              <p className="text-sm text-red-600">Under-utilized (under 50%)</p>
+              <p className="text-sm text-red-600">Under-utilized (under 45%)</p>
               <p className="text-2xl font-bold text-red-900 mt-2">
                 {insightsData.lowAdoptionUsers.length} users
               </p>
@@ -162,7 +166,7 @@ export function Insights({ userData, processedData, onBack }: InsightsProps) {
             >
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium text-gray-900">
-                  Power Users - Exhausted Quota (above 95%)
+                  Power Users - High Usage (90%+ of quota)
                 </h3>
                 <svg
                   className={`w-5 h-5 text-gray-400 transition-transform ${isPowerUsersExpanded ? 'transform rotate-180' : ''}`}
@@ -228,7 +232,7 @@ export function Insights({ userData, processedData, onBack }: InsightsProps) {
             >
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium text-gray-900">
-                  Average Users - Moderate Usage (50-95%)
+                  Average Users - Moderate Usage (45-90%)
                 </h3>
                 <svg
                   className={`w-5 h-5 text-gray-400 transition-transform ${isAverageUsersExpanded ? 'transform rotate-180' : ''}`}
@@ -294,7 +298,7 @@ export function Insights({ userData, processedData, onBack }: InsightsProps) {
             >
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium text-gray-900">
-                  Low Adoption Users - Under-utilized (under 50%)
+                  Low Adoption Users - Under-utilized (under 45%)
                 </h3>
                 <svg
                   className={`w-5 h-5 text-gray-400 transition-transform ${isLowAdoptionExpanded ? 'transform rotate-180' : ''}`}
