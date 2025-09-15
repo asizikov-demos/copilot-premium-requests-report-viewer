@@ -79,11 +79,16 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
   return (
     <div className="w-full mx-auto">
       {/* Header - Mobile Optimized */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Data Analysis Results</h2>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-8">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Data Analysis Results</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            {analysis.timeFrame.start} to {analysis.timeFrame.end} • {filename}
+          </p>
+        </div>
         <button
           onClick={onReset}
-          className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex-shrink-0"
         >
           Upload New File
         </button>
@@ -202,20 +207,20 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                   <div className="p-5">
                     <div className="flex items-center">
                       <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                          <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                           </svg>
                         </div>
                       </div>
                       <div className="ml-5 w-0 flex-1">
                         <dl>
-                          <dt className="text-sm font-medium text-gray-500 truncate">File Info</dt>
+                          <dt className="text-sm font-medium text-gray-500 truncate">Insights</dt>
                           <dd className="text-sm text-gray-600">
-                            {analysis.timeFrame.start} to {analysis.timeFrame.end}
+                            Coming soon...
                           </dd>
-                          <dd className="mt-1 text-sm text-gray-600 truncate" title={filename}>
-                            {filename}
+                          <dd className="mt-1 text-xs text-gray-400">
+                            Advanced analytics
                           </dd>
                         </dl>
                       </div>
