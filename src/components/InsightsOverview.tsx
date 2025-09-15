@@ -178,7 +178,7 @@ export function InsightsOverview({ userData, processedData, onBack }: InsightsOv
       averageUnusedValueUSD: calcUnusedValue(insightsData.averageUsers),
       lowUnusedValueUSD: calcUnusedValue(insightsData.lowAdoptionUsers)
     };
-  }, [insightsData, PRICING.OVERAGE_RATE_PER_REQUEST]);
+  }, [insightsData]);
 
   return (
     <div className="w-full">
