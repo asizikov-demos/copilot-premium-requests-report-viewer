@@ -44,7 +44,7 @@ function categorizeUserConsumption(userData: UserSummary[], processedData: Proce
       consumptionPercentage = (userSummary.totalRequests / quota) * 100;
     }
 
-    // New bands:
+    // Bands:
     // Power: >= 90%
     // Average: 45% - <90%
     // Low: <45%
@@ -74,7 +74,7 @@ function categorizeUserConsumption(userData: UserSummary[], processedData: Proce
   };
 }
 
-// NOTE: Renamed from `Insights` to `InsightsOverview` to follow naming conventions in `.github/instructions/components.instructions.md`
+// Exported Overview component (renamed from `Insights` to match naming conventions)
 export function InsightsOverview({ userData, processedData, onBack }: InsightsOverviewProps) {
   const [isPowerUsersExpanded, setIsPowerUsersExpanded] = useState(false);
   const [isAverageUsersExpanded, setIsAverageUsersExpanded] = useState(false);
