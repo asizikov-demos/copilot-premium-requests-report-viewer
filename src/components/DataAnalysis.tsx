@@ -31,6 +31,9 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
   const [excludeEarlyJune, setExcludeEarlyJune] = useState(false);
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
   
+  // Computed variable for detail view state
+  const isDetailViewActive = showUsersOverview || showPowerUsers || showCodingAgentOverview || showInsightsOverview;
+  
   const { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, codingAgentAnalysis, processedData, hasJune2025Data, availableMonths, hasMultipleMonthsData, weeklyExhaustion } = useMemo(() => {
     const processedData = processCSVData(csvData);
     const hasJune2025Data = containsJune2025Data(processedData);
@@ -107,7 +110,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
               setShowInsightsOverview(false);
             }}
             className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              !showUsersOverview && !showPowerUsers && !showCodingAgentOverview && !showInsightsOverview
+              !isDetailViewActive
                 ? 'bg-blue-600 text-white' 
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
@@ -179,13 +182,13 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
 
       {/* Responsive Layout */}
       <div className={`${
-  showUsersOverview || showPowerUsers || showCodingAgentOverview || showInsightsOverview
+        isDetailViewActive
           ? 'block' // Full width for users table
           : 'grid grid-cols-1 xl:grid-cols-4 2xl:grid-cols-5 gap-8'
       }`}>
         {/* Main Content */}
         <div className={`${
-          showUsersOverview || showPowerUsers || showCodingAgentOverview || showInsightsOverview
+          isDetailViewActive
             ? 'w-full' 
             : 'xl:col-span-3 2xl:col-span-4 space-y-8'
         }`}>
@@ -436,7 +439,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
         </div>
 
         {/* Info Panel - Hidden on mobile when showing users */}
-  {!showUsersOverview && !showPowerUsers && !showCodingAgentOverview && !showInsightsOverview && (
+        {!isDetailViewActive && (
           <div className="xl:col-span-1 2xl:col-span-1">
             <div className="bg-white shadow rounded-lg p-4 sm:p-6 sticky top-6">
               {/* Plan Selector */}
