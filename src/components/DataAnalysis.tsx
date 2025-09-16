@@ -23,16 +23,14 @@ type CopilotPlan = 'business' | 'enterprise';
 
 export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) {
   const [selectedPlan, setSelectedPlan] = useState<CopilotPlan>('business');
-  const [showUsersOverview, setShowUsersOverview] = useState(false);
-  const [showPowerUsers, setShowPowerUsers] = useState(false);
-  const [showCodingAgentOverview, setShowCodingAgentOverview] = useState(false);
-  const [showInsightsOverview, setShowInsightsOverview] = useState(false);
+  // Consolidated view state replaces multiple booleans
+  const [view, setView] = useState<'overview' | 'users' | 'powerUsers' | 'codingAgent' | 'insights'>('overview');
   const [minRequestsThreshold, setMinRequestsThreshold] = useState(DEFAULT_MIN_REQUESTS);
   const [excludeEarlyJune, setExcludeEarlyJune] = useState(false);
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
   
-  // Computed variable for detail view state
-  const isDetailViewActive = showUsersOverview || showPowerUsers || showCodingAgentOverview || showInsightsOverview;
+  // Derived flag for layout decisions
+  const isDetailViewActive = view !== 'overview';
   
   const { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, codingAgentAnalysis, processedData, hasJune2025Data, availableMonths, hasMultipleMonthsData, weeklyExhaustion } = useMemo(() => {
     const processedData = processCSVData(csvData);
@@ -103,14 +101,9 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
       <div className="lg:hidden mb-6">
         <div className="flex flex-wrap gap-2 p-4 bg-gray-50 rounded-lg">
           <button
-            onClick={() => {
-              setShowUsersOverview(false);
-              setShowPowerUsers(false);
-              setShowCodingAgentOverview(false);
-              setShowInsightsOverview(false);
-            }}
+            onClick={() => setView('overview')}
             className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              !isDetailViewActive
+              view === 'overview'
                 ? 'bg-blue-600 text-white' 
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
@@ -118,14 +111,9 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
             📊 Overview
           </button>
           <button
-            onClick={() => {
-              setShowUsersOverview(true);
-              setShowPowerUsers(false);
-              setShowCodingAgentOverview(false);
-              setShowInsightsOverview(false);
-            }}
+            onClick={() => setView('users')}
             className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              showUsersOverview && !showPowerUsers && !showCodingAgentOverview && !showInsightsOverview
+              view === 'users'
                 ? 'bg-blue-600 text-white' 
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
@@ -133,14 +121,9 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
             👥 Users ({analysis.totalUniqueUsers})
           </button>
           <button
-            onClick={() => {
-              setShowUsersOverview(false);
-              setShowPowerUsers(false);
-              setShowCodingAgentOverview(true);
-              setShowInsightsOverview(false);
-            }}
+            onClick={() => setView('codingAgent')}
             className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              showCodingAgentOverview && !showInsightsOverview
+              view === 'codingAgent'
                 ? 'bg-blue-600 text-white' 
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
@@ -148,14 +131,9 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
             🤖 Coding Agent ({codingAgentAnalysis.totalUsers})
           </button>
           <button
-            onClick={() => {
-              setShowUsersOverview(false);
-              setShowPowerUsers(true);
-              setShowCodingAgentOverview(false);
-              setShowInsightsOverview(false);
-            }}
+            onClick={() => setView('powerUsers')}
             className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              showPowerUsers && !showInsightsOverview
+              view === 'powerUsers'
                 ? 'bg-blue-600 text-white' 
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
@@ -163,14 +141,9 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
             ⭐ Power Users ({powerUsersAnalysis.powerUsers.length})
           </button>
           <button
-            onClick={() => {
-              setShowUsersOverview(false);
-              setShowPowerUsers(false);
-              setShowCodingAgentOverview(false);
-              setShowInsightsOverview(true);
-            }}
+            onClick={() => setView('insights')}
             className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              showInsightsOverview
+              view === 'insights'
                 ? 'bg-blue-600 text-white' 
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
@@ -192,7 +165,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
             ? 'w-full' 
             : 'xl:col-span-3 2xl:col-span-4 space-y-8'
         }`}>
-          {showUsersOverview ? (
+          {view === 'users' ? (
             <div className="min-h-[80vh]">
               <UsersOverview 
                 userData={userData}
@@ -200,35 +173,35 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                 allModels={allModels}
                 selectedPlan={selectedPlan}
                 dailyCumulativeData={dailyCumulativeData}
-                onBack={() => setShowUsersOverview(false)}
+                onBack={() => setView('overview')}
               />
             </div>
-          ) : showCodingAgentOverview ? (
+          ) : view === 'codingAgent' ? (
             <div className="min-h-[80vh]">
               <CodingAgentOverview 
                 codingAgentUsers={codingAgentAnalysis.users}
                 totalUniqueUsers={codingAgentAnalysis.totalUniqueUsers}
                 adoptionRate={codingAgentAnalysis.adoptionRate}
                 processedData={processedData}
-                onBack={() => setShowCodingAgentOverview(false)}
+                onBack={() => setView('overview')}
               />
             </div>
-          ) : showPowerUsers ? (
+          ) : view === 'powerUsers' ? (
             <div className="min-h-[80vh]">
               <PowerUsersOverview 
                 powerUsers={powerUsersAnalysis.powerUsers}
                 totalQualifiedUsers={powerUsersAnalysis.totalQualifiedUsers}
                 minRequestsThreshold={minRequestsThreshold}
-                onBack={() => setShowPowerUsers(false)}
+                onBack={() => setView('overview')}
                 onThresholdChange={setMinRequestsThreshold}
               />
             </div>
-          ) : showInsightsOverview ? (
+          ) : view === 'insights' ? (
             <div className="min-h-[80vh]">
               <InsightsOverview 
                 userData={userData}
                 processedData={processedData}
-                onBack={() => setShowInsightsOverview(false)}
+                onBack={() => setView('overview')}
               />
             </div>
           ) : (
@@ -236,7 +209,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
               {/* Summary Stats */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <button
-                  onClick={() => setShowInsightsOverview(true)}
+                  onClick={() => setView('insights')}
                   className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 w-full text-left"
                 >
                   <div className="p-5">
@@ -269,7 +242,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                 </button>
 
                 <button
-                  onClick={() => setShowUsersOverview(true)}
+                  onClick={() => setView('users')}
                   className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 w-full text-left"
                 >
                   <div className="p-5">
@@ -297,7 +270,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                 </button>
 
                 <button
-                  onClick={() => setShowCodingAgentOverview(true)}
+                  onClick={() => setView('codingAgent')}
                   className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 w-full text-left"
                 >
                   <div className="p-5">
@@ -330,7 +303,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                 </button>
 
                 <button
-                  onClick={() => setShowPowerUsers(true)}
+                  onClick={() => setView('powerUsers')}
                   className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 w-full text-left"
                 >
                   <div className="p-5">
