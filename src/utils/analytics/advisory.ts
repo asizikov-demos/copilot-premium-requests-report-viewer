@@ -62,7 +62,7 @@ export function generateAdvisories(
     advisories.push({
       type: 'training',
       severity: 'medium',
-      title: 'Training Opportunity for Low-Utilization Users',
+      title: 'Training Opportunity for Low-Adoption Users',
       description: `${lowAdoptionUsers.length} users (${(lowUtilizationPercentage * 100).toFixed(0)}%) are using less than 20% of their included premium requests, indicating potential adoption challenges.`,
       actionItems: [
         'Schedule GitHub Copilot training sessions focusing on best practices',
@@ -72,7 +72,7 @@ export function generateAdvisories(
         'Consider creating internal Copilot champions program'
       ],
       affectedUsers: lowAdoptionUsers.length,
-      estimatedImpact: `Unused value: ~$${unusedValue.toFixed(0)}/month`,
+      estimatedImpact: `Unutilized value: ~$${unusedValue.toFixed(0)}/month`,
     });
   }
   

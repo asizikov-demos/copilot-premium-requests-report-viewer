@@ -1,125 +1,69 @@
 'use client';
 
 import { WeeklyExhaustionData } from '@/utils/analytics/weeklyQuota';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import React, { useMemo } from 'react';
 
 interface WeeklyQuotaExhaustionProps {
   weeklyExhaustion: WeeklyExhaustionData;
   totalUsers: number;
+  height?: number | string;
 }
 
-export function WeeklyQuotaExhaustion({ 
-  weeklyExhaustion, 
-  totalUsers 
-}: WeeklyQuotaExhaustionProps) {
+interface WeeklyQuotaDatum {
+  week: string;
+  users: number;
+  range: string; // days range for tooltip
+}
+
+export function WeeklyQuotaExhaustion({ weeklyExhaustion, totalUsers, height = 280 }: WeeklyQuotaExhaustionProps) {
   const { week1Exhausted, week2Exhausted, week3Exhausted } = weeklyExhaustion;
-  
-  const weeks = [
-    { 
-      label: 'Week 1 (Days 1-7)', 
-      users: week1Exhausted, 
-      color: 'red',
-      bgColor: 'bg-red-100',
-      textColor: 'text-red-800'
-    },
-    { 
-      label: 'Week 2 (Days 8-14)', 
-      users: week2Exhausted, 
-      color: 'orange',
-      bgColor: 'bg-orange-100',
-      textColor: 'text-orange-800'
-    },
-    { 
-      label: 'Week 3 (Days 15-21)', 
-      users: week3Exhausted, 
-      color: 'yellow',
-      bgColor: 'bg-yellow-100',
-      textColor: 'text-yellow-800'
-    },
-  ];
-  
-  const totalEarlyExhausters = week1Exhausted.length + week2Exhausted.length + week3Exhausted.length;
-  
+  const totalEarly = week1Exhausted.length + week2Exhausted.length + week3Exhausted.length;
+
+  const data: WeeklyQuotaDatum[] = useMemo(() => [
+    { week: 'Week 1', users: week1Exhausted.length, range: 'Days 1-7' },
+    { week: 'Week 2', users: week2Exhausted.length, range: 'Days 8-14' },
+    { week: 'Week 3', users: week3Exhausted.length, range: 'Days 15-21' },
+  ], [week1Exhausted, week2Exhausted, week3Exhausted]);
+
   return (
-    <div className="space-y-6">
-      {/* Summary */}
-      <div className="bg-gray-50 rounded-lg p-4">
-        <h4 className="font-medium text-gray-900 mb-2">Summary</h4>
-        <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-          <span>
-            <strong>{totalEarlyExhausters}</strong> of <strong>{totalUsers}</strong> users 
-            ({totalUsers > 0 ? ((totalEarlyExhausters / totalUsers) * 100).toFixed(1) : 0}%) 
-            exhausted quota before day 21
+    <div className="space-y-4" aria-label="Weekly quota exhaustion summary">
+      <div className="bg-gray-50 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" aria-live="polite">
+        <div>
+          <h4 className="font-medium text-gray-900">Early Quota Exhaustion</h4>
+          <p className="text-sm text-gray-600 mt-1">
+            {totalEarly} of {totalUsers} users ({totalUsers > 0 ? ((totalEarly / totalUsers) * 100).toFixed(1) : '0'}) exhausted quota before day 21
+          </p>
+        </div>
+        {totalEarly === 0 && (
+          <span className="inline-flex items-center text-sm px-3 py-1 rounded-full bg-green-100 text-green-700 font-medium">
+            Balanced usage ✅
           </span>
-        </div>
+        )}
       </div>
-      
-      {/* Weekly Breakdown */}
-      <div className="space-y-4">
-        {weeks.map((week) => (
-          <div key={week.label} className="border border-gray-200 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="font-medium text-gray-900">{week.label}</h4>
-              <span className={`px-3 py-1 text-sm font-medium rounded-full ${week.bgColor} ${week.textColor}`}>
-                {week.users.length} user{week.users.length !== 1 ? 's' : ''}
-              </span>
-            </div>
-            
-            {week.users.length > 0 ? (
-              <div className="space-y-2">
-                <div className="flex flex-wrap gap-2">
-                  {week.users.slice(0, 8).map(user => (
-                    <span 
-                      key={user} 
-                      className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded border"
-                      title={user}
-                    >
-                      {user.length > 15 ? `${user.substring(0, 15)}...` : user}
-                    </span>
-                  ))}
-                  {week.users.length > 8 && (
-                    <span className="text-xs px-2 py-1 bg-gray-200 text-gray-600 rounded border">
-                      +{week.users.length - 8} more
-                    </span>
-                  )}
-                </div>
-                {week.users.length > 8 && (
-                  <details className="text-xs">
-                    <summary className="cursor-pointer text-blue-600 hover:text-blue-800">
-                      Show all {week.users.length} users
-                    </summary>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {week.users.slice(8).map(user => (
-                        <span 
-                          key={user} 
-                          className="px-2 py-1 bg-gray-100 text-gray-700 rounded border"
-                        >
-                          {user}
-                        </span>
-                      ))}
-                    </div>
-                  </details>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500 italic">
-                No users exhausted quota during this period
-              </p>
-            )}
-          </div>
-        ))}
+
+      <div className="w-full h-[240px]">
+        <ResponsiveContainer width="100%" height={height}>
+          <BarChart
+            data={data}
+            margin={{ top: 20, right: 20, left: 10, bottom: 10 }}
+            barCategoryGap={50}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="week" />
+            <YAxis allowDecimals={false} label={{ value: 'Users', angle: -90, position: 'insideLeft', dy: 35 }} />
+            <Tooltip
+              formatter={(value: number) => [`${value} users`, 'Users']}
+              labelFormatter={(label: string, items: any[]) => {
+                const row = items?.[0]?.payload as WeeklyQuotaDatum | undefined;
+                return row ? `${label} (${row.range})` : label;
+              }}
+            />
+            <Bar dataKey="users" fill="#EF4444" radius={[4,4,0,0]} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
-      
-      {totalEarlyExhausters === 0 && (
-        <div className="text-center py-6">
-          <div className="text-4xl mb-2">✅</div>
-          <p className="text-gray-500 text-sm">
-            No users exhausted their quota before day 21 in the current period.
-          </p>
-          <p className="text-gray-400 text-xs mt-1">
-            This indicates well-balanced usage patterns across your organization.
-          </p>
-        </div>
-      )}
+      <p className="text-xs text-gray-500">Bars show count of users who exhausted full quota in each early-week window.</p>
     </div>
   );
 }
