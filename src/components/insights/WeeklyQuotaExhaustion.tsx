@@ -54,8 +54,8 @@ export function WeeklyQuotaExhaustion({ weeklyExhaustion, totalUsers, height = 2
             <YAxis allowDecimals={false} label={{ value: 'Users', angle: -90, position: 'insideLeft', dy: 35 }} />
             <Tooltip
               formatter={(value: number) => [`${value} users`, 'Users']}
-              labelFormatter={(label: string, items: any[]) => {
-                const row = items?.[0]?.payload as WeeklyQuotaDatum | undefined;
+              labelFormatter={(label: string, items: { payload?: WeeklyQuotaDatum }[]) => {
+                const row = items?.[0]?.payload;
                 return row ? `${label} (${row.range})` : label;
               }}
             />

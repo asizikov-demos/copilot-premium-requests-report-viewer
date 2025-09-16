@@ -1,5 +1,5 @@
 import { UserSummary } from './transformations';
-import { categorizeUserConsumption, UserConsumptionCategory, calculateUnusedValue as calculateUnusedValueFromInsights } from './insights';
+import { categorizeUserConsumption, calculateUnusedValue as calculateUnusedValueFromInsights } from './insights';
 import { ProcessedData } from '@/types/csv';
 import { WeeklyExhaustionData, getEarlyExhausterUsers } from './weeklyQuota';
 import { PRICING } from '@/constants/pricing';

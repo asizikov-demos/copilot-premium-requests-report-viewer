@@ -127,7 +127,7 @@ function NoActionRequired() {
             No Action Required
           </h4>
           <p className="text-sm text-green-700">
-            Your organization's GitHub Copilot usage is well-balanced. Usage patterns look healthy with good adoption rates and reasonable quota consumption.
+            Your organization&apos;s GitHub Copilot usage is well-balanced. Usage patterns look healthy with good adoption rates and reasonable quota consumption.
           </p>
           <div className="mt-3 text-xs text-green-600">
             <div className="flex items-center space-x-4">
