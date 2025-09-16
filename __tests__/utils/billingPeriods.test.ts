@@ -1,4 +1,4 @@
-import { processCSVData, getAvailableMonths, filterBySelectedMonths } from '../../src/utils/dataAnalysis';
+import { processCSVData, getAvailableMonths, filterBySelectedMonths } from '../../src/utils/analytics';
 import { CSVData } from '../../src/types/csv';
 
 describe('Billing Period Boundaries', () => {

@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { createPortal } from 'react-dom';
 import { UserConsumptionModalProps } from '@/types/csv';
-import { generateUserDailyModelData } from '@/utils/dataAnalysis';
+import { generateUserDailyModelData } from '@/utils/analytics';
 import { 
   getUserData, 
   calculateUserTotalRequests, 

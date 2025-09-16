@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { UserSummary, DailyCumulativeData, getUserQuotaValue } from '@/utils/dataAnalysis';
+import { UserSummary, DailyCumulativeData, getUserQuotaValue } from '@/utils/analytics';
 import { ProcessedData } from '@/types/csv';
 import { UserConsumptionModal } from './UserConsumptionModal';
 import { calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';

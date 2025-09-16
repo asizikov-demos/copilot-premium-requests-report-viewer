@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { ProcessedData } from '@/types/csv';
-import { UserSummary } from '@/utils/dataAnalysis';
+import { UserSummary } from '@/utils/analytics';
 import { PRICING } from '@/constants/pricing';
 
 interface InsightsOverviewProps {
