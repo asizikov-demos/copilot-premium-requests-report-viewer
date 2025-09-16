@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { Tooltip as RechartsTooltip } from 'recharts';
+import { UserDailyStackedChart } from './charts/UserDailyStackedChart';
 import { createPortal } from 'react-dom';
 import { UserConsumptionModalProps } from '@/types/csv';
 import { generateUserDailyModelData } from '@/utils/analytics';
@@ -284,66 +285,13 @@ export function UserConsumptionModal({
               
               {/* Chart */}
               <div className="flex-1 min-h-0 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={userDailyData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis 
-                    dataKey="date" 
-                    stroke="#6b7280"
-                    fontSize={12}
-                    tickFormatter={(value) => {
-                      const date = new Date(value);
-                      return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
-                    }}
-                  />
-                  <YAxis 
-                    stroke="#6b7280" 
-                    fontSize={12}
-                    domain={[0, (dataMax: number) => {
-                      const quotaLimit = userQuotaValue === 'unlimited' ? 0 : userQuotaValue;
-                      return Math.max(quotaLimit, dataMax);
-                    }]}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  
-                  {/* Quota reference line - only show if user has a numeric quota */}
-                  {userQuotaValue !== 'unlimited' && (
-                    <ReferenceLine 
-                      y={userQuotaValue} 
-                      stroke="#ef4444" 
-                      strokeWidth={2}
-                      strokeDasharray="5 5"
-                      label={{ 
-                        value: `${userQuotaValue} quota limit`, 
-                        position: "insideTopRight",
-                        style: { fontSize: '12px', fill: '#ef4444' }
-                      }}
-                    />
-                  )}
-                  
-                  {/* Stacked bars for each model */}
-                  {userModels.map((model) => (
-                    <Bar
-                      key={model}
-                      dataKey={model}
-                      stackId="models"
-                      fill={modelColors[model]}
-                      name={model}
-                    />
-                  ))}
-                  
-                  {/* Cumulative total line */}
-                  <Line
-                    type="monotone"
-                    dataKey="totalCumulative"
-                    stroke="#1f2937"
-                    strokeWidth={3}
-                    dot={{ fill: '#1f2937', r: 4 }}
-                    activeDot={{ r: 6 }}
-                    name="Cumulative Total"
-                  />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                <UserDailyStackedChart
+                  data={userDailyData}
+                  models={userModels}
+                  modelColors={modelColors}
+                  quotaValue={userQuotaValue}
+                  tooltip={<CustomTooltip />}
+                />
               </div>
             </div>
           ) : (

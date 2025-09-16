@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+// Recharts usage extracted to dedicated chart component
+import { ModelRequestsBarChart } from './charts/ModelRequestsBarChart';
 import { CSVData } from '@/types/csv';
 import { UsersOverview } from './UsersOverview';
 import { PowerUsersOverview } from './PowerUsersOverview';
@@ -311,38 +312,7 @@ function DataAnalysisInner() {
               <div className="bg-white shadow rounded-lg p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-6">Total Requests by Model</h3>
                 <div className="h-96 2xl:h-[32rem]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={chartData}
-                      margin={{
-                        top: 20,
-                        right: 30,
-                        left: 20,
-                        bottom: 60,
-                      }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="model" 
-                        angle={-45}
-                        textAnchor="end"
-                        height={100}
-                        fontSize={12}
-                      />
-                      <YAxis />
-                      <Tooltip 
-                        formatter={(value) => [
-                          `${value} requests`,
-                          'Total Requests'
-                        ]}
-                        labelFormatter={(label, payload) => {
-                          const item = payload?.[0]?.payload;
-                          return item?.fullModel || label;
-                        }}
-                      />
-                      <Bar dataKey="requests" fill="#3B82F6" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <ModelRequestsBarChart data={chartData} />
                 </div>
               </div>
 

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+// Chart primitives extracted to dedicated component
+import { UsersQuotaConsumptionChart } from './charts/UsersQuotaConsumptionChart';
 import { UserSummary, DailyCumulativeData, getUserQuotaValue } from '@/utils/analytics';
 import { ProcessedData } from '@/types/csv';
 import { UserConsumptionModal } from './UserConsumptionModal';
@@ -180,78 +181,15 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
             )}
           </div>
           <div className="h-64 sm:h-80 2xl:h-96 relative z-30">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={dailyCumulativeData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis 
-                  dataKey="date" 
-                  stroke="#6b7280"
-                  fontSize={12}
-                  tickFormatter={(value) => {
-                    const date = new Date(value);
-                    return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
-                  }}
-                />
-                <YAxis 
-                  stroke="#6b7280" 
-                  fontSize={12}
-                  domain={[0, (dataMax: number) => Math.max(currentQuota, dataMax)]}
-                />
-                <Tooltip 
-                  labelFormatter={(label) => {
-                    const date = new Date(label);
-                    return date.toLocaleDateString('en-US', { timeZone: 'UTC' });
-                  }}
-                  formatter={(value: number, name: string) => [
-                    `${value.toFixed(1)} requests`,
-                    name
-                  ]}
-                />
-                {/* Quota reference lines */}
-                {hasMixedQuotas ? (
-                  <>
-                    {quotaTypes.has(PRICING.BUSINESS_QUOTA) && (
-                      <ReferenceLine 
-                        y={PRICING.BUSINESS_QUOTA} 
-                        stroke="#f97316" 
-                        strokeWidth={2}
-                        strokeDasharray="5 5"
-                        label={{ value: `${PRICING.BUSINESS_QUOTA} Business quota`, position: "insideTopRight" }}
-                      />
-                    )}
-                    {quotaTypes.has(PRICING.ENTERPRISE_QUOTA) && (
-                      <ReferenceLine 
-                        y={PRICING.ENTERPRISE_QUOTA} 
-                        stroke="#dc2626" 
-                        strokeWidth={2}
-                        strokeDasharray="5 5"
-                        label={{ value: `${PRICING.ENTERPRISE_QUOTA} Enterprise quota`, position: "insideTopRight" }}
-                      />
-                    )}
-                  </>
-                ) : (
-                  <ReferenceLine 
-                    y={currentQuota} 
-                    stroke="#ef4444" 
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
-                    label={{ value: `${currentQuota} quota limit`, position: "insideTopRight" }}
-                  />
-                )}
-                {/* User lines */}
-                {chartUsers.map((user) => (
-                  <Line
-                    key={user}
-                    type="monotone"
-                    dataKey={user}
-                    stroke={userColors[user]}
-                    strokeWidth={2}
-                    dot={{ r: 3 }}
-                    activeDot={{ r: 5 }}
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
+            <UsersQuotaConsumptionChart
+              dailyCumulativeData={dailyCumulativeData}
+              users={chartUsers}
+              userColors={userColors}
+              currentQuota={currentQuota}
+              quotaTypes={quotaTypes}
+              hasMixedQuotas={hasMixedQuotas}
+              hasMixedLicenses={hasMixedLicenses}
+            />
           </div>
         </div>
       )}
