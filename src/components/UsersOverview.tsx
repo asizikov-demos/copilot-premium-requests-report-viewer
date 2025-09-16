@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-// Chart primitives extracted to dedicated component
+import { useState, useEffect, useMemo } from 'react';
 import { UsersQuotaConsumptionChart } from './charts/UsersQuotaConsumptionChart';
 import { UserSummary, DailyCumulativeData, getUserQuotaValue } from '@/utils/analytics';
 import { ProcessedData } from '@/types/csv';
 import { UserConsumptionModal } from './UserConsumptionModal';
 import { calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
+import { computeOverageSummary } from '@/utils/analytics/overage';
+import { useSortableTable } from '@/hooks/useSortableTable';
+import { useUserConsumptionModal } from '@/hooks/useUserConsumptionModal';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { PRICING } from '@/constants/pricing';
 
 interface UsersOverviewProps {
@@ -42,17 +45,28 @@ const generateUserColors = (users: string[]): Record<string, string> => {
 
 export function UsersOverview({ userData, processedData, allModels, selectedPlan, dailyCumulativeData, onBack }: UsersOverviewProps) {
   const [showChart, setShowChart] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
-  const [sortBy, setSortBy] = useState<string | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const isMobile = useIsMobile();
+  const { selectedUser, open: openUserModal, close: closeUserModal, isOpen } = useUserConsumptionModal();
 
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  // Columns: totalRequests + dynamic model names
+  type ColumnKey = 'totalRequests' | typeof allModels[number];
+  const columns = useMemo<ColumnKey[]>(() => ['totalRequests', ...allModels as ColumnKey[]], [allModels]);
+
+  const {
+    sortedData: sortedUserData,
+    sortBy,
+    sortDirection,
+    handleSort,
+    isSorted
+  } = useSortableTable({
+    data: userData,
+    columns,
+    getSortableValue: (row, column) => {
+      if (column === 'totalRequests') return row.totalRequests;
+      return row.modelBreakdown[column] || 0;
+    },
+    defaultSort: { column: 'totalRequests', direction: 'desc' }
+  });
 
   const planInfo = {
     business: {
@@ -67,14 +81,10 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
 
   const currentQuota = planInfo[selectedPlan].monthlyQuota;
   
-  // Calculate total overage cost considering user-specific quotas
-  const totalOverageRequests = userData.reduce((total, user) => {
-    const userQuota = getUserQuotaValue(processedData, user.user);
-    const effectiveQuota = userQuota === 'unlimited' ? Infinity : userQuota;
-    const overage = calculateOverageRequests(user.totalRequests, effectiveQuota);
-    return total + overage;
-  }, 0);
-  const totalOverageCost = calculateOverageCost(totalOverageRequests);
+  // Calculate total overage via utility (ensures consistency & testability)
+  const { totalOverageRequests, totalOverageCost } = useMemo(() => (
+    computeOverageSummary(userData, processedData)
+  ), [userData, processedData]);
   
   // Detect if we have mixed quota types for chart display
   const quotaTypes = new Set<number>();
@@ -87,35 +97,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
   const hasMixedQuotas = quotaTypes.size > 1;
   const hasMixedLicenses = quotaTypes.has(PRICING.BUSINESS_QUOTA) && quotaTypes.has(PRICING.ENTERPRISE_QUOTA);
   
-  // Handle sorting
-  const handleSort = (column: string) => {
-    if (sortBy === column) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(column);
-      setSortDirection('desc');
-    }
-  };
-
-  // Sort userData based on current sort settings
-  const sortedUserData = [...userData].sort((a, b) => {
-    if (!sortBy) return 0;
-    
-    let aValue: number;
-    let bValue: number;
-    
-    if (sortBy === 'totalRequests') {
-      aValue = a.totalRequests;
-      bValue = b.totalRequests;
-    } else {
-      // It's a model column
-      aValue = a.modelBreakdown[sortBy] || 0;
-      bValue = b.modelBreakdown[sortBy] || 0;
-    }
-    
-    const comparison = aValue - bValue;
-    return sortDirection === 'asc' ? comparison : -comparison;
-  });
+  // sortedUserData provided by hook
   
   // Get users for chart
   const chartUsers = userData.map(u => u.user);
@@ -208,7 +190,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
                 return (
                 <button
                   key={user.user}
-                  onClick={() => setSelectedUser(user.user)}
+                  onClick={() => openUserModal(user.user)}
                   className="w-full bg-gray-50 rounded-lg p-4 border hover:bg-gray-100 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 >
                   <div className="flex justify-between items-start mb-2">
@@ -307,7 +289,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
                 <tr key={user.user} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                   <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium sticky left-0 z-10 border-r border-gray-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                     <button
-                      onClick={() => setSelectedUser(user.user)}
+                      onClick={() => openUserModal(user.user)}
                       className="max-w-32 truncate text-left text-blue-600 hover:text-blue-800 hover:underline cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded"
                       title={`View ${user.user}'s consumption details`}
                     >
@@ -352,12 +334,12 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
       )}
       
       {/* User Consumption Modal */}
-      {selectedUser && (
+      {isOpen && selectedUser && (
         <UserConsumptionModal
           user={selectedUser}
           processedData={processedData}
           userQuotaValue={getUserQuotaValue(processedData, selectedUser)}
-          onClose={() => setSelectedUser(null)}
+          onClose={closeUserModal}
         />
       )}
     </div>
