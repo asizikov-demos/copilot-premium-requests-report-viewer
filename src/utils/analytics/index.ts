@@ -7,3 +7,5 @@ export * from './filters';
 export * from './exhaustion';
 export * from './overage';
 export * from './insights';
+export * from './weeklyQuota';
+export * from './advisory';
