@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { CSVData } from '@/types/csv';
-import { processCSVData, analyzeData, analyzeUserData, generateDailyCumulativeData, analyzePowerUsers, analyzeCodingAgentAdoption, containsJune2025Data, filterEarlyJune2025, getAvailableMonths, hasMultipleMonths, filterBySelectedMonths, computeWeeklyQuotaExhaustion } from '@/utils/analytics';
+import { processCSVData } from '@/utils/analytics';
+import { useAnalysisFilters } from '@/hooks/useAnalysisFilters';
+import { useAnalyzedData } from '@/hooks/useAnalyzedData';
 import { UsersOverview } from './UsersOverview';
 import { PowerUsersOverview } from './PowerUsersOverview';
 import { CodingAgentOverview } from './CodingAgentOverview';
@@ -26,34 +28,36 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
   // Consolidated view state replaces multiple booleans
   const [view, setView] = useState<'overview' | 'users' | 'powerUsers' | 'codingAgent' | 'insights'>('overview');
   const [minRequestsThreshold, setMinRequestsThreshold] = useState(DEFAULT_MIN_REQUESTS);
-  const [excludeEarlyJune, setExcludeEarlyJune] = useState(false);
-  const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
+  // Filter state managed by dedicated hook once base processed data known
+  const baseProcessed = processCSVData(csvData);
+  const {
+    excludeEarlyJune,
+    setExcludeEarlyJune,
+    selectedMonths,
+    setSelectedMonths,
+    hasJune2025Data,
+    availableMonths,
+    hasMultipleMonthsData
+  } = useAnalysisFilters(baseProcessed);
   
   // Derived flag for layout decisions
   const isDetailViewActive = view !== 'overview';
   
-  const { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, codingAgentAnalysis, processedData, hasJune2025Data, availableMonths, hasMultipleMonthsData, weeklyExhaustion } = useMemo(() => {
-    const processedData = processCSVData(csvData);
-    const hasJune2025Data = containsJune2025Data(processedData);
-    const availableMonths = getAvailableMonths(processedData);
-    const hasMultipleMonthsData = hasMultipleMonths(processedData);
-    
-    // Apply early June filter if enabled
-    let filteredData = excludeEarlyJune ? filterEarlyJune2025(processedData) : processedData;
-    
-    // Apply billing period filter if months are selected
-    filteredData = filterBySelectedMonths(filteredData, selectedMonths);
-    
-    const analysis = analyzeData(filteredData);
-    const userData = analyzeUserData(filteredData);
-    const allModels = Array.from(new Set(filteredData.map(d => d.model))).sort();
-    const dailyCumulativeData = generateDailyCumulativeData(filteredData);
-    const powerUsersAnalysis = analyzePowerUsers(filteredData, minRequestsThreshold);
-    const codingAgentAnalysis = analyzeCodingAgentAdoption(filteredData);
-    const weeklyExhaustion = computeWeeklyQuotaExhaustion(filteredData);
-    
-    return { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, codingAgentAnalysis, processedData: filteredData, hasJune2025Data, availableMonths, hasMultipleMonthsData, weeklyExhaustion };
-  }, [csvData, minRequestsThreshold, excludeEarlyJune, selectedMonths]);
+  const {
+    analysis,
+    userData,
+    allModels,
+    dailyCumulativeData,
+    powerUsersAnalysis,
+    codingAgentAnalysis,
+    processedData,
+    weeklyExhaustion
+  } = useAnalyzedData({
+    baseProcessed,
+    excludeEarlyJune,
+    selectedMonths,
+    minRequestsThreshold
+  });
 
   // Auto-select plan based on quota analysis
   useEffect(() => {
