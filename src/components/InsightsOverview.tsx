@@ -2,8 +2,10 @@
 
 import React, { useMemo, useState } from 'react';
 import { ProcessedData } from '@/types/csv';
-import { UserSummary } from '@/utils/dataAnalysis';
-import { PRICING } from '@/constants/pricing';
+import { UserSummary } from '@/utils/analytics';
+import { categorizeUserConsumption, calculateFeatureUtilization, calculateUnusedValue, CONSUMPTION_THRESHOLDS } from '@/utils/analytics/insights';
+import { ExpandableSection } from './primitives/ExpandableSection';
+import { UserCategoryTable } from './analysis/UserCategoryTable';
 
 interface InsightsOverviewProps {
   userData: UserSummary[];
@@ -11,140 +13,7 @@ interface InsightsOverviewProps {
   onBack: () => void;
 }
 
-interface UserConsumptionCategory {
-  user: string;
-  totalRequests: number;
-  quota: number | 'unlimited';
-  consumptionPercentage: number;
-  category: 'power' | 'average' | 'low';
-}
-
-interface InsightsOverviewData {
-  powerUsers: UserConsumptionCategory[];
-  averageUsers: UserConsumptionCategory[];
-  lowAdoptionUsers: UserConsumptionCategory[];
-}
-
-interface FeatureUtilizationStats {
-  codeReview: {
-    totalSessions: number;
-    averagePerUser: number;
-    userCount: number;
-  };
-  codingAgent: {
-    totalSessions: number;
-    averagePerUser: number;
-    userCount: number;
-  };
-  spark: {
-    totalSessions: number;
-    averagePerUser: number;
-    userCount: number;
-  };
-}
-
-function calculateFeatureUtilization(processedData: ProcessedData[]): FeatureUtilizationStats {
-  const codeReviewUsers = new Map<string, number>();
-  const codingAgentUsers = new Map<string, number>();
-  const sparkUsers = new Map<string, number>();
-  
-  let totalCodeReviewSessions = 0;
-  let totalCodingAgentSessions = 0;
-  let totalSparkSessions = 0;
-  
-  processedData.forEach(row => {
-    const modelLower = row.model.toLowerCase();
-    
-    if (modelLower.includes('code review')) {
-      totalCodeReviewSessions += row.requestsUsed;
-      const currentCount = codeReviewUsers.get(row.user) || 0;
-      codeReviewUsers.set(row.user, currentCount + row.requestsUsed);
-    }
-    
-    if (modelLower.includes('coding agent') || modelLower.includes('padawan')) {
-      totalCodingAgentSessions += row.requestsUsed;
-      const currentCount = codingAgentUsers.get(row.user) || 0;
-      codingAgentUsers.set(row.user, currentCount + row.requestsUsed);
-    }
-    
-    if (modelLower.includes('spark')) {
-      totalSparkSessions += row.requestsUsed;
-      const currentCount = sparkUsers.get(row.user) || 0;
-      sparkUsers.set(row.user, currentCount + row.requestsUsed);
-    }
-  });
-  
-  const codeReviewUserCount = codeReviewUsers.size;
-  const codingAgentUserCount = codingAgentUsers.size;
-  const sparkUserCount = sparkUsers.size;
-  
-  return {
-    codeReview: {
-      totalSessions: totalCodeReviewSessions,
-      averagePerUser: codeReviewUserCount > 0 ? totalCodeReviewSessions / codeReviewUserCount : 0,
-      userCount: codeReviewUserCount
-    },
-    codingAgent: {
-      totalSessions: totalCodingAgentSessions,
-      averagePerUser: codingAgentUserCount > 0 ? totalCodingAgentSessions / codingAgentUserCount : 0,
-      userCount: codingAgentUserCount
-    },
-    spark: {
-      totalSessions: totalSparkSessions,
-      averagePerUser: sparkUserCount > 0 ? totalSparkSessions / sparkUserCount : 0,
-      userCount: sparkUserCount
-    }
-  };
-}
-
-function categorizeUserConsumption(userData: UserSummary[], processedData: ProcessedData[]): InsightsOverviewData {
-  // Create a map to get quota for each user
-  const userQuotaMap = new Map<string, number | 'unlimited'>();
-  
-  // Get the quota for each user (use the first quota found for that user)
-  processedData.forEach(row => {
-    if (!userQuotaMap.has(row.user)) {
-      userQuotaMap.set(row.user, row.quotaValue);
-    }
-  });
-
-  const categorizedUsers: UserConsumptionCategory[] = userData.map(userSummary => {
-    const quota = userQuotaMap.get(userSummary.user) || 'unlimited';
-    
-    let consumptionPercentage = 0;
-    if (quota !== 'unlimited' && typeof quota === 'number' && quota > 0) {
-      consumptionPercentage = (userSummary.totalRequests / quota) * 100;
-    }
-
-    // Bands:
-    // Power: >= 90%
-    // Average: 45% - <90%
-    // Low: <45%
-    let category: 'power' | 'average' | 'low' = 'low';
-    if (consumptionPercentage >= 90) {
-      category = 'power';
-    } else if (consumptionPercentage >= 45) {
-      category = 'average';
-    }
-
-    return {
-      user: userSummary.user,
-      totalRequests: userSummary.totalRequests,
-      quota,
-      consumptionPercentage,
-      category
-    };
-  });
-
-  // Sort by consumption percentage (highest first)
-  categorizedUsers.sort((a, b) => b.consumptionPercentage - a.consumptionPercentage);
-
-  return {
-    powerUsers: categorizedUsers.filter(u => u.category === 'power'),
-    averageUsers: categorizedUsers.filter(u => u.category === 'average'),
-    lowAdoptionUsers: categorizedUsers.filter(u => u.category === 'low')
-  };
-}
+// (Interfaces & logic moved to analytics/insights.ts)
 
 // Exported Overview component (renamed from `Insights` to match naming conventions)
 export function InsightsOverview({ userData, processedData, onBack }: InsightsOverviewProps) {
@@ -163,22 +32,8 @@ export function InsightsOverview({ userData, processedData, onBack }: InsightsOv
   );
 
   // Compute unutilized value (only for users with numeric quotas)
-  const { averageUnusedValueUSD, lowUnusedValueUSD } = useMemo(() => {
-    const calcUnusedValue = (users: UserConsumptionCategory[]) => {
-      let total = 0;
-      for (const u of users) {
-        if (typeof u.quota === 'number' && u.quota > 0) {
-          const unused = Math.max(0, u.quota - u.totalRequests);
-            total += unused * PRICING.OVERAGE_RATE_PER_REQUEST;
-        }
-      }
-      return total;
-    };
-    return {
-      averageUnusedValueUSD: calcUnusedValue(insightsData.averageUsers),
-      lowUnusedValueUSD: calcUnusedValue(insightsData.lowAdoptionUsers)
-    };
-  }, [insightsData]);
+  const averageUnusedValueUSD = useMemo(() => calculateUnusedValue(insightsData.averageUsers), [insightsData]);
+  const lowUnusedValueUSD = useMemo(() => calculateUnusedValue(insightsData.lowAdoptionUsers), [insightsData]);
 
   return (
     <div className="w-full">
@@ -278,205 +133,43 @@ export function InsightsOverview({ userData, processedData, onBack }: InsightsOv
       <div className="space-y-8">
         {/* Power Users Table */}
         {insightsData.powerUsers.length > 0 && (
-          <div className="bg-white shadow rounded-lg overflow-hidden">
-            <button
-              onClick={() => setIsPowerUsersExpanded(!isPowerUsersExpanded)}
-              className="w-full px-6 py-4 border-b border-gray-200 text-left hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900">
-                  Power Users - High Usage (90%+ of quota)
-                </h3>
-                <svg
-                  className={`w-5 h-5 text-gray-400 transition-transform ${isPowerUsersExpanded ? 'transform rotate-180' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </button>
-            {isPowerUsersExpanded && (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        User
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Requests Used
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Quota
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Consumption %
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {insightsData.powerUsers.map((user, index) => (
-                      <tr key={user.user} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {user.user}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {user.totalRequests.toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {user.quota === 'unlimited' ? 'Unlimited' : user.quota.toString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            {user.consumptionPercentage.toFixed(1)}%
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          <ExpandableSection
+            id="power-users"
+            title={`Power Users - High Usage (${CONSUMPTION_THRESHOLDS.powerMinPct}%+ of quota)`}
+            expanded={isPowerUsersExpanded}
+            onToggle={() => setIsPowerUsersExpanded(e => !e)}
+          >
+            <UserCategoryTable users={insightsData.powerUsers} color="green" />
+          </ExpandableSection>
         )}
 
         {/* Average Users Table */}
         {insightsData.averageUsers.length > 0 && (
-          <div className="bg-white shadow rounded-lg overflow-hidden">
-            <button
-              onClick={() => setIsAverageUsersExpanded(!isAverageUsersExpanded)}
-              className="w-full px-6 py-4 border-b border-gray-200 text-left hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900">
-                  Average Users - Moderate Usage (45-90%)
-                </h3>
-                <svg
-                  className={`w-5 h-5 text-gray-400 transition-transform ${isAverageUsersExpanded ? 'transform rotate-180' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </button>
-            {isAverageUsersExpanded && (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        User
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Requests Used
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Quota
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Consumption %
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {insightsData.averageUsers.map((user, index) => (
-                      <tr key={user.user} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {user.user}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {user.totalRequests.toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {user.quota === 'unlimited' ? 'Unlimited' : user.quota.toString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                            {user.consumptionPercentage.toFixed(1)}%
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          <ExpandableSection
+            id="average-users"
+            title={`Average Users - Moderate Usage (${CONSUMPTION_THRESHOLDS.averageMinPct}-${CONSUMPTION_THRESHOLDS.powerMinPct}%)`}
+            expanded={isAverageUsersExpanded}
+            onToggle={() => setIsAverageUsersExpanded(e => !e)}
+          >
+            <UserCategoryTable users={insightsData.averageUsers} color="yellow" />
+          </ExpandableSection>
         )}
 
         {/* Low Adoption Users Table */}
         {insightsData.lowAdoptionUsers.length > 0 && (
-          <div className="bg-white shadow rounded-lg overflow-hidden">
-            <button
-              onClick={() => setIsLowAdoptionExpanded(!isLowAdoptionExpanded)}
-              className="w-full px-6 py-4 border-b border-gray-200 text-left hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900">
-                  Low Adoption Users - Under-utilized (under 45%)
-                </h3>
-                <svg
-                  className={`w-5 h-5 text-gray-400 transition-transform ${isLowAdoptionExpanded ? 'transform rotate-180' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </button>
-            {isLowAdoptionExpanded && (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        User
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Requests Used
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Quota
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Consumption %
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {insightsData.lowAdoptionUsers.slice(0, 20).map((user, index) => (
-                      <tr key={user.user} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {user.user}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {user.totalRequests.toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {user.quota === 'unlimited' ? 'Unlimited' : user.quota.toString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                            {user.consumptionPercentage.toFixed(1)}%
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {insightsData.lowAdoptionUsers.length > 20 && (
-                  <div className="px-6 py-3 bg-gray-50 text-sm text-gray-500 text-center">
-                    Showing top 20 of {insightsData.lowAdoptionUsers.length} users
-                  </div>
-                )}
+          <ExpandableSection
+            id="low-users"
+            title={`Low Adoption Users - Under-utilized (<${CONSUMPTION_THRESHOLDS.averageMinPct}%)`}
+            expanded={isLowAdoptionExpanded}
+            onToggle={() => setIsLowAdoptionExpanded(e => !e)}
+          >
+            <UserCategoryTable users={insightsData.lowAdoptionUsers} color="red" limit={20} />
+            {insightsData.lowAdoptionUsers.length > 20 && (
+              <div className="px-6 py-3 bg-gray-50 text-sm text-gray-500 text-center">
+                Showing top 20 of {insightsData.lowAdoptionUsers.length} users
               </div>
             )}
-          </div>
+          </ExpandableSection>
         )}
       </div>
 

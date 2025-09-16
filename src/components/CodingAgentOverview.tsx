@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useState } from 'react';
+import { CodingAgentUsageChart } from './charts/CodingAgentUsageChart';
 import { CodingAgentOverviewProps } from '@/types/csv';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { computeDailyCodingAgentUsage } from '@/utils/analytics/codingAgent';
 
 export function CodingAgentOverview({ 
   codingAgentUsers, 
@@ -11,42 +13,9 @@ export function CodingAgentOverview({
   processedData,
   onBack 
 }: CodingAgentOverviewProps) {
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
   const [showChart, setShowChart] = useState(true);
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Generate daily coding agent usage data
-  const dailyCodingAgentData = useMemo(() => {
-    const dailyData = new Map<string, number>();
-    
-    processedData.forEach(row => {
-      const isCodingAgent = row.model.toLowerCase().includes('coding agent') || 
-                           row.model.toLowerCase().includes('padawan');
-      if (isCodingAgent) {
-        const date = new Date(row.timestamp).toISOString().split('T')[0];
-        dailyData.set(date, (dailyData.get(date) || 0) + row.requestsUsed);
-      }
-    });
-
-    const sortedDates = Array.from(dailyData.keys()).sort();
-    let cumulative = 0;
-    
-    return sortedDates.map(date => {
-      const dailyRequests = dailyData.get(date) || 0;
-      cumulative += dailyRequests;
-      return {
-        date,
-        dailyRequests,
-        cumulativeRequests: cumulative
-      };
-    });
-  }, [processedData]);
+  const dailyCodingAgentData = computeDailyCodingAgentUsage(processedData);
 
   return (
     <div className="space-y-6">
@@ -80,51 +49,7 @@ export function CodingAgentOverview({
         <div className="bg-white shadow rounded-lg p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Coding Agent Usage Over Time</h3>
           <div className="h-64 sm:h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={dailyCodingAgentData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis 
-                  dataKey="date" 
-                  stroke="#6b7280"
-                  fontSize={12}
-                  tickFormatter={(value) => {
-                    const date = new Date(value);
-                    return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
-                  }}
-                />
-                <YAxis stroke="#6b7280" fontSize={12} />
-                <Tooltip 
-                  labelFormatter={(label) => {
-                    const date = new Date(label);
-                    return date.toLocaleDateString('en-US', { timeZone: 'UTC' });
-                  }}
-                  formatter={(value: number, name: string) => [
-                    `${value.toFixed(1)} requests`,
-                    name === 'Daily Requests' ? 'Daily' : 'Cumulative'
-                  ]}
-                />
-                {/* Cumulative total line */}
-                <Line
-                  type="monotone"
-                  dataKey="cumulativeRequests"
-                  stroke="#3B82F6"
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                  name="Cumulative Requests"
-                />
-                {/* Daily requests line */}
-                <Line
-                  type="monotone"
-                  dataKey="dailyRequests"
-                  stroke="#10B981"
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                  name="Daily Requests"
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <CodingAgentUsageChart data={dailyCodingAgentData} />
           </div>
         </div>
       )}

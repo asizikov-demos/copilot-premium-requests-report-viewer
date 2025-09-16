@@ -1,17 +1,17 @@
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import React from 'react';
+// Recharts usage extracted to dedicated chart component
+import { ModelRequestsBarChart } from './charts/ModelRequestsBarChart';
 import { CSVData } from '@/types/csv';
-import { processCSVData, analyzeData, analyzeUserData, generateDailyCumulativeData, analyzePowerUsers, analyzeCodingAgentAdoption, containsJune2025Data, filterEarlyJune2025, getAvailableMonths, hasMultipleMonths, filterBySelectedMonths, computeWeeklyQuotaExhaustion } from '@/utils/dataAnalysis';
 import { UsersOverview } from './UsersOverview';
 import { PowerUsersOverview } from './PowerUsersOverview';
 import { CodingAgentOverview } from './CodingAgentOverview';
 import { InsightsOverview } from './InsightsOverview';
 import { PRICING } from '@/constants/pricing';
+import { AnalysisProvider, useAnalysisContext } from '@/context/AnalysisContext';
 
-// Constants
-const DEFAULT_MIN_REQUESTS = 20;
+// The outer component now only supplies provider props
 
 interface DataAnalysisProps {
   csvData: CSVData[];
@@ -21,65 +21,35 @@ interface DataAnalysisProps {
 
 type CopilotPlan = 'business' | 'enterprise';
 
-export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) {
-  const [selectedPlan, setSelectedPlan] = useState<CopilotPlan>('business');
-  const [showUsersOverview, setShowUsersOverview] = useState(false);
-  const [showPowerUsers, setShowPowerUsers] = useState(false);
-  const [showCodingAgentOverview, setShowCodingAgentOverview] = useState(false);
-  const [showInsightsOverview, setShowInsightsOverview] = useState(false);
-  const [minRequestsThreshold, setMinRequestsThreshold] = useState(DEFAULT_MIN_REQUESTS);
-  const [excludeEarlyJune, setExcludeEarlyJune] = useState(false);
-  const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
-  
-  // Computed variable for detail view state
-  const isDetailViewActive = showUsersOverview || showPowerUsers || showCodingAgentOverview || showInsightsOverview;
-  
-  const { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, codingAgentAnalysis, processedData, hasJune2025Data, availableMonths, hasMultipleMonthsData, weeklyExhaustion } = useMemo(() => {
-    const processedData = processCSVData(csvData);
-    const hasJune2025Data = containsJune2025Data(processedData);
-    const availableMonths = getAvailableMonths(processedData);
-    const hasMultipleMonthsData = hasMultipleMonths(processedData);
-    
-    // Apply early June filter if enabled
-    let filteredData = excludeEarlyJune ? filterEarlyJune2025(processedData) : processedData;
-    
-    // Apply billing period filter if months are selected
-    filteredData = filterBySelectedMonths(filteredData, selectedMonths);
-    
-    const analysis = analyzeData(filteredData);
-    const userData = analyzeUserData(filteredData);
-    const allModels = Array.from(new Set(filteredData.map(d => d.model))).sort();
-    const dailyCumulativeData = generateDailyCumulativeData(filteredData);
-    const powerUsersAnalysis = analyzePowerUsers(filteredData, minRequestsThreshold);
-    const codingAgentAnalysis = analyzeCodingAgentAdoption(filteredData);
-    const weeklyExhaustion = computeWeeklyQuotaExhaustion(filteredData);
-    
-    return { analysis, userData, allModels, dailyCumulativeData, powerUsersAnalysis, codingAgentAnalysis, processedData: filteredData, hasJune2025Data, availableMonths, hasMultipleMonthsData, weeklyExhaustion };
-  }, [csvData, minRequestsThreshold, excludeEarlyJune, selectedMonths]);
-
-  // Auto-select plan based on quota analysis
-  useEffect(() => {
-    if (analysis.quotaBreakdown.suggestedPlan) {
-      setSelectedPlan(analysis.quotaBreakdown.suggestedPlan);
-    }
-  }, [analysis.quotaBreakdown.suggestedPlan]);
-
-  const chartData = analysis.requestsByModel.map(item => ({
-    model: item.model.length > 20 ? `${item.model.substring(0, 20)}...` : item.model,
-    fullModel: item.model,
-    requests: Math.round(item.totalRequests * 100) / 100
-  }));
-
-  const planInfo = {
-    business: {
-      name: 'Copilot Business',
-      monthlyQuota: PRICING.BUSINESS_QUOTA
-    },
-    enterprise: {
-      name: 'Copilot Enterprise', 
-      monthlyQuota: PRICING.ENTERPRISE_QUOTA
-    }
-  };
+function DataAnalysisInner() {
+  const {
+    selectedPlan,
+    setSelectedPlan,
+    view,
+    setView,
+    minRequestsThreshold,
+    setMinRequestsThreshold,
+    analysis,
+    userData,
+    allModels,
+    dailyCumulativeData,
+    powerUsersAnalysis,
+    codingAgentAnalysis,
+    processedData,
+    weeklyExhaustion,
+    excludeEarlyJune,
+    setExcludeEarlyJune,
+    hasJune2025Data,
+    availableMonths,
+    hasMultipleMonthsData,
+    selectedMonths,
+    setSelectedMonths,
+    isDetailViewActive,
+    chartData,
+    planInfo,
+    filename,
+    onReset
+  } = useAnalysisContext();
 
   return (
     <div className="w-full mx-auto">
@@ -103,14 +73,9 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
       <div className="lg:hidden mb-6">
         <div className="flex flex-wrap gap-2 p-4 bg-gray-50 rounded-lg">
           <button
-            onClick={() => {
-              setShowUsersOverview(false);
-              setShowPowerUsers(false);
-              setShowCodingAgentOverview(false);
-              setShowInsightsOverview(false);
-            }}
+            onClick={() => setView('overview')}
             className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              !isDetailViewActive
+              view === 'overview'
                 ? 'bg-blue-600 text-white' 
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
@@ -118,14 +83,9 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
             📊 Overview
           </button>
           <button
-            onClick={() => {
-              setShowUsersOverview(true);
-              setShowPowerUsers(false);
-              setShowCodingAgentOverview(false);
-              setShowInsightsOverview(false);
-            }}
+            onClick={() => setView('users')}
             className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              showUsersOverview && !showPowerUsers && !showCodingAgentOverview && !showInsightsOverview
+              view === 'users'
                 ? 'bg-blue-600 text-white' 
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
@@ -133,14 +93,9 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
             👥 Users ({analysis.totalUniqueUsers})
           </button>
           <button
-            onClick={() => {
-              setShowUsersOverview(false);
-              setShowPowerUsers(false);
-              setShowCodingAgentOverview(true);
-              setShowInsightsOverview(false);
-            }}
+            onClick={() => setView('codingAgent')}
             className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              showCodingAgentOverview && !showInsightsOverview
+              view === 'codingAgent'
                 ? 'bg-blue-600 text-white' 
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
@@ -148,14 +103,9 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
             🤖 Coding Agent ({codingAgentAnalysis.totalUsers})
           </button>
           <button
-            onClick={() => {
-              setShowUsersOverview(false);
-              setShowPowerUsers(true);
-              setShowCodingAgentOverview(false);
-              setShowInsightsOverview(false);
-            }}
+            onClick={() => setView('powerUsers')}
             className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              showPowerUsers && !showInsightsOverview
+              view === 'powerUsers'
                 ? 'bg-blue-600 text-white' 
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
@@ -163,14 +113,9 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
             ⭐ Power Users ({powerUsersAnalysis.powerUsers.length})
           </button>
           <button
-            onClick={() => {
-              setShowUsersOverview(false);
-              setShowPowerUsers(false);
-              setShowCodingAgentOverview(false);
-              setShowInsightsOverview(true);
-            }}
+            onClick={() => setView('insights')}
             className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              showInsightsOverview
+              view === 'insights'
                 ? 'bg-blue-600 text-white' 
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
@@ -192,7 +137,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
             ? 'w-full' 
             : 'xl:col-span-3 2xl:col-span-4 space-y-8'
         }`}>
-          {showUsersOverview ? (
+          {view === 'users' ? (
             <div className="min-h-[80vh]">
               <UsersOverview 
                 userData={userData}
@@ -200,35 +145,35 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                 allModels={allModels}
                 selectedPlan={selectedPlan}
                 dailyCumulativeData={dailyCumulativeData}
-                onBack={() => setShowUsersOverview(false)}
+                onBack={() => setView('overview')}
               />
             </div>
-          ) : showCodingAgentOverview ? (
+          ) : view === 'codingAgent' ? (
             <div className="min-h-[80vh]">
               <CodingAgentOverview 
                 codingAgentUsers={codingAgentAnalysis.users}
                 totalUniqueUsers={codingAgentAnalysis.totalUniqueUsers}
                 adoptionRate={codingAgentAnalysis.adoptionRate}
                 processedData={processedData}
-                onBack={() => setShowCodingAgentOverview(false)}
+                onBack={() => setView('overview')}
               />
             </div>
-          ) : showPowerUsers ? (
+          ) : view === 'powerUsers' ? (
             <div className="min-h-[80vh]">
               <PowerUsersOverview 
                 powerUsers={powerUsersAnalysis.powerUsers}
                 totalQualifiedUsers={powerUsersAnalysis.totalQualifiedUsers}
                 minRequestsThreshold={minRequestsThreshold}
-                onBack={() => setShowPowerUsers(false)}
+                onBack={() => setView('overview')}
                 onThresholdChange={setMinRequestsThreshold}
               />
             </div>
-          ) : showInsightsOverview ? (
+          ) : view === 'insights' ? (
             <div className="min-h-[80vh]">
               <InsightsOverview 
                 userData={userData}
                 processedData={processedData}
-                onBack={() => setShowInsightsOverview(false)}
+                onBack={() => setView('overview')}
               />
             </div>
           ) : (
@@ -236,7 +181,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
               {/* Summary Stats */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <button
-                  onClick={() => setShowInsightsOverview(true)}
+                  onClick={() => setView('insights')}
                   className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 w-full text-left"
                 >
                   <div className="p-5">
@@ -269,7 +214,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                 </button>
 
                 <button
-                  onClick={() => setShowUsersOverview(true)}
+                  onClick={() => setView('users')}
                   className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 w-full text-left"
                 >
                   <div className="p-5">
@@ -297,7 +242,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                 </button>
 
                 <button
-                  onClick={() => setShowCodingAgentOverview(true)}
+                  onClick={() => setView('codingAgent')}
                   className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 w-full text-left"
                 >
                   <div className="p-5">
@@ -330,7 +275,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
                 </button>
 
                 <button
-                  onClick={() => setShowPowerUsers(true)}
+                  onClick={() => setView('powerUsers')}
                   className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 w-full text-left"
                 >
                   <div className="p-5">
@@ -367,38 +312,7 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
               <div className="bg-white shadow rounded-lg p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-6">Total Requests by Model</h3>
                 <div className="h-96 2xl:h-[32rem]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={chartData}
-                      margin={{
-                        top: 20,
-                        right: 30,
-                        left: 20,
-                        bottom: 60,
-                      }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="model" 
-                        angle={-45}
-                        textAnchor="end"
-                        height={100}
-                        fontSize={12}
-                      />
-                      <YAxis />
-                      <Tooltip 
-                        formatter={(value) => [
-                          `${value} requests`,
-                          'Total Requests'
-                        ]}
-                        labelFormatter={(label, payload) => {
-                          const item = payload?.[0]?.payload;
-                          return item?.fullModel || label;
-                        }}
-                      />
-                      <Bar dataKey="requests" fill="#3B82F6" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <ModelRequestsBarChart data={chartData} />
                 </div>
               </div>
 
@@ -570,5 +484,14 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
         )}
       </div>
     </div>
+  );
+}
+
+export function DataAnalysis(props: DataAnalysisProps) {
+  const { csvData, filename, onReset } = props;
+  return (
+    <AnalysisProvider csvData={csvData} filename={filename} onReset={onReset}>
+      <DataAnalysisInner />
+    </AnalysisProvider>
   );
 }

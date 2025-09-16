@@ -10,7 +10,7 @@ import {
   getAvailableMonths,
   hasMultipleMonths,
   filterBySelectedMonths
-} from '@/utils/dataAnalysis';
+} from '@/utils/analytics';
 import { CSVData, ProcessedData } from '@/types/csv';
 import { validCSVData, powerUserCSVData } from '../fixtures/validCSVData';
 import { createMockCSVData, createMockCSVDataArray } from '../helpers/testUtils';
@@ -544,7 +544,7 @@ describe('CSV Data Processing', () => {
   });
 
   describe('computeWeeklyQuotaExhaustion', () => {
-    const { computeWeeklyQuotaExhaustion } = require('@/utils/dataAnalysis');
+  const { computeWeeklyQuotaExhaustion } = require('@/utils/analytics');
 
     const makeProcessed = (entries: Array<{ ts: string; user: string; used: number; quota: number | 'unlimited'; model?: string }>): ProcessedData[] => {
       return entries.map(e => ({
