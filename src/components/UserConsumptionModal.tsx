@@ -1,9 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { Tooltip as RechartsTooltip } from 'recharts';
 import { UserDailyStackedChart } from './charts/UserDailyStackedChart';
-import { createPortal } from 'react-dom';
 import { UserConsumptionModalProps } from '@/types/csv';
 import { generateUserDailyModelData } from '@/utils/analytics';
 import { 
@@ -13,6 +11,7 @@ import {
   calculateOverageCost 
 } from '@/utils/userCalculations';
 import { PRICING } from '@/constants/pricing';
+import { FullScreenModal } from './primitives/FullScreenModal';
 
 // Generate colors for model bars
 const generateModelColors = (models: string[]): Record<string, string> => {
@@ -38,11 +37,11 @@ const generateModelColors = (models: string[]): Record<string, string> => {
   return result;
 };
 
-export function UserConsumptionModal({ 
-  user, 
-  processedData, 
+export function UserConsumptionModal({
+  user,
+  processedData,
   userQuotaValue,
-  onClose 
+  onClose
 }: UserConsumptionModalProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -99,31 +98,7 @@ export function UserConsumptionModal({
 
   useEffect(() => {
     setMounted(true);
-    
-    // Lock body scroll
-    document.body.style.overflow = 'hidden';
-    
-    // Handle escape key
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    
-    document.addEventListener('keydown', handleEscape);
-    
-    return () => {
-      document.body.style.overflow = 'auto';
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [onClose]);
-
-  // Handle backdrop click
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
+  }, []);
 
   const planInfo = {
     business: { name: 'Copilot Business', monthlyQuota: PRICING.BUSINESS_QUOTA },
@@ -214,14 +189,14 @@ export function UserConsumptionModal({
 
   if (!mounted) return null;
 
-  const modalContent = (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-      onClick={handleBackdropClick}
-    >
-      <div className="bg-white rounded-lg shadow-xl w-[98vw] h-[98vh] max-w-[1800px] flex flex-col">
-        {/* Header */}
-        <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+  return (
+    <FullScreenModal
+      open={mounted}
+      onClose={onClose}
+      title={`${user} Daily Usage`}
+      contentClassName="flex flex-col"
+      customHeader={(
+        <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0" id="modal-title">
           <div className="flex-1 min-w-0">
             <button
               onClick={handleCopyUser}
@@ -229,26 +204,26 @@ export function UserConsumptionModal({
               title="Click to copy username"
             >
               {user}
-              <svg 
-                className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors" 
-                fill="none" 
-                stroke="currentColor" 
+              <svg
+                className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors"
+                fill="none"
+                stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" 
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
                 />
               </svg>
             </button>
             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-6 mt-1">
               <p className="text-xs sm:text-sm text-gray-500 truncate">
-                {userActualPlan === 'unlimited' 
-                  ? 'Unlimited Plan' 
-                  : planInfo[userActualPlan as 'business' | 'enterprise'].name
-                } - Daily Usage Overview
+                {userActualPlan === 'unlimited'
+                  ? 'Unlimited Plan'
+                  : planInfo[userActualPlan as 'business' | 'enterprise'].name}
+                {' '} - Daily Usage Overview
               </p>
               <p className="text-xs sm:text-sm text-gray-500 truncate">
                 Total requests: {userTotalRequests.toFixed(1)} / {userQuotaValue === 'unlimited' ? 'Unlimited' : userQuotaValue} quota
@@ -270,59 +245,51 @@ export function UserConsumptionModal({
             </svg>
           </button>
         </div>
-
-        {/* Chart Content */}
-        <div className="flex-1 p-2 sm:p-4 flex flex-col min-h-0">
-          {userDailyData.length > 0 ? (
-            <div className="h-full flex flex-col gap-2">
-              {/* Chart Description */}
-              <div className="text-xs sm:text-sm text-gray-600 bg-gray-50 p-2 rounded-lg flex flex-wrap gap-x-4 gap-y-1">
-                <p className="whitespace-nowrap"><strong>Chart Explanation:</strong></p>
-                <p className="whitespace-nowrap">• <strong>Stacked Bars:</strong> Daily requests per model</p>
-                <p className="whitespace-nowrap">• <strong>Black Line:</strong> Cumulative total requests</p>
-                <p className="whitespace-nowrap">• <strong>Red Line:</strong> Quota limit</p>
-              </div>
-              
-              {/* Chart */}
-              <div className="flex-1 min-h-0 w-full">
-                <UserDailyStackedChart
-                  data={userDailyData}
-                  models={userModels}
-                  modelColors={modelColors}
-                  quotaValue={userQuotaValue}
-                  tooltip={<CustomTooltip />}
-                />
-              </div>
+      )}
+    >
+      <div className="flex-1 p-2 sm:p-4 flex flex-col min-h-0">
+        {userDailyData.length > 0 ? (
+          <div className="flex flex-col gap-2 flex-1 min-h-0">
+            <div className="text-xs sm:text-sm text-gray-600 bg-gray-50 p-2 rounded-lg flex flex-wrap gap-x-4 gap-y-1">
+              <p className="whitespace-nowrap"><strong>Chart Explanation:</strong></p>
+              <p className="whitespace-nowrap">• <strong>Stacked Bars:</strong> Daily requests per model</p>
+              <p className="whitespace-nowrap">• <strong>Black Line:</strong> Cumulative total requests</p>
+              <p className="whitespace-nowrap">• <strong>Red Line:</strong> Quota limit</p>
             </div>
-          ) : (
-            <div className="flex items-center justify-center h-64 text-gray-500">
-              No data available for this user
+            <div className="flex-1 min-h-0 w-full">
+              <UserDailyStackedChart
+                data={userDailyData}
+                models={userModels}
+                modelColors={modelColors}
+                quotaValue={userQuotaValue}
+                tooltip={<CustomTooltip />}
+              />
             </div>
-          )}
-
-          {/* Legend */}
-          {userModels.length > 0 && (
-            <div className="border-t border-gray-200 pt-2">
-              <h4 className="text-xs sm:text-sm font-medium text-gray-900 mb-1 sm:mb-2">Models Used</h4>
-              <div className="flex flex-wrap gap-x-4 gap-y-1">
-                {sortedModels.map((model) => (
-                  <div key={model} className="flex items-center space-x-1.5">
-                    <div 
-                      className="w-2.5 h-2.5 rounded"
-                      style={{ backgroundColor: modelColors[model] }}
-                    />
-                    <span className="text-xs text-gray-600 truncate max-w-[150px]" title={model}>
-                      {model.length > 20 ? `${model.substring(0, 20)}...` : model} × {modelUsageTotals[model]?.toFixed(1)}
-                    </span>
-                  </div>
-                ))}
-              </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-64 text-gray-500">
+            No data available for this user
+          </div>
+        )}
+        {userModels.length > 0 && (
+          <div className="border-t border-gray-200 pt-2">
+            <h4 className="text-xs sm:text-sm font-medium text-gray-900 mb-1 sm:mb-2">Models Used</h4>
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              {sortedModels.map((model) => (
+                <div key={model} className="flex items-center space-x-1.5">
+                  <div
+                    className="w-2.5 h-2.5 rounded"
+                    style={{ backgroundColor: modelColors[model] }}
+                  />
+                  <span className="text-xs text-gray-600 truncate max-w-[150px]" title={model}>
+                    {model.length > 20 ? `${model.substring(0, 20)}...` : model} × {modelUsageTotals[model]?.toFixed(1)}
+                  </span>
+                </div>
+              ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
-    </div>
+    </FullScreenModal>
   );
-
-  return createPortal(modalContent, document.body);
 }
