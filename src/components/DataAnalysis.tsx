@@ -1,19 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { CSVData } from '@/types/csv';
-import { processCSVData } from '@/utils/analytics';
-import { useAnalysisFilters } from '@/hooks/useAnalysisFilters';
-import { useAnalyzedData } from '@/hooks/useAnalyzedData';
 import { UsersOverview } from './UsersOverview';
 import { PowerUsersOverview } from './PowerUsersOverview';
 import { CodingAgentOverview } from './CodingAgentOverview';
 import { InsightsOverview } from './InsightsOverview';
 import { PRICING } from '@/constants/pricing';
+import { AnalysisProvider, useAnalysisContext } from '@/context/AnalysisContext';
 
-// Constants
-const DEFAULT_MIN_REQUESTS = 20;
+// The outer component now only supplies provider props
 
 interface DataAnalysisProps {
   csvData: CSVData[];
@@ -23,27 +20,14 @@ interface DataAnalysisProps {
 
 type CopilotPlan = 'business' | 'enterprise';
 
-export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) {
-  const [selectedPlan, setSelectedPlan] = useState<CopilotPlan>('business');
-  // Consolidated view state replaces multiple booleans
-  const [view, setView] = useState<'overview' | 'users' | 'powerUsers' | 'codingAgent' | 'insights'>('overview');
-  const [minRequestsThreshold, setMinRequestsThreshold] = useState(DEFAULT_MIN_REQUESTS);
-  // Filter state managed by dedicated hook once base processed data known
-  const baseProcessed = processCSVData(csvData);
+function DataAnalysisInner() {
   const {
-    excludeEarlyJune,
-    setExcludeEarlyJune,
-    selectedMonths,
-    setSelectedMonths,
-    hasJune2025Data,
-    availableMonths,
-    hasMultipleMonthsData
-  } = useAnalysisFilters(baseProcessed);
-  
-  // Derived flag for layout decisions
-  const isDetailViewActive = view !== 'overview';
-  
-  const {
+    selectedPlan,
+    setSelectedPlan,
+    view,
+    setView,
+    minRequestsThreshold,
+    setMinRequestsThreshold,
     analysis,
     userData,
     allModels,
@@ -51,37 +35,20 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
     powerUsersAnalysis,
     codingAgentAnalysis,
     processedData,
-    weeklyExhaustion
-  } = useAnalyzedData({
-    baseProcessed,
+    weeklyExhaustion,
     excludeEarlyJune,
+    setExcludeEarlyJune,
+    hasJune2025Data,
+    availableMonths,
+    hasMultipleMonthsData,
     selectedMonths,
-    minRequestsThreshold
-  });
-
-  // Auto-select plan based on quota analysis
-  useEffect(() => {
-    if (analysis.quotaBreakdown.suggestedPlan) {
-      setSelectedPlan(analysis.quotaBreakdown.suggestedPlan);
-    }
-  }, [analysis.quotaBreakdown.suggestedPlan]);
-
-  const chartData = analysis.requestsByModel.map(item => ({
-    model: item.model.length > 20 ? `${item.model.substring(0, 20)}...` : item.model,
-    fullModel: item.model,
-    requests: Math.round(item.totalRequests * 100) / 100
-  }));
-
-  const planInfo = {
-    business: {
-      name: 'Copilot Business',
-      monthlyQuota: PRICING.BUSINESS_QUOTA
-    },
-    enterprise: {
-      name: 'Copilot Enterprise', 
-      monthlyQuota: PRICING.ENTERPRISE_QUOTA
-    }
-  };
+    setSelectedMonths,
+    isDetailViewActive,
+    chartData,
+    planInfo,
+    filename,
+    onReset
+  } = useAnalysisContext();
 
   return (
     <div className="w-full mx-auto">
@@ -547,5 +514,14 @@ export function DataAnalysis({ csvData, filename, onReset }: DataAnalysisProps) 
         )}
       </div>
     </div>
+  );
+}
+
+export function DataAnalysis(props: DataAnalysisProps) {
+  const { csvData, filename, onReset } = props;
+  return (
+    <AnalysisProvider csvData={csvData} filename={filename} onReset={onReset}>
+      <DataAnalysisInner />
+    </AnalysisProvider>
   );
 }
