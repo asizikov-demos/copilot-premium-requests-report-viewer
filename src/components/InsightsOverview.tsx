@@ -4,8 +4,11 @@ import React, { useMemo, useState } from 'react';
 import { ProcessedData } from '@/types/csv';
 import { UserSummary } from '@/utils/analytics';
 import { categorizeUserConsumption, calculateFeatureUtilization, calculateUnusedValue, CONSUMPTION_THRESHOLDS } from '@/utils/analytics/insights';
+import { analyzeWeeklyQuotaExhaustion } from '@/utils/analytics/weeklyQuota';
 import { ExpandableSection } from './primitives/ExpandableSection';
 import { UserCategoryTable } from './analysis/UserCategoryTable';
+import { AdvisorySection } from './insights/AdvisorySection';
+import { WeeklyQuotaExhaustion } from './insights/WeeklyQuotaExhaustion';
 
 interface InsightsOverviewProps {
   userData: UserSummary[];
@@ -13,9 +16,6 @@ interface InsightsOverviewProps {
   onBack: () => void;
 }
 
-// (Interfaces & logic moved to analytics/insights.ts)
-
-// Exported Overview component (renamed from `Insights` to match naming conventions)
 export function InsightsOverview({ userData, processedData, onBack }: InsightsOverviewProps) {
   const [isPowerUsersExpanded, setIsPowerUsersExpanded] = useState(false);
   const [isAverageUsersExpanded, setIsAverageUsersExpanded] = useState(false);
@@ -31,18 +31,23 @@ export function InsightsOverview({ userData, processedData, onBack }: InsightsOv
     [processedData]
   );
 
+  const weeklyExhaustion = useMemo(() => 
+    analyzeWeeklyQuotaExhaustion(processedData),
+    [processedData]
+  );
+
   // Compute unutilized value (only for users with numeric quotas)
   const averageUnusedValueUSD = useMemo(() => calculateUnusedValue(insightsData.averageUsers), [insightsData]);
   const lowUnusedValueUSD = useMemo(() => calculateUnusedValue(insightsData.lowAdoptionUsers), [insightsData]);
 
   return (
-    <div className="w-full">
+    <div className="w-full space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Consumption Insights</h2>
           <p className="text-sm text-gray-600 mt-1">
-            User consumption patterns and adoption levels
+            User consumption patterns, adoption levels, and recommendations
           </p>
         </div>
         <button
@@ -53,8 +58,16 @@ export function InsightsOverview({ userData, processedData, onBack }: InsightsOv
         </button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      {/* User Categories Summary */}
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900">User Categories</h3>
+          <p className="text-sm text-gray-500 mt-1">
+            Breakdown of users by consumption patterns
+          </p>
+        </div>
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-green-50 border border-green-200 rounded-lg p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -99,7 +112,6 @@ export function InsightsOverview({ userData, processedData, onBack }: InsightsOv
             </div>
           </div>
         </div>
-
         <div className="bg-red-50 border border-red-200 rounded-lg p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
@@ -127,7 +139,9 @@ export function InsightsOverview({ userData, processedData, onBack }: InsightsOv
             </div>
           </div>
         </div>
-      </div>
+        </div>
+        </div>
+  </div>
 
       {/* Detailed Tables */}
       <div className="space-y-8">
@@ -265,6 +279,41 @@ export function InsightsOverview({ userData, processedData, onBack }: InsightsOv
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Weekly Quota Exhaustion */}
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900">
+            Weekly Quota Exhaustion Pattern
+          </h3>
+          <p className="text-sm text-gray-500 mt-1">
+            Users who exhausted their quota before day 21 of the month
+          </p>
+        </div>
+        <div className="px-4 sm:px-6 py-6">
+          <WeeklyQuotaExhaustion
+            weeklyExhaustion={weeklyExhaustion}
+            totalUsers={userData.length}
+          />
+        </div>
+      </div>
+
+      {/* Recommendations & Advisory */}
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-medium text-gray-900">Recommendations & Advisory</h3>
+            <p className="text-sm text-gray-500 mt-1">
+              Actionable insights to optimize your GitHub Copilot deployment
+            </p>
+        </div>
+        <div className="px-4 sm:px-6 py-6">
+          <AdvisorySection
+            userData={userData}
+            processedData={processedData}
+            weeklyExhaustion={weeklyExhaustion}
+          />
         </div>
       </div>
     </div>

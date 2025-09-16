@@ -158,7 +158,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
           </div>
           <div className="text-xs text-blue-500 mt-1">
             <a
-              href="https://docs.github.com/en/enterprise-cloud@latest/copilot/managing-copilot/monitoring-usage-and-entitlements/monitoring-your-copilot-usage-and-entitlements"
+              href="https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/manage-and-track-spending/monitor-premium-requests#downloading-a-copilot-premium-request-usage-report"
               target="_blank"
               rel="noopener noreferrer"
               className="underline hover:text-blue-700"
