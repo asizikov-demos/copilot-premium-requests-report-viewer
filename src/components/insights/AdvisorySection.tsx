@@ -11,6 +11,22 @@ interface AdvisorySectionProps {
   weeklyExhaustion: WeeklyExhaustionData;
 }
 
+// Highlight key phrases inside advisory descriptions without needing HTML in data layer
+function renderDescription(advisory: Advisory) {
+  const phrase = 'before day 21 of the month';
+  if (advisory.description.includes(phrase)) {
+    const parts = advisory.description.split(phrase);
+    return (
+      <>
+        {parts[0]}
+        <strong className="font-semibold">{phrase}</strong>
+        {parts.slice(1).join(phrase)}
+      </>
+    );
+  }
+  return advisory.description;
+}
+
 function AdvisoryCard({ advisory }: { advisory: Advisory }) {
   const severityStyles = {
     high: {
@@ -60,7 +76,7 @@ function AdvisoryCard({ advisory }: { advisory: Advisory }) {
           </div>
           
           <p className={`text-sm mb-3 ${styles.description}`}>
-            {advisory.description}
+            {renderDescription(advisory)}
           </p>
           
           {advisory.estimatedImpact && (

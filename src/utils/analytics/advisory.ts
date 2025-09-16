@@ -15,11 +15,6 @@ export interface Advisory {
   documentationLink?: string;
 }
 
-/**
- * Generates advisory recommendations based on user consumption patterns
- * - Per-request billing for power users (30% threshold)
- * - Training for low-utilization users (40% threshold)
- */
 export function generateAdvisories(
   userData: UserSummary[],
   processedData: ProcessedData[],
@@ -45,7 +40,7 @@ export function generateAdvisories(
         'Review power user consumption patterns in detail',
         'Set up per-request billing budgets for high-consumption users',
         'Configure spending limits to control costs',
-        'Consider increasing base licenses for consistent power users'
+        'Consider upgrading to a higher plan for consistent power users'
       ],
       affectedUsers: earlyExhausterUsers.length,
       estimatedImpact: `Indicative additional cost: ~$${(earlyExhausterUsers.length * 50 * PRICING.OVERAGE_RATE_PER_REQUEST).toFixed(0)}/month (assuming 50 extra requests per early power user)`,
@@ -53,7 +48,6 @@ export function generateAdvisories(
     });
   }
   
-  // Check for training recommendation (40% threshold for low utilization)
   const { lowAdoptionUsers } = categorizeUserConsumption(userData, processedData);
   const lowUtilizationPercentage = lowAdoptionUsers.length / totalUsers;
   
