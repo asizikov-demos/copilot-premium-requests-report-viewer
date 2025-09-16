@@ -30,16 +30,17 @@ export function generateAdvisories(
   
   if (totalUsers === 0) return advisories;
   
-  // Check for per-request billing recommendation (30% threshold for power users)
+  // Always provide per-request billing recommendation if ANY early exhausters exist
+  // Severity escalates to 'high' when they represent >=30% of users, otherwise 'medium'
   const earlyExhausterUsers = getEarlyExhausterUsers(weeklyExhaustion);
   const earlyExhausterPercentage = earlyExhausterUsers.length / totalUsers;
-  
-  if (earlyExhausterPercentage >= 0.30) {
+  if (earlyExhausterUsers.length > 0) {
+    const severity: Advisory['severity'] = earlyExhausterPercentage >= 0.30 ? 'high' : 'medium';
     advisories.push({
       type: 'perRequestBilling',
-      severity: 'high',
+      severity,
       title: 'Consider Per-Request Billing for Power Users',
-      description: `${earlyExhausterUsers.length} users (${(earlyExhausterPercentage * 100).toFixed(0)}%) exhaust their quota before day 21 of the month. These power users could benefit from per-request billing to avoid disruption.`,
+      description: `${earlyExhausterUsers.length} user${earlyExhausterUsers.length === 1 ? '' : 's'} (${(earlyExhausterPercentage * 100).toFixed(0)}%) exhaust their quota before day 21 of the month. These power users could benefit from per-request billing to avoid disruption.`,
       actionItems: [
         'Review power user consumption patterns in detail',
         'Set up per-request billing budgets for high-consumption users',
@@ -47,7 +48,7 @@ export function generateAdvisories(
         'Consider increasing base licenses for consistent power users'
       ],
       affectedUsers: earlyExhausterUsers.length,
-      estimatedImpact: `Additional cost: ~$${(earlyExhausterUsers.length * 50 * PRICING.OVERAGE_RATE_PER_REQUEST).toFixed(0)}/month (assuming 50 extra requests per user)`,
+      estimatedImpact: `Indicative additional cost: ~$${(earlyExhausterUsers.length * 50 * PRICING.OVERAGE_RATE_PER_REQUEST).toFixed(0)}/month (assuming 50 extra requests per early power user)`,
       documentationLink: 'https://docs.github.com/en/enterprise-cloud@latest/billing/tutorials/set-up-budgets#managing-budgets-for-your-organization-or-enterprise'
     });
   }
