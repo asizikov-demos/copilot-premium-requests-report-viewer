@@ -74,6 +74,7 @@ export function generateAdvisories(
       ],
       affectedUsers: lowAdoptionUsers.length,
       estimatedImpact: `Unutilized value: ~$${unusedValue.toFixed(0)}/month`,
+      documentationLink: 'https://docs.github.com/en/enterprise-cloud@latest/copilot/tutorials/roll-out-at-scale/enable-developers/drive-adoption#supporting-effective-use-of-copilot-in-your-organization'
     });
   }
   
