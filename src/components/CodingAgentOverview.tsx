@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState } from 'react';
 import { CodingAgentUsageChart } from './charts/CodingAgentUsageChart';
 import { CodingAgentOverviewProps } from '@/types/csv';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { computeDailyCodingAgentUsage } from '@/utils/analytics/codingAgent';
 
 export function CodingAgentOverview({ 
   codingAgentUsers, 
@@ -11,42 +13,9 @@ export function CodingAgentOverview({
   processedData,
   onBack 
 }: CodingAgentOverviewProps) {
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
   const [showChart, setShowChart] = useState(true);
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Generate daily coding agent usage data
-  const dailyCodingAgentData = useMemo(() => {
-    const dailyData = new Map<string, number>();
-    
-    processedData.forEach(row => {
-      const isCodingAgent = row.model.toLowerCase().includes('coding agent') || 
-                           row.model.toLowerCase().includes('padawan');
-      if (isCodingAgent) {
-        const date = new Date(row.timestamp).toISOString().split('T')[0];
-        dailyData.set(date, (dailyData.get(date) || 0) + row.requestsUsed);
-      }
-    });
-
-    const sortedDates = Array.from(dailyData.keys()).sort();
-    let cumulative = 0;
-    
-    return sortedDates.map(date => {
-      const dailyRequests = dailyData.get(date) || 0;
-      cumulative += dailyRequests;
-      return {
-        date,
-        dailyRequests,
-        cumulativeRequests: cumulative
-      };
-    });
-  }, [processedData]);
+  const dailyCodingAgentData = computeDailyCodingAgentUsage(processedData);
 
   return (
     <div className="space-y-6">

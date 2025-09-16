@@ -3,12 +3,19 @@
 import React from 'react';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
+export interface UserDailyDatum {
+  date: string;
+  totalCumulative: number;
+  // Additional dynamic model keys mapping to numeric daily counts
+  [model: string]: string | number;
+}
+
 export interface UserDailyStackedChartProps {
-  data: any[]; // [{ date: string, totalCumulative: number, modelA: number, ...}]
+  data: UserDailyDatum[]; // dynamic model columns + totalCumulative
   models: string[];
   modelColors: Record<string, string>;
   quotaValue: number | 'unlimited';
-  tooltip: React.ReactNode; // preconfigured tooltip component instance
+  tooltip: React.ReactElement; // preconfigured tooltip component instance
 }
 
 export function UserDailyStackedChart({ data, models, modelColors, quotaValue, tooltip }: UserDailyStackedChartProps) {
@@ -33,7 +40,7 @@ export function UserDailyStackedChart({ data, models, modelColors, quotaValue, t
             return Math.max(quotaLimit, dataMax);
           }]}
         />
-        <Tooltip content={tooltip as any} />
+  <Tooltip content={tooltip} />
         {quotaValue !== 'unlimited' && (
           <ReferenceLine 
             y={quotaValue} 

@@ -5,7 +5,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { PRICING } from '@/constants/pricing';
 
 export interface UsersQuotaConsumptionChartProps {
-  dailyCumulativeData: any[]; // shape: [{ date: string, [username]: number, ... }]
+  dailyCumulativeData: { date: string; [user: string]: string | number }[]; // dynamic user cumulative values
   users: string[];
   userColors: Record<string, string>;
   currentQuota: number; // selected plan quota (may not be used if mixed quotas)
@@ -26,7 +26,7 @@ export function UsersQuotaConsumptionChart({
 }: UsersQuotaConsumptionChartProps) {
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={dailyCumulativeData}>
+      <LineChart data={dailyCumulativeData} aria-label={`users-quota-consumption-${hasMixedLicenses ? 'mixed-licenses' : 'uniform-license'}`}> 
         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
         <XAxis 
           dataKey="date" 

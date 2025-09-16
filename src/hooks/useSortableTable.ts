@@ -26,7 +26,7 @@ export interface UseSortableTableResult<Row, ColumnKey extends string> extends S
  * Always returns a new sorted array when sort settings change; original data order preserved when unsorted.
  */
 export function useSortableTable<Row, ColumnKey extends string>(params: UseSortableTableParams<Row, ColumnKey>): UseSortableTableResult<Row, ColumnKey> {
-  const { data, defaultSort, getSortableValue, columns } = params;
+  const { data, defaultSort, getSortableValue } = params; // columns reserved for future validation
   const stable = params.stable !== false; // default true
 
   const [sortBy, setSortBy] = useState<ColumnKey | null>(defaultSort?.column ?? null);

@@ -1,5 +1,5 @@
 "use client";
-import React, { ReactNode, useState, useRef, useEffect } from 'react';
+import React, { ReactNode, useState, useRef, useEffect, useCallback } from 'react';
 
 interface TooltipProps {
   content: ReactNode;
@@ -27,14 +27,14 @@ export const Tooltip: React.FC<TooltipProps> = ({
   const triggerRef = useRef<HTMLSpanElement | null>(null);
   const idRef = useRef(`tooltip-${Math.random().toString(36).slice(2)}`);
 
-  const show = () => {
+  const show = useCallback(() => {
     if (timerId) clearTimeout(timerId);
     setTimerId(setTimeout(() => setVisible(true), delay));
-  };
-  const hide = () => {
+  }, [timerId, delay]);
+  const hide = useCallback(() => {
     if (timerId) clearTimeout(timerId);
     setVisible(false);
-  };
+  }, [timerId]);
 
   useEffect(() => {
     const node = triggerRef.current;
@@ -44,7 +44,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
     };
     node.addEventListener('keydown', onKey);
     return () => node.removeEventListener('keydown', onKey);
-  }, []);
+  }, [hide]);
 
   return (
     <span

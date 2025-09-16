@@ -32,11 +32,11 @@ export function ModelRequestsBarChart({ data, height = '100%' }: ModelRequestsBa
         />
         <YAxis />
         <Tooltip 
-          formatter={(value) => [
+          formatter={(value: number) => [
             `${value} requests`,
             'Total Requests'
           ]}
-          labelFormatter={(label, payload: any) => {
+          labelFormatter={(label: string, payload: { payload?: ModelRequestsBarChartDatum }[]) => {
             const item = payload?.[0]?.payload;
             return item?.fullModel || label;
           }}

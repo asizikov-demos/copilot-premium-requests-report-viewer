@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { UsersQuotaConsumptionChart } from './charts/UsersQuotaConsumptionChart';
 import { UserSummary, DailyCumulativeData, getUserQuotaValue } from '@/utils/analytics';
 import { ProcessedData } from '@/types/csv';
 import { UserConsumptionModal } from './UserConsumptionModal';
-import { calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
+// Overages handled via computeOverageSummary; removed unused calculation imports
 import { computeOverageSummary } from '@/utils/analytics/overage';
 import { useSortableTable } from '@/hooks/useSortableTable';
 import { useUserConsumptionModal } from '@/hooks/useUserConsumptionModal';
@@ -56,8 +56,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
     sortedData: sortedUserData,
     sortBy,
     sortDirection,
-    handleSort,
-    isSorted
+    handleSort
   } = useSortableTable({
     data: userData,
     columns,
