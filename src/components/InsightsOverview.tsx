@@ -242,7 +242,7 @@ export function InsightsOverview({ userData, processedData, onBack }: InsightsOv
                       {Math.round(featureUtilization.codingAgent.totalSessions)} sessions
                     </p>
                     <p className="text-sm text-purple-600 mt-1">
-                      Average per user: {featureUtilization.codingAgent.averagePerUser.toFixed(1)} sessions
+                      Average per Coding Agent User: {featureUtilization.codingAgent.averagePerUser.toFixed(1)} sessions
                     </p>
                     <p className="text-xs text-purple-500 mt-1">
                       {featureUtilization.codingAgent.userCount} users
@@ -269,7 +269,7 @@ export function InsightsOverview({ userData, processedData, onBack }: InsightsOv
                       {Math.round(featureUtilization.spark.totalSessions)} sessions
                     </p>
                     <p className="text-sm text-orange-600 mt-1">
-                      Average per user: {featureUtilization.spark.averagePerUser.toFixed(1)} sessions
+                      Average per Spark User: {featureUtilization.spark.averagePerUser.toFixed(1)} sessions
                     </p>
                     <p className="text-xs text-orange-500 mt-1">
                       {featureUtilization.spark.userCount} users
