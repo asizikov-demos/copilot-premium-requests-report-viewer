@@ -214,7 +214,7 @@ export function InsightsOverview({ userData, processedData, onBack }: InsightsOv
                       {Math.round(featureUtilization.codeReview.totalSessions)} reviews
                     </p>
                     <p className="text-sm text-blue-600 mt-1">
-                      Average per user: {featureUtilization.codeReview.averagePerUser.toFixed(1)} reviews
+                      Average per Code Review User: {featureUtilization.codeReview.averagePerUser.toFixed(1)} reviews
                     </p>
                     <p className="text-xs text-blue-500 mt-1">
                       {featureUtilization.codeReview.userCount} users
