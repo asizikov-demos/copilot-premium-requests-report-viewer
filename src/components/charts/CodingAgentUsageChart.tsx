@@ -3,6 +3,8 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
+import { chartTooltipContentStyle, chartTooltipLabelStyle } from './chartTooltipStyles';
+
 export interface CodingAgentUsageDatum {
   date: string;              // YYYY-MM-DD (UTC original date fragment)
   dailyRequests: number;     // requests that day
@@ -37,6 +39,8 @@ export function CodingAgentUsageChart({ data }: CodingAgentUsageChartProps) {
             `${value.toFixed(1)} requests`,
             name === 'Daily Requests' ? 'Daily' : 'Cumulative'
           ]}
+          contentStyle={chartTooltipContentStyle}
+          labelStyle={chartTooltipLabelStyle}
         />
         <Line
           type="monotone"

@@ -3,6 +3,8 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
+import { chartTooltipContentStyle, chartTooltipLabelStyle } from './chartTooltipStyles';
+
 export interface ModelRequestsBarChartDatum {
   model: string;      // shortened model label for axis
   fullModel?: string; // full model name for tooltip
@@ -40,6 +42,8 @@ export function ModelRequestsBarChart({ data, height = '100%' }: ModelRequestsBa
             const item = payload?.[0]?.payload;
             return item?.fullModel || label;
           }}
+          contentStyle={chartTooltipContentStyle}
+          labelStyle={chartTooltipLabelStyle}
         />
         <Bar dataKey="requests" fill="#3B82F6" />
       </BarChart>
