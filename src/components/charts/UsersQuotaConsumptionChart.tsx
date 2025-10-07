@@ -2,7 +2,10 @@
 
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+
 import { PRICING } from '@/constants/pricing';
+
+import { chartTooltipContentStyle, chartTooltipLabelStyle } from './chartTooltipStyles';
 
 export interface UsersQuotaConsumptionChartProps {
   dailyCumulativeData: { date: string; [user: string]: string | number }[]; // dynamic user cumulative values
@@ -51,7 +54,8 @@ export function UsersQuotaConsumptionChart({
             `${value.toFixed(1)} requests`,
             name
           ]}
-          labelStyle={{ color: '#1f2937', fontWeight: 500 }}
+          contentStyle={chartTooltipContentStyle}
+          labelStyle={chartTooltipLabelStyle}
         />
         {/* Quota reference lines */}
         {hasMixedQuotas ? (

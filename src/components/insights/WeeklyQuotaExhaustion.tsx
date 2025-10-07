@@ -1,8 +1,11 @@
 'use client';
 
-import { WeeklyExhaustionData } from '@/utils/analytics/weeklyQuota';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import React, { useMemo } from 'react';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+
+import { WeeklyExhaustionData } from '@/utils/analytics/weeklyQuota';
+
+import { chartTooltipContentStyle, chartTooltipLabelStyle } from '../charts/chartTooltipStyles';
 
 interface WeeklyQuotaExhaustionProps {
   weeklyExhaustion: WeeklyExhaustionData;
@@ -58,6 +61,8 @@ export function WeeklyQuotaExhaustion({ weeklyExhaustion, totalUsers, height = 2
                 const row = items?.[0]?.payload;
                 return row ? `${label} (${row.range})` : label;
               }}
+              contentStyle={chartTooltipContentStyle}
+              labelStyle={chartTooltipLabelStyle}
             />
             <Bar dataKey="users" fill="#EF4444" radius={[4,4,0,0]} />
           </BarChart>
