@@ -1,5 +1,11 @@
 import { ProcessedData } from '@/types/csv';
 
+// Static UTC month names map to avoid locale/date allocations during month label generation.
+const MONTH_NAMES = [
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December'
+];
+
 // Helper function to check if CSV data contains June 2025 data
 export function containsJune2025Data(data: ProcessedData[]): boolean {
   return data.some(row => row.timestamp.toISOString().startsWith('2025-06-'));
@@ -18,17 +24,24 @@ export function filterEarlyJune2025(data: ProcessedData[]): ProcessedData[] {
 // Get available months (UTC) present in dataset
 export function getAvailableMonths(data: ProcessedData[]): { value: string; label: string }[] {
   const monthsSet = new Set<string>();
-  data.forEach(row => {
-    const d = row.timestamp;
-    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-    monthsSet.add(key);
-  });
-  return Array.from(monthsSet).sort().map(key => {
-    const [year, month] = key.split('-');
-    const date = new Date(Date.UTC(parseInt(year, 10), parseInt(month, 10) - 1));
-    const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
-    return { value: key, label: monthName };
-  });
+  for (const row of data) {
+    if (row.monthKey) {
+      monthsSet.add(row.monthKey);
+    } else {
+      const d = row.timestamp;
+      const computed = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+      monthsSet.add(computed);
+    }
+  }
+  return Array.from(monthsSet)
+    .sort()
+    .map(key => {
+      const [yearStr, monthStr] = key.split('-');
+      const year = yearStr; // already YYYY
+      const monthIndex = parseInt(monthStr, 10) - 1; // 0-based
+      const label = `${MONTH_NAMES[monthIndex]} ${year}`;
+      return { value: key, label };
+    });
 }
 
 export function hasMultipleMonths(data: ProcessedData[]): boolean {
@@ -37,9 +50,9 @@ export function hasMultipleMonths(data: ProcessedData[]): boolean {
 
 export function filterBySelectedMonths(data: ProcessedData[], selectedMonths: string[]): ProcessedData[] {
   if (selectedMonths.length === 0) return data;
+  const selSet = new Set(selectedMonths);
   return data.filter(row => {
-    const d = row.timestamp;
-    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-    return selectedMonths.includes(key);
+    const key = row.monthKey || `${row.timestamp.getUTCFullYear()}-${String(row.timestamp.getUTCMonth() + 1).padStart(2, '0')}`;
+    return selSet.has(key);
   });
 }

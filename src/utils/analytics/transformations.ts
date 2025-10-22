@@ -1,5 +1,6 @@
 import { CSVData, NewCSVData, ProcessedData, AnalysisResults } from '@/types/csv';
 import { parseQuotaValue, buildQuotaBreakdown } from './quota';
+import { buildDateKeys } from '../dateKeys';
 
 export interface UserSummary {
   user: string;
@@ -20,20 +21,24 @@ export function processCSVData(rawData: (CSVData | NewCSVData)[]): ProcessedData
     const format = detectRowFormat(row);
     if (format === 'legacy') {
       const legacy = row as CSVData;
+      const timestamp = new Date(legacy.Timestamp); // preserve UTC
+      const keys = buildDateKeys(timestamp);
       return {
-        timestamp: new Date(legacy.Timestamp), // preserve UTC
+        timestamp,
         user: legacy.User,
         model: legacy.Model,
         requestsUsed: parseFloat(legacy['Requests Used']),
         exceedsQuota: legacy['Exceeds Monthly Quota'].toLowerCase() === 'true',
         totalQuota: legacy['Total Monthly Quota'],
         quotaValue: parseQuotaValue(legacy['Total Monthly Quota']),
+        ...keys,
         sourceFormat: 'legacy'
       };
     } else {
       const newer = row as NewCSVData;
       // Build a UTC timestamp from YYYY-MM-DD (DO NOT localize)
       const timestamp = new Date(`${newer.date}T00:00:00Z`);
+      const keys = buildDateKeys(timestamp);
       const totalQuotaRaw = newer.total_monthly_quota || 'Unlimited';
       return {
         timestamp,
@@ -51,6 +56,7 @@ export function processCSVData(rawData: (CSVData | NewCSVData)[]): ProcessedData
         grossAmount: newer.gross_amount ? parseFloat(newer.gross_amount) : undefined,
         discountAmount: newer.discount_amount ? parseFloat(newer.discount_amount) : undefined,
         netAmount: newer.net_amount ? parseFloat(newer.net_amount) : undefined,
+        ...keys,
         sourceFormat: 'new'
       };
     }
@@ -76,8 +82,8 @@ export function analyzeData(data: ProcessedData[]): AnalysisResults {
 
   const sortedData = [...data].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
   const timeFrame = {
-    start: sortedData[0].timestamp.toISOString().split('T')[0],
-    end: sortedData[sortedData.length - 1].timestamp.toISOString().split('T')[0]
+    start: sortedData[0].dateKey,
+    end: sortedData[sortedData.length - 1].dateKey
   };
 
   const uniqueUsers = new Set(data.map(row => row.user));
@@ -139,19 +145,28 @@ export interface DailyCumulativeData { date: string; [user: string]: string | nu
 
 export function generateDailyCumulativeData(data: ProcessedData[]): DailyCumulativeData[] {
   if (data.length === 0) return [];
-  const sortedData = [...data].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  const sortedData = [...data].sort((a, b) => a.epoch - b.epoch);
   const users = Array.from(new Set(data.map(d => d.user))).sort();
-  const startDate = new Date(sortedData[0].timestamp);
-  const endDate = new Date(sortedData[sortedData.length - 1].timestamp);
+  const startEpoch = sortedData[0].epoch;
+  const endEpoch = sortedData[sortedData.length - 1].epoch;
+  // Pre-group records by dateKey to avoid repeated filtering inside loop.
+  const byDate = new Map<string, ProcessedData[]>();
+  for (const row of sortedData) {
+    const arr = byDate.get(row.dateKey);
+    if (arr) arr.push(row); else byDate.set(row.dateKey, [row]);
+  }
   const userTotals = new Map<string, number>();
   users.forEach(u => userTotals.set(u, 0));
   const result: DailyCumulativeData[] = [];
-  for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
-    const dateStr = date.toISOString().split('T')[0];
-    const dayRequests = sortedData.filter(d => d.timestamp.toISOString().split('T')[0] === dateStr);
-    dayRequests.forEach(r => userTotals.set(r.user, (userTotals.get(r.user) || 0) + r.requestsUsed));
+  // Iterate day by day using Date arithmetic from start timestamp.
+  for (let current = new Date(startEpoch); current.getTime() <= endEpoch; current.setUTCDate(current.getUTCDate() + 1)) {
+    const dateStr = current.toISOString().slice(0, 10); // UTC YYYY-MM-DD
+    const dayRequests = byDate.get(dateStr) || [];
+    for (const r of dayRequests) {
+      userTotals.set(r.user, (userTotals.get(r.user) || 0) + r.requestsUsed);
+    }
     const dataPoint: DailyCumulativeData = { date: dateStr };
-    users.forEach(u => { dataPoint[u] = userTotals.get(u) || 0; });
+    for (const u of users) dataPoint[u] = userTotals.get(u) || 0;
     result.push(dataPoint);
   }
   return result;
@@ -160,20 +175,26 @@ export function generateDailyCumulativeData(data: ProcessedData[]): DailyCumulat
 export function generateUserDailyModelData(data: ProcessedData[], userName: string): import('@/types/csv').UserDailyData[] {
   const userData = data.filter(d => d.user === userName);
   if (userData.length === 0) return [];
-  const allSorted = [...data].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-  const startDate = new Date(allSorted[0].timestamp);
-  const endDate = new Date(allSorted[allSorted.length - 1].timestamp);
-  const sortedUserData = [...userData].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  const allSorted = [...data].sort((a, b) => a.epoch - b.epoch);
+  const startEpoch = allSorted[0].epoch;
+  const endEpoch = allSorted[allSorted.length - 1].epoch;
+  const sortedUserData = [...userData].sort((a, b) => a.epoch - b.epoch);
   const userModels = Array.from(new Set(userData.map(d => d.model))).sort();
+  // Pre-group user data by dateKey for O(1) daily lookup.
+  const byDate = new Map<string, ProcessedData[]>();
+  for (const row of sortedUserData) {
+    const arr = byDate.get(row.dateKey);
+    if (arr) arr.push(row); else byDate.set(row.dateKey, [row]);
+  }
   let cumulativeTotal = 0;
   const result: import('@/types/csv').UserDailyData[] = [];
-  for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
-    const dateStr = date.toISOString().split('T')[0];
-    const dayRequests = sortedUserData.filter(d => d.timestamp.toISOString().split('T')[0] === dateStr);
+  for (let current = new Date(startEpoch); current.getTime() <= endEpoch; current.setUTCDate(current.getUTCDate() + 1)) {
+    const dateStr = current.toISOString().slice(0, 10);
+    const dayRequests = byDate.get(dateStr) || [];
     const dailyByModel: Record<string, number> = {};
-    userModels.forEach(m => { dailyByModel[m] = 0; });
+    for (const m of userModels) dailyByModel[m] = 0;
     let dailyTotal = 0;
-    dayRequests.forEach(req => { dailyByModel[req.model] += req.requestsUsed; dailyTotal += req.requestsUsed; });
+    for (const req of dayRequests) { dailyByModel[req.model] += req.requestsUsed; dailyTotal += req.requestsUsed; }
     cumulativeTotal += dailyTotal;
     result.push({ date: dateStr, totalCumulative: cumulativeTotal, ...dailyByModel });
   }

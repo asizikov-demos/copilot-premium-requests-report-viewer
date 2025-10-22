@@ -11,14 +11,14 @@ export interface DailyCodingAgentUsageDatum {
 
 export function computeDailyCodingAgentUsage(processedData: ProcessedData[]): DailyCodingAgentUsageDatum[] {
   const dailyData = new Map<string, number>();
-  processedData.forEach(row => {
+  for (const row of processedData) {
     const lower = row.model.toLowerCase();
     if (lower.includes('coding agent') || lower.includes('padawan')) {
-      // Keep UTC date fragment without timezone conversion
-      const date = new Date(row.timestamp).toISOString().split('T')[0];
+      // Use cached dateKey when present; fallback to timestamp slice for legacy tests/mocks.
+      const date = row.dateKey || row.timestamp.toISOString().slice(0, 10);
       dailyData.set(date, (dailyData.get(date) || 0) + row.requestsUsed);
     }
-  });
+  }
   const sorted = Array.from(dailyData.keys()).sort();
   let cumulative = 0;
   return sorted.map(date => {

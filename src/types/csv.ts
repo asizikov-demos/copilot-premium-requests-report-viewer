@@ -36,6 +36,11 @@ export interface ProcessedData {
   exceedsQuota: boolean; // derived from legacy/new boolean field (defaults false if absent)
   totalQuota: string; // original string (numeric or 'Unlimited')
   quotaValue: number | 'unlimited'; // Parsed quota value using pricing constants/logic
+  // Cached UTC-derived keys (added in date refactor step 1)
+  iso: string; // Full UTC ISO string (timestamp.toISOString())
+  dateKey: string; // YYYY-MM-DD (first 10 chars of ISO) for fast daily grouping
+  monthKey: string; // YYYY-MM (first 7 chars of ISO) for fast monthly grouping
+  epoch: number; // Milliseconds since epoch (timestamp.getTime()) for arithmetic
   // Extended (new format only; optional for legacy rows)
   product?: string;
   sku?: string;

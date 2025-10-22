@@ -19,27 +19,24 @@ export function analyzeWeeklyQuotaExhaustion(
   
   // Group by user and find when they hit 100%
   const userGroups = new Map<string, ProcessedData[]>();
-  processedData.forEach(entry => {
-    if (!userGroups.has(entry.user)) {
-      userGroups.set(entry.user, []);
-    }
-    userGroups.get(entry.user)!.push(entry);
-  });
+  for (const entry of processedData) {
+    let arr = userGroups.get(entry.user);
+    if (!arr) { arr = []; userGroups.set(entry.user, arr); }
+    arr.push(entry);
+  }
   
   userGroups.forEach((entries, user) => {
     const userQuota = getUserQuotaValue(processedData, user);
     if (userQuota === 'unlimited') return;
     
     // Sort by date and calculate cumulative usage
-    const sorted = [...entries].sort((a, b) => 
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
+    const sorted = [...entries].sort((a, b) => a.epoch - b.epoch);
     
     let cumulative = 0;
     for (const entry of sorted) {
       cumulative += entry.requestsUsed;
       if (cumulative >= userQuota) {
-        const exhaustionDay = new Date(entry.timestamp).getUTCDate();
+        const exhaustionDay = entry.timestamp.getUTCDate();
         userExhaustionDates.set(user, exhaustionDay);
         break;
       }
