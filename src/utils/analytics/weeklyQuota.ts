@@ -1,5 +1,4 @@
 import { ProcessedData } from '@/types/csv';
-import { getUserQuotaValue } from './index';
 
 export interface WeeklyExhaustionData {
   week1Exhausted: string[]; // Users who hit 100% by day 7
@@ -26,7 +25,8 @@ export function analyzeWeeklyQuotaExhaustion(
   }
   
   userGroups.forEach((entries, user) => {
-    const userQuota = getUserQuotaValue(processedData, user);
+    // Resolve user quota from first occurrence in processedData (O(1) after map build)
+    const userQuota = entries.length ? entries[0].quotaValue : 'unlimited';
     if (userQuota === 'unlimited') return;
     
     // Sort by date and calculate cumulative usage

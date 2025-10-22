@@ -60,7 +60,5 @@ export function buildQuotaBreakdown(data: ProcessedData[]): QuotaBreakdownResult
   return { unlimited, business, enterprise, mixed, suggestedPlan };
 }
 
-export function getUserQuotaValue(data: ProcessedData[], userName: string): number | 'unlimited' {
-  const userRecord = data.find(d => d.user === userName);
-  return userRecord?.quotaValue || 'unlimited';
-}
+// NOTE: getUserQuotaValue removed. Prefer artifact-based getUserQuota (O(1)) or derive directly
+// from processed rows (first occurrence) where needed.

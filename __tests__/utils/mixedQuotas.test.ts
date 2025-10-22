@@ -1,4 +1,3 @@
-import { getUserQuotaValue } from '../../src/utils/analytics';
 import { processCSVData, analyzeData } from '../helpers/processCSVData';
 import { CSVData } from '../../src/types/csv';
 
@@ -66,13 +65,13 @@ describe('Mixed Quota Support', () => {
     expect(analysis.usersExceedingQuota).toBe(1); // Only UserA
   });
 
-  it('should get user quota value correctly', () => {
+  it('should resolve user quota values from first occurrence', () => {
     const processedData = processCSVData(mockData);
-    
-    expect(getUserQuotaValue(processedData, 'UserA')).toBe(300);
-    expect(getUserQuotaValue(processedData, 'UserB')).toBe(1000);
-    expect(getUserQuotaValue(processedData, 'UserC')).toBe('unlimited');
-    expect(getUserQuotaValue(processedData, 'NonExistentUser')).toBe('unlimited');
+    const quota = (user: string) => processedData.find(r => r.user === user)?.quotaValue ?? 'unlimited';
+    expect(quota('UserA')).toBe(300);
+    expect(quota('UserB')).toBe(1000);
+    expect(quota('UserC')).toBe('unlimited');
+    expect(quota('NonExistentUser')).toBe('unlimited');
   });
 
   it('should suggest business plan for all business users', () => {
