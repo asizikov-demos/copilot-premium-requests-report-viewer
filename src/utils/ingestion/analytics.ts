@@ -11,7 +11,8 @@
 
 import { PRICING } from '@/constants/pricing';
 import type { AnalysisResults } from '@/types/csv';
-import type { QuotaArtifacts, UsageArtifacts, DailyBucketsArtifacts } from './types';
+import type { QuotaArtifacts, UsageArtifacts, DailyBucketsArtifacts, FeatureUsageArtifacts } from './types';
+import type { FeatureUtilizationStats } from '@/utils/analytics/insights';
 import { calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
 import { PowerUsersAnalysis, PowerUserScore, CodingAgentAnalysis, UserDailyData } from '@/types/csv';
 
@@ -403,4 +404,36 @@ export function buildUserDailyModelDataFromArtifacts(
     result.push(row as UserDailyData);
   }
   return result;
+}
+
+// -----------------------------
+// Feature Utilization From FeatureUsageArtifacts
+// -----------------------------
+/**
+ * Build FeatureUtilizationStats (matching legacy calculateFeatureUtilization return shape)
+ * directly from FeatureUsageAggregator artifacts.
+ */
+export function buildFeatureUtilizationFromArtifacts(featureUsage: FeatureUsageArtifacts): FeatureUtilizationStats {
+  const { featureTotals, featureUsers } = featureUsage;
+  const avg = (total: number, count: number) => (count > 0 ? total / count : 0);
+  const codeReviewUsers = featureUsers.codeReview.size;
+  const codingAgentUsers = featureUsers.codingAgent.size;
+  const sparkUsers = featureUsers.spark.size;
+  return {
+    codeReview: {
+      totalSessions: featureTotals.codeReview,
+      averagePerUser: avg(featureTotals.codeReview, codeReviewUsers),
+      userCount: codeReviewUsers
+    },
+    codingAgent: {
+      totalSessions: featureTotals.codingAgent,
+      averagePerUser: avg(featureTotals.codingAgent, codingAgentUsers),
+      userCount: codingAgentUsers
+    },
+    spark: {
+      totalSessions: featureTotals.spark,
+      averagePerUser: avg(featureTotals.spark, sparkUsers),
+      userCount: sparkUsers
+    }
+  };
 }

@@ -6,7 +6,7 @@ import { UserSummary } from '@/utils/analytics';
 import { categorizeUserConsumption, calculateFeatureUtilization, calculateUnusedValue, CONSUMPTION_THRESHOLDS } from '@/utils/analytics/insights';
 import { analyzeWeeklyQuotaExhaustion, WeeklyExhaustionData } from '@/utils/analytics/weeklyQuota';
 import { AnalysisContext } from '@/context/AnalysisContext';
-import { getUserQuota, QuotaArtifacts, UsageArtifacts, computeOverageSummaryFromArtifacts } from '@/utils/ingestion';
+import { getUserQuota, QuotaArtifacts, UsageArtifacts, computeOverageSummaryFromArtifacts, buildFeatureUtilizationFromArtifacts, FeatureUsageArtifacts } from '@/utils/ingestion';
 import { ExpandableSection } from './primitives/ExpandableSection';
 import { UserCategoryTable } from './analysis/UserCategoryTable';
 import { AdvisorySection } from './insights/AdvisorySection';
@@ -26,6 +26,7 @@ export function InsightsOverview({ userData, processedData, onBack }: InsightsOv
   const quotaArtifacts = analysisCtx?.quotaArtifacts as QuotaArtifacts | undefined;
   const usageArtifacts = analysisCtx?.usageArtifacts as UsageArtifacts | undefined;
   const weeklyExhaustionArtifacts = analysisCtx?.weeklyExhaustion;
+  const featureUsageArtifacts = analysisCtx?.featureUsageArtifacts as FeatureUsageArtifacts | undefined;
   
   const insightsData = useMemo(() => {
     // When artifacts available, build a synthetic processedData-like quota map via quotaArtifacts for categorization
@@ -52,16 +53,19 @@ export function InsightsOverview({ userData, processedData, onBack }: InsightsOv
   }, [userData, processedData, quotaArtifacts, usageArtifacts]);
 
   const featureUtilization = useMemo(() => {
+    if (featureUsageArtifacts) {
+      return buildFeatureUtilizationFromArtifacts(featureUsageArtifacts);
+    }
     if (usageArtifacts) {
-      // Derive feature utilization from usageArtifacts modelBreakdown aggregated per user
+      // Temporary intermediate path until legacy derivation is fully removed
       let totalCR=0,totalCA=0,totalSpark=0;
       const crUsers=new Set<string>(), caUsers=new Set<string>(), sparkUsers=new Set<string>();
       for (const u of usageArtifacts.users) {
         for (const [model, qty] of Object.entries(u.modelBreakdown)) {
           const lower = model.toLowerCase();
-            if (lower.includes('code review')) { totalCR += qty; crUsers.add(u.user); }
-            if (lower.includes('coding agent') || lower.includes('padawan')) { totalCA += qty; caUsers.add(u.user); }
-            if (lower.includes('spark')) { totalSpark += qty; sparkUsers.add(u.user); }
+          if (lower.includes('code review')) { totalCR += qty; crUsers.add(u.user); }
+          if (lower.includes('coding agent') || lower.includes('padawan')) { totalCA += qty; caUsers.add(u.user); }
+          if (lower.includes('spark')) { totalSpark += qty; sparkUsers.add(u.user); }
         }
       }
       const avg = (t:number,c:number)=> c>0 ? t/c : 0;
@@ -72,7 +76,7 @@ export function InsightsOverview({ userData, processedData, onBack }: InsightsOv
       };
     }
     return calculateFeatureUtilization(processedData);
-  }, [processedData, usageArtifacts]);
+  }, [processedData, usageArtifacts, featureUsageArtifacts]);
 
   const weeklyExhaustion = useMemo<WeeklyExhaustionData>(() => {
     if (weeklyExhaustionArtifacts && 'weeks' in weeklyExhaustionArtifacts) {
