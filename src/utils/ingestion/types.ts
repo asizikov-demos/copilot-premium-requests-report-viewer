@@ -157,3 +157,24 @@ export interface FeatureUsageArtifacts {
     spark: Set<string>;
   };
 }
+
+/**
+ * Billing aggregation results.
+ * Sums provided billing columns (gross, discount, net) exactly as supplied in the CSV
+ * without recomputation. This enables O(1) access to billing summaries and per-user
+ * billing breakdowns without retaining every normalized row (eliminating RawDataAggregator dependency).
+ */
+export interface BillingUserTotals {
+  user: string;
+  quantity: number; // total request quantity (duplicate of usageArtifacts but convenient for billing view)
+  gross?: number;
+  discount?: number;
+  net?: number;
+}
+
+export interface BillingArtifacts {
+  totals: { gross: number; discount: number; net: number };
+  users: BillingUserTotals[]; // unsorted list; consumer may sort
+  userMap: Map<string, BillingUserTotals>; // internal convenience map (exposed for advanced consumers)
+  hasAnyBillingData: boolean; // true if at least one billing numeric column encountered
+}

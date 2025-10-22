@@ -11,6 +11,7 @@ import {
   UsageArtifacts, 
   DailyBucketsArtifacts,
   FeatureUsageArtifacts,
+  BillingArtifacts,
   NormalizedRow,
   buildProcessedDataFromRows
 } from '@/utils/ingestion';
@@ -37,6 +38,7 @@ interface AnalysisContextValue {
   usageArtifacts: UsageArtifacts;
   dailyBucketsArtifacts: DailyBucketsArtifacts;
   featureUsageArtifacts?: FeatureUsageArtifacts; // optional until fully adopted
+  billingArtifacts?: BillingArtifacts; // new billing summary artifacts
   
   // Raw & processed (adapter bridge - to be phased out)
   baseProcessed: ProcessedData[];
@@ -87,12 +89,13 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
   const [minRequestsThreshold, setMinRequestsThreshold] = useState(DEFAULT_MIN_REQUESTS);
 
   // Extract aggregator outputs
-  const { quotaArtifacts, usageArtifacts, dailyBucketsArtifacts } = useMemo(() => {
+  const { quotaArtifacts, usageArtifacts, dailyBucketsArtifacts, billingArtifacts } = useMemo(() => {
     return {
       quotaArtifacts: ingestionResult.outputs.quota as QuotaArtifacts,
       usageArtifacts: ingestionResult.outputs.usage as UsageArtifacts,
       dailyBucketsArtifacts: ingestionResult.outputs.dailyBuckets as DailyBucketsArtifacts,
-      featureUsageArtifacts: ingestionResult.outputs.featureUsage as FeatureUsageArtifacts | undefined
+      featureUsageArtifacts: ingestionResult.outputs.featureUsage as FeatureUsageArtifacts | undefined,
+      billingArtifacts: ingestionResult.outputs.billing as BillingArtifacts | undefined
     };
   }, [ingestionResult]);
 
@@ -161,6 +164,7 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
     usageArtifacts,
     dailyBucketsArtifacts,
     featureUsageArtifacts: ingestionResult.outputs.featureUsage as FeatureUsageArtifacts | undefined,
+    billingArtifacts: billingArtifacts,
     // Legacy adapter bridge
     baseProcessed,
     processedData,

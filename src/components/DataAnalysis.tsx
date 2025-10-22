@@ -45,24 +45,29 @@ function DataAnalysisInner() {
     planInfo,
     filename,
     onReset,
-    quotaArtifacts // NEW: quota artifacts from context
-    , usageArtifacts
+    quotaArtifacts,
+    usageArtifacts,
+    billingArtifacts
   } = useAnalysisContext();
 
   // Aggregate cost metrics if present (new format only). We deliberately do NOT
   // derive pricing from raw request counts; instead we trust provided billing columns.
-  const costMetricsAvailable = processedData.some(d => d.netAmount !== undefined);
-  const aggregatedCosts = costMetricsAvailable
-    ? processedData.reduce(
-        (acc, row) => {
-          if (row.netAmount !== undefined) acc.net += row.netAmount;
-          if (row.grossAmount !== undefined) acc.gross += row.grossAmount;
-          if (row.discountAmount !== undefined) acc.discount += row.discountAmount;
-          return acc;
-        },
-        { net: 0, gross: 0, discount: 0 }
-      )
-    : null;
+  // Prefer BillingAggregator artifacts; fallback to legacy scan only if absent
+  // Determine cost metrics availability. Prefer BillingAggregator artifacts; fallback to legacy processedData scan for backward compatibility (tests / legacy path).
+  let costMetricsAvailable = false;
+  let aggregatedCosts: { net: number; gross: number; discount: number } | null = null;
+  if (billingArtifacts?.hasAnyBillingData) {
+    costMetricsAvailable = true;
+    aggregatedCosts = billingArtifacts.totals;
+  } else if (processedData.some(d => d.netAmount !== undefined || d.grossAmount !== undefined || d.discountAmount !== undefined)) {
+    costMetricsAvailable = true;
+    aggregatedCosts = processedData.reduce((acc, row) => {
+      if (row.netAmount !== undefined) acc.net += row.netAmount;
+      if (row.grossAmount !== undefined) acc.gross += row.grossAmount;
+      if (row.discountAmount !== undefined) acc.discount += row.discountAmount;
+      return acc;
+    }, { net: 0, gross: 0, discount: 0 });
+  }
 
   return (
     <div className="w-full mx-auto">

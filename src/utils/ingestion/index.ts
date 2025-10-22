@@ -9,6 +9,7 @@ export * from './orchestrator';
 export * from './QuotaAggregator';
 export * from './UsageAggregator';
 export * from './DailyBucketsAggregator';
+export * from './BillingAggregator';
 export * from './RawDataAggregator';
 export * from './FeatureUsageAggregator';
 export * from './adapters';
