@@ -281,6 +281,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
               {sortedUserData.map((user, index) => {
                 const userQuota = getUserQuotaValue(processedData, user.user);
                 const isOverQuota = userQuota !== 'unlimited' && user.totalRequests > userQuota;
+                const isAtQuota = userQuota !== 'unlimited' && user.totalRequests === userQuota;
                 const quotaDisplay = userQuota === 'unlimited' ? 'Unlimited' : userQuota.toString();
                 
                 return (
@@ -289,7 +290,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
                     <button
                       onClick={() => openUserModal(user.user)}
                       className="max-w-32 truncate text-left text-blue-600 hover:text-blue-800 hover:underline cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded"
-                      title={`View ${user.user}'s consumption details`}
+                      title={`View ${user.user}&apos;s consumption details`}
                     >
                       {user.user}
                     </button>
@@ -298,7 +299,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
                     {quotaDisplay}
                   </td>
                   <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold ${
-                    isOverQuota 
+                    isOverQuota || isAtQuota
                       ? 'text-red-600' 
                       : 'text-blue-600'
                   }`}>
