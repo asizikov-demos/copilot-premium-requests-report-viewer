@@ -129,4 +129,11 @@ export interface UsageArtifacts {
 export interface DailyBucketsArtifacts {
   dailyUserTotals: Map<string, Map<string, number>>;
   dateRange: { min: string; max: string } | null;
+  /**
+   * Optional richer breakdown: day -> user -> model -> quantity.
+   * Added to support artifact-based replacement of generateUserDailyModelData
+   * used by the UserConsumptionModal without retaining raw rows.
+   * Present when produced by the updated DailyBucketsAggregator.
+   */
+  dailyUserModelTotals?: Map<string, Map<string, Map<string, number>>>;
 }

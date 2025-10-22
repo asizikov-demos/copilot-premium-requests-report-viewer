@@ -5,20 +5,20 @@ import { UsersQuotaConsumptionChart } from './charts/UsersQuotaConsumptionChart'
 import { UserSummary, DailyCumulativeData } from '@/utils/analytics';
 import { ProcessedData } from '@/types/csv';
 import { UserConsumptionModal } from './UserConsumptionModal';
-import { computeOverageSummary } from '@/utils/analytics/overage';
 import { useSortableTable } from '@/hooks/useSortableTable';
 import { useUserConsumptionModal } from '@/hooks/useUserConsumptionModal';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { PRICING } from '@/constants/pricing';
-import { getUserQuota, QuotaArtifacts } from '@/utils/ingestion';
+import { getUserQuota, QuotaArtifacts, UsageArtifacts, computeOverageSummaryFromArtifacts } from '@/utils/ingestion';
 
 interface UsersOverviewProps {
   userData: UserSummary[];
-  processedData: ProcessedData[]; // Add this for modal
+  processedData: ProcessedData[]; // bridge for modal only (will be removed after modal fully artifact-only in tests)
   allModels: string[];
   selectedPlan: 'business' | 'enterprise';
   dailyCumulativeData: DailyCumulativeData[];
-  quotaArtifacts: QuotaArtifacts; // NEW: Direct quota map access
+  quotaArtifacts: QuotaArtifacts;
+  usageArtifacts: UsageArtifacts; // NEW: used for overage + future enhancements
   onBack: () => void;
 }
 
@@ -44,7 +44,7 @@ const generateUserColors = (users: string[]): Record<string, string> => {
   return result;
 };
 
-export function UsersOverview({ userData, processedData, allModels, selectedPlan, dailyCumulativeData, quotaArtifacts, onBack }: UsersOverviewProps) {
+export function UsersOverview({ userData, processedData, allModels, selectedPlan, dailyCumulativeData, quotaArtifacts, usageArtifacts, onBack }: UsersOverviewProps) {
   const [showChart, setShowChart] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
   const isMobile = useIsMobile();
@@ -84,10 +84,10 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
 
   const currentQuota = planInfo[selectedPlan].monthlyQuota;
   
-  // Calculate total overage via utility (ensures consistency & testability)
+  // Calculate total overage directly from artifacts (O(U))
   const { totalOverageRequests, totalOverageCost } = useMemo(() => (
-    computeOverageSummary(userData, processedData)
-  ), [userData, processedData]);
+    computeOverageSummaryFromArtifacts(usageArtifacts, quotaArtifacts)
+  ), [usageArtifacts, quotaArtifacts]);
   
   // Memoize quota types calculation for chart display - NOW using O(1) quota map!
   const quotaInfo = useMemo(() => {

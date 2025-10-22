@@ -1,17 +1,19 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useContext } from 'react';
 import { UserDailyStackedChart } from './charts/UserDailyStackedChart';
 import { UserConsumptionModalProps } from '@/types/csv';
-import { generateUserDailyModelData } from '@/utils/analytics';
-import { 
-  getUserData, 
-  calculateUserTotalRequests, 
-  calculateOverageRequests, 
-  calculateOverageCost 
+import { generateUserDailyModelData } from '@/utils/analytics'; // legacy fallback
+import {
+  getUserData,
+  calculateUserTotalRequests,
+  calculateOverageRequests,
+  calculateOverageCost
 } from '@/utils/userCalculations';
 import { PRICING } from '@/constants/pricing';
 import { FullScreenModal } from './primitives/FullScreenModal';
+import { AnalysisContext } from '@/context/AnalysisContext';
+import { buildUserDailyModelDataFromArtifacts, UsageArtifacts, QuotaArtifacts, DailyBucketsArtifacts, getUserQuota } from '@/utils/ingestion';
 
 // Generate colors for model bars
 const generateModelColors = (models: string[]): Record<string, string> => {
@@ -44,11 +46,26 @@ export function UserConsumptionModal({
   onClose
 }: UserConsumptionModalProps) {
   const [mounted, setMounted] = useState(false);
+  // Optional context (may be absent in isolated test rendering)
+  const analysisCtx = useContext(AnalysisContext);
+
+  // Artifact references (undefined when context absent)
+  const usageArtifacts = analysisCtx?.usageArtifacts as UsageArtifacts | undefined;
+  const dailyBucketsArtifacts = analysisCtx?.dailyBucketsArtifacts as DailyBucketsArtifacts | undefined;
+  const quotaArtifacts = analysisCtx?.quotaArtifacts as QuotaArtifacts | undefined;
+
+  const artifactUserQuota = quotaArtifacts ? getUserQuota(quotaArtifacts, user) : undefined;
+  const effectiveUserQuotaValue = artifactUserQuota !== undefined ? artifactUserQuota : userQuotaValue;
 
   // Generate daily model data for this user
   const userDailyData = useMemo(() => {
+    // Prefer artifact pathway when all required artifacts present & enriched map exists
+    if (usageArtifacts && dailyBucketsArtifacts?.dailyUserModelTotals) {
+      return buildUserDailyModelDataFromArtifacts(dailyBucketsArtifacts, usageArtifacts, user);
+    }
+    // Fallback to legacy row-scan function (tests still pass ProcessedData only)
     return generateUserDailyModelData(processedData, user);
-  }, [processedData, user]);
+  }, [processedData, user, usageArtifacts, dailyBucketsArtifacts]);
 
   // Get filtered user data (single source of truth)
   const userData = useMemo(() => {
@@ -64,11 +81,15 @@ export function UserConsumptionModal({
 
   // Calculate user's total requests using shared utility
   const userTotalRequests = useMemo(() => {
+    if (usageArtifacts) {
+      const agg = usageArtifacts.users.find(u => u.user === user);
+      if (agg) return agg.totalRequests;
+    }
     return calculateUserTotalRequests(processedData, user);
-  }, [processedData, user]);
+  }, [processedData, user, usageArtifacts]);
 
   // Calculate overage requests and cost using user's actual quota
-  const effectiveQuota = userQuotaValue === 'unlimited' ? Infinity : userQuotaValue;
+  const effectiveQuota = effectiveUserQuotaValue === 'unlimited' ? Infinity : effectiveUserQuotaValue;
   const overageRequests = useMemo(() => {
     return calculateOverageRequests(userTotalRequests, effectiveQuota);
   }, [userTotalRequests, effectiveQuota]);
@@ -226,9 +247,9 @@ export function UserConsumptionModal({
                 {' '} - Daily Usage Overview
               </p>
               <p className="text-xs sm:text-sm text-gray-500 truncate">
-                Total requests: {userTotalRequests.toFixed(1)} / {userQuotaValue === 'unlimited' ? 'Unlimited' : userQuotaValue} quota
+                Total requests: {userTotalRequests.toFixed(1)} / {effectiveUserQuotaValue === 'unlimited' ? 'Unlimited' : effectiveUserQuotaValue} quota
               </p>
-              {overageRequests > 0 && userQuotaValue !== 'unlimited' && (
+              {overageRequests > 0 && effectiveUserQuotaValue !== 'unlimited' && (
                 <p className="text-xs sm:text-sm text-red-600 font-medium truncate" role="alert">
                   Overage cost: ${overageCost.toFixed(2)} ({overageRequests.toFixed(1)} × ${PRICING.OVERAGE_RATE_PER_REQUEST.toFixed(2)})
                 </p>

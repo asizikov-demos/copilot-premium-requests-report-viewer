@@ -11,6 +11,7 @@ export * from './UsageAggregator';
 export * from './DailyBucketsAggregator';
 export * from './RawDataAggregator';
 export * from './adapters';
+export * from './analytics';
 
 // Re-export helpers
 import { QuotaArtifacts } from './types';

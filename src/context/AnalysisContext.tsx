@@ -71,7 +71,10 @@ interface AnalysisContextValue {
   onReset: () => void;
 }
 
-const AnalysisContext = createContext<AnalysisContextValue | null>(null);
+// Exporting the raw context as well (in addition to hook) enables optional consumption
+// in components that want to gracefully fallback when provider is absent (e.g. tests
+// that mount a component in isolation like UserConsumptionModal).
+export const AnalysisContext = createContext<AnalysisContextValue | null>(null);
 
 const DEFAULT_MIN_REQUESTS = 20;
 
@@ -115,7 +118,10 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
   } = useAnalyzedData({
     baseProcessed,
     selectedMonths,
-    minRequestsThreshold
+    minRequestsThreshold,
+    usageArtifacts,
+    quotaArtifacts,
+    dailyBucketsArtifacts
   });
 
   // Auto-select plan when suggested by quota breakdown
