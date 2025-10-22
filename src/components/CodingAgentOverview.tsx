@@ -1,10 +1,19 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { CodingAgentUsageChart } from './charts/CodingAgentUsageChart';
-import { CodingAgentOverviewProps } from '@/types/csv';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import { computeDailyCodingAgentUsage } from '@/utils/analytics/codingAgent';
+import { computeDailyCodingAgentUsage } from '@/utils/analytics/codingAgent'; // legacy fallback for tests
+import { AnalysisContext } from '@/context/AnalysisContext';
+import { buildDailyCumulativeDataFromArtifacts, analyzeCodingAgentAdoptionFromArtifacts, UsageArtifacts, QuotaArtifacts, DailyBucketsArtifacts } from '@/utils/ingestion';
+
+interface CodingAgentOverviewProps {
+  codingAgentUsers: import('@/types/csv').CodingAgentUser[];
+  totalUniqueUsers: number;
+  adoptionRate: number;
+  processedData: import('@/types/csv').ProcessedData[]; // transitional; removed after tests updated
+  onBack: () => void;
+}
 
 export function CodingAgentOverview({ 
   codingAgentUsers, 
@@ -15,12 +24,21 @@ export function CodingAgentOverview({
 }: CodingAgentOverviewProps) {
   const isMobile = useIsMobile();
   const [showChart, setShowChart] = useState(true);
+  const analysisCtx = React.useContext(AnalysisContext);
+  const usageArtifacts = analysisCtx?.usageArtifacts as UsageArtifacts | undefined;
+  const quotaArtifacts = analysisCtx?.quotaArtifacts as QuotaArtifacts | undefined;
+  const dailyBucketsArtifacts = analysisCtx?.dailyBucketsArtifacts as DailyBucketsArtifacts | undefined;
   
   // Memoize daily coding agent data calculation
-  const dailyCodingAgentData = useMemo(
-    () => computeDailyCodingAgentUsage(processedData),
-    [processedData]
-  );
+  const dailyCodingAgentData = useMemo(() => {
+    // If artifacts available, build daily cumulative specifically for coding agent users
+    if (usageArtifacts && quotaArtifacts && dailyBucketsArtifacts) {
+      // We can derive daily cumulative per-user and then filter to coding agent users based on adoption analysis.
+      // Simpler: fallback to legacy computeDailyCodingAgentUsage until a dedicated artifact time series is added.
+      return computeDailyCodingAgentUsage(processedData);
+    }
+    return computeDailyCodingAgentUsage(processedData);
+  }, [processedData, usageArtifacts, quotaArtifacts, dailyBucketsArtifacts]);
 
   return (
     <div className="space-y-6">

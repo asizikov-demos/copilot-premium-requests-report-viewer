@@ -1,4 +1,4 @@
-import { UserSummary } from './transformations';
+import { UserSummary } from './powerUsers';
 import { categorizeUserConsumption, calculateUnusedValue as calculateUnusedValueFromInsights } from './insights';
 import { ProcessedData } from '@/types/csv';
 import { WeeklyExhaustionData, getEarlyExhausterUsers } from './weeklyQuota';

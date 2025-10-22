@@ -1,4 +1,4 @@
-import { processCSVData } from '@/utils/analytics/transformations';
+import { processCSVData } from '../helpers/processCSVData';
 import { newFormatRows } from '../fixtures/newFormatCSVData';
 
 describe('processCSVData (CSV format)', () => {

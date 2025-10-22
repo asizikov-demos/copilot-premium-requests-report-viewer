@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { UsersQuotaConsumptionChart } from './charts/UsersQuotaConsumptionChart';
-import { UserSummary, DailyCumulativeData } from '@/utils/analytics';
+import { UserSummary } from '@/utils/analytics/powerUsers';
 import { ProcessedData } from '@/types/csv';
 import { UserConsumptionModal } from './UserConsumptionModal';
 import { useSortableTable } from '@/hooks/useSortableTable';
@@ -10,6 +10,8 @@ import { useUserConsumptionModal } from '@/hooks/useUserConsumptionModal';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { PRICING } from '@/constants/pricing';
 import { getUserQuota, QuotaArtifacts, UsageArtifacts, computeOverageSummaryFromArtifacts } from '@/utils/ingestion';
+
+type DailyCumulativeData = { date: string; [user: string]: string | number };
 
 interface UsersOverviewProps {
   userData: UserSummary[];

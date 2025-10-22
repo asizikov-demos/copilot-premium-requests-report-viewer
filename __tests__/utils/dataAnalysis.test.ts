@@ -1,6 +1,4 @@
 import { 
-  processCSVData, 
-  analyzeData, 
   analyzePowerUsers, 
   calculateSpecialFeaturesScore, 
   SPECIAL_FEATURES_CONFIG, 
@@ -9,6 +7,7 @@ import {
   hasMultipleMonths,
   filterBySelectedMonths
 } from '@/utils/analytics';
+import { processCSVData, analyzeData } from '../helpers/processCSVData';
 import { CSVData, ProcessedData } from '@/types/csv';
 import { validCSVData, powerUserCSVData } from '../fixtures/validCSVData';
 import { createMockCSVData, createMockCSVDataArray } from '../helpers/testUtils';

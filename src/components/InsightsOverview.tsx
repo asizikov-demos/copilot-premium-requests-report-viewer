@@ -4,7 +4,9 @@ import React, { useMemo, useState } from 'react';
 import { ProcessedData } from '@/types/csv';
 import { UserSummary } from '@/utils/analytics';
 import { categorizeUserConsumption, calculateFeatureUtilization, calculateUnusedValue, CONSUMPTION_THRESHOLDS } from '@/utils/analytics/insights';
-import { analyzeWeeklyQuotaExhaustion } from '@/utils/analytics/weeklyQuota';
+import { analyzeWeeklyQuotaExhaustion, WeeklyExhaustionData } from '@/utils/analytics/weeklyQuota';
+import { AnalysisContext } from '@/context/AnalysisContext';
+import { getUserQuota, QuotaArtifacts, UsageArtifacts, computeOverageSummaryFromArtifacts } from '@/utils/ingestion';
 import { ExpandableSection } from './primitives/ExpandableSection';
 import { UserCategoryTable } from './analysis/UserCategoryTable';
 import { AdvisorySection } from './insights/AdvisorySection';
@@ -12,7 +14,7 @@ import { WeeklyQuotaExhaustion } from './insights/WeeklyQuotaExhaustion';
 
 interface InsightsOverviewProps {
   userData: UserSummary[];
-  processedData: ProcessedData[];
+  processedData: ProcessedData[]; // transitional (billing fields for advisory if needed)
   onBack: () => void;
 }
 
@@ -20,21 +22,74 @@ export function InsightsOverview({ userData, processedData, onBack }: InsightsOv
   const [isPowerUsersExpanded, setIsPowerUsersExpanded] = useState(false);
   const [isAverageUsersExpanded, setIsAverageUsersExpanded] = useState(false);
   const [isLowAdoptionExpanded, setIsLowAdoptionExpanded] = useState(false);
+  const analysisCtx = React.useContext(AnalysisContext);
+  const quotaArtifacts = analysisCtx?.quotaArtifacts as QuotaArtifacts | undefined;
+  const usageArtifacts = analysisCtx?.usageArtifacts as UsageArtifacts | undefined;
+  const weeklyExhaustionArtifacts = analysisCtx?.weeklyExhaustion;
   
-  const insightsData = useMemo(() => 
-    categorizeUserConsumption(userData, processedData),
-    [userData, processedData]
-  );
+  const insightsData = useMemo(() => {
+    // When artifacts available, build a synthetic processedData-like quota map via quotaArtifacts for categorization
+    if (quotaArtifacts && usageArtifacts) {
+      // Reconstruct minimal array of pseudo processed rows for quota (only one per user) to reuse existing categorize function
+      const synthetic: ProcessedData[] = userData.map(u => ({
+        // Provide required fields used by categorizeUserConsumption (quotaValue, user)
+        user: u.user,
+        quotaValue: getUserQuota(quotaArtifacts, u.user),
+        // The rest are dummy placeholders to satisfy type but won't affect logic
+        timestamp: new Date('1970-01-01T00:00:00Z'),
+        model: '',
+        requestsUsed: u.totalRequests,
+        exceedsQuota: false,
+        totalQuota: '',
+        iso: '1970-01-01T00:00:00.000Z',
+        dateKey: '1970-01-01',
+        monthKey: '1970-01',
+        epoch: 0
+      } as ProcessedData));
+      return categorizeUserConsumption(userData, synthetic);
+    }
+    return categorizeUserConsumption(userData, processedData);
+  }, [userData, processedData, quotaArtifacts, usageArtifacts]);
 
-  const featureUtilization = useMemo(() => 
-    calculateFeatureUtilization(processedData),
-    [processedData]
-  );
+  const featureUtilization = useMemo(() => {
+    if (usageArtifacts) {
+      // Derive feature utilization from usageArtifacts modelBreakdown aggregated per user
+      let totalCR=0,totalCA=0,totalSpark=0;
+      const crUsers=new Set<string>(), caUsers=new Set<string>(), sparkUsers=new Set<string>();
+      for (const u of usageArtifacts.users) {
+        for (const [model, qty] of Object.entries(u.modelBreakdown)) {
+          const lower = model.toLowerCase();
+            if (lower.includes('code review')) { totalCR += qty; crUsers.add(u.user); }
+            if (lower.includes('coding agent') || lower.includes('padawan')) { totalCA += qty; caUsers.add(u.user); }
+            if (lower.includes('spark')) { totalSpark += qty; sparkUsers.add(u.user); }
+        }
+      }
+      const avg = (t:number,c:number)=> c>0 ? t/c : 0;
+      return {
+        codeReview: { totalSessions: totalCR, averagePerUser: avg(totalCR, crUsers.size), userCount: crUsers.size },
+        codingAgent: { totalSessions: totalCA, averagePerUser: avg(totalCA, caUsers.size), userCount: caUsers.size },
+        spark: { totalSessions: totalSpark, averagePerUser: avg(totalSpark, sparkUsers.size), userCount: sparkUsers.size }
+      };
+    }
+    return calculateFeatureUtilization(processedData);
+  }, [processedData, usageArtifacts]);
 
-  const weeklyExhaustion = useMemo(() => 
-    analyzeWeeklyQuotaExhaustion(processedData),
-    [processedData]
-  );
+  const weeklyExhaustion = useMemo<WeeklyExhaustionData>(() => {
+    if (weeklyExhaustionArtifacts && 'weeks' in weeklyExhaustionArtifacts) {
+      // Transform artifact breakdown (counts only) into legacy shape using placeholder user IDs.
+      const w1 = weeklyExhaustionArtifacts.weeks.find(w => w.weekNumber === 1)?.usersExhaustedInWeek || 0;
+      const w2 = weeklyExhaustionArtifacts.weeks.find(w => w.weekNumber === 2)?.usersExhaustedInWeek || 0;
+      const w3 = weeklyExhaustionArtifacts.weeks.find(w => w.weekNumber === 3)?.usersExhaustedInWeek || 0;
+      const arr = (n: number) => Array.from({ length: n }, (_, i) => `user-${i+1}`);
+      return {
+        week1Exhausted: arr(w1),
+        week2Exhausted: arr(w2),
+        week3Exhausted: arr(w3),
+        currentPeriodOnly: true
+      };
+    }
+    return analyzeWeeklyQuotaExhaustion(processedData);
+  }, [weeklyExhaustionArtifacts, processedData]);
 
   // Compute unutilized value (only for users with numeric quotas)
   const averageUnusedValueUSD = useMemo(() => calculateUnusedValue(insightsData.averageUsers), [insightsData]);

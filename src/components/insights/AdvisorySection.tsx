@@ -1,7 +1,7 @@
 'use client';
 
 import { Advisory, generateAdvisories } from '@/utils/analytics/advisory';
-import { UserSummary } from '@/utils/analytics/transformations';
+import { UserSummary } from '@/utils/analytics/powerUsers';
 import { ProcessedData } from '@/types/csv';
 import { WeeklyExhaustionData } from '@/utils/analytics/weeklyQuota';
 

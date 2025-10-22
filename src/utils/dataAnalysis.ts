@@ -7,7 +7,6 @@
  *   - quota.ts
  *   - powerUsers.ts
  *   - codingAgent.ts
- *   - transformations.ts
  *   - filters.ts
  *   - exhaustion.ts
  *
@@ -16,7 +15,6 @@
  * at `utils/analytics`.
  */
 
-export * from './analytics/transformations';
 export * from './analytics/quota';
 export * from './analytics/filters';
 export * from './analytics/powerUsers';

@@ -1,4 +1,5 @@
-import { processCSVData, analyzeData, getUserQuotaValue } from '../../src/utils/analytics';
+import { getUserQuotaValue } from '../../src/utils/analytics';
+import { processCSVData, analyzeData } from '../helpers/processCSVData';
 import { CSVData } from '../../src/types/csv';
 
 describe('Mixed Quota Support', () => {

@@ -1,4 +1,4 @@
-import { UserSummary } from './transformations';
+import { UserSummary } from './powerUsers';
 import { ProcessedData } from '@/types/csv';
 import { getUserQuotaValue } from './quota';
 import { calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';

@@ -46,6 +46,7 @@ function DataAnalysisInner() {
     filename,
     onReset,
     quotaArtifacts // NEW: quota artifacts from context
+    , usageArtifacts
   } = useAnalysisContext();
 
   // Aggregate cost metrics if present (new format only). We deliberately do NOT
@@ -158,6 +159,7 @@ function DataAnalysisInner() {
                 selectedPlan={selectedPlan}
                 dailyCumulativeData={dailyCumulativeData}
                 quotaArtifacts={quotaArtifacts}
+                usageArtifacts={usageArtifacts}
                 onBack={() => setView('overview')}
               />
             </div>

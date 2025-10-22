@@ -1,5 +1,5 @@
 import { computeOverageSummary } from '@/utils/analytics/overage';
-import { UserSummary } from '@/utils/analytics/transformations';
+import { UserSummary } from '@/utils/analytics/powerUsers';
 import { ProcessedData } from '@/types/csv';
 import { PRICING } from '@/constants/pricing';
 

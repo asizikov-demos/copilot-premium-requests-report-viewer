@@ -1,4 +1,5 @@
-import { processCSVData, getAvailableMonths, filterBySelectedMonths } from '../../src/utils/analytics';
+import { getAvailableMonths, filterBySelectedMonths } from '../../src/utils/analytics';
+import { processCSVData } from '../helpers/processCSVData';
 import { CSVData } from '../../src/types/csv';
 
 describe('UTC Date Handling and Billing Periods', () => {

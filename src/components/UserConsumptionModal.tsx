@@ -3,7 +3,6 @@
 import React, { useEffect, useState, useMemo, useContext } from 'react';
 import { UserDailyStackedChart } from './charts/UserDailyStackedChart';
 import { UserConsumptionModalProps } from '@/types/csv';
-import { generateUserDailyModelData } from '@/utils/analytics'; // legacy fallback
 import {
   getUserData,
   calculateUserTotalRequests,
@@ -59,12 +58,27 @@ export function UserConsumptionModal({
 
   // Generate daily model data for this user
   const userDailyData = useMemo(() => {
-    // Prefer artifact pathway when all required artifacts present & enriched map exists
     if (usageArtifacts && dailyBucketsArtifacts?.dailyUserModelTotals) {
       return buildUserDailyModelDataFromArtifacts(dailyBucketsArtifacts, usageArtifacts, user);
     }
-    // Fallback to legacy row-scan function (tests still pass ProcessedData only)
-    return generateUserDailyModelData(processedData, user);
+    // Minimal legacy fallback for tests (re-implemented locally after removing transformations.ts)
+    const userRows = processedData.filter(d => d.user === user);
+    if (userRows.length === 0) return [];
+    const allSorted = [...processedData].sort((a,b)=> a.epoch - b.epoch);
+    const start = allSorted[0].epoch; const end = allSorted[allSorted.length-1].epoch;
+    const models = Array.from(new Set(userRows.map(r=>r.model))).sort();
+    const byDate = new Map<string, typeof processedData>();
+    userRows.forEach(r => { const arr = byDate.get(r.dateKey); if (arr) arr.push(r); else byDate.set(r.dateKey,[r]); });
+    let cumulative = 0; const result: any[] = [];
+    for (let current = new Date(start); current.getTime() <= end; current.setUTCDate(current.getUTCDate()+1)) {
+      const dateStr = current.toISOString().slice(0,10);
+      const day = byDate.get(dateStr) || [];
+      const row: any = { date: dateStr };
+      let dailyTotal = 0; models.forEach(m => { row[m] = 0; });
+      for (const rec of day) { row[rec.model] += rec.requestsUsed; dailyTotal += rec.requestsUsed; }
+      cumulative += dailyTotal; row.totalCumulative = cumulative; result.push(row);
+    }
+    return result;
   }, [processedData, user, usageArtifacts, dailyBucketsArtifacts]);
 
   // Get filtered user data (single source of truth)
