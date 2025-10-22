@@ -6,7 +6,8 @@ import { UserSummary } from '@/utils/analytics';
 import { categorizeUserConsumption, calculateFeatureUtilization, calculateUnusedValue, CONSUMPTION_THRESHOLDS } from '@/utils/analytics/insights';
 import { analyzeWeeklyQuotaExhaustion, WeeklyExhaustionData } from '@/utils/analytics/weeklyQuota';
 import { AnalysisContext } from '@/context/AnalysisContext';
-import { getUserQuota, QuotaArtifacts, UsageArtifacts, computeOverageSummaryFromArtifacts, buildFeatureUtilizationFromArtifacts, FeatureUsageArtifacts } from '@/utils/ingestion';
+import { QuotaArtifacts, UsageArtifacts, FeatureUsageArtifacts } from '@/utils/ingestion/types';
+import { buildConsumptionCategoriesFromArtifacts, buildFeatureUtilizationFromArtifacts } from '@/utils/ingestion/analytics';
 import { ExpandableSection } from './primitives/ExpandableSection';
 import { UserCategoryTable } from './analysis/UserCategoryTable';
 import { AdvisorySection } from './insights/AdvisorySection';
@@ -14,53 +15,47 @@ import { WeeklyQuotaExhaustion } from './insights/WeeklyQuotaExhaustion';
 
 interface InsightsOverviewProps {
   userData: UserSummary[];
-  processedData: ProcessedData[]; // transitional (billing fields for advisory if needed)
+  processedData: ProcessedData[]; // transitional
+  quotaArtifacts?: QuotaArtifacts;
+  usageArtifacts?: UsageArtifacts;
+  featureUsageArtifacts?: FeatureUsageArtifacts;
+  // Weekly exhaustion artifact (computeWeeklyQuotaExhaustionFromArtifacts output). Typed loosely here since we only read weekNumber & usersExhaustedInWeek.
+  weeklyExhaustionArtifacts?: { weeks: Array<{ weekNumber: number; usersExhaustedInWeek: number; startDate: string; endDate: string }>; totalUsersExhausted: number };
   onBack: () => void;
 }
 
-export function InsightsOverview({ userData, processedData, onBack }: InsightsOverviewProps) {
+export function InsightsOverview({ userData, processedData, quotaArtifacts, usageArtifacts, featureUsageArtifacts, weeklyExhaustionArtifacts, onBack }: InsightsOverviewProps) {
   const [isPowerUsersExpanded, setIsPowerUsersExpanded] = useState(false);
   const [isAverageUsersExpanded, setIsAverageUsersExpanded] = useState(false);
   const [isLowAdoptionExpanded, setIsLowAdoptionExpanded] = useState(false);
   const analysisCtx = React.useContext(AnalysisContext);
-  const quotaArtifacts = analysisCtx?.quotaArtifacts as QuotaArtifacts | undefined;
-  const usageArtifacts = analysisCtx?.usageArtifacts as UsageArtifacts | undefined;
-  const weeklyExhaustionArtifacts = analysisCtx?.weeklyExhaustion;
-  const featureUsageArtifacts = analysisCtx?.featureUsageArtifacts as FeatureUsageArtifacts | undefined;
+  const quotaArtifactsFromCtx = analysisCtx?.quotaArtifacts as QuotaArtifacts | undefined;
+  const usageArtifactsFromCtx = analysisCtx?.usageArtifacts as UsageArtifacts | undefined;
+  const weeklyExhaustionArtifactsFromCtx = analysisCtx?.weeklyExhaustion as { weeks?: Array<{ weekNumber: number; usersExhaustedInWeek: number; startDate: string; endDate: string }>; totalUsersExhausted?: number } | undefined;
+  const featureUsageArtifactsFromCtx = analysisCtx?.featureUsageArtifacts as FeatureUsageArtifacts | undefined;
+
+  // Prefer explicitly passed artifacts (future-proof for isolated component tests) then context.
+  const quotaArtifactsEff = quotaArtifacts || quotaArtifactsFromCtx;
+  const usageArtifactsEff = usageArtifacts || usageArtifactsFromCtx;
+  const featureUsageArtifactsEff = featureUsageArtifacts || featureUsageArtifactsFromCtx;
+  const weeklyExhaustionArtifactsEff = weeklyExhaustionArtifacts || weeklyExhaustionArtifactsFromCtx;
   
   const insightsData = useMemo(() => {
-    // When artifacts available, build a synthetic processedData-like quota map via quotaArtifacts for categorization
-    if (quotaArtifacts && usageArtifacts) {
-      // Reconstruct minimal array of pseudo processed rows for quota (only one per user) to reuse existing categorize function
-      const synthetic: ProcessedData[] = userData.map(u => ({
-        // Provide required fields used by categorizeUserConsumption (quotaValue, user)
-        user: u.user,
-        quotaValue: getUserQuota(quotaArtifacts, u.user),
-        // The rest are dummy placeholders to satisfy type but won't affect logic
-        timestamp: new Date('1970-01-01T00:00:00Z'),
-        model: '',
-        requestsUsed: u.totalRequests,
-        exceedsQuota: false,
-        totalQuota: '',
-        iso: '1970-01-01T00:00:00.000Z',
-        dateKey: '1970-01-01',
-        monthKey: '1970-01',
-        epoch: 0
-      } as ProcessedData));
-      return categorizeUserConsumption(userData, synthetic);
+    if (usageArtifactsEff && quotaArtifactsEff) {
+      return buildConsumptionCategoriesFromArtifacts(usageArtifactsEff, quotaArtifactsEff);
     }
     return categorizeUserConsumption(userData, processedData);
-  }, [userData, processedData, quotaArtifacts, usageArtifacts]);
+  }, [userData, processedData, usageArtifactsEff, quotaArtifactsEff]);
 
   const featureUtilization = useMemo(() => {
-    if (featureUsageArtifacts) {
-      return buildFeatureUtilizationFromArtifacts(featureUsageArtifacts);
+    if (featureUsageArtifactsEff) {
+      return buildFeatureUtilizationFromArtifacts(featureUsageArtifactsEff);
     }
-    if (usageArtifacts) {
-      // Temporary intermediate path until legacy derivation is fully removed
+    if (usageArtifactsEff) {
+      // Fallback intermediate path (can be removed later)
       let totalCR=0,totalCA=0,totalSpark=0;
       const crUsers=new Set<string>(), caUsers=new Set<string>(), sparkUsers=new Set<string>();
-      for (const u of usageArtifacts.users) {
+      for (const u of usageArtifactsEff.users) {
         for (const [model, qty] of Object.entries(u.modelBreakdown)) {
           const lower = model.toLowerCase();
           if (lower.includes('code review')) { totalCR += qty; crUsers.add(u.user); }
@@ -76,14 +71,15 @@ export function InsightsOverview({ userData, processedData, onBack }: InsightsOv
       };
     }
     return calculateFeatureUtilization(processedData);
-  }, [processedData, usageArtifacts, featureUsageArtifacts]);
+  }, [processedData, usageArtifactsEff, featureUsageArtifactsEff]);
 
   const weeklyExhaustion = useMemo<WeeklyExhaustionData>(() => {
-    if (weeklyExhaustionArtifacts && 'weeks' in weeklyExhaustionArtifacts) {
+    if (weeklyExhaustionArtifactsEff && Array.isArray(weeklyExhaustionArtifactsEff.weeks)) {
       // Transform artifact breakdown (counts only) into legacy shape using placeholder user IDs.
-      const w1 = weeklyExhaustionArtifacts.weeks.find(w => w.weekNumber === 1)?.usersExhaustedInWeek || 0;
-      const w2 = weeklyExhaustionArtifacts.weeks.find(w => w.weekNumber === 2)?.usersExhaustedInWeek || 0;
-      const w3 = weeklyExhaustionArtifacts.weeks.find(w => w.weekNumber === 3)?.usersExhaustedInWeek || 0;
+      const weeksArr = weeklyExhaustionArtifactsEff.weeks;
+      const w1 = weeksArr.find((w: { weekNumber: number }) => w.weekNumber === 1)?.usersExhaustedInWeek || 0;
+      const w2 = weeksArr.find((w: { weekNumber: number }) => w.weekNumber === 2)?.usersExhaustedInWeek || 0;
+      const w3 = weeksArr.find((w: { weekNumber: number }) => w.weekNumber === 3)?.usersExhaustedInWeek || 0;
       const arr = (n: number) => Array.from({ length: n }, (_, i) => `user-${i+1}`);
       return {
         week1Exhausted: arr(w1),
@@ -93,7 +89,7 @@ export function InsightsOverview({ userData, processedData, onBack }: InsightsOv
       };
     }
     return analyzeWeeklyQuotaExhaustion(processedData);
-  }, [weeklyExhaustionArtifacts, processedData]);
+  }, [weeklyExhaustionArtifactsEff, processedData]);
 
   // Compute unutilized value (only for users with numeric quotas)
   const averageUnusedValueUSD = useMemo(() => calculateUnusedValue(insightsData.averageUsers), [insightsData]);

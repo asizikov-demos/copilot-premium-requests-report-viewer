@@ -1,6 +1,9 @@
 'use client';
 
 import { Advisory, generateAdvisories } from '@/utils/analytics/advisory';
+import { buildAdvisoriesFromArtifacts, buildConsumptionCategoriesFromArtifacts } from '@/utils/ingestion/analytics';
+import { AnalysisContext } from '@/context/AnalysisContext';
+import { QuotaArtifacts, UsageArtifacts } from '@/utils/ingestion/types';
 import { UserSummary } from '@/utils/analytics/powerUsers';
 import { ProcessedData } from '@/types/csv';
 import { WeeklyExhaustionData } from '@/utils/analytics/weeklyQuota';
@@ -147,7 +150,20 @@ export function AdvisorySection({
   processedData, 
   weeklyExhaustion 
 }: AdvisorySectionProps) {
-  const advisories = generateAdvisories(userData, processedData, weeklyExhaustion);
+  const analysisCtx = React.useContext(AnalysisContext);
+  const quotaArtifacts = analysisCtx?.quotaArtifacts as QuotaArtifacts | undefined;
+  const usageArtifacts = analysisCtx?.usageArtifacts as UsageArtifacts | undefined;
+  const weeklyArtifacts = analysisCtx?.weeklyExhaustion as any; // artifact form (if present)
+
+  const advisories = React.useMemo(() => {
+    if (usageArtifacts && quotaArtifacts && weeklyArtifacts && weeklyArtifacts.weeks) {
+      // Use artifact path: build categories then advisories
+      const categories = buildConsumptionCategoriesFromArtifacts(usageArtifacts, quotaArtifacts);
+      return buildAdvisoriesFromArtifacts(categories, weeklyArtifacts, usageArtifacts, quotaArtifacts);
+    }
+    // Fallback to legacy generator
+    return generateAdvisories(userData, processedData, weeklyExhaustion);
+  }, [usageArtifacts, quotaArtifacts, weeklyArtifacts, userData, processedData, weeklyExhaustion]);
   
   if (advisories.length === 0) {
     return <NoActionRequired />;
