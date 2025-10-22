@@ -1,21 +1,21 @@
 export const invalidCSVData = {
-  missingColumns: `Timestamp,User,Model
-2025-06-03T11:05:27Z,USerA,gpt-4.1-2025-04-14`,
+  missingColumns: `date,username,model
+2025-06-03,USerA,gpt-4.1-2025-04-14`,
   
   emptyFile: '',
   
-  malformedData: `Timestamp,User,Model,Requests Used,Exceeds Monthly Quota,Total Monthly Quota
-2025-06-03T11:05:27Z,USerA,gpt-4.1-2025-04-14,invalid_number,false,Unlimited`,
+  malformedData: `date,username,model,quantity,exceeds_quota,total_monthly_quota
+2025-06-03,USerA,gpt-4.1-2025-04-14,invalid_number,false,Unlimited`,
   
-  invalidTimestamp: `Timestamp,User,Model,Requests Used,Exceeds Monthly Quota,Total Monthly Quota
-invalid-timestamp,USerA,gpt-4.1-2025-04-14,1.00,false,Unlimited`,
+  invalidDate: `date,username,model,quantity,exceeds_quota,total_monthly_quota
+invalid-date,USerA,gpt-4.1-2025-04-14,1.00,false,Unlimited`,
 
-  missingRequiredColumns: `User,Model,Requests Used
+  missingRequiredColumns: `username,model,quantity
 USerA,gpt-4.1-2025-04-14,1.00`,
 
-  extraColumns: `Timestamp,User,Model,Requests Used,Exceeds Monthly Quota,Total Monthly Quota,Extra Column
-2025-06-03T11:05:27Z,USerA,gpt-4.1-2025-04-14,1.00,false,Unlimited,extra_value`,
+  extraColumns: `date,username,model,quantity,exceeds_quota,total_monthly_quota,extra_column
+2025-06-03,USerA,gpt-4.1-2025-04-14,1.00,false,Unlimited,extra_value`,
 
-  invalidBooleanValues: `Timestamp,User,Model,Requests Used,Exceeds Monthly Quota,Total Monthly Quota
-2025-06-03T11:05:27Z,USerA,gpt-4.1-2025-04-14,1.00,maybe,Unlimited`
+  invalidBooleanValues: `date,username,model,quantity,exceeds_quota,total_monthly_quota
+2025-06-03,USerA,gpt-4.1-2025-04-14,1.00,maybe,Unlimited`
 };

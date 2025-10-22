@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import Papa from 'papaparse';
-import { CSVData, NewCSVData } from '@/types/csv';
+import { CSVData } from '@/types/csv';
 
 interface CSVUploaderProps {
   onDataLoad: (data: CSVData[], filename: string) => void;
@@ -15,33 +15,17 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
   const [progress, setProgress] = useState(0);
   const [showPrivacyDialog, setShowPrivacyDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const accumulatedData = useRef<(CSVData | NewCSVData)[]>([]);
+  const accumulatedData = useRef<CSVData[]>([]);
   const isFormatValidated = useRef(false);
   const totalRows = useRef(0);
 
-  const validateFormat = (firstRow: CSVData | NewCSVData): boolean => {
-    const isLegacy = 'Timestamp' in firstRow;
-    const isNew = 'date' in firstRow && 'username' in firstRow && 'model' in firstRow && 'quantity' in firstRow;
-
-    if (!isLegacy && !isNew) {
-      onError('Unrecognized CSV format. Expected legacy headers (Timestamp, User, ...) or new headers (date, username, model, quantity).');
+  const validateFormat = (firstRow: CSVData): boolean => {
+    const required = ['date', 'username', 'model', 'quantity'];
+    const missing = required.filter(col => !(col in firstRow));
+    
+    if (missing.length > 0) {
+      onError(`Missing required columns: ${missing.join(', ')}`);
       return false;
-    }
-
-    if (isLegacy) {
-      const requiredLegacy = ['Timestamp', 'User', 'Model', 'Requests Used', 'Exceeds Monthly Quota', 'Total Monthly Quota'];
-      const missingLegacy = requiredLegacy.filter(col => !(col in firstRow));
-      if (missingLegacy.length > 0) {
-        onError(`Missing required legacy columns: ${missingLegacy.join(', ')}`);
-        return false;
-      }
-    } else if (isNew) {
-      const requiredNew = ['date', 'username', 'model', 'quantity'];
-      const missingNew = requiredNew.filter(col => !(col in firstRow));
-      if (missingNew.length > 0) {
-        onError(`Missing required new format columns: ${missingNew.join(', ')}`);
-        return false;
-      }
     }
 
     return true;
@@ -74,7 +58,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
           return;
         }
 
-        const chunkData = results.data as (CSVData | NewCSVData)[];
+        const chunkData = results.data as CSVData[];
         
         // Validate format on first chunk
         if (!isFormatValidated.current && chunkData.length > 0) {
@@ -233,11 +217,9 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
           </div>
           
           <div className="text-xs text-gray-400">
-            Supported formats:
+            Required columns: date, username, model, quantity
             <br />
-            <span className="font-medium">Legacy:</span> Timestamp, User, Model, Requests Used, Exceeds Monthly Quota, Total Monthly Quota
-            <br />
-            <span className="font-medium">New:</span> date, username, model, quantity, (optional cost & quota columns)
+            Optional: exceeds_quota, total_monthly_quota, cost columns, organization, cost_center_name
           </div>
           <div className="text-xs text-blue-500 mt-1">
             <a

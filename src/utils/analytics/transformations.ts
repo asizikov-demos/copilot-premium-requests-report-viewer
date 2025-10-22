@@ -1,4 +1,4 @@
-import { CSVData, NewCSVData, ProcessedData, AnalysisResults } from '@/types/csv';
+import { CSVData, ProcessedData, AnalysisResults } from '@/types/csv';
 import { parseQuotaValue, buildQuotaBreakdown } from './quota';
 import { buildDateKeys } from '../dateKeys';
 
@@ -9,57 +9,30 @@ export interface UserSummary {
 }
 
 // Convert raw CSV rows into strongly typed processed data (UTC-sensitive: timestamps used as-is)
-// Detect row format (legacy vs new) using presence of discriminant keys.
-function detectRowFormat(row: CSVData | NewCSVData): 'legacy' | 'new' {
-  return (row as CSVData).Timestamp !== undefined ? 'legacy' : 'new';
-}
-
-// Convert raw mixed-format rows (legacy or new) into unified processed records.
-// This maintains backward compatibility while enabling expanded analytics.
-export function processCSVData(rawData: (CSVData | NewCSVData)[]): ProcessedData[] {
+export function processCSVData(rawData: CSVData[]): ProcessedData[] {
   return rawData.map(row => {
-    const format = detectRowFormat(row);
-    if (format === 'legacy') {
-      const legacy = row as CSVData;
-      const timestamp = new Date(legacy.Timestamp); // preserve UTC
-      const keys = buildDateKeys(timestamp);
-      return {
-        timestamp,
-        user: legacy.User,
-        model: legacy.Model,
-        requestsUsed: parseFloat(legacy['Requests Used']),
-        exceedsQuota: legacy['Exceeds Monthly Quota'].toLowerCase() === 'true',
-        totalQuota: legacy['Total Monthly Quota'],
-        quotaValue: parseQuotaValue(legacy['Total Monthly Quota']),
-        ...keys,
-        sourceFormat: 'legacy'
-      };
-    } else {
-      const newer = row as NewCSVData;
-      // Build a UTC timestamp from YYYY-MM-DD (DO NOT localize)
-      const timestamp = new Date(`${newer.date}T00:00:00Z`);
-      const keys = buildDateKeys(timestamp);
-      const totalQuotaRaw = newer.total_monthly_quota || 'Unlimited';
-      return {
-        timestamp,
-        user: newer.username,
-        model: newer.model,
-        requestsUsed: parseFloat(newer.quantity),
-        exceedsQuota: newer.exceeds_quota ? newer.exceeds_quota.toLowerCase() === 'true' : false,
-        totalQuota: totalQuotaRaw,
-        quotaValue: parseQuotaValue(totalQuotaRaw),
-        product: newer.product,
-        sku: newer.sku,
-        organization: newer.organization,
-        costCenter: newer.cost_center_name,
-        appliedCostPerQuantity: newer.applied_cost_per_quantity ? parseFloat(newer.applied_cost_per_quantity) : undefined,
-        grossAmount: newer.gross_amount ? parseFloat(newer.gross_amount) : undefined,
-        discountAmount: newer.discount_amount ? parseFloat(newer.discount_amount) : undefined,
-        netAmount: newer.net_amount ? parseFloat(newer.net_amount) : undefined,
-        ...keys,
-        sourceFormat: 'new'
-      };
-    }
+    // Build a UTC timestamp from YYYY-MM-DD (DO NOT localize)
+    const timestamp = new Date(`${row.date}T00:00:00Z`);
+    const keys = buildDateKeys(timestamp);
+    const totalQuotaRaw = row.total_monthly_quota || 'Unlimited';
+    return {
+      timestamp,
+      user: row.username,
+      model: row.model,
+      requestsUsed: parseFloat(row.quantity),
+      exceedsQuota: row.exceeds_quota ? row.exceeds_quota.toLowerCase() === 'true' : false,
+      totalQuota: totalQuotaRaw,
+      quotaValue: parseQuotaValue(totalQuotaRaw),
+      product: row.product,
+      sku: row.sku,
+      organization: row.organization,
+      costCenter: row.cost_center_name,
+      appliedCostPerQuantity: row.applied_cost_per_quantity ? parseFloat(row.applied_cost_per_quantity) : undefined,
+      grossAmount: row.gross_amount ? parseFloat(row.gross_amount) : undefined,
+      discountAmount: row.discount_amount ? parseFloat(row.discount_amount) : undefined,
+      netAmount: row.net_amount ? parseFloat(row.net_amount) : undefined,
+      ...keys
+    };
   });
 }
 

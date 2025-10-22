@@ -1,16 +1,6 @@
-// LEGACY CSV FORMAT (original premium request usage export)
-export interface CSVData {
-  Timestamp: string; // ISO timestamp string (already UTC; never shift)
-  User: string; // username
-  Model: string; // raw model name
-  'Requests Used': string; // numeric string (integer historically, but parseFloat applied)
-  'Exceeds Monthly Quota': string; // 'true' | 'false'
-  'Total Monthly Quota': string; // numeric or 'Unlimited'
-}
-
-// NEW CSV FORMAT (expanded billing export)
+// CSV FORMAT (expanded billing export)
 // Uses daily date (YYYY-MM-DD) & additional commercial + cost fields.
-export interface NewCSVData {
+export interface CSVData {
   date: string; // YYYY-MM-DD (UTC day) — convert to midnight UTC timestamp
   username: string;
   product?: string;
@@ -27,21 +17,21 @@ export interface NewCSVData {
   cost_center_name?: string;
 }
 
-// Unified processed record produced from either legacy or new CSV row.
+// Processed record produced from CSV row.
 export interface ProcessedData {
-  timestamp: Date; // Normalized UTC timestamp (legacy: original; new: date + T00:00:00Z)
-  user: string; // legacy: User, new: username
+  timestamp: Date; // Normalized UTC timestamp (date + T00:00:00Z)
+  user: string; // username from CSV
   model: string; // normalized raw model name (prefixes like 'Auto: ' stripped later in analytics if needed)
   requestsUsed: number; // float-safe parsed quantity/requests used
-  exceedsQuota: boolean; // derived from legacy/new boolean field (defaults false if absent)
+  exceedsQuota: boolean; // derived from boolean field (defaults false if absent)
   totalQuota: string; // original string (numeric or 'Unlimited')
   quotaValue: number | 'unlimited'; // Parsed quota value using pricing constants/logic
-  // Cached UTC-derived keys (added in date refactor step 1)
+  // Cached UTC-derived keys
   iso: string; // Full UTC ISO string (timestamp.toISOString())
   dateKey: string; // YYYY-MM-DD (first 10 chars of ISO) for fast daily grouping
   monthKey: string; // YYYY-MM (first 7 chars of ISO) for fast monthly grouping
   epoch: number; // Milliseconds since epoch (timestamp.getTime()) for arithmetic
-  // Extended (new format only; optional for legacy rows)
+  // Extended fields from CSV
   product?: string;
   sku?: string;
   organization?: string;
@@ -50,8 +40,6 @@ export interface ProcessedData {
   grossAmount?: number;
   discountAmount?: number;
   netAmount?: number;
-  // Metadata
-  sourceFormat: 'legacy' | 'new';
 }
 
 export interface AnalysisResults {

@@ -13,23 +13,25 @@ export const createMockFile = (content: string, name: string, type: string = 'te
 };
 
 export const createMockCSVData = (overrides: Partial<CSVData> = {}): CSVData => ({
-  Timestamp: '2025-06-03T11:05:27Z',
-  User: 'TestUser',
-  Model: 'test-model',
-  'Requests Used': '1.00',
-  'Exceeds Monthly Quota': 'false',
-  'Total Monthly Quota': 'Unlimited',
+  date: '2025-06-03',
+  username: 'TestUser',
+  model: 'test-model',
+  quantity: '1.00',
+  exceeds_quota: 'false',
+  total_monthly_quota: 'Unlimited',
   ...overrides
 });
 
 // Helper to create multiple mock CSV entries
 export const createMockCSVDataArray = (count: number, overrides: Partial<CSVData> = {}): CSVData[] => {
-  return Array.from({ length: count }, (_, index) => 
-    createMockCSVData({
+  return Array.from({ length: count }, (_, index) => {
+    const date = new Date(2025, 5, 3 + index);
+    const dateStr = date.toISOString().slice(0, 10); // YYYY-MM-DD
+    return createMockCSVData({
       ...overrides,
-      User: `TestUser${index + 1}`,
-      Timestamp: new Date(2025, 5, 3 + index, 10, 0, 0).toISOString(),
-      'Requests Used': (Math.random() * 5).toFixed(2)
-    })
-  );
+      username: `TestUser${index + 1}`,
+      date: dateStr,
+      quantity: (Math.random() * 5).toFixed(2)
+    });
+  });
 };

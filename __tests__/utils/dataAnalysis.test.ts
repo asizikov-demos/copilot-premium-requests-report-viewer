@@ -22,21 +22,20 @@ describe('CSV Data Processing', () => {
       
       expect(result).toHaveLength(4);
       expect(result[0]).toMatchObject({
-        timestamp: new Date('2025-06-03T11:05:27Z'),
+        timestamp: new Date('2025-06-03T00:00:00Z'),
         user: 'USerA',
         model: 'gpt-4.1-2025-04-14',
         requestsUsed: 1.00,
         exceedsQuota: false,
         totalQuota: 'Unlimited',
-        quotaValue: 'unlimited',
-        sourceFormat: 'legacy'
+        quotaValue: 'unlimited'
       });
     });
 
     it('should handle boolean conversion correctly', () => {
       const testData: CSVData[] = [
         createMockCSVData({
-          'Exceeds Monthly Quota': 'TRUE'
+          exceeds_quota: 'TRUE'
         })
       ];
       
@@ -46,9 +45,9 @@ describe('CSV Data Processing', () => {
 
     it('should handle case-insensitive boolean conversion', () => {
       const testData: CSVData[] = [
-        createMockCSVData({ 'Exceeds Monthly Quota': 'True' }),
-        createMockCSVData({ 'Exceeds Monthly Quota': 'FALSE' }),
-        createMockCSVData({ 'Exceeds Monthly Quota': 'false' })
+        createMockCSVData({ exceeds_quota: 'True' }),
+        createMockCSVData({ exceeds_quota: 'FALSE' }),
+        createMockCSVData({ exceeds_quota: 'false' })
       ];
       
       const result = processCSVData(testData);
@@ -60,7 +59,7 @@ describe('CSV Data Processing', () => {
     it('should handle numeric conversion correctly', () => {
       const testData: CSVData[] = [
         createMockCSVData({
-          'Requests Used': '3.14159'
+          quantity: '3.14159'
         })
       ];
       
@@ -71,7 +70,7 @@ describe('CSV Data Processing', () => {
     it('should handle invalid numbers gracefully', () => {
       const testData: CSVData[] = [
         createMockCSVData({
-          'Requests Used': 'invalid'
+          quantity: 'invalid'
         })
       ];
       
@@ -82,7 +81,7 @@ describe('CSV Data Processing', () => {
     it('should handle zero values correctly', () => {
       const testData: CSVData[] = [
         createMockCSVData({
-          'Requests Used': '0'
+          quantity: '0'
         })
       ];
       
@@ -99,14 +98,13 @@ describe('CSV Data Processing', () => {
       const result = processCSVData(validCSVData);
       
       expect(result[1]).toMatchObject({
-        timestamp: new Date('2025-06-03T14:22:15Z'),
+        timestamp: new Date('2025-06-03T00:00:00Z'),
         user: 'JohnDoe',
         model: 'claude-3.7-sonnet-thought',
         requestsUsed: 2.50,
         exceedsQuota: true,
         totalQuota: '100',
-        quotaValue: 100,
-        sourceFormat: 'legacy'
+        quotaValue: 100
       });
     });
 
@@ -178,19 +176,19 @@ describe('CSV Data Processing', () => {
     });
 
     it('should sort data by timestamp internally', () => {
-      // Create data with mixed timestamps
+      // Create data with mixed dates
       const mixedData: CSVData[] = [
         createMockCSVData({ 
-          Timestamp: '2025-06-05T10:00:00Z',
-          User: 'User1'
+          date: '2025-06-05',
+          username: 'User1'
         }),
         createMockCSVData({ 
-          Timestamp: '2025-06-03T10:00:00Z',
-          User: 'User2'
+          date: '2025-06-03',
+          username: 'User2'
         }),
         createMockCSVData({ 
-          Timestamp: '2025-06-04T10:00:00Z',
-          User: 'User3'
+          date: '2025-06-04',
+          username: 'User3'
         })
       ];
       
@@ -248,8 +246,8 @@ describe('CSV Data Processing', () => {
       const mixedData = [
         ...powerUserCSVData, // PowerUser1 with 22 requests total
         createMockCSVData({ 
-          User: 'LowUser',
-          'Requests Used': '1.0'
+          username: 'LowUser',
+          quantity: '1.0'
         })
       ];
       
@@ -275,9 +273,9 @@ describe('CSV Data Processing', () => {
         // Create 25 requests per user to qualify as power users
         for (let j = 1; j <= 25; j++) {
           manyPowerUsers.push(createMockCSVData({
-            User: `PowerUser${i}`,
-            'Requests Used': '1.0',
-            Timestamp: `2025-06-${String(j).padStart(2, '0')}T10:00:00Z`
+            username: `PowerUser${i}`,
+            quantity: '1.0',
+            date: `2025-06-${String(j).padStart(2, '0')}`
           }));
         }
       }
@@ -379,7 +377,6 @@ describe('CSV Data Processing', () => {
         exceedsQuota: false,
         totalQuota: '100',
         quotaValue: 100,
-        sourceFormat: 'legacy',
         iso,
         dateKey: iso.substring(0, 10),
         monthKey: iso.substring(0, 7),
@@ -570,7 +567,6 @@ describe('CSV Data Processing', () => {
           exceedsQuota: false,
           totalQuota: e.quota === 'unlimited' ? 'Unlimited' : String(e.quota),
           quotaValue: e.quota,
-          sourceFormat: 'legacy',
           iso,
           dateKey: iso.substring(0, 10),
           monthKey: iso.substring(0, 7),

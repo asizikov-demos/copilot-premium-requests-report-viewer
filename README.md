@@ -39,55 +39,39 @@ https://gh.io/pru-view
 - **Open Source**: Full source code available for review
 - **Zero Data Collection**: No tracking, analytics, or data storage
 
-## 📋 Supported CSV Formats (Dual Format)
+## 📋 Supported CSV Format
 
-This application now supports both the original (legacy) Copilot premium request usage CSV and an expanded billing export (new format).
+This application supports the GitHub Copilot expanded billing export format.
 
-### 1. Legacy Format
-```csv
-Timestamp,User,Model,Requests Used,Exceeds Monthly Quota,Total Monthly Quota
-2025-06-03T11:05:27Z,userabc,gpt-4.1-2025-04-14,1.00,false,Unlimited
-```
-Required columns:
-- `Timestamp` (ISO 8601 UTC — never timezone converted)
-- `User`
-- `Model`
-- `Requests Used`
-- `Exceeds Monthly Quota`
-- `Total Monthly Quota`
-
-### 2. New Expanded Billing Format
+### CSV Format
 ```csv
 date,username,product,sku,model,quantity,unit_type,applied_cost_per_quantity,gross_amount,discount_amount,net_amount,exceeds_quota,total_monthly_quota,organization,cost_center_name
 2025-10-01,alice,copilot,copilot_premium_request,Claude Sonnet 4,3.6,requests,0.04,0.144,0,0.144,False,1000,org-alpha,CC-Alpha
 ```
-Minimum required columns:
+
+**Minimum required columns:**
 - `date` (YYYY-MM-DD UTC day; internally normalized to midnight UTC)
 - `username`
 - `model`
 - `quantity`
 
-Optional billing & organizational columns (auto-detected when present):
+**Optional billing & organizational columns** (auto-detected when present):
 - `applied_cost_per_quantity`, `gross_amount`, `discount_amount`, `net_amount`
 - `exceeds_quota`, `total_monthly_quota`
 - `product`, `sku`, `organization`, `cost_center_name`
 
-### Normalization & Processing
-- Both formats are converted into a unified internal `ProcessedData` shape.
+### Data Processing
 - Fractional request quantities (e.g. `0.9`, `3.6`) are preserved with full precision.
 - Quotas: numeric values or the string `Unlimited` (case-insensitive).
-- Source provenance tracked via `sourceFormat: 'legacy' | 'new'`.
 - Boolean fields are case-insensitive (`True`, `FALSE`, etc.).
 - Dates are treated strictly as UTC — never shifted to local time.
 
 ### Cost Metrics
 If billing columns are present, a summarized gross, discount, and net amount panel is displayed. Values are taken verbatim from the CSV (no recomputation) to ensure fidelity with billing systems.
 
-📖 **How to obtain these reports**:
-- Legacy: GitHub Copilot premium request usage report.
-- New: Expanded billing export from Copilot spending or enterprise usage dashboards.
+📖 **How to obtain this report**:
 
-Refer to the official [GitHub Copilot usage and entitlements documentation](https://docs.github.com/en/enterprise-cloud@latest/copilot/managing-copilot/monitoring-usage-and-entitlements/monitoring-your-copilot-usage-and-entitlements).
+Expanded billing export from Copilot spending or enterprise usage dashboards. Refer to the official [GitHub Copilot usage and entitlements documentation](https://docs.github.com/en/enterprise-cloud@latest/copilot/managing-copilot/monitoring-usage-and-entitlements/monitoring-your-copilot-usage-and-entitlements).
 
 ## 🛠️ Technologies Used
 
