@@ -47,8 +47,8 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, minRequestsThre
   return useMemo(() => {
     const artifactsAvailable = !!(
       usageArtifacts && quotaArtifacts && dailyBucketsArtifacts &&
-      (usageArtifacts as any).users && (usageArtifacts as any).modelTotals &&
-      (quotaArtifacts as any).quotaByUser && (dailyBucketsArtifacts as any).dailyUserTotals
+      usageArtifacts.users && usageArtifacts.modelTotals &&
+      quotaArtifacts.quotaByUser && dailyBucketsArtifacts.dailyUserTotals
     );
 
     if (artifactsAvailable) {
@@ -126,7 +126,9 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, minRequestsThre
         const dateStr = cur.toISOString().slice(0,10);
         const day = byDate.get(dateStr) || [];
         for (const r of day) totals.set(r.user,(totals.get(r.user)||0)+r.requestsUsed);
-        const row: any = { date: dateStr }; for (const u of users) row[u] = totals.get(u) || 0; result.push(row);
+        const row: { date: string; [user: string]: string | number; } = { date: dateStr }; 
+        for (const u of users) row[u] = totals.get(u) || 0; 
+        result.push(row);
       }
       return result;
     })();

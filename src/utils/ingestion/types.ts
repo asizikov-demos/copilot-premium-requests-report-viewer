@@ -137,3 +137,23 @@ export interface DailyBucketsArtifacts {
    */
   dailyUserModelTotals?: Map<string, Map<string, Map<string, number>>>;
 }
+
+/**
+ * Feature usage aggregation results.
+ * Tracks totals and distinct user sets for specialized Copilot features
+ * (code review, coding agent / padawan, spark). This enables O(1) access
+ * to feature utilization statistics without rescanning raw or per-user
+ * model breakdown data at render time.
+ */
+export interface FeatureUsageArtifacts {
+  featureTotals: {
+    codeReview: number;
+    codingAgent: number;
+    spark: number;
+  };
+  featureUsers: {
+    codeReview: Set<string>;
+    codingAgent: Set<string>;
+    spark: Set<string>;
+  };
+}

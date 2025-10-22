@@ -10,6 +10,7 @@ import {
   QuotaArtifacts, 
   UsageArtifacts, 
   DailyBucketsArtifacts,
+  FeatureUsageArtifacts,
   NormalizedRow,
   buildProcessedDataFromRows
 } from '@/utils/ingestion';
@@ -35,6 +36,7 @@ interface AnalysisContextValue {
   quotaArtifacts: QuotaArtifacts;
   usageArtifacts: UsageArtifacts;
   dailyBucketsArtifacts: DailyBucketsArtifacts;
+  featureUsageArtifacts?: FeatureUsageArtifacts; // optional until fully adopted
   
   // Raw & processed (adapter bridge - to be phased out)
   baseProcessed: ProcessedData[];
@@ -89,7 +91,8 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
     return {
       quotaArtifacts: ingestionResult.outputs.quota as QuotaArtifacts,
       usageArtifacts: ingestionResult.outputs.usage as UsageArtifacts,
-      dailyBucketsArtifacts: ingestionResult.outputs.dailyBuckets as DailyBucketsArtifacts
+      dailyBucketsArtifacts: ingestionResult.outputs.dailyBuckets as DailyBucketsArtifacts,
+      featureUsageArtifacts: ingestionResult.outputs.featureUsage as FeatureUsageArtifacts | undefined
     };
   }, [ingestionResult]);
 
@@ -157,6 +160,7 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
     quotaArtifacts,
     usageArtifacts,
     dailyBucketsArtifacts,
+    featureUsageArtifacts: ingestionResult.outputs.featureUsage as FeatureUsageArtifacts | undefined,
     // Legacy adapter bridge
     baseProcessed,
     processedData,

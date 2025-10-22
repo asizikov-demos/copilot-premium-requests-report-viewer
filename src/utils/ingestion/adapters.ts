@@ -12,33 +12,78 @@ import { buildDateKeys } from '../dateKeys';
  * Reconstructs a ProcessedData array from normalized rows.
  * Used by hooks that haven't been migrated to aggregator outputs yet.
  */
-export function buildProcessedDataFromRows(rows: NormalizedRow[]): ProcessedData[] {
-  return rows.map(row => {
-    // Allow legacy/raw CSV rows in tests (defensive). If 'username' exists we treat it as raw CSVData.
-    const asAny = row as any;
-    const date = (row as any).date;
-    const user = typeof asAny.user === 'string' ? asAny.user : asAny.username;
-    const model = row.model || asAny.model;
-    const quantity = typeof (row as any).quantity === 'number' ? (row as any).quantity : parseFloat(String(asAny.quantity));
-    const timestamp = new Date(`${date}T00:00:00Z`);
+interface ExpandedCSVLike {
+  date: string;
+  username: string;
+  model: string;
+  quantity: string | number;
+  exceeds_quota?: string;
+  total_monthly_quota?: string;
+  applied_cost_per_quantity?: string;
+  gross_amount?: string;
+  discount_amount?: string;
+  net_amount?: string;
+  product?: string;
+  sku?: string;
+  organization?: string;
+  cost_center_name?: string;
+}
+
+function isExpandedCSVLike(r: unknown): r is ExpandedCSVLike {
+  return !!r && typeof r === 'object' && 'username' in r && 'quantity' in r && 'date' in r;
+}
+
+/**
+ * Build ProcessedData from either NormalizedRow objects (preferred path) or
+ * raw expanded CSV row objects used by older tests. This maintains backward
+ * compatibility during migration without resorting to 'any'.
+ */
+export function buildProcessedDataFromRows(rows: unknown[]): ProcessedData[] {
+  return rows.map(raw => {
+    if (isExpandedCSVLike(raw)) {
+      const quantityNum = typeof raw.quantity === 'number' ? raw.quantity : parseFloat(raw.quantity);
+      const timestamp = new Date(`${raw.date}T00:00:00Z`);
+      const keys = buildDateKeys(timestamp);
+      const quotaRaw = raw.total_monthly_quota || 'Unlimited';
+      const quotaValue = quotaRaw.toLowerCase() === 'unlimited' ? 'unlimited' : parseFloat(quotaRaw);
+      return {
+        timestamp,
+        user: raw.username,
+        model: raw.model,
+        requestsUsed: quantityNum,
+        exceedsQuota: raw.exceeds_quota ? raw.exceeds_quota.toLowerCase() === 'true' : false,
+        totalQuota: quotaRaw,
+        quotaValue,
+        product: raw.product,
+        sku: raw.sku,
+        organization: raw.organization,
+        costCenter: raw.cost_center_name,
+        appliedCostPerQuantity: raw.applied_cost_per_quantity ? parseFloat(raw.applied_cost_per_quantity) : undefined,
+        grossAmount: raw.gross_amount ? parseFloat(raw.gross_amount) : undefined,
+        discountAmount: raw.discount_amount ? parseFloat(raw.discount_amount) : undefined,
+        netAmount: raw.net_amount ? parseFloat(raw.net_amount) : undefined,
+        ...keys
+      };
+    }
+    const row = raw as NormalizedRow; // Fallback to assumed NormalizedRow shape
+    const timestamp = new Date(`${row.date}T00:00:00Z`);
     const keys = buildDateKeys(timestamp);
-    
     return {
       timestamp,
-      user,
-      model,
-      requestsUsed: quantity,
-      exceedsQuota: (row as any).exceedsQuota ?? (typeof asAny.exceeds_quota === 'string' ? asAny.exceeds_quota.toLowerCase() === 'true' : false),
-      totalQuota: row.quotaRaw || asAny.total_monthly_quota || 'Unlimited',
-      quotaValue: row.quotaValue || (asAny.total_monthly_quota ? asAny.total_monthly_quota : 'unlimited'),
-      product: row.product || asAny.product,
-      sku: row.sku || asAny.sku,
-      organization: row.organization || asAny.organization,
-      costCenter: row.costCenter || asAny.cost_center_name,
-      appliedCostPerQuantity: row.appliedCostPerQuantity ?? (asAny.applied_cost_per_quantity ? parseFloat(String(asAny.applied_cost_per_quantity)) : undefined),
-      grossAmount: row.grossAmount ?? (asAny.gross_amount ? parseFloat(String(asAny.gross_amount)) : undefined),
-      discountAmount: row.discountAmount ?? (asAny.discount_amount ? parseFloat(String(asAny.discount_amount)) : undefined),
-      netAmount: row.netAmount ?? (asAny.net_amount ? parseFloat(String(asAny.net_amount)) : undefined),
+      user: row.user,
+      model: row.model,
+      requestsUsed: row.quantity,
+      exceedsQuota: row.exceedsQuota ?? false,
+      totalQuota: row.quotaRaw || (row.quotaValue === 'unlimited' ? 'Unlimited' : String(row.quotaValue ?? 'Unlimited')),
+      quotaValue: row.quotaValue ?? 'unlimited',
+      product: row.product,
+      sku: row.sku,
+      organization: row.organization,
+      costCenter: row.costCenter,
+      appliedCostPerQuantity: row.appliedCostPerQuantity,
+      grossAmount: row.grossAmount,
+      discountAmount: row.discountAmount,
+      netAmount: row.netAmount,
       ...keys
     };
   });

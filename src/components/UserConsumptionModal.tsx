@@ -69,13 +69,13 @@ export function UserConsumptionModal({
     const models = Array.from(new Set(userRows.map(r=>r.model))).sort();
     const byDate = new Map<string, typeof processedData>();
     userRows.forEach(r => { const arr = byDate.get(r.dateKey); if (arr) arr.push(r); else byDate.set(r.dateKey,[r]); });
-    let cumulative = 0; const result: any[] = [];
+    let cumulative = 0; const result: import('@/types/csv').UserDailyData[] = [];
     for (let current = new Date(start); current.getTime() <= end; current.setUTCDate(current.getUTCDate()+1)) {
       const dateStr = current.toISOString().slice(0,10);
       const day = byDate.get(dateStr) || [];
-      const row: any = { date: dateStr };
+      const row: import('@/types/csv').UserDailyData = { date: dateStr, totalCumulative: 0 } as import('@/types/csv').UserDailyData;
       let dailyTotal = 0; models.forEach(m => { row[m] = 0; });
-      for (const rec of day) { row[rec.model] += rec.requestsUsed; dailyTotal += rec.requestsUsed; }
+      for (const rec of day) { row[rec.model] = (row[rec.model] as number) + rec.requestsUsed; dailyTotal += rec.requestsUsed; }
       cumulative += dailyTotal; row.totalCumulative = cumulative; result.push(row);
     }
     return result;

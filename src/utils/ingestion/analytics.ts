@@ -391,7 +391,7 @@ export function buildUserDailyModelDataFromArtifacts(
   for (const date of dates) {
     const dayUserMap = daily.dailyUserModelTotals.get(date);
     const modelMap = dayUserMap?.get(user);
-    const row: any = { date, totalCumulative: 0 };
+    const row: UserDailyData = { date, totalCumulative: 0 } as UserDailyData;
     let dailyTotal = 0;
     for (const m of models) {
       const v = modelMap?.get(m) || 0;

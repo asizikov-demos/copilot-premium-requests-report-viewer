@@ -10,6 +10,7 @@ export * from './QuotaAggregator';
 export * from './UsageAggregator';
 export * from './DailyBucketsAggregator';
 export * from './RawDataAggregator';
+export * from './FeatureUsageAggregator';
 export * from './adapters';
 export * from './analytics';
 
