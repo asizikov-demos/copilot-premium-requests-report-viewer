@@ -1,4 +1,4 @@
-import { CSVData, ProcessedData, AnalysisResults } from '@/types/csv';
+import { CSVData, NewCSVData, ProcessedData, AnalysisResults } from '@/types/csv';
 import { parseQuotaValue, buildQuotaBreakdown } from './quota';
 
 export interface UserSummary {
@@ -8,16 +8,53 @@ export interface UserSummary {
 }
 
 // Convert raw CSV rows into strongly typed processed data (UTC-sensitive: timestamps used as-is)
-export function processCSVData(rawData: CSVData[]): ProcessedData[] {
-  return rawData.map(row => ({
-    timestamp: new Date(row.Timestamp), // DO NOT timezone-shift; keep UTC ISO intact
-    user: row.User,
-    model: row.Model,
-    requestsUsed: parseFloat(row['Requests Used']),
-    exceedsQuota: row['Exceeds Monthly Quota'].toLowerCase() === 'true',
-    totalQuota: row['Total Monthly Quota'],
-    quotaValue: parseQuotaValue(row['Total Monthly Quota'])
-  }));
+// Detect row format (legacy vs new) using presence of discriminant keys.
+function detectRowFormat(row: CSVData | NewCSVData): 'legacy' | 'new' {
+  return (row as CSVData).Timestamp !== undefined ? 'legacy' : 'new';
+}
+
+// Convert raw mixed-format rows (legacy or new) into unified processed records.
+// This maintains backward compatibility while enabling expanded analytics.
+export function processCSVData(rawData: (CSVData | NewCSVData)[]): ProcessedData[] {
+  return rawData.map(row => {
+    const format = detectRowFormat(row);
+    if (format === 'legacy') {
+      const legacy = row as CSVData;
+      return {
+        timestamp: new Date(legacy.Timestamp), // preserve UTC
+        user: legacy.User,
+        model: legacy.Model,
+        requestsUsed: parseFloat(legacy['Requests Used']),
+        exceedsQuota: legacy['Exceeds Monthly Quota'].toLowerCase() === 'true',
+        totalQuota: legacy['Total Monthly Quota'],
+        quotaValue: parseQuotaValue(legacy['Total Monthly Quota']),
+        sourceFormat: 'legacy'
+      };
+    } else {
+      const newer = row as NewCSVData;
+      // Build a UTC timestamp from YYYY-MM-DD (DO NOT localize)
+      const timestamp = new Date(`${newer.date}T00:00:00Z`);
+      const totalQuotaRaw = newer.total_monthly_quota || 'Unlimited';
+      return {
+        timestamp,
+        user: newer.username,
+        model: newer.model,
+        requestsUsed: parseFloat(newer.quantity),
+        exceedsQuota: newer.exceeds_quota ? newer.exceeds_quota.toLowerCase() === 'true' : false,
+        totalQuota: totalQuotaRaw,
+        quotaValue: parseQuotaValue(totalQuotaRaw),
+        product: newer.product,
+        sku: newer.sku,
+        organization: newer.organization,
+        costCenter: newer.cost_center_name,
+        appliedCostPerQuantity: newer.applied_cost_per_quantity ? parseFloat(newer.applied_cost_per_quantity) : undefined,
+        grossAmount: newer.gross_amount ? parseFloat(newer.gross_amount) : undefined,
+        discountAmount: newer.discount_amount ? parseFloat(newer.discount_amount) : undefined,
+        netAmount: newer.net_amount ? parseFloat(newer.net_amount) : undefined,
+        sourceFormat: 'new'
+      };
+    }
+  });
 }
 
 export function analyzeData(data: ProcessedData[]): AnalysisResults {

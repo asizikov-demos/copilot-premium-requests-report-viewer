@@ -21,14 +21,15 @@ describe('CSV Data Processing', () => {
       const result = processCSVData(validCSVData);
       
       expect(result).toHaveLength(4);
-      expect(result[0]).toEqual({
+      expect(result[0]).toMatchObject({
         timestamp: new Date('2025-06-03T11:05:27Z'),
         user: 'USerA',
         model: 'gpt-4.1-2025-04-14',
         requestsUsed: 1.00,
         exceedsQuota: false,
         totalQuota: 'Unlimited',
-        quotaValue: 'unlimited'
+        quotaValue: 'unlimited',
+        sourceFormat: 'legacy'
       });
     });
 
@@ -97,14 +98,15 @@ describe('CSV Data Processing', () => {
     it('should preserve all user and model information', () => {
       const result = processCSVData(validCSVData);
       
-      expect(result[1]).toEqual({
+      expect(result[1]).toMatchObject({
         timestamp: new Date('2025-06-03T14:22:15Z'),
         user: 'JohnDoe',
         model: 'claude-3.7-sonnet-thought',
         requestsUsed: 2.50,
         exceedsQuota: true,
         totalQuota: '100',
-        quotaValue: 100
+        quotaValue: 100,
+        sourceFormat: 'legacy'
       });
     });
 
@@ -373,7 +375,8 @@ describe('CSV Data Processing', () => {
       requestsUsed: 1.0,
       exceedsQuota: false,
       totalQuota: '100',
-      quotaValue: 100
+      quotaValue: 100,
+      sourceFormat: 'legacy'
     });
 
     describe('containsJune2025Data', () => {
@@ -554,7 +557,8 @@ describe('CSV Data Processing', () => {
         requestsUsed: e.used,
         exceedsQuota: false,
         totalQuota: e.quota === 'unlimited' ? 'Unlimited' : String(e.quota),
-        quotaValue: e.quota
+        quotaValue: e.quota,
+        sourceFormat: 'legacy'
       }));
     };
 

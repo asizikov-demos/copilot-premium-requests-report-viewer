@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import Papa from 'papaparse';
-import { CSVData } from '@/types/csv';
+import { CSVData, NewCSVData } from '@/types/csv';
 
 interface CSVUploaderProps {
   onDataLoad: (data: CSVData[], filename: string) => void;
@@ -26,6 +26,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
+      dynamicTyping: false, // we will manually parse for precision control
       complete: (results) => {
         if (results.errors.length > 0) {
           onError(`CSV parsing error: ${results.errors[0].message}`);
@@ -33,25 +34,43 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
           return;
         }
 
-        // Validate CSV structure
-        const data = results.data as CSVData[];
-        if (data.length === 0) {
+        const raw = results.data as (CSVData | NewCSVData)[];
+        if (raw.length === 0) {
           onError('CSV file is empty');
           setIsLoading(false);
           return;
         }
 
-        const requiredColumns = ['Timestamp', 'User', 'Model', 'Requests Used', 'Exceeds Monthly Quota', 'Total Monthly Quota'];
-        const firstRow = data[0];
-        const missingColumns = requiredColumns.filter(col => !(col in firstRow));
-        
-        if (missingColumns.length > 0) {
-          onError(`Missing required columns: ${missingColumns.join(', ')}`);
+        // Detect format using headers of first row.
+        const firstRow = raw[0];
+        const isLegacy = 'Timestamp' in firstRow;
+        const isNew = 'date' in firstRow && 'username' in firstRow && 'model' in firstRow && 'quantity' in firstRow;
+
+        if (!isLegacy && !isNew) {
+          onError('Unrecognized CSV format. Expected legacy headers (Timestamp, User, ...) or new headers (date, username, model, quantity).');
           setIsLoading(false);
           return;
         }
 
-        onDataLoad(data, file.name);
+        if (isLegacy) {
+          const requiredLegacy = ['Timestamp', 'User', 'Model', 'Requests Used', 'Exceeds Monthly Quota', 'Total Monthly Quota'];
+          const missingLegacy = requiredLegacy.filter(col => !(col in firstRow));
+          if (missingLegacy.length > 0) {
+            onError(`Missing required legacy columns: ${missingLegacy.join(', ')}`);
+            setIsLoading(false);
+            return;
+          }
+        } else if (isNew) {
+          const requiredNew = ['date', 'username', 'model', 'quantity'];
+          const missingNew = requiredNew.filter(col => !(col in firstRow));
+          if (missingNew.length > 0) {
+            onError(`Missing required new format columns: ${missingNew.join(', ')}`);
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        onDataLoad(raw as any[], file.name); // downstream processing will normalize
         setIsLoading(false);
       },
       error: (error) => {
@@ -154,7 +173,11 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
           </div>
           
           <div className="text-xs text-gray-400">
-            Expected format: Timestamp, User, Model, Requests Used, Exceeds Monthly Quota, Total Monthly Quota
+            Supported formats:
+            <br />
+            <span className="font-medium">Legacy:</span> Timestamp, User, Model, Requests Used, Exceeds Monthly Quota, Total Monthly Quota
+            <br />
+            <span className="font-medium">New:</span> date, username, model, quantity, (optional cost & quota columns)
           </div>
           <div className="text-xs text-blue-500 mt-1">
             <a

@@ -51,6 +51,21 @@ function DataAnalysisInner() {
     onReset
   } = useAnalysisContext();
 
+  // Aggregate cost metrics if present (new format only). We deliberately do NOT
+  // derive pricing from raw request counts; instead we trust provided billing columns.
+  const costMetricsAvailable = processedData.some(d => d.netAmount !== undefined);
+  const aggregatedCosts = costMetricsAvailable
+    ? processedData.reduce(
+        (acc, row) => {
+          if (row.netAmount !== undefined) acc.net += row.netAmount;
+          if (row.grossAmount !== undefined) acc.gross += row.grossAmount;
+          if (row.discountAmount !== undefined) acc.discount += row.discountAmount;
+          return acc;
+        },
+        { net: 0, gross: 0, discount: 0 }
+      )
+    : null;
+
   return (
     <div className="w-full mx-auto">
       {/* Header - Mobile Optimized */}
@@ -474,6 +489,27 @@ function DataAnalysisInner() {
                             Week {w.weekNumber} ({w.startDate} – {w.endDate}): {w.usersExhaustedInWeek}
                           </li>
                         ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Cost Metrics (New Format) */}
+                  {costMetricsAvailable && aggregatedCosts && (
+                    <div className="mt-4 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+                      <h4 className="text-sm font-medium text-indigo-800 mb-2">Billing Summary (Provided)</h4>
+                      <ul className="space-y-1 text-xs text-indigo-700" aria-label="billing-summary">
+                        <li>
+                          <span className="font-medium">Gross Amount:</span> ${aggregatedCosts.gross.toFixed(2)}
+                        </li>
+                        <li>
+                          <span className="font-medium">Discounts:</span> ${aggregatedCosts.discount.toFixed(2)}
+                        </li>
+                        <li>
+                          <span className="font-medium">Net Amount:</span> ${aggregatedCosts.net.toFixed(2)}
+                        </li>
+                        <li className="text-[10px] text-indigo-600 mt-1">
+                          Costs are summed directly from CSV billing columns (no recomputation). Values shown in USD.
+                        </li>
                       </ul>
                     </div>
                   )}

@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { CSVUploader } from '@/components/CSVUploader';
 import { validCSVString, validCSVData } from '../fixtures/validCSVData';
 import { invalidCSVData } from '../fixtures/invalidCSVData';
+import { newFormatRows } from '../fixtures/newFormatCSVData';
 import { createMockFile } from '../helpers/testUtils';
 
 // Mock PapaParse
@@ -40,10 +41,31 @@ describe('CSVUploader', () => {
     expect(screen.getByText(/upload csv file/i)).toBeInTheDocument();
   });
 
-  it('should show expected CSV format', () => {
+  it('should show supported CSV formats message', () => {
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
-    
-    expect(screen.getByText(/Expected format: Timestamp, User, Model, Requests Used, Exceeds Monthly Quota, Total Monthly Quota/i)).toBeInTheDocument();
+    expect(screen.getByText(/Supported formats:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Legacy:/i)).toBeInTheDocument();
+    expect(screen.getByText(/New:/i)).toBeInTheDocument();
+  });
+  it('should handle new-format CSV parsing', async () => {
+    const mockFile = createMockFile('new-format.csv content', 'new-format.csv');
+    const parse = jest.requireMock('papaparse').parse;
+    parse.mockImplementation((file, config) => {
+      setTimeout(() => {
+        config.complete?.({
+          data: newFormatRows,
+          errors: []
+        });
+      }, 0);
+    });
+
+    render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
+    const hiddenInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(hiddenInput, mockFile);
+
+    await waitFor(() => {
+      expect(mockOnDataLoad).toHaveBeenCalledWith(expect.arrayContaining(newFormatRows), 'new-format.csv');
+    });
   });
 
   it('should handle successful CSV parsing', async () => {
@@ -108,7 +130,7 @@ describe('CSVUploader', () => {
 
     await waitFor(() => {
       expect(mockOnError).toHaveBeenCalledWith(
-        expect.stringContaining('Missing required columns')
+        expect.stringContaining('Missing required legacy columns')
       );
     });
   });
@@ -257,27 +279,25 @@ describe('CSVUploader', () => {
     expect(docLink.closest('a')).toHaveAttribute('href', expect.stringContaining('docs.github.com'));
   });
 
-  it('should validate all required columns are present', async () => {
+  it('should validate all required legacy columns are present (Timestamp present)', async () => {
     const mockFile = createMockFile(invalidCSVData.missingRequiredColumns, 'test.csv');
-    
     const parse = jest.requireMock('papaparse').parse;
     parse.mockImplementation((file, config) => {
       setTimeout(() => {
         config.complete?.({
-          data: [{ User: 'USerA', Model: 'gpt-4.1-2025-04-14', 'Requests Used': '1.00' }],
+          data: [{ Timestamp: '2025-06-03T11:05:27Z', User: 'USerA', Model: 'gpt-4.1-2025-04-14', 'Requests Used': '1.00' }],
           errors: []
         });
       }, 0);
     });
 
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
-    
     const hiddenInput = document.querySelector('input[type="file"]') as HTMLInputElement;
     await user.upload(hiddenInput, mockFile);
 
     await waitFor(() => {
       expect(mockOnError).toHaveBeenCalledWith(
-        expect.stringContaining('Missing required columns: Timestamp, Exceeds Monthly Quota, Total Monthly Quota')
+        expect.stringContaining('Missing required legacy columns: Exceeds Monthly Quota, Total Monthly Quota')
       );
     });
   });
