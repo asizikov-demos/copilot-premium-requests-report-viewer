@@ -2,6 +2,10 @@
 
 A Next.js application for analyzing CSV data containing user request analytics and quota information from GitHub Copilot Premium Models usage reports. This tool provides detailed insights into usage patterns, quota consumption, and cost analysis.
 
+## Sharable Url
+
+https://gh.io/pru-view 
+
 ## ✨ Features
 
 ### 📊 **Analytics Dashboard**
