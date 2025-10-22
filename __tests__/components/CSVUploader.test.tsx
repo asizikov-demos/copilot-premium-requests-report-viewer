@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { CSVUploader } from '@/components/CSVUploader';
 import { validCSVString, validCSVData } from '../fixtures/validCSVData';
 import { invalidCSVData } from '../fixtures/invalidCSVData';
+import { newFormatRows } from '../fixtures/newFormatCSVData';
 import { createMockFile } from '../helpers/testUtils';
 
 // Mock PapaParse
@@ -12,14 +13,7 @@ jest.mock('papaparse', () => ({
     if (!file.name.endsWith('.csv')) {
       return;
     }
-    setTimeout(() => {
-      if (config.complete) {
-        config.complete({
-          data: [],
-          errors: []
-        });
-      }
-    }, 0);
+    // Default implementation that does nothing
   })
 }));
 
@@ -40,21 +34,40 @@ describe('CSVUploader', () => {
     expect(screen.getByText(/upload csv file/i)).toBeInTheDocument();
   });
 
-  it('should show expected CSV format', () => {
+  it('should show supported CSV formats message', () => {
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
-    
-    expect(screen.getByText(/Expected format: Timestamp, User, Model, Requests Used, Exceeds Monthly Quota, Total Monthly Quota/i)).toBeInTheDocument();
+    expect(screen.getByText(/Supported formats:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Legacy:/i)).toBeInTheDocument();
+    expect(screen.getByText(/New:/i)).toBeInTheDocument();
+  });
+  it('should handle new-format CSV parsing', async () => {
+    const mockFile = createMockFile('new-format.csv content', 'new-format.csv');
+    const parse = jest.requireMock('papaparse').parse;
+    parse.mockImplementation((_file: any, config: any) => {
+      setTimeout(() => {
+        // Simulate chunk callback with data
+        config.chunk?.({ data: newFormatRows, errors: [] }, {} as any);
+        // Then call complete
+        config.complete?.();
+      }, 0);
+    });
+
+    render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
+    const hiddenInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(hiddenInput, mockFile);
+
+    await waitFor(() => {
+      expect(mockOnDataLoad).toHaveBeenCalledWith(expect.arrayContaining(newFormatRows), 'new-format.csv');
+    });
   });
 
   it('should handle successful CSV parsing', async () => {
     const mockFile = createMockFile(validCSVString, 'test.csv');
     const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((file, config) => {
+    parse.mockImplementation((_file: any, config: any) => {
       setTimeout(() => {
-        config.complete({
-          data: validCSVData,
-          errors: []
-        });
+        config.chunk?.({ data: validCSVData, errors: [] }, {} as any);
+        config.complete?.();
       }, 0);
     });
 
@@ -92,12 +105,10 @@ describe('CSVUploader', () => {
     const mockFile = createMockFile(invalidCSVData.missingColumns, 'test.csv');
     
     const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((file, config) => {
+    parse.mockImplementation((_file: any, config: any) => {
       setTimeout(() => {
-        config.complete?.({
-          data: [{ Timestamp: '2025-06-03T11:05:27Z', User: 'USerA', Model: 'gpt-4.1-2025-04-14' }],
-          errors: []
-        });
+        const mockParser = { abort: jest.fn() };
+        config.chunk?.({ data: [{ Timestamp: '2025-06-03T11:05:27Z', User: 'USerA', Model: 'gpt-4.1-2025-04-14' }], errors: [] }, mockParser);
       }, 0);
     });
 
@@ -108,7 +119,7 @@ describe('CSVUploader', () => {
 
     await waitFor(() => {
       expect(mockOnError).toHaveBeenCalledWith(
-        expect.stringContaining('Missing required columns')
+        expect.stringContaining('Missing required legacy columns')
       );
     });
   });
@@ -117,12 +128,9 @@ describe('CSVUploader', () => {
     const mockFile = createMockFile(invalidCSVData.emptyFile, 'empty.csv');
     
     const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((file, config) => {
+    parse.mockImplementation((_file: any, config: any) => {
       setTimeout(() => {
-        config.complete?.({
-          data: [],
-          errors: []
-        });
+        config.complete?.();
       }, 0);
     });
 
@@ -140,12 +148,10 @@ describe('CSVUploader', () => {
     const mockFile = createMockFile(validCSVString, 'test.csv');
     
     const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((file, config) => {
+    parse.mockImplementation((_file: any, config: any) => {
       setTimeout(() => {
-        config.complete?.({
-          data: [],
-          errors: [{ message: 'Parse error', type: 'Quotes', code: 'MissingQuotes', row: 1 }]
-        });
+        const mockParser = { abort: jest.fn() };
+        config.chunk?.({ data: [], errors: [{ message: 'Parse error', type: 'Quotes', code: 'MissingQuotes', row: 1 }] }, mockParser);
       }, 0);
     });
 
@@ -163,7 +169,7 @@ describe('CSVUploader', () => {
     const mockFile = createMockFile(validCSVString, 'test.csv');
     
     const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((file, config) => {
+    parse.mockImplementation((_file: any, config: any) => {
       setTimeout(() => {
         config.error(new Error('File reading failed'));
       }, 0);
@@ -202,12 +208,10 @@ describe('CSVUploader', () => {
     const mockFile = createMockFile(validCSVString, 'test.csv');
     
     const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((file, config) => {
+    parse.mockImplementation((_file: any, config: any) => {
       setTimeout(() => {
-        config.complete?.({
-          data: validCSVData,
-          errors: []
-        });
+        config.chunk?.({ data: validCSVData, errors: [] }, {} as any);
+        config.complete?.();
       }, 0);
     });
 
@@ -257,27 +261,23 @@ describe('CSVUploader', () => {
     expect(docLink.closest('a')).toHaveAttribute('href', expect.stringContaining('docs.github.com'));
   });
 
-  it('should validate all required columns are present', async () => {
+  it('should validate all required legacy columns are present (Timestamp present)', async () => {
     const mockFile = createMockFile(invalidCSVData.missingRequiredColumns, 'test.csv');
-    
     const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((file, config) => {
+    parse.mockImplementation((_file: any, config: any) => {
       setTimeout(() => {
-        config.complete?.({
-          data: [{ User: 'USerA', Model: 'gpt-4.1-2025-04-14', 'Requests Used': '1.00' }],
-          errors: []
-        });
+        const mockParser = { abort: jest.fn() };
+        config.chunk?.({ data: [{ Timestamp: '2025-06-03T11:05:27Z', User: 'USerA', Model: 'gpt-4.1-2025-04-14', 'Requests Used': '1.00' }], errors: [] }, mockParser);
       }, 0);
     });
 
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
-    
     const hiddenInput = document.querySelector('input[type="file"]') as HTMLInputElement;
     await user.upload(hiddenInput, mockFile);
 
     await waitFor(() => {
       expect(mockOnError).toHaveBeenCalledWith(
-        expect.stringContaining('Missing required columns: Timestamp, Exceeds Monthly Quota, Total Monthly Quota')
+        expect.stringContaining('Missing required legacy columns: Exceeds Monthly Quota, Total Monthly Quota')
       );
     });
   });
@@ -286,9 +286,9 @@ describe('CSVUploader', () => {
     const mockFile = createMockFile(invalidCSVData.extraColumns, 'test.csv');
     
     const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((file, config) => {
+    parse.mockImplementation((_file: any, config: any) => {
       setTimeout(() => {
-        config.complete?.({
+        config.chunk?.({
           data: [{
             Timestamp: '2025-06-03T11:05:27Z',
             User: 'USerA',
@@ -299,7 +299,8 @@ describe('CSVUploader', () => {
             'Extra Column': 'extra_value'
           }],
           errors: []
-        });
+        }, {} as any);
+        config.complete?.();
       }, 0);
     });
 

@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import Papa from 'papaparse';
-import { CSVData } from '@/types/csv';
+import { CSVData, NewCSVData } from '@/types/csv';
 
 interface CSVUploaderProps {
   onDataLoad: (data: CSVData[], filename: string) => void;
@@ -12,8 +12,40 @@ interface CSVUploaderProps {
 export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [showPrivacyDialog, setShowPrivacyDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const accumulatedData = useRef<(CSVData | NewCSVData)[]>([]);
+  const isFormatValidated = useRef(false);
+  const totalRows = useRef(0);
+
+  const validateFormat = (firstRow: CSVData | NewCSVData): boolean => {
+    const isLegacy = 'Timestamp' in firstRow;
+    const isNew = 'date' in firstRow && 'username' in firstRow && 'model' in firstRow && 'quantity' in firstRow;
+
+    if (!isLegacy && !isNew) {
+      onError('Unrecognized CSV format. Expected legacy headers (Timestamp, User, ...) or new headers (date, username, model, quantity).');
+      return false;
+    }
+
+    if (isLegacy) {
+      const requiredLegacy = ['Timestamp', 'User', 'Model', 'Requests Used', 'Exceeds Monthly Quota', 'Total Monthly Quota'];
+      const missingLegacy = requiredLegacy.filter(col => !(col in firstRow));
+      if (missingLegacy.length > 0) {
+        onError(`Missing required legacy columns: ${missingLegacy.join(', ')}`);
+        return false;
+      }
+    } else if (isNew) {
+      const requiredNew = ['date', 'username', 'model', 'quantity'];
+      const missingNew = requiredNew.filter(col => !(col in firstRow));
+      if (missingNew.length > 0) {
+        onError(`Missing required new format columns: ${missingNew.join(', ')}`);
+        return false;
+      }
+    }
+
+    return true;
+  };
 
   const handleFileSelect = (file: File) => {
     if (!file || !file.name.toLowerCase().endsWith('.csv')) {
@@ -21,42 +53,68 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
       return;
     }
 
+    // Reset state
     setIsLoading(true);
+    setProgress(0);
+    accumulatedData.current = [];
+    isFormatValidated.current = false;
+    totalRows.current = 0;
 
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      complete: (results) => {
+      dynamicTyping: false,
+      chunkSize: 1024 * 1024, // 1MB chunks for smooth UI
+      chunk: (results, parser) => {
+        // Handle errors in chunk
         if (results.errors.length > 0) {
+          parser.abort();
           onError(`CSV parsing error: ${results.errors[0].message}`);
           setIsLoading(false);
           return;
         }
 
-        // Validate CSV structure
-        const data = results.data as CSVData[];
-        if (data.length === 0) {
+        const chunkData = results.data as (CSVData | NewCSVData)[];
+        
+        // Validate format on first chunk
+        if (!isFormatValidated.current && chunkData.length > 0) {
+          if (!validateFormat(chunkData[0])) {
+            parser.abort();
+            setIsLoading(false);
+            return;
+          }
+          isFormatValidated.current = true;
+        }
+
+        // Accumulate data
+        accumulatedData.current.push(...chunkData);
+        totalRows.current += chunkData.length;
+
+        // Update progress (estimate based on bytes read)
+        // PapaParse doesn't provide exact progress, so we estimate based on chunk count
+        setProgress(prev => Math.min(prev + 10, 90));
+      },
+      complete: () => {
+        if (accumulatedData.current.length === 0) {
           onError('CSV file is empty');
           setIsLoading(false);
           return;
         }
 
-        const requiredColumns = ['Timestamp', 'User', 'Model', 'Requests Used', 'Exceeds Monthly Quota', 'Total Monthly Quota'];
-        const firstRow = data[0];
-        const missingColumns = requiredColumns.filter(col => !(col in firstRow));
+        // Final processing
+        setProgress(100);
         
-        if (missingColumns.length > 0) {
-          onError(`Missing required columns: ${missingColumns.join(', ')}`);
+        // Small delay to show 100% before transitioning
+        setTimeout(() => {
+          onDataLoad(accumulatedData.current as CSVData[], file.name);
           setIsLoading(false);
-          return;
-        }
-
-        onDataLoad(data, file.name);
-        setIsLoading(false);
+          setProgress(0);
+        }, 200);
       },
       error: (error) => {
         onError(`File reading error: ${error.message}`);
         setIsLoading(false);
+        setProgress(0);
       }
     });
   };
@@ -141,8 +199,29 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
             <h3 className="text-lg font-medium text-gray-900 mb-2">
               {isLoading ? 'Processing CSV file...' : 'Upload CSV File'}
             </h3>
+            
+            {isLoading && progress > 0 && (
+              <div className="mb-4">
+                <div className="flex justify-between text-xs text-gray-600 mb-1">
+                  <span>Processing...</span>
+                  <span>{progress}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
+                    style={{ width: `${progress}%` }}
+                  ></div>
+                </div>
+                {totalRows.current > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {totalRows.current.toLocaleString()} rows processed
+                  </p>
+                )}
+              </div>
+            )}
+            
             <p className="text-gray-500 mb-4">
-              Drag and drop your CSV file here, or click to browse
+              {isLoading ? 'Please wait while we process your file...' : 'Drag and drop your CSV file here, or click to browse'}
             </p>
             <button
               onClick={handleButtonClick}
@@ -154,7 +233,11 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
           </div>
           
           <div className="text-xs text-gray-400">
-            Expected format: Timestamp, User, Model, Requests Used, Exceeds Monthly Quota, Total Monthly Quota
+            Supported formats:
+            <br />
+            <span className="font-medium">Legacy:</span> Timestamp, User, Model, Requests Used, Exceeds Monthly Quota, Total Monthly Quota
+            <br />
+            <span className="font-medium">New:</span> date, username, model, quantity, (optional cost & quota columns)
           </div>
           <div className="text-xs text-blue-500 mt-1">
             <a

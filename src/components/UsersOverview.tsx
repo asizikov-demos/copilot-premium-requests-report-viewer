@@ -44,8 +44,11 @@ const generateUserColors = (users: string[]): Record<string, string> => {
 
 export function UsersOverview({ userData, processedData, allModels, selectedPlan, dailyCumulativeData, onBack }: UsersOverviewProps) {
   const [showChart, setShowChart] = useState(true);
+  const [currentPage, setCurrentPage] = useState(0);
   const isMobile = useIsMobile();
   const { selectedUser, open: openUserModal, close: closeUserModal, isOpen } = useUserConsumptionModal();
+
+  const ROWS_PER_PAGE = 50;
 
   // Columns: totalRequests + dynamic model names
   type ColumnKey = 'totalRequests' | typeof allModels[number];
@@ -84,22 +87,45 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
     computeOverageSummary(userData, processedData)
   ), [userData, processedData]);
   
-  // Detect if we have mixed quota types for chart display
-  const quotaTypes = new Set<number>();
-  userData.forEach(user => {
-    const userQuota = getUserQuotaValue(processedData, user.user);
-    if (userQuota !== 'unlimited') {
-      quotaTypes.add(userQuota);
-    }
-  });
-  const hasMixedQuotas = quotaTypes.size > 1;
-  const hasMixedLicenses = quotaTypes.has(PRICING.BUSINESS_QUOTA) && quotaTypes.has(PRICING.ENTERPRISE_QUOTA);
+  // Memoize quota types calculation for chart display
+  const quotaInfo = useMemo(() => {
+    const quotaTypes = new Set<number>();
+    userData.forEach(user => {
+      const userQuota = getUserQuotaValue(processedData, user.user);
+      if (userQuota !== 'unlimited') {
+        quotaTypes.add(userQuota);
+      }
+    });
+    const hasMixedQuotas = quotaTypes.size > 1;
+    const hasMixedLicenses = quotaTypes.has(PRICING.BUSINESS_QUOTA) && quotaTypes.has(PRICING.ENTERPRISE_QUOTA);
+    return { quotaTypes, hasMixedQuotas, hasMixedLicenses };
+  }, [userData, processedData]);
+
+  const { quotaTypes, hasMixedQuotas, hasMixedLicenses } = quotaInfo;
   
-  // sortedUserData provided by hook
+  // Pagination calculations
+  const totalPages = Math.ceil(sortedUserData.length / ROWS_PER_PAGE);
+  const paginatedUserData = useMemo(() => 
+    sortedUserData.slice(currentPage * ROWS_PER_PAGE, (currentPage + 1) * ROWS_PER_PAGE),
+    [sortedUserData, currentPage]
+  );
+
+  // Reset to first page when sorting changes
+  const handleSortWithReset = (column: ColumnKey) => {
+    handleSort(column);
+    setCurrentPage(0);
+  };
   
-  // Get users for chart
-  const chartUsers = userData.map(u => u.user);
-  const userColors = generateUserColors(chartUsers);
+  // Memoize chart data to prevent recalculation on pagination/sorting
+  const chartData = useMemo(() => {
+    const users = userData.map(u => u.user);
+    return {
+      users,
+      colors: generateUserColors(users)
+    };
+  }, [userData]);
+
+  const { users: chartUsers, colors: userColors } = chartData;
 
   return (
     <div className="bg-white shadow rounded-lg overflow-hidden h-full flex flex-col">
@@ -180,7 +206,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
           {/* Mobile Summary Cards */}
           {isMobile && (
             <div className="p-4 space-y-3 sm:hidden">
-              {sortedUserData.slice(0, 5).map((user) => {
+              {paginatedUserData.map((user) => {
                 const userQuota = getUserQuotaValue(processedData, user.user);
                 const isOverQuota = userQuota !== 'unlimited' && user.totalRequests > userQuota;
                 const quotaDisplay = userQuota === 'unlimited' ? 'Unlimited' : `${userQuota}`;
@@ -216,14 +242,27 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
                 </button>
               )})}
               
-              
-              {sortedUserData.length > 5 && (
-                <button 
-                  onClick={() => setShowChart(false)}
-                  className="w-full text-center py-3 text-blue-600 text-sm font-medium border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100"
-                >
-                  View Full Table ({sortedUserData.length - 5} more users)
-                </button>
+              {/* Mobile Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                    disabled={currentPage === 0}
+                    className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    ← Previous
+                  </button>
+                  <span className="text-sm text-gray-600">
+                    Page {currentPage + 1} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
+                    disabled={currentPage === totalPages - 1}
+                    className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next →
+                  </button>
+                </div>
               )}
             </div>
           )}
@@ -243,7 +282,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
                   className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-32 cursor-pointer hover:bg-gray-100 select-none ${
                     sortBy === 'totalRequests' ? 'bg-gray-200' : 'bg-gray-50'
                   }`}
-                  onClick={() => handleSort('totalRequests')}
+                  onClick={() => handleSortWithReset('totalRequests')}
                 >
                   <div className="flex items-center justify-between">
                     Total Requests
@@ -261,7 +300,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
                       sortBy === model ? 'bg-gray-200' : 'bg-gray-50'
                     }`}
                     title={model}
-                    onClick={() => handleSort(model)}
+                    onClick={() => handleSortWithReset(model)}
                   >
                     <div className="flex items-center justify-between">
                       <span>
@@ -278,9 +317,10 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {sortedUserData.map((user, index) => {
+              {paginatedUserData.map((user, index) => {
                 const userQuota = getUserQuotaValue(processedData, user.user);
                 const isOverQuota = userQuota !== 'unlimited' && user.totalRequests > userQuota;
+                const isAtQuota = userQuota !== 'unlimited' && user.totalRequests === userQuota;
                 const quotaDisplay = userQuota === 'unlimited' ? 'Unlimited' : userQuota.toString();
                 
                 return (
@@ -289,7 +329,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
                     <button
                       onClick={() => openUserModal(user.user)}
                       className="max-w-32 truncate text-left text-blue-600 hover:text-blue-800 hover:underline cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded"
-                      title={`View ${user.user}'s consumption details`}
+                      title={`View ${user.user}&apos;s consumption details`}
                     >
                       {user.user}
                     </button>
@@ -298,7 +338,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
                     {quotaDisplay}
                   </td>
                   <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold ${
-                    isOverQuota 
+                    isOverQuota || isAtQuota
                       ? 'text-red-600' 
                       : 'text-blue-600'
                   }`}>
@@ -321,6 +361,90 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
               )})}
             </tbody>
           </table>
+          
+          {/* Desktop Pagination */}
+          {totalPages > 1 && (
+            <div className="bg-white px-6 py-4 flex items-center justify-between border-t border-gray-200">
+              <div className="flex-1 flex justify-between sm:hidden">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                  disabled={currentPage === 0}
+                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
+                  disabled={currentPage === totalPages - 1}
+                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">
+                    Showing <span className="font-medium">{currentPage * ROWS_PER_PAGE + 1}</span> to{' '}
+                    <span className="font-medium">{Math.min((currentPage + 1) * ROWS_PER_PAGE, sortedUserData.length)}</span> of{' '}
+                    <span className="font-medium">{sortedUserData.length}</span> users
+                  </p>
+                </div>
+                <div>
+                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                      disabled={currentPage === 0}
+                      className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="sr-only">Previous</span>
+                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                    
+                    {/* Page numbers */}
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i;
+                      } else if (currentPage < 3) {
+                        pageNum = i;
+                      } else if (currentPage > totalPages - 4) {
+                        pageNum = totalPages - 5 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                            currentPage === pageNum
+                              ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                          }`}
+                        >
+                          {pageNum + 1}
+                        </button>
+                      );
+                    })}
+                    
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
+                      disabled={currentPage === totalPages - 1}
+                      className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="sr-only">Next</span>
+                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </nav>
+                </div>
+              </div>
+            </div>
+          )}
           </div>
         </div>
       )}

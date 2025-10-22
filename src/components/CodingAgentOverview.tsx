@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { CodingAgentUsageChart } from './charts/CodingAgentUsageChart';
 import { CodingAgentOverviewProps } from '@/types/csv';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -15,7 +15,12 @@ export function CodingAgentOverview({
 }: CodingAgentOverviewProps) {
   const isMobile = useIsMobile();
   const [showChart, setShowChart] = useState(true);
-  const dailyCodingAgentData = computeDailyCodingAgentUsage(processedData);
+  
+  // Memoize daily coding agent data calculation
+  const dailyCodingAgentData = useMemo(
+    () => computeDailyCodingAgentUsage(processedData),
+    [processedData]
+  );
 
   return (
     <div className="space-y-6">
