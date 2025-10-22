@@ -70,7 +70,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
           }
         }
 
-        onDataLoad(raw as any[], file.name); // downstream processing will normalize
+        onDataLoad(raw as CSVData[], file.name); // downstream processing will normalize both formats
         setIsLoading(false);
       },
       error: (error) => {
