@@ -368,16 +368,24 @@ describe('CSV Data Processing', () => {
   });
 
   describe('Date Filtering Functions', () => {
-    const createTestDataForDate = (dateString: string): ProcessedData => ({
-      timestamp: new Date(dateString),
-      user: 'TestUser',
-      model: 'test-model',
-      requestsUsed: 1.0,
-      exceedsQuota: false,
-      totalQuota: '100',
-      quotaValue: 100,
-      sourceFormat: 'legacy'
-    });
+    const createTestDataForDate = (dateString: string): ProcessedData => {
+      const timestamp = new Date(dateString);
+      const iso = timestamp.toISOString();
+      return {
+        timestamp,
+        user: 'TestUser',
+        model: 'test-model',
+        requestsUsed: 1.0,
+        exceedsQuota: false,
+        totalQuota: '100',
+        quotaValue: 100,
+        sourceFormat: 'legacy',
+        iso,
+        dateKey: iso.substring(0, 10),
+        monthKey: iso.substring(0, 7),
+        epoch: timestamp.getTime()
+      };
+    };
 
     describe('containsJune2025Data', () => {
       it('should return true when data contains June 2025', () => {
@@ -547,19 +555,28 @@ describe('CSV Data Processing', () => {
   });
 
   describe('computeWeeklyQuotaExhaustion', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { computeWeeklyQuotaExhaustion } = require('@/utils/analytics');
 
     const makeProcessed = (entries: Array<{ ts: string; user: string; used: number; quota: number | 'unlimited'; model?: string }>): ProcessedData[] => {
-      return entries.map(e => ({
-        timestamp: new Date(e.ts),
-        user: e.user,
-        model: e.model || 'test-model',
-        requestsUsed: e.used,
-        exceedsQuota: false,
-        totalQuota: e.quota === 'unlimited' ? 'Unlimited' : String(e.quota),
-        quotaValue: e.quota,
-        sourceFormat: 'legacy'
-      }));
+      return entries.map(e => {
+        const timestamp = new Date(e.ts);
+        const iso = timestamp.toISOString();
+        return {
+          timestamp,
+          user: e.user,
+          model: e.model || 'test-model',
+          requestsUsed: e.used,
+          exceedsQuota: false,
+          totalQuota: e.quota === 'unlimited' ? 'Unlimited' : String(e.quota),
+          quotaValue: e.quota,
+          sourceFormat: 'legacy',
+          iso,
+          dateKey: iso.substring(0, 10),
+          monthKey: iso.substring(0, 7),
+          epoch: timestamp.getTime()
+        };
+      });
     };
 
     it('should return empty structure for no data', () => {
@@ -585,8 +602,11 @@ describe('CSV Data Processing', () => {
       const result = computeWeeklyQuotaExhaustion(data);
       expect(result.totalUsersExhausted).toBe(3);
       // Expect weeks 1,2,5 to have counts 1 each
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const w1 = result.weeks.find((w: any) => w.weekNumber === 1);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const w2 = result.weeks.find((w: any) => w.weekNumber === 2);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const w5 = result.weeks.find((w: any) => w.weekNumber === 5);
       expect(w1?.usersExhaustedInWeek).toBe(1);
       expect(w2?.usersExhaustedInWeek).toBe(1);
@@ -602,6 +622,7 @@ describe('CSV Data Processing', () => {
       ]);
       const result = computeWeeklyQuotaExhaustion(data);
       expect(result.totalUsersExhausted).toBe(1);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const w3 = result.weeks.find((w: any) => w.weekNumber === 3);
       expect(w3?.usersExhaustedInWeek).toBe(1);
       expect(result.weeks.length).toBe(1);

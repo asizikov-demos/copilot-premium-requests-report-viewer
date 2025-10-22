@@ -10,11 +10,13 @@ describe('computeDailyCodingAgentUsage', () => {
     totalQuota: '300',
     exceedsQuota: false,
     requestsUsed: 0
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
 
   test('returns empty array for no coding agent usage', () => {
     const data: ProcessedData[] = [
       { ...base, model: 'o3-mini', requestsUsed: 5 }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ] as any;
     expect(computeDailyCodingAgentUsage(data)).toEqual([]);
   });
@@ -24,6 +26,7 @@ describe('computeDailyCodingAgentUsage', () => {
       { ...base, timestamp: new Date('2025-06-01T00:05:00Z'), requestsUsed: 2 },
       { ...base, timestamp: new Date('2025-06-01T23:59:59Z'), requestsUsed: 3 },
       { ...base, timestamp: new Date('2025-06-02T01:00:00Z'), requestsUsed: 5 },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ] as any;
     const result = computeDailyCodingAgentUsage(data);
     expect(result).toHaveLength(2);

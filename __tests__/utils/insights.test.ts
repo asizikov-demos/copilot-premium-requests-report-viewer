@@ -44,6 +44,7 @@ describe('insights analytics', () => {
     ];
     const total = calculateUnusedValue(users);
     // unused: a=200, b=50 => 250 * overage rate (import pricing constant to avoid magic number).
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { PRICING } = require('@/constants/pricing');
     expect(total).toBeCloseTo((200 + 50) * PRICING.OVERAGE_RATE_PER_REQUEST, 6);
   });

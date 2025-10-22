@@ -9,10 +9,7 @@ import { createMockFile } from '../helpers/testUtils';
 
 // Mock PapaParse
 jest.mock('papaparse', () => ({
-  parse: jest.fn((file, config) => {
-    if (!file.name.endsWith('.csv')) {
-      return;
-    }
+  parse: jest.fn(() => {
     // Default implementation that does nothing
   })
 }));
@@ -43,10 +40,10 @@ describe('CSVUploader', () => {
   it('should handle new-format CSV parsing', async () => {
     const mockFile = createMockFile('new-format.csv content', 'new-format.csv');
     const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((_file: any, config: any) => {
+    parse.mockImplementation((_file: File, config: { chunk?: (results: { data: unknown[]; errors: unknown[] }, parser: unknown) => void; complete?: () => void }) => {
       setTimeout(() => {
         // Simulate chunk callback with data
-        config.chunk?.({ data: newFormatRows, errors: [] }, {} as any);
+        config.chunk?.({ data: newFormatRows, errors: [] }, {});
         // Then call complete
         config.complete?.();
       }, 0);
@@ -64,9 +61,9 @@ describe('CSVUploader', () => {
   it('should handle successful CSV parsing', async () => {
     const mockFile = createMockFile(validCSVString, 'test.csv');
     const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((_file: any, config: any) => {
+    parse.mockImplementation((_file: File, config: { chunk?: (results: { data: unknown[]; errors: unknown[] }, parser: unknown) => void; complete?: () => void }) => {
       setTimeout(() => {
-        config.chunk?.({ data: validCSVData, errors: [] }, {} as any);
+        config.chunk?.({ data: validCSVData, errors: [] }, {});
         config.complete?.();
       }, 0);
     });
@@ -105,7 +102,7 @@ describe('CSVUploader', () => {
     const mockFile = createMockFile(invalidCSVData.missingColumns, 'test.csv');
     
     const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((_file: any, config: any) => {
+    parse.mockImplementation((_file: File, config: { chunk?: (results: { data: unknown[]; errors: unknown[] }, parser: { abort: () => void }) => void }) => {
       setTimeout(() => {
         const mockParser = { abort: jest.fn() };
         config.chunk?.({ data: [{ Timestamp: '2025-06-03T11:05:27Z', User: 'USerA', Model: 'gpt-4.1-2025-04-14' }], errors: [] }, mockParser);
@@ -128,7 +125,7 @@ describe('CSVUploader', () => {
     const mockFile = createMockFile(invalidCSVData.emptyFile, 'empty.csv');
     
     const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((_file: any, config: any) => {
+    parse.mockImplementation((_file: File, config: { complete?: () => void }) => {
       setTimeout(() => {
         config.complete?.();
       }, 0);
@@ -148,7 +145,7 @@ describe('CSVUploader', () => {
     const mockFile = createMockFile(validCSVString, 'test.csv');
     
     const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((_file: any, config: any) => {
+    parse.mockImplementation((_file: File, config: { chunk?: (results: { data: unknown[]; errors: Array<Record<string, unknown>> }, parser: { abort: () => void }) => void }) => {
       setTimeout(() => {
         const mockParser = { abort: jest.fn() };
         config.chunk?.({ data: [], errors: [{ message: 'Parse error', type: 'Quotes', code: 'MissingQuotes', row: 1 }] }, mockParser);
@@ -169,7 +166,7 @@ describe('CSVUploader', () => {
     const mockFile = createMockFile(validCSVString, 'test.csv');
     
     const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((_file: any, config: any) => {
+    parse.mockImplementation((_file: File, config: { error: (error: Error) => void }) => {
       setTimeout(() => {
         config.error(new Error('File reading failed'));
       }, 0);
@@ -208,9 +205,9 @@ describe('CSVUploader', () => {
     const mockFile = createMockFile(validCSVString, 'test.csv');
     
     const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((_file: any, config: any) => {
+    parse.mockImplementation((_file: File, config: { chunk?: (results: { data: unknown[]; errors: unknown[] }, parser: unknown) => void; complete?: () => void }) => {
       setTimeout(() => {
-        config.chunk?.({ data: validCSVData, errors: [] }, {} as any);
+        config.chunk?.({ data: validCSVData, errors: [] }, {});
         config.complete?.();
       }, 0);
     });
@@ -264,7 +261,7 @@ describe('CSVUploader', () => {
   it('should validate all required legacy columns are present (Timestamp present)', async () => {
     const mockFile = createMockFile(invalidCSVData.missingRequiredColumns, 'test.csv');
     const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((_file: any, config: any) => {
+    parse.mockImplementation((_file: File, config: { chunk?: (results: { data: unknown[]; errors: unknown[] }, parser: { abort: () => void }) => void }) => {
       setTimeout(() => {
         const mockParser = { abort: jest.fn() };
         config.chunk?.({ data: [{ Timestamp: '2025-06-03T11:05:27Z', User: 'USerA', Model: 'gpt-4.1-2025-04-14', 'Requests Used': '1.00' }], errors: [] }, mockParser);
@@ -286,7 +283,7 @@ describe('CSVUploader', () => {
     const mockFile = createMockFile(invalidCSVData.extraColumns, 'test.csv');
     
     const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((_file: any, config: any) => {
+    parse.mockImplementation((_file: File, config: { chunk?: (results: { data: unknown[]; errors: unknown[] }, parser: unknown) => void; complete?: () => void }) => {
       setTimeout(() => {
         config.chunk?.({
           data: [{
@@ -299,7 +296,7 @@ describe('CSVUploader', () => {
             'Extra Column': 'extra_value'
           }],
           errors: []
-        }, {} as any);
+        }, {});
         config.complete?.();
       }, 0);
     });

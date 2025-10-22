@@ -8,7 +8,6 @@ import { newFormatRows } from '../fixtures/newFormatCSVData';
 
 // Mock ResizeObserver for Recharts ResponsiveContainer in JSDOM
 beforeAll(() => {
-  // @ts-ignore
   global.ResizeObserver = class {
     observe() {}
     unobserve() {}
@@ -18,6 +17,7 @@ beforeAll(() => {
 
 describe('DataAnalysis billing summary (new format)', () => {
   it('renders billing summary when cost fields are present', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     render(<DataAnalysis csvData={newFormatRows as any} filename="new-format.csv" onReset={() => {}} />);
 
     // Wait for provider effects & rendering.
