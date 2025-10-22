@@ -87,16 +87,21 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
     computeOverageSummary(userData, processedData)
   ), [userData, processedData]);
   
-  // Detect if we have mixed quota types for chart display
-  const quotaTypes = new Set<number>();
-  userData.forEach(user => {
-    const userQuota = getUserQuotaValue(processedData, user.user);
-    if (userQuota !== 'unlimited') {
-      quotaTypes.add(userQuota);
-    }
-  });
-  const hasMixedQuotas = quotaTypes.size > 1;
-  const hasMixedLicenses = quotaTypes.has(PRICING.BUSINESS_QUOTA) && quotaTypes.has(PRICING.ENTERPRISE_QUOTA);
+  // Memoize quota types calculation for chart display
+  const quotaInfo = useMemo(() => {
+    const quotaTypes = new Set<number>();
+    userData.forEach(user => {
+      const userQuota = getUserQuotaValue(processedData, user.user);
+      if (userQuota !== 'unlimited') {
+        quotaTypes.add(userQuota);
+      }
+    });
+    const hasMixedQuotas = quotaTypes.size > 1;
+    const hasMixedLicenses = quotaTypes.has(PRICING.BUSINESS_QUOTA) && quotaTypes.has(PRICING.ENTERPRISE_QUOTA);
+    return { quotaTypes, hasMixedQuotas, hasMixedLicenses };
+  }, [userData, processedData]);
+
+  const { quotaTypes, hasMixedQuotas, hasMixedLicenses } = quotaInfo;
   
   // Pagination calculations
   const totalPages = Math.ceil(sortedUserData.length / ROWS_PER_PAGE);
@@ -111,9 +116,16 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
     setCurrentPage(0);
   };
   
-  // Get users for chart
-  const chartUsers = userData.map(u => u.user);
-  const userColors = generateUserColors(chartUsers);
+  // Memoize chart data to prevent recalculation on pagination/sorting
+  const chartData = useMemo(() => {
+    const users = userData.map(u => u.user);
+    return {
+      users,
+      colors: generateUserColors(users)
+    };
+  }, [userData]);
+
+  const { users: chartUsers, colors: userColors } = chartData;
 
   return (
     <div className="bg-white shadow rounded-lg overflow-hidden h-full flex flex-col">
