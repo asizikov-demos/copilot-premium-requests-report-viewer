@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { UsersQuotaConsumptionChart } from './charts/UsersQuotaConsumptionChart';
-import { UserSummary, DailyCumulativeData, getUserQuotaValue } from '@/utils/analytics';
+import { UserSummary, DailyCumulativeData } from '@/utils/analytics';
 import { ProcessedData } from '@/types/csv';
 import { UserConsumptionModal } from './UserConsumptionModal';
 import { computeOverageSummary } from '@/utils/analytics/overage';
@@ -10,6 +10,7 @@ import { useSortableTable } from '@/hooks/useSortableTable';
 import { useUserConsumptionModal } from '@/hooks/useUserConsumptionModal';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { PRICING } from '@/constants/pricing';
+import { getUserQuota, QuotaArtifacts } from '@/utils/ingestion';
 
 interface UsersOverviewProps {
   userData: UserSummary[];
@@ -17,6 +18,7 @@ interface UsersOverviewProps {
   allModels: string[];
   selectedPlan: 'business' | 'enterprise';
   dailyCumulativeData: DailyCumulativeData[];
+  quotaArtifacts: QuotaArtifacts; // NEW: Direct quota map access
   onBack: () => void;
 }
 
@@ -42,7 +44,7 @@ const generateUserColors = (users: string[]): Record<string, string> => {
   return result;
 };
 
-export function UsersOverview({ userData, processedData, allModels, selectedPlan, dailyCumulativeData, onBack }: UsersOverviewProps) {
+export function UsersOverview({ userData, processedData, allModels, selectedPlan, dailyCumulativeData, quotaArtifacts, onBack }: UsersOverviewProps) {
   const [showChart, setShowChart] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
   const isMobile = useIsMobile();
@@ -87,11 +89,11 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
     computeOverageSummary(userData, processedData)
   ), [userData, processedData]);
   
-  // Memoize quota types calculation for chart display
+  // Memoize quota types calculation for chart display - NOW using O(1) quota map!
   const quotaInfo = useMemo(() => {
     const quotaTypes = new Set<number>();
     userData.forEach(user => {
-      const userQuota = getUserQuotaValue(processedData, user.user);
+      const userQuota = getUserQuota(quotaArtifacts, user.user);
       if (userQuota !== 'unlimited') {
         quotaTypes.add(userQuota);
       }
@@ -99,7 +101,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
     const hasMixedQuotas = quotaTypes.size > 1;
     const hasMixedLicenses = quotaTypes.has(PRICING.BUSINESS_QUOTA) && quotaTypes.has(PRICING.ENTERPRISE_QUOTA);
     return { quotaTypes, hasMixedQuotas, hasMixedLicenses };
-  }, [userData, processedData]);
+  }, [userData, quotaArtifacts]);
 
   const { quotaTypes, hasMixedQuotas, hasMixedLicenses } = quotaInfo;
   
@@ -207,7 +209,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
           {isMobile && (
             <div className="p-4 space-y-3 sm:hidden">
               {paginatedUserData.map((user) => {
-                const userQuota = getUserQuotaValue(processedData, user.user);
+                const userQuota = getUserQuota(quotaArtifacts, user.user);
                 const isOverQuota = userQuota !== 'unlimited' && user.totalRequests > userQuota;
                 const quotaDisplay = userQuota === 'unlimited' ? 'Unlimited' : `${userQuota}`;
                 
@@ -318,7 +320,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {paginatedUserData.map((user, index) => {
-                const userQuota = getUserQuotaValue(processedData, user.user);
+                const userQuota = getUserQuota(quotaArtifacts, user.user);
                 const isOverQuota = userQuota !== 'unlimited' && user.totalRequests > userQuota;
                 const isAtQuota = userQuota !== 'unlimited' && user.totalRequests === userQuota;
                 const quotaDisplay = userQuota === 'unlimited' ? 'Unlimited' : userQuota.toString();
@@ -460,7 +462,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
         <UserConsumptionModal
           user={selectedUser}
           processedData={processedData}
-          userQuotaValue={getUserQuotaValue(processedData, selectedUser)}
+          userQuotaValue={getUserQuota(quotaArtifacts, selectedUser)}
           onClose={closeUserModal}
         />
       )}

@@ -1,10 +1,9 @@
 import { useMemo } from 'react';
 import { ProcessedData, AnalysisResults, PowerUsersAnalysis, CodingAgentAnalysis } from '@/types/csv';
-import { analyzeData, analyzeUserData, generateDailyCumulativeData, analyzePowerUsers, analyzeCodingAgentAdoption, filterEarlyJune2025, filterBySelectedMonths, computeWeeklyQuotaExhaustion } from '@/utils/analytics';
+import { analyzeData, analyzeUserData, generateDailyCumulativeData, analyzePowerUsers, analyzeCodingAgentAdoption, filterBySelectedMonths, computeWeeklyQuotaExhaustion } from '@/utils/analytics';
 
 interface UseAnalyzedDataArgs {
   baseProcessed: ProcessedData[]; // already result of processCSVData(csvRaw)
-  excludeEarlyJune: boolean;
   selectedMonths: string[];
   minRequestsThreshold: number;
 }
@@ -25,13 +24,10 @@ interface UseAnalyzedDataReturn {
  * Maintains strict UTC semantics by delegating to existing utilities that already
  * avoid local timezone conversions.
  */
-export function useAnalyzedData({ baseProcessed, excludeEarlyJune, selectedMonths, minRequestsThreshold }: UseAnalyzedDataArgs): UseAnalyzedDataReturn {
+export function useAnalyzedData({ baseProcessed, selectedMonths, minRequestsThreshold }: UseAnalyzedDataArgs): UseAnalyzedDataReturn {
   return useMemo(() => {
-    // Apply early June exclusion (billable period adjustment)
-    let filtered = excludeEarlyJune ? filterEarlyJune2025(baseProcessed) : baseProcessed;
-
     // Apply selected billing months (if any)
-    filtered = filterBySelectedMonths(filtered, selectedMonths);
+    const filtered = filterBySelectedMonths(baseProcessed, selectedMonths);
 
     const analysis = analyzeData(filtered);
     const userData = analyzeUserData(filtered);
@@ -51,5 +47,5 @@ export function useAnalyzedData({ baseProcessed, excludeEarlyJune, selectedMonth
       codingAgentAnalysis,
       weeklyExhaustion,
     };
-  }, [baseProcessed, excludeEarlyJune, selectedMonths, minRequestsThreshold]);
+  }, [baseProcessed, selectedMonths, minRequestsThreshold]);
 }
