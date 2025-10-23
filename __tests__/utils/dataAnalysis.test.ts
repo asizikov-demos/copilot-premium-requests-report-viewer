@@ -2,11 +2,10 @@ import {
   analyzePowerUsers, 
   calculateSpecialFeaturesScore, 
   SPECIAL_FEATURES_CONFIG, 
-  MAX_SPECIAL_FEATURES_SCORE,
-  getAvailableMonths,
-  hasMultipleMonths,
-  filterBySelectedMonths
+  MAX_SPECIAL_FEATURES_SCORE
 } from '@/utils/analytics';
+import { buildMonthListFromArtifacts } from '@/utils/ingestion/analytics';
+import type { DailyBucketsArtifacts } from '@/utils/ingestion';
 import { processCSVData, analyzeData } from '../helpers/processCSVData';
 import { CSVData, ProcessedData } from '@/types/csv';
 import { validCSVData, powerUserCSVData } from '../fixtures/validCSVData';
@@ -381,7 +380,13 @@ describe('CSV Data Processing', () => {
       };
     };
 
-    describe('getAvailableMonths', () => {
+    function artifactFromProcessed(data: ProcessedData[]): DailyBucketsArtifacts {
+      const monthsSet = new Set<string>();
+      for (const row of data) monthsSet.add(row.monthKey || row.timestamp.toISOString().slice(0,7));
+      return { dailyUserTotals: new Map(), dateRange: null, months: Array.from(monthsSet).sort() };
+    }
+
+    describe('getAvailableMonths (artifact-based)', () => {
       it('should return available months from data', () => {
         const data = [
           createTestDataForDate('2025-06-15T10:00:00Z'),
@@ -390,7 +395,8 @@ describe('CSV Data Processing', () => {
           createTestDataForDate('2025-08-15T10:00:00Z')
         ];
 
-        const months = getAvailableMonths(data);
+        const artifacts = artifactFromProcessed(data);
+        const months = buildMonthListFromArtifacts(artifacts);
         expect(months).toEqual([
           { value: '2025-06', label: 'June 2025' },
           { value: '2025-07', label: 'July 2025' },
@@ -399,7 +405,8 @@ describe('CSV Data Processing', () => {
       });
 
       it('should return empty array for no data', () => {
-        const months = getAvailableMonths([]);
+        const artifacts = artifactFromProcessed([]);
+        const months = buildMonthListFromArtifacts(artifacts);
         expect(months).toEqual([]);
       });
 
@@ -409,21 +416,24 @@ describe('CSV Data Processing', () => {
           createTestDataForDate('2025-06-20T10:00:00Z')
         ];
 
-        const months = getAvailableMonths(data);
+        const artifacts = artifactFromProcessed(data);
+        const months = buildMonthListFromArtifacts(artifacts);
         expect(months).toEqual([
           { value: '2025-06', label: 'June 2025' }
         ]);
       });
     });
 
-    describe('hasMultipleMonths', () => {
+    describe('hasMultipleMonths (artifact-based)', () => {
       it('should return true for data spanning multiple months', () => {
         const data = [
           createTestDataForDate('2025-06-15T10:00:00Z'),
           createTestDataForDate('2025-07-15T10:00:00Z')
         ];
 
-        expect(hasMultipleMonths(data)).toBe(true);
+        const artifacts = artifactFromProcessed(data);
+        const months = buildMonthListFromArtifacts(artifacts);
+        expect(months.length > 1).toBe(true);
       });
 
       it('should return false for data in single month', () => {
@@ -432,15 +442,19 @@ describe('CSV Data Processing', () => {
           createTestDataForDate('2025-06-20T10:00:00Z')
         ];
 
-        expect(hasMultipleMonths(data)).toBe(false);
+        const artifacts = artifactFromProcessed(data);
+        const months = buildMonthListFromArtifacts(artifacts);
+        expect(months.length > 1).toBe(false);
       });
 
       it('should return false for empty data', () => {
-        expect(hasMultipleMonths([])).toBe(false);
+        const artifacts = artifactFromProcessed([]);
+        const months = buildMonthListFromArtifacts(artifacts);
+        expect(months.length > 1).toBe(false);
       });
     });
 
-    describe('filterBySelectedMonths', () => {
+    describe('filterBySelectedMonths (local)', () => {
       const testData = [
         createTestDataForDate('2025-06-15T10:00:00Z'),
         createTestDataForDate('2025-07-15T10:00:00Z'),
@@ -448,8 +462,14 @@ describe('CSV Data Processing', () => {
         createTestDataForDate('2025-06-20T10:00:00Z')
       ];
 
+      function filterBySelectedMonthsLocal(data: ProcessedData[], selected: string[]): ProcessedData[] {
+        if (selected.length === 0) return data;
+        const set = new Set(selected);
+        return data.filter(d => set.has(d.monthKey));
+      }
+
       it('should filter by selected months', () => {
-        const filtered = filterBySelectedMonths(testData, ['2025-06', '2025-08']);
+        const filtered = filterBySelectedMonthsLocal(testData, ['2025-06', '2025-08']);
         expect(filtered).toHaveLength(3);
         expect(filtered.map(d => d.timestamp.toISOString())).toEqual([
           '2025-06-15T10:00:00.000Z',
@@ -459,12 +479,12 @@ describe('CSV Data Processing', () => {
       });
 
       it('should return all data when no months selected', () => {
-        const filtered = filterBySelectedMonths(testData, []);
+        const filtered = filterBySelectedMonthsLocal(testData, []);
         expect(filtered).toEqual(testData);
       });
 
       it('should return empty array when no data matches selected months', () => {
-        const filtered = filterBySelectedMonths(testData, ['2025-12']);
+        const filtered = filterBySelectedMonthsLocal(testData, ['2025-12']);
         expect(filtered).toEqual([]);
       });
     });

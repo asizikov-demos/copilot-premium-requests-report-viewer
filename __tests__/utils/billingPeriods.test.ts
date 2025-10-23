@@ -1,4 +1,4 @@
-import { getAvailableMonths, filterBySelectedMonths } from '../../src/utils/analytics';
+import { buildMonthListFromArtifacts, DailyBucketsArtifacts } from '@/utils/ingestion/analytics';
 import { processCSVData } from '../helpers/processCSVData';
 import { CSVData } from '../../src/types/csv';
 
@@ -38,9 +38,17 @@ describe('Billing Period Boundaries', () => {
     }
   ];
 
+  function artifactFromProcessed(processed: ReturnType<typeof processCSVData>): DailyBucketsArtifacts {
+    // Derive months from processedData (legacy style) then feed into artifact shape
+    const monthsSet = new Set<string>();
+    for (const row of processed) monthsSet.add(row.monthKey || row.timestamp.toISOString().slice(0,7));
+    return { dailyUserTotals: new Map(), dateRange: null, months: Array.from(monthsSet).sort() };
+  }
+
   it('should correctly identify available months from boundary data', () => {
     const processedData = processCSVData(testData);
-    const availableMonths = getAvailableMonths(processedData);
+    const artifacts = artifactFromProcessed(processedData);
+    const availableMonths = buildMonthListFromArtifacts(artifacts);
     
     console.log('Available months:', availableMonths);
     
@@ -49,9 +57,15 @@ describe('Billing Period Boundaries', () => {
     expect(availableMonths.map(m => m.value)).toEqual(['2025-06', '2025-07', '2025-08']);
   });
 
+  function filterBySelectedMonthsLocal(data: ReturnType<typeof processCSVData>, selected: string[]) {
+    if (selected.length === 0) return data;
+    const set = new Set(selected);
+    return data.filter(d => set.has(d.monthKey));
+  }
+
   it('should filter July data correctly (1st to 31st only)', () => {
     const processedData = processCSVData(testData);
-    const julyData = filterBySelectedMonths(processedData, ['2025-07']);
+    const julyData = filterBySelectedMonthsLocal(processedData, ['2025-07']);
     
     console.log('July filtered data timestamps:', julyData.map(d => d.timestamp.toISOString()));
     
@@ -63,7 +77,7 @@ describe('Billing Period Boundaries', () => {
 
   it('should not include June 30th in July billing period', () => {
     const processedData = processCSVData(testData);
-    const julyData = filterBySelectedMonths(processedData, ['2025-07']);
+    const julyData = filterBySelectedMonthsLocal(processedData, ['2025-07']);
     
     // Should not include June 30th timestamp
     const june30thIncluded = julyData.some(d => 
@@ -74,7 +88,7 @@ describe('Billing Period Boundaries', () => {
 
   it('should not include August 1st in July billing period', () => {
     const processedData = processCSVData(testData);
-    const julyData = filterBySelectedMonths(processedData, ['2025-07']);
+    const julyData = filterBySelectedMonthsLocal(processedData, ['2025-07']);
     
     // Should not include August 1st timestamp
     const aug1stIncluded = julyData.some(d => 

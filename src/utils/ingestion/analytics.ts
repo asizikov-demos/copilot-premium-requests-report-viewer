@@ -594,3 +594,26 @@ export function buildDailyCodingAgentUsageFromArtifacts(
     return { date: d.date, dailyRequests: d.total, cumulativeRequests: cumulative } as DailyCodingAgentUsageDatum;
   });
 }
+
+// -----------------------------
+// Month List From Artifacts
+// -----------------------------
+/** Month names constant retained for consistent labeling (UTC context). */
+const MONTH_NAMES = [
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December'
+];
+
+/**
+ * Build month list (value, label) directly from DailyBucketsArtifacts.months.
+ * Returns empty array when months not present (e.g., legacy artifact shape).
+ */
+export function buildMonthListFromArtifacts(daily: DailyBucketsArtifacts): { value: string; label: string }[] {
+  if (!daily.months || daily.months.length === 0) return [];
+  return daily.months.map(key => {
+    const [yearStr, monthStr] = key.split('-');
+    const monthIndex = parseInt(monthStr, 10) - 1;
+    return { value: key, label: `${MONTH_NAMES[monthIndex]} ${yearStr}` };
+  });
+}
+

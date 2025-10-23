@@ -2,7 +2,6 @@
 export * from './quota';
 export * from './powerUsers';
 export * from './codingAgent';
-export * from './filters';
 export * from './exhaustion';
 export * from './overage';
 export * from './insights';

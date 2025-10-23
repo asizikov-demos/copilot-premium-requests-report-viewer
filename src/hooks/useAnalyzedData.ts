@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { ProcessedData, AnalysisResults, PowerUsersAnalysis, CodingAgentAnalysis } from '@/types/csv';
-import { analyzePowerUsers, analyzeCodingAgentAdoption, filterBySelectedMonths, computeWeeklyQuotaExhaustion } from '@/utils/analytics';
+import { analyzePowerUsers, analyzeCodingAgentAdoption, computeWeeklyQuotaExhaustion } from '@/utils/analytics';
 import { PRICING } from '@/constants/pricing';
 // New artifact-based analytics (incremental migration)
 import {
@@ -53,7 +53,9 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, minRequestsThre
 
     if (artifactsAvailable) {
       // NOTE: Month filtering currently still relies on legacy processed data (will migrate in later step).
-      const filtered = filterBySelectedMonths(baseProcessed, selectedMonths);
+      const filtered = selectedMonths.length === 0
+        ? baseProcessed
+        : baseProcessed.filter(r => selectedMonths.includes(r.monthKey));
       // Build hybrid: analysis & heavy computations from artifacts; retain processed subset for components needing row-level billing fields.
       const analysis = deriveAnalysisFromArtifacts(usageArtifacts!, quotaArtifacts!, dailyBucketsArtifacts!);
       const dailyCumulativeData = buildDailyCumulativeDataFromArtifacts(dailyBucketsArtifacts!);
@@ -77,7 +79,9 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, minRequestsThre
     }
 
     // Legacy pathway
-    const filtered = filterBySelectedMonths(baseProcessed, selectedMonths);
+    const filtered = selectedMonths.length === 0
+      ? baseProcessed
+      : baseProcessed.filter(r => selectedMonths.includes(r.monthKey));
     const analysis: AnalysisResults = (() => {
       if (filtered.length === 0) return { timeFrame: { start: '', end: '' }, totalUniqueUsers: 0, usersExceedingQuota: 0, requestsByModel: [], quotaBreakdown: { unlimited: [], business: [], enterprise: [], mixed: false, suggestedPlan: null } };
       const sorted = [...filtered].sort((a,b)=> a.epoch - b.epoch);
