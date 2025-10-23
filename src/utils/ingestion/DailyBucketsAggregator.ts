@@ -21,6 +21,7 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
   private months = new Set<string>();
   
   init(_ctx: AggregatorContext): void {
+    void _ctx;
     // Reset state
     this.dailyUserTotals.clear();
     this.dailyUserModelTotals.clear();
@@ -30,6 +31,7 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
   }
   
   onRow(row: NormalizedRow, _ctx: AggregatorContext): void {
+    void _ctx;
     const { day, user, quantity, model } = row;
     
     // Track date range
@@ -65,6 +67,7 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
   }
   
   finalize(_ctx: AggregatorContext): DailyBucketsArtifacts {
+    void _ctx;
     return {
       dailyUserTotals: this.dailyUserTotals,
       dailyUserModelTotals: this.dailyUserModelTotals,

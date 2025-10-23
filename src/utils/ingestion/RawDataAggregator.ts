@@ -16,15 +16,18 @@ export class RawDataAggregator implements Aggregator<NormalizedRow[]> {
   private rows: NormalizedRow[] = [];
   
   init(_ctx: AggregatorContext): void {
+    void _ctx;
     this.rows = [];
   }
   
   onRow(row: NormalizedRow, _ctx: AggregatorContext): void {
+    void _ctx;
     // Store a copy to avoid reference issues
     this.rows.push({ ...row });
   }
   
   finalize(_ctx: AggregatorContext): NormalizedRow[] {
+    void _ctx;
     return this.rows;
   }
 }

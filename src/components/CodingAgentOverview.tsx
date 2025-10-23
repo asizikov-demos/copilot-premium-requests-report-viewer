@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { CodingAgentUsageChart } from './charts/CodingAgentUsageChart';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { AnalysisContext } from '@/context/AnalysisContext';
-import { UsageArtifacts, QuotaArtifacts, DailyBucketsArtifacts, buildDailyCodingAgentUsageFromArtifacts } from '@/utils/ingestion';
+import { DailyBucketsArtifacts, buildDailyCodingAgentUsageFromArtifacts } from '@/utils/ingestion';
 
 interface CodingAgentOverviewProps {
   codingAgentUsers: import('@/types/csv').CodingAgentUser[];
@@ -22,8 +22,6 @@ export function CodingAgentOverview({
   const isMobile = useIsMobile();
   const [showChart, setShowChart] = useState(true);
   const analysisCtx = React.useContext(AnalysisContext);
-  const usageArtifacts = analysisCtx?.usageArtifacts as UsageArtifacts | undefined;
-  const quotaArtifacts = analysisCtx?.quotaArtifacts as QuotaArtifacts | undefined;
   const dailyBucketsArtifacts = analysisCtx?.dailyBucketsArtifacts as DailyBucketsArtifacts | undefined;
   
   // Memoize daily coding agent data calculation

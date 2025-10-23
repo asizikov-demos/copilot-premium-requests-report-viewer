@@ -20,6 +20,7 @@ export class UsageAggregator implements Aggregator<UsageArtifacts> {
   private topModelPerUser = new Map<string, { model: string; value: number }>();
   
   init(_ctx: AggregatorContext): void {
+    void _ctx;
     // Reset state
     this.userTotals.clear();
     this.userModelTotals.clear();
@@ -28,6 +29,7 @@ export class UsageAggregator implements Aggregator<UsageArtifacts> {
   }
   
   onRow(row: NormalizedRow, _ctx: AggregatorContext): void {
+    void _ctx;
     const { user, model, quantity } = row;
     
     // User totals
@@ -53,6 +55,7 @@ export class UsageAggregator implements Aggregator<UsageArtifacts> {
   }
   
   finalize(_ctx: AggregatorContext): UsageArtifacts {
+    void _ctx;
     const users: UserAggregate[] = [];
     
     for (const [user, totalRequests] of this.userTotals) {

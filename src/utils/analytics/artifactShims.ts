@@ -108,7 +108,6 @@ export function analyzePowerUsers(processedData: ProcessedData[], minRequestsThr
 
 export function computeWeeklyQuotaExhaustion(processedData: ProcessedData[]): WeeklyQuotaExhaustionBreakdown {
   if (processedData.length === 0) return { totalUsersExhausted: 0, weeks: [] };
-  const usage = buildUsageArtifacts(processedData); // usage not directly needed; included for completeness if future logic expands
   const quota = buildQuotaArtifacts(processedData);
   const daily = buildDailyBucketsArtifacts(processedData);
   return computeWeeklyQuotaExhaustionFromArtifacts(daily, quota);

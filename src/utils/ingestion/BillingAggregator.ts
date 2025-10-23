@@ -26,6 +26,7 @@ export class BillingAggregator implements Aggregator<BillingArtifacts> {
   private hasAnyBillingData = false;
 
   init(_ctx: AggregatorContext): void {
+    void _ctx;
     this.grossTotal = 0;
     this.discountTotal = 0;
     this.netTotal = 0;
@@ -34,6 +35,7 @@ export class BillingAggregator implements Aggregator<BillingArtifacts> {
   }
 
   onRow(row: NormalizedRow, _ctx: AggregatorContext): void {
+    void _ctx;
     // Fast path: if no billing columns present in this row and none seen yet, still need to track quantity per user if billing appears later.
     let entry = this.userMap.get(row.user);
     if (!entry) {
@@ -62,6 +64,7 @@ export class BillingAggregator implements Aggregator<BillingArtifacts> {
   }
 
   finalize(_ctx: AggregatorContext): BillingArtifacts {
+    void _ctx;
     return {
       totals: { gross: this.grossTotal, discount: this.discountTotal, net: this.netTotal },
       users: Array.from(this.userMap.values()),

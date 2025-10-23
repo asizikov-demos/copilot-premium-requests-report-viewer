@@ -18,6 +18,7 @@ export class QuotaAggregator implements Aggregator<QuotaArtifacts> {
   private distinctQuotas = new Set<number>();
   
   init(_ctx: AggregatorContext): void {
+    void _ctx;
     // Reset state
     this.quotaByUser.clear();
     this.conflicts.clear();
@@ -25,6 +26,7 @@ export class QuotaAggregator implements Aggregator<QuotaArtifacts> {
   }
   
   onRow(row: NormalizedRow, _ctx: AggregatorContext): void {
+    void _ctx;
     if (row.quotaValue === undefined) return;
     
     const existing = this.quotaByUser.get(row.user);

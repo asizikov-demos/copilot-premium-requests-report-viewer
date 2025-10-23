@@ -1,4 +1,4 @@
-import { computeWeeklyQuotaExhaustionFromArtifacts, WeeklyQuotaExhaustionBreakdown } from '@/utils/ingestion/analytics';
+import { computeWeeklyQuotaExhaustionFromArtifacts } from '@/utils/ingestion/analytics';
 import type { DailyBucketsArtifacts, QuotaArtifacts } from '@/utils/ingestion';
 
 // Helper to build DailyBucketsArtifacts with daily user totals

@@ -27,6 +27,7 @@ export class FeatureUsageAggregator implements Aggregator<FeatureUsageArtifacts>
   private sparkUsers = new Set<string>();
 
   init(_ctx: AggregatorContext): void {
+    void _ctx;
     this.codeReviewTotal = 0;
     this.codingAgentTotal = 0;
     this.sparkTotal = 0;
@@ -36,6 +37,7 @@ export class FeatureUsageAggregator implements Aggregator<FeatureUsageArtifacts>
   }
 
   onRow(row: NormalizedRow, _ctx: AggregatorContext): void {
+    void _ctx;
     const lower = row.model.toLowerCase();
     const qty = row.quantity;
 
@@ -55,6 +57,7 @@ export class FeatureUsageAggregator implements Aggregator<FeatureUsageArtifacts>
   }
 
   finalize(_ctx: AggregatorContext): FeatureUsageArtifacts {
+    void _ctx;
     return {
       featureTotals: {
         codeReview: this.codeReviewTotal,

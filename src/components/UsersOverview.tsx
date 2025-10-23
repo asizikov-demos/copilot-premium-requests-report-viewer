@@ -226,7 +226,6 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
                 currentQuota={currentQuota}
                 quotaTypes={quotaTypes}
                 hasMixedQuotas={hasMixedQuotas}
-                hasMixedLicenses={hasMixedLicenses}
               />
             ) : chartUsers.length > 1000 ? (
               <div className="flex items-center justify-center h-full bg-gray-50 rounded-lg border-2 border-gray-200">

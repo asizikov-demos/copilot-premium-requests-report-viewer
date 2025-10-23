@@ -9,7 +9,6 @@ export interface UsersConsumptionHeatmapProps {
   currentQuota: number;
   quotaTypes: Set<number>;
   hasMixedQuotas: boolean;
-  hasMixedLicenses: boolean;
 }
 
 interface HeatmapCell {
@@ -74,8 +73,7 @@ export function UsersConsumptionHeatmap({
   users,
   currentQuota,
   quotaTypes,
-  hasMixedQuotas,
-  hasMixedLicenses
+  hasMixedQuotas
 }: UsersConsumptionHeatmapProps) {
   const { heatmapData, maxConsumption, binSize } = useMemo(() => {
     let maxValue = currentQuota * 1.2;

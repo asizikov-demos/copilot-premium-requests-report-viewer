@@ -17,7 +17,7 @@ import { calculateOverageRequests, calculateOverageCost } from '@/utils/userCalc
 import { PowerUsersAnalysis, PowerUserScore, CodingAgentAnalysis, UserDailyData } from '@/types/csv';
 // Legacy DailyCodingAgentUsageDatum type recreated locally (originally from codingAgent.ts)
 export interface DailyCodingAgentUsageDatum { date: string; dailyRequests: number; cumulativeRequests: number; }
-import { CONSUMPTION_THRESHOLDS, UserConsumptionCategory, InsightsOverviewData, FeatureUtilizationStats as LegacyFeatureUtilizationStats } from '@/utils/analytics/insights';
+import { CONSUMPTION_THRESHOLDS, UserConsumptionCategory, InsightsOverviewData } from '@/utils/analytics/insights';
 import { Advisory as LegacyAdvisory } from '@/utils/analytics/advisory';
 
 /** Build time frame (start/end) from daily bucket date range. */
@@ -492,6 +492,8 @@ export function buildAdvisoriesFromArtifacts(
   usage: UsageArtifacts,
   quota: QuotaArtifacts
 ): LegacyAdvisory[] {
+  // Currently quota artifacts not directly used; retained for future advisory enhancements.
+  void quota;
   const advisories: LegacyAdvisory[] = [];
   const totalUsers = usage.userCount;
   if (totalUsers === 0) return advisories;
