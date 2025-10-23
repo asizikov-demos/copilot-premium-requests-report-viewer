@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { ProcessedData, AnalysisResults, PowerUsersAnalysis, CodingAgentAnalysis } from '@/types/csv';
-import { analyzePowerUsers, analyzeCodingAgentAdoption, computeWeeklyQuotaExhaustion } from '@/utils/analytics';
+import { analyzePowerUsers, computeWeeklyQuotaExhaustion } from '@/utils/analytics';
 import { PRICING } from '@/constants/pricing';
 // New artifact-based analytics (incremental migration)
 import {
@@ -137,7 +137,40 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, minRequestsThre
       return result;
     })();
     const powerUsersAnalysis = analyzePowerUsers(filtered, minRequestsThreshold);
-    const codingAgentAnalysis = analyzeCodingAgentAdoption(filtered);
+    // Legacy coding agent adoption computation inlined (module removed). Provides backward-compatible stats when artifacts absent.
+    const codingAgentAnalysis: CodingAgentAnalysis = (() => {
+      if (filtered.length === 0) return { totalUsers: 0, totalUniqueUsers: 0, totalCodingAgentRequests: 0, adoptionRate: 0, users: [] };
+      const allUsers = new Set(filtered.map(d => d.user));
+      const totalUniqueUsers = allUsers.size;
+      const userStats = new Map<string, { totalRequests: number; codingAgentRequests: number; models: Set<string>; quota: number | 'unlimited'; }>();
+      for (const row of filtered) {
+        const lower = row.model.toLowerCase();
+        const isCodingAgent = lower.includes('coding agent') || lower.includes('padawan');
+        if (!userStats.has(row.user)) {
+          userStats.set(row.user, { totalRequests: 0, codingAgentRequests: 0, models: new Set(), quota: row.quotaValue });
+        }
+        const stats = userStats.get(row.user)!;
+        stats.totalRequests += row.requestsUsed;
+        if (isCodingAgent) {
+          stats.codingAgentRequests += row.requestsUsed;
+          stats.models.add(row.model);
+        }
+      }
+      const adopters = Array.from(userStats.entries())
+        .filter(([, s]) => s.codingAgentRequests > 0)
+        .map(([user, s]) => ({
+          user,
+          totalRequests: s.totalRequests,
+          codingAgentRequests: s.codingAgentRequests,
+          codingAgentPercentage: s.totalRequests > 0 ? (s.codingAgentRequests / s.totalRequests) * 100 : 0,
+          quota: s.quota,
+          models: Array.from(s.models)
+        }))
+        .sort((a, b) => b.codingAgentRequests - a.codingAgentRequests);
+      const totalCodingAgentRequests = adopters.reduce((sum, u) => sum + u.codingAgentRequests, 0);
+      const adoptionRate = totalUniqueUsers > 0 ? (adopters.length / totalUniqueUsers) * 100 : 0;
+      return { totalUsers: adopters.length, totalUniqueUsers, totalCodingAgentRequests, adoptionRate, users: adopters };
+    })();
     const weeklyExhaustion = computeWeeklyQuotaExhaustion(filtered);
     return {
       processedData: filtered,
