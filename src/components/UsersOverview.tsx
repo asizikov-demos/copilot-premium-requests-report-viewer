@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { UsersQuotaConsumptionChart } from './charts/UsersQuotaConsumptionChart';
+import { UsersConsumptionHeatmap } from './charts/UsersConsumptionHeatmap';
 import { UserSummary } from '@/utils/analytics/powerUsers';
 import { ProcessedData } from '@/types/csv';
 import { UserConsumptionModal } from './UserConsumptionModal';
@@ -48,6 +49,7 @@ const generateUserColors = (users: string[]): Record<string, string> => {
 
 export function UsersOverview({ userData, processedData, allModels, selectedPlan, dailyCumulativeData, quotaArtifacts, usageArtifacts, onBack }: UsersOverviewProps) {
   const [showChart, setShowChart] = useState(true);
+  const [chartType, setChartType] = useState<'heatmap' | 'lines'>('heatmap');
   const [currentPage, setCurrentPage] = useState(0);
   const isMobile = useIsMobile();
   const { selectedUser, open: openUserModal, close: closeUserModal, isOpen } = useUserConsumptionModal();
@@ -180,26 +182,76 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
         <div className="px-4 sm:px-6 py-4 bg-white border-b border-gray-200 flex-shrink-0 relative z-30">
           <div className="flex justify-between items-center mb-4">
             <h4 className="text-lg font-medium text-gray-900">Premium Request Quota Consumption</h4>
-            {isMobile && (
-              <button
-                onClick={() => setShowChart(false)}
-                className="text-gray-400 hover:text-gray-600"
-                aria-label="Hide chart"
-              >
-                ✕
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              <div className="flex bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setChartType('heatmap')}
+                  className={`px-3 py-1 text-sm font-medium rounded transition-colors ${
+                    chartType === 'heatmap'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Heatmap
+                </button>
+                <button
+                  onClick={() => setChartType('lines')}
+                  disabled={chartUsers.length > 1000}
+                  className={`px-3 py-1 text-sm font-medium rounded transition-colors ${
+                    chartType === 'lines'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  } ${chartUsers.length > 1000 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  title={chartUsers.length > 1000 ? `Cannot display ${chartUsers.length} users as lines` : undefined}
+                >
+                  Lines
+                </button>
+              </div>
+              {isMobile && (
+                <button
+                  onClick={() => setShowChart(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                  aria-label="Hide chart"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
           <div className="h-64 sm:h-80 2xl:h-96 relative z-30">
-            <UsersQuotaConsumptionChart
-              dailyCumulativeData={dailyCumulativeData}
-              users={chartUsers}
-              userColors={userColors}
-              currentQuota={currentQuota}
-              quotaTypes={quotaTypes}
-              hasMixedQuotas={hasMixedQuotas}
-              hasMixedLicenses={hasMixedLicenses}
-            />
+            {chartType === 'heatmap' ? (
+              <UsersConsumptionHeatmap
+                dailyCumulativeData={dailyCumulativeData}
+                users={chartUsers}
+                currentQuota={currentQuota}
+                quotaTypes={quotaTypes}
+                hasMixedQuotas={hasMixedQuotas}
+                hasMixedLicenses={hasMixedLicenses}
+              />
+            ) : chartUsers.length > 1000 ? (
+              <div className="flex items-center justify-center h-full bg-gray-50 rounded-lg border-2 border-gray-200">
+                <div className="text-center p-8">
+                  <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Too Many Users to Display</h3>
+                  <p className="text-gray-600 max-w-md">
+                    The line chart cannot display more than 1,000 users ({chartUsers.length.toLocaleString()} users in dataset).
+                    Please use the Heatmap view for better visualization.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <UsersQuotaConsumptionChart
+                dailyCumulativeData={dailyCumulativeData}
+                users={chartUsers}
+                userColors={userColors}
+                currentQuota={currentQuota}
+                quotaTypes={quotaTypes}
+                hasMixedQuotas={hasMixedQuotas}
+                hasMixedLicenses={hasMixedLicenses}
+              />
+            )}
           </div>
         </div>
       )}
