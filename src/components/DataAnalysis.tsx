@@ -174,7 +174,6 @@ function DataAnalysisInner() {
                 codingAgentUsers={codingAgentAnalysis.users}
                 totalUniqueUsers={codingAgentAnalysis.totalUniqueUsers}
                 adoptionRate={codingAgentAnalysis.adoptionRate}
-                processedData={processedData}
                 onBack={() => setView('overview')}
               />
             </div>
