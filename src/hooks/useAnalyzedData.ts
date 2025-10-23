@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { ProcessedData, AnalysisResults, PowerUsersAnalysis, CodingAgentAnalysis } from '@/types/csv';
-import { analyzePowerUsers, computeWeeklyQuotaExhaustion } from '@/utils/analytics';
 import { PRICING } from '@/constants/pricing';
 // New artifact-based analytics (incremental migration)
 import {
@@ -11,7 +10,8 @@ import {
   computeWeeklyQuotaExhaustionFromArtifacts,
   UsageArtifacts,
   QuotaArtifacts,
-  DailyBucketsArtifacts
+  DailyBucketsArtifacts,
+  WeeklyQuotaExhaustionBreakdown
 } from '@/utils/ingestion';
 
 interface UseAnalyzedDataArgs {
@@ -28,14 +28,14 @@ interface UseAnalyzedDataArgs {
 }
 
 interface UseAnalyzedDataReturn {
-  processedData: ProcessedData[]; // filtered
+  processedData: ProcessedData[]; // filtered (retained for billing row-level fields)
   analysis: AnalysisResults;
   userData: { user: string; totalRequests: number; modelBreakdown: Record<string, number>; }[];
   allModels: string[];
   dailyCumulativeData: { date: string; [user: string]: string | number; }[];
   powerUsersAnalysis: PowerUsersAnalysis;
   codingAgentAnalysis: CodingAgentAnalysis;
-  weeklyExhaustion: ReturnType<typeof computeWeeklyQuotaExhaustion>;
+  weeklyExhaustion: WeeklyQuotaExhaustionBreakdown;
 }
 
 /**
@@ -51,127 +51,54 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, minRequestsThre
       quotaArtifacts.quotaByUser && dailyBucketsArtifacts.dailyUserTotals
     );
 
-    if (artifactsAvailable) {
-      // NOTE: Month filtering currently still relies on legacy processed data (will migrate in later step).
+    if (!artifactsAvailable) {
+      // Minimal fallback to support legacy tests relying solely on processedData (billing summary, etc.)
       const filtered = selectedMonths.length === 0
         ? baseProcessed
         : baseProcessed.filter(r => selectedMonths.includes(r.monthKey));
-      // Build hybrid: analysis & heavy computations from artifacts; retain processed subset for components needing row-level billing fields.
-      const analysis = deriveAnalysisFromArtifacts(usageArtifacts!, quotaArtifacts!, dailyBucketsArtifacts!);
-      const dailyCumulativeData = buildDailyCumulativeDataFromArtifacts(dailyBucketsArtifacts!);
-      const powerUsersAnalysis = analyzePowerUsersFromArtifacts(usageArtifacts!, minRequestsThreshold);
-      const codingAgentAnalysis = analyzeCodingAgentAdoptionFromArtifacts(usageArtifacts!, quotaArtifacts!);
-      const weeklyExhaustion = computeWeeklyQuotaExhaustionFromArtifacts(dailyBucketsArtifacts!, quotaArtifacts!);
-      // User summaries (model breakdown etc.) can be taken directly from usageArtifacts
-      const userData = usageArtifacts!.users.map(u => ({ user: u.user, totalRequests: u.totalRequests, modelBreakdown: u.modelBreakdown })).sort((a, b) => b.totalRequests - a.totalRequests);
-      const allModels = Object.keys(usageArtifacts!.modelTotals).sort();
-
+      const analysis: AnalysisResults = (() => {
+        if (filtered.length === 0) return { timeFrame: { start: '', end: '' }, totalUniqueUsers: 0, usersExceedingQuota: 0, requestsByModel: [], quotaBreakdown: { unlimited: [], business: [], enterprise: [], mixed: false, suggestedPlan: null } };
+        const sorted = [...filtered].sort((a,b)=> a.epoch - b.epoch);
+        const timeFrame = { start: sorted[0].dateKey, end: sorted[sorted.length-1].dateKey };
+        const uniqueUsers = new Set(filtered.map(r=> r.user));
+        const requestsByModelMap = new Map<string, number>();
+        const quotaByUser = new Map<string, number | 'unlimited'>();
+        for (const r of filtered) {
+          requestsByModelMap.set(r.model, (requestsByModelMap.get(r.model) || 0) + r.requestsUsed);
+          if (!quotaByUser.has(r.user)) quotaByUser.set(r.user, r.quotaValue);
+        }
+        const requestsByModel = Array.from(requestsByModelMap.entries()).map(([model,totalRequests])=>({ model, totalRequests })).sort((a,b)=> b.totalRequests - a.totalRequests);
+        const unlimited: string[] = []; const business: string[] = []; const enterprise: string[] = [];
+        for (const [u,q] of quotaByUser) { if (q === 'unlimited') unlimited.push(u); else if (q === PRICING.BUSINESS_QUOTA) business.push(u); else if (q === PRICING.ENTERPRISE_QUOTA) enterprise.push(u); }
+        const types = [unlimited.length?'u':null,business.length?'b':null,enterprise.length?'e':null].filter(Boolean);
+        const mixed = types.length > 1;
+        let suggestedPlan: 'business' | 'enterprise' | null = null;
+        if (!mixed && unlimited.length===0) { if (business.length && !enterprise.length) suggestedPlan='business'; else if (enterprise.length && !business.length) suggestedPlan='enterprise'; }
+        return { timeFrame, totalUniqueUsers: uniqueUsers.size, usersExceedingQuota: 0, requestsByModel, quotaBreakdown: { unlimited, business, enterprise, mixed, suggestedPlan } };
+      })();
       return {
-        processedData: filtered, // still provided for components needing row-level details (billing fields)
+        processedData: filtered,
         analysis,
-        userData,
-        allModels,
-        dailyCumulativeData,
-        powerUsersAnalysis,
-        codingAgentAnalysis,
-        weeklyExhaustion,
+        userData: [],
+        allModels: Array.from(new Set(filtered.map(r=> r.model))).sort(),
+        dailyCumulativeData: [],
+        powerUsersAnalysis: { powerUsers: [], totalQualifiedUsers: 0 },
+        codingAgentAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodingAgentRequests: 0, adoptionRate: 0, users: [] },
+        weeklyExhaustion: { totalUsersExhausted: 0, weeks: [] }
       };
     }
 
-    // Legacy pathway
+    // Month filtering still based on processed rows (artifact month filter already derived; next step will remove processed dependency for filtering)
     const filtered = selectedMonths.length === 0
       ? baseProcessed
       : baseProcessed.filter(r => selectedMonths.includes(r.monthKey));
-    const analysis: AnalysisResults = (() => {
-      if (filtered.length === 0) return { timeFrame: { start: '', end: '' }, totalUniqueUsers: 0, usersExceedingQuota: 0, requestsByModel: [], quotaBreakdown: { unlimited: [], business: [], enterprise: [], mixed: false, suggestedPlan: null } };
-      const sorted = [...filtered].sort((a,b)=> a.epoch - b.epoch);
-      const timeFrame = { start: sorted[0].dateKey, end: sorted[sorted.length-1].dateKey };
-      const uniqueUsers = new Set(filtered.map(r=>r.user));
-      const userTotals = new Map<string, number>();
-      const modelTotals = new Map<string, number>();
-      const userQuota = new Map<string, number | 'unlimited'>();
-      for (const r of filtered) {
-        if (!userQuota.has(r.user)) userQuota.set(r.user, r.quotaValue);
-        userTotals.set(r.user, (userTotals.get(r.user)||0)+r.requestsUsed);
-        modelTotals.set(r.model,(modelTotals.get(r.model)||0)+r.requestsUsed);
-      }
-      let usersExceeding = 0;
-      for (const [u,total] of userTotals) { const q = userQuota.get(u); if (q !== undefined && q !== 'unlimited' && total > q) usersExceeding++; }
-      const requestsByModel = Array.from(modelTotals.entries()).map(([model,totalRequests])=>({ model, totalRequests })).sort((a,b)=> b.totalRequests - a.totalRequests);
-      const unlimited: string[] = []; const business: string[] = []; const enterprise: string[] = [];
-      for (const [u,q] of userQuota) { if (q === 'unlimited') unlimited.push(u); else if (q === PRICING.BUSINESS_QUOTA) business.push(u); else if (q === PRICING.ENTERPRISE_QUOTA) enterprise.push(u); }
-      const types = [unlimited.length?'u':null,business.length?'b':null,enterprise.length?'e':null].filter(Boolean);
-      const mixed = types.length > 1;
-      let suggestedPlan: 'business' | 'enterprise' | null = null;
-      if (!mixed && unlimited.length===0) { if (business.length && !enterprise.length) suggestedPlan='business'; else if (enterprise.length && !business.length) suggestedPlan='enterprise'; }
-      return { timeFrame, totalUniqueUsers: uniqueUsers.size, usersExceedingQuota: usersExceeding, requestsByModel, quotaBreakdown: { unlimited, business, enterprise, mixed, suggestedPlan } };
-    })();
-    const userData = (() => {
-      const map = new Map<string, { user: string; totalRequests: number; modelBreakdown: Record<string, number>; }>();
-      for (const r of filtered) {
-        let entry = map.get(r.user);
-        if (!entry) { entry = { user: r.user, totalRequests: 0, modelBreakdown: {} }; map.set(r.user, entry); }
-        entry.totalRequests += r.requestsUsed;
-        entry.modelBreakdown[r.model] = (entry.modelBreakdown[r.model] || 0) + r.requestsUsed;
-      }
-      return Array.from(map.values()).sort((a,b)=> b.totalRequests - a.totalRequests);
-    })();
-    const allModels = Array.from(new Set(filtered.map(d => d.model))).sort();
-    const dailyCumulativeData = (() => {
-      if (filtered.length === 0) return [] as { date: string; [user: string]: string | number; }[];
-      const sorted = [...filtered].sort((a,b)=> a.epoch - b.epoch);
-      const users = Array.from(new Set(filtered.map(d=> d.user))).sort();
-      const start = sorted[0].epoch; const end = sorted[sorted.length-1].epoch;
-      const byDate = new Map<string, ProcessedData[]>();
-      for (const r of sorted) { const arr = byDate.get(r.dateKey); if (arr) arr.push(r); else byDate.set(r.dateKey,[r]); }
-      const totals = new Map<string, number>(); users.forEach(u=> totals.set(u,0));
-      const result: { date: string; [user: string]: string | number; }[] = [];
-      for (let cur = new Date(start); cur.getTime() <= end; cur.setUTCDate(cur.getUTCDate()+1)) {
-        const dateStr = cur.toISOString().slice(0,10);
-        const day = byDate.get(dateStr) || [];
-        for (const r of day) totals.set(r.user,(totals.get(r.user)||0)+r.requestsUsed);
-        const row: { date: string; [user: string]: string | number; } = { date: dateStr }; 
-        for (const u of users) row[u] = totals.get(u) || 0; 
-        result.push(row);
-      }
-      return result;
-    })();
-    const powerUsersAnalysis = analyzePowerUsers(filtered, minRequestsThreshold);
-    // Legacy coding agent adoption computation inlined (module removed). Provides backward-compatible stats when artifacts absent.
-    const codingAgentAnalysis: CodingAgentAnalysis = (() => {
-      if (filtered.length === 0) return { totalUsers: 0, totalUniqueUsers: 0, totalCodingAgentRequests: 0, adoptionRate: 0, users: [] };
-      const allUsers = new Set(filtered.map(d => d.user));
-      const totalUniqueUsers = allUsers.size;
-      const userStats = new Map<string, { totalRequests: number; codingAgentRequests: number; models: Set<string>; quota: number | 'unlimited'; }>();
-      for (const row of filtered) {
-        const lower = row.model.toLowerCase();
-        const isCodingAgent = lower.includes('coding agent') || lower.includes('padawan');
-        if (!userStats.has(row.user)) {
-          userStats.set(row.user, { totalRequests: 0, codingAgentRequests: 0, models: new Set(), quota: row.quotaValue });
-        }
-        const stats = userStats.get(row.user)!;
-        stats.totalRequests += row.requestsUsed;
-        if (isCodingAgent) {
-          stats.codingAgentRequests += row.requestsUsed;
-          stats.models.add(row.model);
-        }
-      }
-      const adopters = Array.from(userStats.entries())
-        .filter(([, s]) => s.codingAgentRequests > 0)
-        .map(([user, s]) => ({
-          user,
-          totalRequests: s.totalRequests,
-          codingAgentRequests: s.codingAgentRequests,
-          codingAgentPercentage: s.totalRequests > 0 ? (s.codingAgentRequests / s.totalRequests) * 100 : 0,
-          quota: s.quota,
-          models: Array.from(s.models)
-        }))
-        .sort((a, b) => b.codingAgentRequests - a.codingAgentRequests);
-      const totalCodingAgentRequests = adopters.reduce((sum, u) => sum + u.codingAgentRequests, 0);
-      const adoptionRate = totalUniqueUsers > 0 ? (adopters.length / totalUniqueUsers) * 100 : 0;
-      return { totalUsers: adopters.length, totalUniqueUsers, totalCodingAgentRequests, adoptionRate, users: adopters };
-    })();
-    const weeklyExhaustion = computeWeeklyQuotaExhaustion(filtered);
+    const analysis = deriveAnalysisFromArtifacts(usageArtifacts!, quotaArtifacts!, dailyBucketsArtifacts!);
+    const dailyCumulativeData = buildDailyCumulativeDataFromArtifacts(dailyBucketsArtifacts!);
+    const powerUsersAnalysis = analyzePowerUsersFromArtifacts(usageArtifacts!, minRequestsThreshold);
+    const codingAgentAnalysis = analyzeCodingAgentAdoptionFromArtifacts(usageArtifacts!, quotaArtifacts!);
+    const weeklyExhaustion = computeWeeklyQuotaExhaustionFromArtifacts(dailyBucketsArtifacts!, quotaArtifacts!);
+    const userData = usageArtifacts!.users.map(u => ({ user: u.user, totalRequests: u.totalRequests, modelBreakdown: u.modelBreakdown })).sort((a, b) => b.totalRequests - a.totalRequests);
+    const allModels = Object.keys(usageArtifacts!.modelTotals).sort();
     return {
       processedData: filtered,
       analysis,
@@ -180,7 +107,7 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, minRequestsThre
       dailyCumulativeData,
       powerUsersAnalysis,
       codingAgentAnalysis,
-      weeklyExhaustion,
+      weeklyExhaustion
     };
   }, [baseProcessed, selectedMonths, minRequestsThreshold, usageArtifacts, quotaArtifacts, dailyBucketsArtifacts]);
 }

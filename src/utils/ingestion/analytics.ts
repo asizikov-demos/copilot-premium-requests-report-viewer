@@ -15,7 +15,8 @@ import type { QuotaArtifacts, UsageArtifacts, DailyBucketsArtifacts, FeatureUsag
 import type { FeatureUtilizationStats } from '@/utils/analytics/insights';
 import { calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
 import { PowerUsersAnalysis, PowerUserScore, CodingAgentAnalysis, UserDailyData } from '@/types/csv';
-import { DailyCodingAgentUsageDatum } from '@/utils/analytics/codingAgent';
+// Legacy DailyCodingAgentUsageDatum type recreated locally (originally from codingAgent.ts)
+export interface DailyCodingAgentUsageDatum { date: string; dailyRequests: number; cumulativeRequests: number; }
 import { CONSUMPTION_THRESHOLDS, UserConsumptionCategory, InsightsOverviewData, FeatureUtilizationStats as LegacyFeatureUtilizationStats } from '@/utils/analytics/insights';
 import { Advisory as LegacyAdvisory } from '@/utils/analytics/advisory';
 
@@ -245,7 +246,13 @@ const POWER_MAX_DISPLAY = 20;
 const POWER_LIGHT = ['gemini-2.0-flash', 'o3-mini', 'o-4-mini'];
 const POWER_HEAVY = ['claude-opus-4', 'claude-3.7-sonnet-thought', 'o3', 'o4', 'gpt-4.5'];
 const POWER_SPECIAL_KEYWORDS = ['code review', 'coding agent', 'padawan', 'spark'];
-const MAX_SPECIAL_FEATURES_SCORE = 20;
+export const MAX_SPECIAL_FEATURES_SCORE = 20;
+export const SPECIAL_FEATURES_CONFIG = [
+  { keyword: 'code review', score: 8, description: 'Code Review feature usage' },
+  { keyword: 'coding agent', score: 8, description: 'Coding Agent feature usage' },
+  { keyword: 'padawan', score: 8, description: 'Padawan feature usage' },
+  { keyword: 'spark', score: 4, description: 'Spark feature usage' }
+] as const;
 
 function categorizeModelForPower(model: string): 'light' | 'medium' | 'heavy' | 'special' {
   const lower = model.toLowerCase();
@@ -257,7 +264,7 @@ function categorizeModelForPower(model: string): 'light' | 'medium' | 'heavy' | 
 
 function isVision(model: string): boolean { return model.toLowerCase().includes('-vision'); }
 
-function calculateSpecialFeaturesScoreArtifact(models: string[]): number {
+export function calculateSpecialFeaturesScore(models: string[]): number {
   const set = new Set(models.map(m => m.toLowerCase()));
   let score = 0; const used = new Set<string>();
   const groups = [
@@ -287,7 +294,7 @@ function buildPowerUserScoreFromArtifact(user: { user: string; modelBreakdown: R
     if (isVision(m)) vision += qty;
   }
   const diversityScore = Math.min(uniqueModels / 4, 1) * 30;
-  const specialFeaturesScore = calculateSpecialFeaturesScoreArtifact(models);
+  const specialFeaturesScore = calculateSpecialFeaturesScore(models);
   const visionScore = totalRequests > 0 ? Math.min((vision / totalRequests) / 0.2, 1) * 15 : 0;
   const heavyRatio = totalRequests > 0 ? heavy / totalRequests : 0;
   let balanceScore = 0;

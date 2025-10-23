@@ -6,7 +6,6 @@ import {
   QuotaAggregator, 
   UsageAggregator, 
   DailyBucketsAggregator,
-  RawDataAggregator,
   FeatureUsageAggregator,
   BillingAggregator,
   IngestionResult 
@@ -42,12 +41,11 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
     const dailyBucketsAggregator = new DailyBucketsAggregator();
     const featureUsageAggregator = new FeatureUsageAggregator();
     const billingAggregator = new BillingAggregator();
-    const rawDataAggregator = new RawDataAggregator(); // retained temporarily until full artifact migration (will be removed)
 
     // Single-pass streaming ingestion with all aggregators
     ingestStream(
       file,
-      [quotaAggregator, usageAggregator, dailyBucketsAggregator, featureUsageAggregator, billingAggregator, rawDataAggregator],
+      [quotaAggregator, usageAggregator, dailyBucketsAggregator, featureUsageAggregator, billingAggregator],
       {
         chunkSize: 1024 * 1024, // 1MB chunks for smooth UI
         progressResolution: 1000,

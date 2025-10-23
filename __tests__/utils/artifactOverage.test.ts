@@ -2,24 +2,30 @@ import { computeOverageSummaryFromArtifacts } from '@/utils/ingestion/analytics'
 import type { UsageArtifacts, QuotaArtifacts } from '@/utils/ingestion';
 import { PRICING } from '@/constants/pricing';
 
-function makeUsage(users: Array<{ user: string; totalRequests: number }>): UsageArtifacts {
-  const modelTotals: Record<string, number> = {};
-  users.forEach(u => { modelTotals['m'] = (modelTotals['m'] || 0) + u.totalRequests; });
-  return {
-    users: users.map(u => ({ user: u.user, totalRequests: u.totalRequests, modelBreakdown: { m: u.totalRequests } })),
-    modelTotals,
-    userCount: users.length,
-    modelCount: Object.keys(modelTotals).length
-  } as UsageArtifacts;
-}
+describe('computeOverageSummaryFromArtifacts', () => {
+  function makeUsage(users: Array<{ user: string; totalRequests: number; modelBreakdown?: Record<string, number> }>): UsageArtifacts {
+    // Derive modelTotals + modelCount consistent with UsageAggregator output
+    const modelTotals: Record<string, number> = {};
+    for (const u of users) {
+      const breakdown = u.modelBreakdown || { m: u.totalRequests };
+      for (const [model, qty] of Object.entries(breakdown)) {
+        modelTotals[model] = (modelTotals[model] || 0) + qty;
+      }
+    }
+    const usage: UsageArtifacts = {
+      users: users.map(u => ({ user: u.user, totalRequests: u.totalRequests, modelBreakdown: u.modelBreakdown || { m: u.totalRequests } })),
+      modelTotals,
+      userCount: users.length,
+      modelCount: Object.keys(modelTotals).length
+    };
+    return usage;
+  }
+  function makeQuota(entries: Array<{ user: string; quota: number | 'unlimited' }>): QuotaArtifacts {
+    const quotaByUser = new Map<string, number | 'unlimited'>();
+    for (const e of entries) quotaByUser.set(e.user, e.quota);
+    return { quotaByUser } as QuotaArtifacts;
+  }
 
-function makeQuota(entries: Array<{ user: string; quota: number | 'unlimited' }>): QuotaArtifacts {
-  const quotaByUser = new Map<string, number | 'unlimited'>();
-  for (const e of entries) quotaByUser.set(e.user, e.quota);
-  return { quotaByUser, conflicts: new Map(), distinctQuotas: new Set(), hasMixedQuotas: false, hasMixedLicenses: false } as QuotaArtifacts;
-}
-
-describe('computeOverageSummary', () => {
   it('returns zero overage when all users under quota', () => {
     const usage = makeUsage([
       { user: 'a', totalRequests: 100 },
@@ -64,10 +70,10 @@ describe('computeOverageSummary', () => {
 
   it('handles mixed quotas and partial overages', () => {
     const usage = makeUsage([
-      { user: 'a', totalRequests: 305 },
-      { user: 'b', totalRequests: 999 },
-      { user: 'c', totalRequests: 1500 },
-      { user: 'd', totalRequests: 310 }
+      { user: 'a', totalRequests: 305 }, // 5 over 300
+      { user: 'b', totalRequests: 999 }, // under 1000
+      { user: 'c', totalRequests: 1500 }, // 500 over 1000
+      { user: 'd', totalRequests: 310 } // 10 over 300
     ]);
     const quota = makeQuota([
       { user: 'a', quota: PRICING.BUSINESS_QUOTA },
@@ -76,7 +82,6 @@ describe('computeOverageSummary', () => {
       { user: 'd', quota: PRICING.BUSINESS_QUOTA }
     ]);
     const res = computeOverageSummaryFromArtifacts(usage, quota);
-    // 5 + 0 + 500 + 10 = 515
     expect(res.totalOverageRequests).toBe(515);
     expect(res.totalOverageCost).toBeCloseTo(515 * PRICING.OVERAGE_RATE_PER_REQUEST, 5);
   });

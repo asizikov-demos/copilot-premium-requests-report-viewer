@@ -1,15 +1,22 @@
-import { 
-  analyzePowerUsers, 
-  calculateSpecialFeaturesScore, 
-  SPECIAL_FEATURES_CONFIG, 
-  MAX_SPECIAL_FEATURES_SCORE
-} from '@/utils/analytics';
+import {
+  analyzePowerUsersFromArtifacts,
+  calculateSpecialFeaturesScore,
+  SPECIAL_FEATURES_CONFIG,
+  MAX_SPECIAL_FEATURES_SCORE,
+  computeWeeklyQuotaExhaustionFromArtifacts
+} from '@/utils/ingestion/analytics';
+import type { UsageArtifacts, QuotaArtifacts } from '@/utils/ingestion';
 import { buildMonthListFromArtifacts } from '@/utils/ingestion/analytics';
 import type { DailyBucketsArtifacts } from '@/utils/ingestion';
 import { processCSVData, analyzeData } from '../helpers/processCSVData';
 import { CSVData, ProcessedData } from '@/types/csv';
 import { validCSVData, powerUserCSVData } from '../fixtures/validCSVData';
 import { createMockCSVData, createMockCSVDataArray } from '../helpers/testUtils';
+
+// Explicit model requests interface to remove implicit any usage
+interface ModelRequest { model: string; totalRequests: number }
+const modelTotal = (requests: ModelRequest[], name: string) => requests.find(r => r.model === name)?.totalRequests;
+interface WeekExhaustion { weekNumber: number; startDate: string; endDate: string; usersExhaustedInWeek: number }
 
 describe('CSV Data Processing', () => {
   describe('processCSVData', () => {
@@ -153,13 +160,9 @@ describe('CSV Data Processing', () => {
 
     it('should aggregate requests by model correctly', () => {
       const processedData = processCSVData(validCSVData);
-      const result = analyzeData(processedData);
-      
-      const gptModel = result.requestsByModel.find(m => m.model === 'gpt-4.1-2025-04-14');
-      expect(gptModel?.totalRequests).toBe(1.00);
-      
-      const claudeModel = result.requestsByModel.find(m => m.model === 'claude-3.7-sonnet-thought');
-      expect(claudeModel?.totalRequests).toBe(2.50);
+      const result = analyzeData(processedData) as { requestsByModel: ModelRequest[] };
+      expect(modelTotal(result.requestsByModel, 'gpt-4.1-2025-04-14')).toBe(1);
+      expect(modelTotal(result.requestsByModel, 'claude-3.7-sonnet-thought')).toBe(2.5);
     });
 
     it('should handle single data point', () => {
@@ -196,10 +199,30 @@ describe('CSV Data Processing', () => {
     });
   });
 
-  describe('analyzePowerUsers', () => {
+  // Helper: build minimal UsageArtifacts from processed data for artifact power user tests
+  function buildUsageArtifacts(processed: ProcessedData[]): UsageArtifacts {
+    const modelTotals: Record<string, number> = {};
+    const usersMap = new Map<string, { totalRequests: number; modelBreakdown: Record<string, number> }>();
+    for (const row of processed) {
+      modelTotals[row.model] = (modelTotals[row.model] || 0) + row.requestsUsed;
+      const entry = usersMap.get(row.user) || { totalRequests: 0, modelBreakdown: {} };
+      entry.totalRequests += row.requestsUsed;
+      entry.modelBreakdown[row.model] = (entry.modelBreakdown[row.model] || 0) + row.requestsUsed;
+      usersMap.set(row.user, entry);
+    }
+    const users = Array.from(usersMap.entries()).map(([user, v]) => {
+      let topModel: string | undefined; let topModelValue = 0;
+      for (const [m, qty] of Object.entries(v.modelBreakdown)) { if (qty > topModelValue) { topModelValue = qty; topModel = m; } }
+      return { user, totalRequests: v.totalRequests, modelBreakdown: v.modelBreakdown, topModel, topModelValue };
+    });
+    return { users, modelTotals, userCount: users.length, modelCount: Object.keys(modelTotals).length } as UsageArtifacts;
+  }
+
+  describe('analyzePowerUsers (artifact-based)', () => {
     it('should identify power users correctly', () => {
       const processedData = processCSVData(powerUserCSVData);
-      const result = analyzePowerUsers(processedData);
+      const usage = buildUsageArtifacts(processedData);
+      const result = analyzePowerUsersFromArtifacts(usage);
       
       expect(result.powerUsers).toHaveLength(1);
       expect(result.powerUsers[0].user).toBe('PowerUser1');
@@ -208,7 +231,8 @@ describe('CSV Data Processing', () => {
 
     it('should calculate power user scores correctly', () => {
       const processedData = processCSVData(powerUserCSVData);
-      const result = analyzePowerUsers(processedData);
+      const usage = buildUsageArtifacts(processedData);
+      const result = analyzePowerUsersFromArtifacts(usage);
       const powerUser = result.powerUsers[0];
       
       expect(powerUser.breakdown).toHaveProperty('diversityScore');
@@ -225,7 +249,8 @@ describe('CSV Data Processing', () => {
 
     it('should categorize model usage correctly', () => {
       const processedData = processCSVData(powerUserCSVData);
-      const result = analyzePowerUsers(processedData);
+      const usage = buildUsageArtifacts(processedData);
+      const result = analyzePowerUsersFromArtifacts(usage);
       const powerUser = result.powerUsers[0];
       
       expect(powerUser.modelUsage.heavy).toBeGreaterThan(0); // gpt-4.5, claude-3.7-sonnet-thought
@@ -248,7 +273,8 @@ describe('CSV Data Processing', () => {
       ];
       
       const processedData = processCSVData(mixedData);
-      const result = analyzePowerUsers(processedData);
+      const usage = buildUsageArtifacts(processedData);
+      const result = analyzePowerUsersFromArtifacts(usage);
       
       // Should only include PowerUser1, not LowUser (who has < 20 requests)
       expect(result.powerUsers).toHaveLength(1);
@@ -256,7 +282,8 @@ describe('CSV Data Processing', () => {
     });
 
     it('should handle empty data gracefully', () => {
-      const result = analyzePowerUsers([]);
+      const usage = buildUsageArtifacts([]);
+      const result = analyzePowerUsersFromArtifacts(usage);
       
       expect(result.powerUsers).toEqual([]);
       expect(result.totalQualifiedUsers).toBe(0);
@@ -277,7 +304,8 @@ describe('CSV Data Processing', () => {
       }
       
       const processedData = processCSVData(manyPowerUsers);
-      const result = analyzePowerUsers(processedData);
+      const usage = buildUsageArtifacts(processedData);
+      const result = analyzePowerUsersFromArtifacts(usage);
       
       expect(result.powerUsers.length).toBeLessThanOrEqual(20);
       expect(result.totalQualifiedUsers).toBe(25);
@@ -490,9 +518,7 @@ describe('CSV Data Processing', () => {
     });
   });
 
-  describe('computeWeeklyQuotaExhaustion', () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { computeWeeklyQuotaExhaustion } = require('@/utils/analytics');
+  describe('computeWeeklyQuotaExhaustion (artifact-based)', () => {
 
     const makeProcessed = (entries: Array<{ ts: string; user: string; used: number; quota: number | 'unlimited'; model?: string }>): ProcessedData[] => {
       return entries.map(e => {
@@ -514,8 +540,43 @@ describe('CSV Data Processing', () => {
       });
     };
 
+    // Helpers to build artifacts for weekly exhaustion tests
+    function buildDailyArtifacts(entries: ProcessedData[]): DailyBucketsArtifacts {
+      const dailyUserTotals = new Map<string, Map<string, number>>();
+      let min: string | null = null; let max: string | null = null;
+      for (const row of entries) {
+        const day = row.dateKey;
+        if (!dailyUserTotals.has(day)) dailyUserTotals.set(day, new Map());
+        const userMap = dailyUserTotals.get(day)!;
+        userMap.set(row.user, (userMap.get(row.user) || 0) + row.requestsUsed);
+        if (!min || day < min) min = day;
+        if (!max || day > max) max = day;
+      }
+      return { dailyUserTotals, dateRange: min && max ? { min, max } : null, months: Array.from(new Set(Array.from(dailyUserTotals.keys()).map(d => d.slice(0,7)))).sort() } as DailyBucketsArtifacts;
+    }
+    function buildQuotaArtifacts(entries: ProcessedData[]): QuotaArtifacts {
+      const quotaByUser = new Map<string, number | 'unlimited'>();
+      const conflicts = new Map<string, Set<number | 'unlimited'>>();
+      const distinctQuotas = new Set<number>();
+      for (const row of entries) {
+        if (!quotaByUser.has(row.user)) quotaByUser.set(row.user, row.quotaValue);
+        else {
+          const existing = quotaByUser.get(row.user);
+          if (existing !== row.quotaValue) {
+            if (!conflicts.has(row.user)) conflicts.set(row.user, new Set());
+            conflicts.get(row.user)!.add(existing!);
+            conflicts.get(row.user)!.add(row.quotaValue!);
+          }
+        }
+        if (typeof row.quotaValue === 'number') distinctQuotas.add(row.quotaValue);
+      }
+      return { quotaByUser, conflicts, distinctQuotas, hasMixedQuotas: distinctQuotas.size > 1, hasMixedLicenses: false } as QuotaArtifacts;
+    }
+
     it('should return empty structure for no data', () => {
-      const result = computeWeeklyQuotaExhaustion([]);
+      const daily = buildDailyArtifacts([]);
+      const quota = buildQuotaArtifacts([]);
+      const result = computeWeeklyQuotaExhaustionFromArtifacts(daily, quota);
       expect(result).toEqual({ totalUsersExhausted: 0, weeks: [] });
     });
 
@@ -534,15 +595,15 @@ describe('CSV Data Processing', () => {
         { ts: '2025-06-22T10:00:00Z', user: 'UserD', used: 200, quota: 300 },
         { ts: '2025-06-29T10:00:00Z', user: 'UserD', used: 110, quota: 300 }, // UserD exhausts week5 (day29)
       ]);
-      const result = computeWeeklyQuotaExhaustion(data);
+      const daily = buildDailyArtifacts(data);
+      const quota = buildQuotaArtifacts(data);
+      const result = computeWeeklyQuotaExhaustionFromArtifacts(daily, quota);
       expect(result.totalUsersExhausted).toBe(3);
       // Expect weeks 1,2,5 to have counts 1 each
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const w1 = result.weeks.find((w: any) => w.weekNumber === 1);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const w2 = result.weeks.find((w: any) => w.weekNumber === 2);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const w5 = result.weeks.find((w: any) => w.weekNumber === 5);
+      const weeks = result.weeks as WeekExhaustion[];
+      const w1 = weeks.find(w => w.weekNumber === 1);
+      const w2 = weeks.find(w => w.weekNumber === 2);
+      const w5 = weeks.find(w => w.weekNumber === 5);
       expect(w1?.usersExhaustedInWeek).toBe(1);
       expect(w2?.usersExhaustedInWeek).toBe(1);
       expect(w5?.usersExhaustedInWeek).toBe(1);
@@ -555,10 +616,11 @@ describe('CSV Data Processing', () => {
         { ts: '2025-06-18T10:00:00Z', user: 'UserA', used: 120, quota: 300 }, // cumulative 320 -> week3
         { ts: '2025-06-25T10:00:00Z', user: 'UserA', used: 50, quota: 300 }  // extra
       ]);
-      const result = computeWeeklyQuotaExhaustion(data);
+      const daily = buildDailyArtifacts(data);
+      const quota = buildQuotaArtifacts(data);
+      const result = computeWeeklyQuotaExhaustionFromArtifacts(daily, quota);
       expect(result.totalUsersExhausted).toBe(1);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const w3 = result.weeks.find((w: any) => w.weekNumber === 3);
+      const w3 = (result.weeks as WeekExhaustion[]).find(w => w.weekNumber === 3);
       expect(w3?.usersExhaustedInWeek).toBe(1);
       expect(result.weeks.length).toBe(1);
     });
@@ -568,7 +630,9 @@ describe('CSV Data Processing', () => {
         { ts: '2025-06-05T10:00:00Z', user: 'UserJ', used: 400, quota: 300 }, // June week1
         { ts: '2025-07-09T10:00:00Z', user: 'UserK', used: 500, quota: 300 }  // July week2
       ]);
-      const result = computeWeeklyQuotaExhaustion(data);
+      const daily = buildDailyArtifacts(data);
+      const quota = buildQuotaArtifacts(data);
+      const result = computeWeeklyQuotaExhaustionFromArtifacts(daily, quota);
       expect(result.totalUsersExhausted).toBe(2);
       // Weeks should contain week1 then week2 (from next month)
       expect(result.weeks[0].weekNumber).toBe(1);
