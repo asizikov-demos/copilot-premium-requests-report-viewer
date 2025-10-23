@@ -3,15 +3,13 @@
 import React, { useState, useMemo } from 'react';
 import { CodingAgentUsageChart } from './charts/CodingAgentUsageChart';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import { computeDailyCodingAgentUsage } from '@/utils/analytics/codingAgent'; // legacy fallback for tests
 import { AnalysisContext } from '@/context/AnalysisContext';
-import { buildDailyCumulativeDataFromArtifacts, analyzeCodingAgentAdoptionFromArtifacts, UsageArtifacts, QuotaArtifacts, DailyBucketsArtifacts, buildDailyCodingAgentUsageFromArtifacts } from '@/utils/ingestion';
+import { UsageArtifacts, QuotaArtifacts, DailyBucketsArtifacts, buildDailyCodingAgentUsageFromArtifacts } from '@/utils/ingestion';
 
 interface CodingAgentOverviewProps {
   codingAgentUsers: import('@/types/csv').CodingAgentUser[];
   totalUniqueUsers: number;
   adoptionRate: number;
-  processedData: import('@/types/csv').ProcessedData[]; // transitional; removed after tests updated
   onBack: () => void;
 }
 
@@ -19,7 +17,6 @@ export function CodingAgentOverview({
   codingAgentUsers, 
   totalUniqueUsers,
   adoptionRate, 
-  processedData,
   onBack 
 }: CodingAgentOverviewProps) {
   const isMobile = useIsMobile();
@@ -31,14 +28,11 @@ export function CodingAgentOverview({
   
   // Memoize daily coding agent data calculation
   const dailyCodingAgentData = useMemo(() => {
-    // Prefer artifact-derived daily coding agent usage if per-model breakdown available.
     if (dailyBucketsArtifacts?.dailyUserModelTotals) {
-      const artifactSeries = buildDailyCodingAgentUsageFromArtifacts(dailyBucketsArtifacts);
-      if (artifactSeries.length > 0) return artifactSeries;
+      return buildDailyCodingAgentUsageFromArtifacts(dailyBucketsArtifacts);
     }
-    // Fallback to legacy scan (tests rely on this during transition)
-    return computeDailyCodingAgentUsage(processedData);
-  }, [processedData, dailyBucketsArtifacts]);
+    return [];
+  }, [dailyBucketsArtifacts]);
 
   return (
     <div className="space-y-6">
