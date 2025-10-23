@@ -1,14 +1,15 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { 
-  ingestStream, 
-  QuotaAggregator, 
-  UsageAggregator, 
+import {
+  ingestStream,
+  QuotaAggregator,
+  UsageAggregator,
   DailyBucketsAggregator,
   FeatureUsageAggregator,
   BillingAggregator,
-  IngestionResult 
+  RawDataAggregator,
+  IngestionResult
 } from '@/utils/ingestion';
 
 interface CSVUploaderProps {
@@ -41,11 +42,12 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
     const dailyBucketsAggregator = new DailyBucketsAggregator();
     const featureUsageAggregator = new FeatureUsageAggregator();
     const billingAggregator = new BillingAggregator();
+    const rawDataAggregator = new RawDataAggregator();
 
     // Single-pass streaming ingestion with all aggregators
     ingestStream(
       file,
-      [quotaAggregator, usageAggregator, dailyBucketsAggregator, featureUsageAggregator, billingAggregator],
+      [quotaAggregator, usageAggregator, dailyBucketsAggregator, featureUsageAggregator, billingAggregator, rawDataAggregator],
       {
         chunkSize: 1024 * 1024, // 1MB chunks for smooth UI
         progressResolution: 1000,

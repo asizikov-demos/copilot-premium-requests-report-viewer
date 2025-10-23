@@ -101,7 +101,7 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
 
   // Build ProcessedData for hooks that still need it (adapter bridge)
   const baseProcessed = useMemo(() => {
-    const rawRows = ingestionResult.outputs.rawData as NormalizedRow[];
+    const rawRows = ingestionResult.outputs.rawData as NormalizedRow[] | undefined;
     return buildProcessedDataFromRows(rawRows);
   }, [ingestionResult]);
 

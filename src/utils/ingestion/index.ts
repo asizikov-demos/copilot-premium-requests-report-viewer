@@ -11,6 +11,7 @@ export * from './UsageAggregator';
 export * from './DailyBucketsAggregator';
 export * from './BillingAggregator';
 export * from './FeatureUsageAggregator';
+export * from './RawDataAggregator';
 export * from './adapters';
 export * from './analytics';
 

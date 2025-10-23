@@ -38,7 +38,10 @@ function isExpandedCSVLike(r: unknown): r is ExpandedCSVLike {
  * raw expanded CSV row objects used by older tests. This maintains backward
  * compatibility during migration without resorting to 'any'.
  */
-export function buildProcessedDataFromRows(rows: unknown[]): ProcessedData[] {
+export function buildProcessedDataFromRows(rows: unknown[] | undefined | null): ProcessedData[] {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return [];
+  }
   return rows.map(raw => {
     if (isExpandedCSVLike(raw)) {
       const quantityNum = typeof raw.quantity === 'number' ? raw.quantity : parseFloat(raw.quantity);

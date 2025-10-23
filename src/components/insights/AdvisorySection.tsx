@@ -1,5 +1,7 @@
-'use client';
+"use client";
 
+import { useContext, useMemo } from 'react';
+import { WeeklyQuotaExhaustionBreakdown } from '@/utils/ingestion/analytics';
 import { Advisory, generateAdvisories } from '@/utils/analytics/advisory';
 import { buildAdvisoriesFromArtifacts, buildConsumptionCategoriesFromArtifacts } from '@/utils/ingestion/analytics';
 import { AnalysisContext } from '@/context/AnalysisContext';
@@ -145,17 +147,17 @@ function NoActionRequired() {
   );
 }
 
-export function AdvisorySection({ 
-  userData, 
-  processedData, 
-  weeklyExhaustion 
+export function AdvisorySection({
+  userData,
+  processedData,
+  weeklyExhaustion
 }: AdvisorySectionProps) {
-  const analysisCtx = React.useContext(AnalysisContext);
+  const analysisCtx = useContext(AnalysisContext);
   const quotaArtifacts = analysisCtx?.quotaArtifacts as QuotaArtifacts | undefined;
   const usageArtifacts = analysisCtx?.usageArtifacts as UsageArtifacts | undefined;
-  const weeklyArtifacts = analysisCtx?.weeklyExhaustion as any; // artifact form (if present)
+  const weeklyArtifacts = analysisCtx?.weeklyExhaustion as WeeklyQuotaExhaustionBreakdown | undefined; // artifact form (if present)
 
-  const advisories = React.useMemo(() => {
+  const advisories = useMemo(() => {
     if (usageArtifacts && quotaArtifacts && weeklyArtifacts && weeklyArtifacts.weeks) {
       // Use artifact path: build categories then advisories
       const categories = buildConsumptionCategoriesFromArtifacts(usageArtifacts, quotaArtifacts);

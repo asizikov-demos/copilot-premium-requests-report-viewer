@@ -1,8 +1,9 @@
 import { BillingAggregator } from '@/utils/ingestion/BillingAggregator';
 import { AggregatorContext, NormalizedRow } from '@/utils/ingestion/types';
+import { PRICING } from '@/constants/pricing';
 
 describe('BillingAggregator', () => {
-  const ctx: AggregatorContext = { pricing: { BUSINESS_QUOTA: 300, ENTERPRISE_QUOTA: 1000, OVERAGE_COST_PER_REQUEST: 0.003 } as any };
+  const ctx: AggregatorContext = { pricing: PRICING };
 
   function buildRow(partial: Partial<NormalizedRow>): NormalizedRow {
     return {

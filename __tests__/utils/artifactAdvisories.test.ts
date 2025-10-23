@@ -1,4 +1,4 @@
-import { buildConsumptionCategoriesFromArtifacts, buildAdvisoriesFromArtifacts } from '@/utils/ingestion/analytics';
+import { buildConsumptionCategoriesFromArtifacts, buildAdvisoriesFromArtifacts, WeeklyQuotaExhaustionBreakdown } from '@/utils/ingestion/analytics';
 import { UsageArtifacts, QuotaArtifacts } from '@/utils/ingestion/types';
 
 function makeUsage(users: Array<{ user: string; total: number; models?: Record<string, number> }>): UsageArtifacts {
@@ -45,7 +45,7 @@ describe('buildAdvisoriesFromArtifacts', () => {
       { user: 'u5', quota: 100 }
     ]);
     const categories = buildConsumptionCategoriesFromArtifacts(usage, quota);
-    const weekly = { totalUsersExhausted: 0, weeks: [] } as any;
+    const weekly: WeeklyQuotaExhaustionBreakdown = { totalUsersExhausted: 0, weeks: [] };
     const advisories = buildAdvisoriesFromArtifacts(categories, weekly, usage, quota);
     expect(advisories.find(a => a.type === 'training')).toBeTruthy();
   });
