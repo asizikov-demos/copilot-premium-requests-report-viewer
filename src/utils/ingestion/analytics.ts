@@ -15,6 +15,7 @@ import type { QuotaArtifacts, UsageArtifacts, DailyBucketsArtifacts, FeatureUsag
 import type { FeatureUtilizationStats } from '@/utils/analytics/insights';
 import { calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
 import { PowerUsersAnalysis, PowerUserScore, CodingAgentAnalysis, UserDailyData } from '@/types/csv';
+import { DailyCodingAgentUsageDatum } from '@/utils/analytics/codingAgent';
 import { CONSUMPTION_THRESHOLDS, UserConsumptionCategory, InsightsOverviewData, FeatureUtilizationStats as LegacyFeatureUtilizationStats } from '@/utils/analytics/insights';
 import { Advisory as LegacyAdvisory } from '@/utils/analytics/advisory';
 
@@ -553,4 +554,43 @@ export function buildAdvisoriesFromArtifacts(
   }
 
   return advisories;
+}
+
+// -----------------------------
+// Coding Agent Daily Usage From Artifacts
+// -----------------------------
+/**
+ * Build daily coding agent usage time series (date, dailyRequests, cumulativeRequests)
+ * without scanning raw processedData rows. Leverages DailyBucketsAggregator's
+ * dailyUserModelTotals nested map. Mirrors legacy computeDailyCodingAgentUsage
+ * behavior by:
+ *  - Including ONLY days with > 0 coding agent (or padawan) requests
+ *  - Sorting by ascending date
+ *  - Computing cumulativeRequests as running sum of dailyRequests
+ * Falls back to empty array if required per-model breakdown map is absent.
+ */
+export function buildDailyCodingAgentUsageFromArtifacts(
+  daily: DailyBucketsArtifacts
+): DailyCodingAgentUsageDatum[] {
+  if (!daily.dailyUserModelTotals) return [];
+  const dayTotals: Array<{ date: string; total: number }> = [];
+  for (const [date, userMap] of daily.dailyUserModelTotals.entries()) {
+    let daySum = 0;
+    for (const modelMap of userMap.values()) {
+      for (const [model, qty] of modelMap.entries()) {
+        const lower = model.toLowerCase();
+        if (lower.includes('coding agent') || lower.includes('padawan')) {
+          daySum += qty;
+        }
+      }
+    }
+    if (daySum > 0) dayTotals.push({ date, total: daySum });
+  }
+  if (dayTotals.length === 0) return [];
+  dayTotals.sort((a, b) => a.date.localeCompare(b.date));
+  let cumulative = 0;
+  return dayTotals.map(d => {
+    cumulative += d.total;
+    return { date: d.date, dailyRequests: d.total, cumulativeRequests: cumulative } as DailyCodingAgentUsageDatum;
+  });
 }

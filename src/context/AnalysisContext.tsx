@@ -110,7 +110,7 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
     setSelectedMonths,
     availableMonths,
     hasMultipleMonthsData
-  } = useAnalysisFilters(baseProcessed);
+  } = useAnalysisFilters(baseProcessed, dailyBucketsArtifacts);
 
   const {
     analysis,

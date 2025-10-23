@@ -18,6 +18,7 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
   private dailyUserModelTotals = new Map<string, Map<string, Map<string, number>>>();
   private minDate: string | null = null;
   private maxDate: string | null = null;
+  private months = new Set<string>();
   
   init(_ctx: AggregatorContext): void {
     // Reset state
@@ -25,6 +26,7 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
     this.dailyUserModelTotals.clear();
     this.minDate = null;
     this.maxDate = null;
+    this.months.clear();
   }
   
   onRow(row: NormalizedRow, _ctx: AggregatorContext): void {
@@ -37,6 +39,8 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
     if (!this.maxDate || day > this.maxDate) {
       this.maxDate = day;
     }
+    // Track month key (YYYY-MM)
+    this.months.add(day.slice(0, 7));
     
     // Accumulate daily totals
     let dayMap = this.dailyUserTotals.get(day);
@@ -66,7 +70,8 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
       dailyUserModelTotals: this.dailyUserModelTotals,
       dateRange: this.minDate && this.maxDate 
         ? { min: this.minDate, max: this.maxDate }
-        : null
+        : null,
+      months: Array.from(this.months).sort()
     };
   }
 }

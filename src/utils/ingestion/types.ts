@@ -136,6 +136,11 @@ export interface DailyBucketsArtifacts {
    * Present when produced by the updated DailyBucketsAggregator.
    */
   dailyUserModelTotals?: Map<string, Map<string, Map<string, number>>>;
+  /**
+   * Sorted list of distinct months (YYYY-MM) encountered while streaming rows.
+   * Enables month filter derivation without scanning processedData.
+   */
+  months?: string[];
 }
 
 /**
