@@ -1,13 +1,12 @@
-import { processCSVData } from '@/utils/analytics/transformations';
+import { processCSVData } from '../helpers/processCSVData';
 import { newFormatRows } from '../fixtures/newFormatCSVData';
 
-describe('processCSVData (new expanded CSV format)', () => {
-  it('maps new-format rows into unified ProcessedData correctly', () => {
+describe('processCSVData (CSV format)', () => {
+  it('maps CSV rows into ProcessedData correctly', () => {
     const processed = processCSVData(newFormatRows);
     expect(processed).toHaveLength(2);
 
     const first = processed[0];
-    expect(first.sourceFormat).toBe('new');
     expect(first.user).toBe('alice');
     expect(first.model).toBe('Claude Sonnet 4');
     expect(first.requestsUsed).toBeCloseTo(3.6);
@@ -21,7 +20,6 @@ describe('processCSVData (new expanded CSV format)', () => {
     expect(first.netAmount).toBeCloseTo(0.144);
 
     const second = processed[1];
-    expect(second.sourceFormat).toBe('new');
     expect(second.user).toBe('bob');
     expect(second.quotaValue).toBe('unlimited');
     expect(second.totalQuota.toLowerCase()).toBe('unlimited');
@@ -34,7 +32,6 @@ describe('processCSVData (new expanded CSV format)', () => {
     processed.forEach(r => {
       expect(typeof r.requestsUsed).toBe('number');
       expect(typeof r.exceedsQuota).toBe('boolean');
-      expect(['legacy','new']).toContain(r.sourceFormat);
     });
   });
 });

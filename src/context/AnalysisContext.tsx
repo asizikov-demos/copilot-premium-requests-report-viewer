@@ -1,18 +1,27 @@
 'use client';
 
 import React, { createContext, useContext, useMemo, useState, useEffect, ReactNode } from 'react';
-import { CSVData, ProcessedData } from '@/types/csv';
-import { processCSVData } from '@/utils/analytics';
+import { ProcessedData } from '@/types/csv';
 import { useAnalysisFilters } from '@/hooks/useAnalysisFilters';
 import { useAnalyzedData } from '@/hooks/useAnalyzedData';
 import { PRICING } from '@/constants/pricing';
+import { 
+  IngestionResult, 
+  QuotaArtifacts, 
+  UsageArtifacts, 
+  DailyBucketsArtifacts,
+  FeatureUsageArtifacts,
+  BillingArtifacts,
+  NormalizedRow,
+  buildProcessedDataFromRows
+} from '@/utils/ingestion';
 
 // Types
 type CopilotPlan = 'business' | 'enterprise';
 type ViewType = 'overview' | 'users' | 'powerUsers' | 'codingAgent' | 'insights';
 
 interface AnalysisProviderProps {
-  csvData: CSVData[];
+  ingestionResult: IngestionResult;
   filename: string;
   onReset: () => void;
   children: ReactNode;
@@ -24,7 +33,14 @@ interface PlanInfoEntry {
 }
 
 interface AnalysisContextValue {
-  // Raw & processed
+  // Aggregator outputs (new architecture)
+  quotaArtifacts: QuotaArtifacts;
+  usageArtifacts: UsageArtifacts;
+  dailyBucketsArtifacts: DailyBucketsArtifacts;
+  featureUsageArtifacts?: FeatureUsageArtifacts; // optional until fully adopted
+  billingArtifacts?: BillingArtifacts; // new billing summary artifacts
+  
+  // Raw & processed (adapter bridge - to be phased out)
   baseProcessed: ProcessedData[];
   processedData: ReturnType<typeof useAnalyzedData>['processedData'];
   analysis: ReturnType<typeof useAnalyzedData>['analysis'];
@@ -36,11 +52,8 @@ interface AnalysisContextValue {
   weeklyExhaustion: ReturnType<typeof useAnalyzedData>['weeklyExhaustion'];
 
   // Filters
-  excludeEarlyJune: boolean;
-  setExcludeEarlyJune: (v: boolean) => void;
   selectedMonths: string[];
-  setSelectedMonths: (months: string[]) => void;
-  hasJune2025Data: boolean;
+  setSelectedMonths: (v: string[]) => void;
   availableMonths: { value: string; label: string }[];
   hasMultipleMonthsData: boolean;
 
@@ -62,28 +75,42 @@ interface AnalysisContextValue {
   onReset: () => void;
 }
 
-const AnalysisContext = createContext<AnalysisContextValue | null>(null);
+// Exporting the raw context as well (in addition to hook) enables optional consumption
+// in components that want to gracefully fallback when provider is absent (e.g. tests
+// that mount a component in isolation like UserConsumptionModal).
+export const AnalysisContext = createContext<AnalysisContextValue | null>(null);
 
 const DEFAULT_MIN_REQUESTS = 20;
 
-export function AnalysisProvider({ csvData, filename, onReset, children }: AnalysisProviderProps) {
+export function AnalysisProvider({ ingestionResult, filename, onReset, children }: AnalysisProviderProps) {
   // Local UI state that was previously in DataAnalysis
   const [selectedPlan, setSelectedPlan] = useState<CopilotPlan>('business');
   const [view, setView] = useState<ViewType>('overview');
   const [minRequestsThreshold, setMinRequestsThreshold] = useState(DEFAULT_MIN_REQUESTS);
 
-  // Heavy processing moved here
-  const baseProcessed = useMemo(() => processCSVData(csvData), [csvData]);
+  // Extract aggregator outputs
+  const { quotaArtifacts, usageArtifacts, dailyBucketsArtifacts, billingArtifacts } = useMemo(() => {
+    return {
+      quotaArtifacts: ingestionResult.outputs.quota as QuotaArtifacts,
+      usageArtifacts: ingestionResult.outputs.usage as UsageArtifacts,
+      dailyBucketsArtifacts: ingestionResult.outputs.dailyBuckets as DailyBucketsArtifacts,
+      featureUsageArtifacts: ingestionResult.outputs.featureUsage as FeatureUsageArtifacts | undefined,
+      billingArtifacts: ingestionResult.outputs.billing as BillingArtifacts | undefined
+    };
+  }, [ingestionResult]);
+
+  // Build ProcessedData for hooks that still need it (adapter bridge)
+  const baseProcessed = useMemo(() => {
+    const rawRows = ingestionResult.outputs.rawData as NormalizedRow[] | undefined;
+    return buildProcessedDataFromRows(rawRows);
+  }, [ingestionResult]);
 
   const {
-    excludeEarlyJune,
-    setExcludeEarlyJune,
     selectedMonths,
     setSelectedMonths,
-    hasJune2025Data,
     availableMonths,
     hasMultipleMonthsData
-  } = useAnalysisFilters(baseProcessed);
+  } = useAnalysisFilters(baseProcessed, dailyBucketsArtifacts);
 
   const {
     analysis,
@@ -96,9 +123,11 @@ export function AnalysisProvider({ csvData, filename, onReset, children }: Analy
     weeklyExhaustion
   } = useAnalyzedData({
     baseProcessed,
-    excludeEarlyJune,
     selectedMonths,
-    minRequestsThreshold
+    minRequestsThreshold,
+    usageArtifacts,
+    quotaArtifacts,
+    dailyBucketsArtifacts
   });
 
   // Auto-select plan when suggested by quota breakdown
@@ -130,6 +159,13 @@ export function AnalysisProvider({ csvData, filename, onReset, children }: Analy
   const isDetailViewActive = view !== 'overview';
 
   const value: AnalysisContextValue = {
+    // New aggregator artifacts
+    quotaArtifacts,
+    usageArtifacts,
+    dailyBucketsArtifacts,
+    featureUsageArtifacts: ingestionResult.outputs.featureUsage as FeatureUsageArtifacts | undefined,
+    billingArtifacts: billingArtifacts,
+    // Legacy adapter bridge
     baseProcessed,
     processedData,
     analysis,
@@ -139,11 +175,8 @@ export function AnalysisProvider({ csvData, filename, onReset, children }: Analy
     powerUsersAnalysis,
     codingAgentAnalysis,
     weeklyExhaustion,
-    excludeEarlyJune,
-    setExcludeEarlyJune,
     selectedMonths,
     setSelectedMonths,
-    hasJune2025Data,
     availableMonths,
     hasMultipleMonthsData,
     minRequestsThreshold,

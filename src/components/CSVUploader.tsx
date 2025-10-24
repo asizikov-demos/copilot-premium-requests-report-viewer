@@ -1,11 +1,19 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import Papa from 'papaparse';
-import { CSVData, NewCSVData } from '@/types/csv';
+import {
+  ingestStream,
+  QuotaAggregator,
+  UsageAggregator,
+  DailyBucketsAggregator,
+  FeatureUsageAggregator,
+  BillingAggregator,
+  RawDataAggregator,
+  IngestionResult
+} from '@/utils/ingestion';
 
 interface CSVUploaderProps {
-  onDataLoad: (data: CSVData[], filename: string) => void;
+  onDataLoad: (result: IngestionResult, filename: string) => void;
   onError: (error: string) => void;
 }
 
@@ -15,37 +23,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
   const [progress, setProgress] = useState(0);
   const [showPrivacyDialog, setShowPrivacyDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const accumulatedData = useRef<(CSVData | NewCSVData)[]>([]);
-  const isFormatValidated = useRef(false);
   const totalRows = useRef(0);
-
-  const validateFormat = (firstRow: CSVData | NewCSVData): boolean => {
-    const isLegacy = 'Timestamp' in firstRow;
-    const isNew = 'date' in firstRow && 'username' in firstRow && 'model' in firstRow && 'quantity' in firstRow;
-
-    if (!isLegacy && !isNew) {
-      onError('Unrecognized CSV format. Expected legacy headers (Timestamp, User, ...) or new headers (date, username, model, quantity).');
-      return false;
-    }
-
-    if (isLegacy) {
-      const requiredLegacy = ['Timestamp', 'User', 'Model', 'Requests Used', 'Exceeds Monthly Quota', 'Total Monthly Quota'];
-      const missingLegacy = requiredLegacy.filter(col => !(col in firstRow));
-      if (missingLegacy.length > 0) {
-        onError(`Missing required legacy columns: ${missingLegacy.join(', ')}`);
-        return false;
-      }
-    } else if (isNew) {
-      const requiredNew = ['date', 'username', 'model', 'quantity'];
-      const missingNew = requiredNew.filter(col => !(col in firstRow));
-      if (missingNew.length > 0) {
-        onError(`Missing required new format columns: ${missingNew.join(', ')}`);
-        return false;
-      }
-    }
-
-    return true;
-  };
 
   const handleFileSelect = (file: File) => {
     if (!file || !file.name.toLowerCase().endsWith('.csv')) {
@@ -56,67 +34,53 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
     // Reset state
     setIsLoading(true);
     setProgress(0);
-    accumulatedData.current = [];
-    isFormatValidated.current = false;
     totalRows.current = 0;
 
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      dynamicTyping: false,
-      chunkSize: 1024 * 1024, // 1MB chunks for smooth UI
-      chunk: (results, parser) => {
-        // Handle errors in chunk
-        if (results.errors.length > 0) {
-          parser.abort();
-          onError(`CSV parsing error: ${results.errors[0].message}`);
-          setIsLoading(false);
-          return;
-        }
+    // Create all aggregators including raw data collector for adapter
+    const quotaAggregator = new QuotaAggregator();
+    const usageAggregator = new UsageAggregator();
+    const dailyBucketsAggregator = new DailyBucketsAggregator();
+    const featureUsageAggregator = new FeatureUsageAggregator();
+    const billingAggregator = new BillingAggregator();
+    const rawDataAggregator = new RawDataAggregator();
 
-        const chunkData = results.data as (CSVData | NewCSVData)[];
-        
-        // Validate format on first chunk
-        if (!isFormatValidated.current && chunkData.length > 0) {
-          if (!validateFormat(chunkData[0])) {
-            parser.abort();
+    // Single-pass streaming ingestion with all aggregators
+    ingestStream(
+      file,
+      [quotaAggregator, usageAggregator, dailyBucketsAggregator, featureUsageAggregator, billingAggregator, rawDataAggregator],
+      {
+        chunkSize: 1024 * 1024, // 1MB chunks for smooth UI
+        progressResolution: 1000,
+        onProgress: (progressInfo) => {
+          totalRows.current = progressInfo.rowsProcessed;
+          // Estimate progress percentage
+          setProgress(prev => Math.min(prev + 5, 90));
+        },
+        onComplete: (result) => {
+          setProgress(100);
+          
+          // Check if CSV is empty
+          if (result.rowsProcessed === 0) {
+            onError('CSV file is empty');
             setIsLoading(false);
+            setProgress(0);
             return;
           }
-          isFormatValidated.current = true;
-        }
-
-        // Accumulate data
-        accumulatedData.current.push(...chunkData);
-        totalRows.current += chunkData.length;
-
-        // Update progress (estimate based on bytes read)
-        // PapaParse doesn't provide exact progress, so we estimate based on chunk count
-        setProgress(prev => Math.min(prev + 10, 90));
-      },
-      complete: () => {
-        if (accumulatedData.current.length === 0) {
-          onError('CSV file is empty');
-          setIsLoading(false);
-          return;
-        }
-
-        // Final processing
-        setProgress(100);
-        
-        // Small delay to show 100% before transitioning
-        setTimeout(() => {
-          onDataLoad(accumulatedData.current as CSVData[], file.name);
+          
+          // Small delay to show 100% before transitioning
+          setTimeout(() => {
+            onDataLoad(result, file.name);
+            setIsLoading(false);
+            setProgress(0);
+          }, 200);
+        },
+        onError: (errorMsg) => {
+          onError(errorMsg);
           setIsLoading(false);
           setProgress(0);
-        }, 200);
-      },
-      error: (error) => {
-        onError(`File reading error: ${error.message}`);
-        setIsLoading(false);
-        setProgress(0);
+        }
       }
-    });
+    );
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -233,11 +197,9 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
           </div>
           
           <div className="text-xs text-gray-400">
-            Supported formats:
+            Required columns: date, username, model, quantity
             <br />
-            <span className="font-medium">Legacy:</span> Timestamp, User, Model, Requests Used, Exceeds Monthly Quota, Total Monthly Quota
-            <br />
-            <span className="font-medium">New:</span> date, username, model, quantity, (optional cost & quota columns)
+            Optional: exceeds_quota, total_monthly_quota, cost columns, organization, cost_center_name
           </div>
           <div className="text-xs text-blue-500 mt-1">
             <a

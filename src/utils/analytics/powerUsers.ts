@@ -1,5 +1,19 @@
 import { PowerUserScore, PowerUsersAnalysis, ProcessedData } from '@/types/csv';
-import { analyzeUserData, UserSummary } from './transformations';
+// Local lightweight user summarization to decouple from removed legacy transformations.
+export interface UserSummary {
+  user: string; totalRequests: number; modelBreakdown: Record<string, number>;
+}
+
+function summarizeUsers(data: ProcessedData[]): UserSummary[] {
+  const map = new Map<string, UserSummary>();
+  for (const row of data) {
+    let summary = map.get(row.user);
+    if (!summary) { summary = { user: row.user, totalRequests: 0, modelBreakdown: {} }; map.set(row.user, summary); }
+    summary.totalRequests += row.requestsUsed;
+    summary.modelBreakdown[row.model] = (summary.modelBreakdown[row.model] || 0) + row.requestsUsed;
+  }
+  return Array.from(map.values()).sort((a,b)=> b.totalRequests - a.totalRequests);
+}
 
 const DEFAULT_MIN_REQUESTS = 20;
 const MAX_POWER_USERS_DISPLAYED = 20;
@@ -114,7 +128,7 @@ export function analyzePowerUsers(
   data: ProcessedData[],
   minRequestsThreshold: number = DEFAULT_MIN_REQUESTS
 ): PowerUsersAnalysis {
-  const userSummaries: UserSummary[] = analyzeUserData(data);
+  const userSummaries: UserSummary[] = summarizeUsers(data);
   const qualifiedUsers: UserSummary[] = userSummaries.filter((u: UserSummary) => u.totalRequests >= minRequestsThreshold);
   const powerUserScores: PowerUserScore[] = qualifiedUsers.map(calculatePowerUserScore);
   const topPowerUsers: PowerUserScore[] = powerUserScores

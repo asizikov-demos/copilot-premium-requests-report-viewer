@@ -1,39 +1,39 @@
-import { processCSVData, analyzeData, getUserQuotaValue } from '../../src/utils/analytics';
+import { processCSVData, analyzeData } from '../helpers/processCSVData';
 import { CSVData } from '../../src/types/csv';
 
 describe('Mixed Quota Support', () => {
   const mockData: CSVData[] = [
     {
-      Timestamp: '2025-06-01T10:00:00Z',
-      User: 'UserA',
-      Model: 'gpt-4.1-2025-04-14',
-      'Requests Used': '5.00',
-      'Exceeds Monthly Quota': 'false',
-      'Total Monthly Quota': '300'
+      date: '2025-06-01',
+      username: 'UserA',
+      model: 'gpt-4.1-2025-04-14',
+      quantity: '5.00',
+      exceeds_quota: 'false',
+      total_monthly_quota: '300'
     },
     {
-      Timestamp: '2025-06-15T11:00:00Z',
-      User: 'UserB',
-      Model: 'claude-3.5-sonnet-2024-10-22',
-      'Requests Used': '10.50',
-      'Exceeds Monthly Quota': 'false',
-      'Total Monthly Quota': '1000'
+      date: '2025-06-15',
+      username: 'UserB',
+      model: 'claude-3.5-sonnet-2024-10-22',
+      quantity: '10.50',
+      exceeds_quota: 'false',
+      total_monthly_quota: '1000'
     },
     {
-      Timestamp: '2025-07-01T10:00:00Z',
-      User: 'UserC',
-      Model: 'gpt-4.1-2025-04-14',
-      'Requests Used': '15.25',
-      'Exceeds Monthly Quota': 'false',
-      'Total Monthly Quota': 'Unlimited'
+      date: '2025-07-01',
+      username: 'UserC',
+      model: 'gpt-4.1-2025-04-14',
+      quantity: '15.25',
+      exceeds_quota: 'false',
+      total_monthly_quota: 'Unlimited'
     },
     {
-      Timestamp: '2025-07-10T11:00:00Z',
-      User: 'UserA',
-      Model: 'gemini-2.0-flash',
-      'Requests Used': '350.00',
-      'Exceeds Monthly Quota': 'true',
-      'Total Monthly Quota': '300'
+      date: '2025-07-10',
+      username: 'UserA',
+      model: 'gemini-2.0-flash',
+      quantity: '350.00',
+      exceeds_quota: 'true',
+      total_monthly_quota: '300'
     }
   ];
 
@@ -65,32 +65,32 @@ describe('Mixed Quota Support', () => {
     expect(analysis.usersExceedingQuota).toBe(1); // Only UserA
   });
 
-  it('should get user quota value correctly', () => {
+  it('should resolve user quota values from first occurrence', () => {
     const processedData = processCSVData(mockData);
-    
-    expect(getUserQuotaValue(processedData, 'UserA')).toBe(300);
-    expect(getUserQuotaValue(processedData, 'UserB')).toBe(1000);
-    expect(getUserQuotaValue(processedData, 'UserC')).toBe('unlimited');
-    expect(getUserQuotaValue(processedData, 'NonExistentUser')).toBe('unlimited');
+    const quota = (user: string) => processedData.find(r => r.user === user)?.quotaValue ?? 'unlimited';
+    expect(quota('UserA')).toBe(300);
+    expect(quota('UserB')).toBe(1000);
+    expect(quota('UserC')).toBe('unlimited');
+    expect(quota('NonExistentUser')).toBe('unlimited');
   });
 
   it('should suggest business plan for all business users', () => {
     const businessOnlyData: CSVData[] = [
       {
-        Timestamp: '2025-06-01T10:00:00Z',
-        User: 'UserA',
-        Model: 'gpt-4.1-2025-04-14',
-        'Requests Used': '5.00',
-        'Exceeds Monthly Quota': 'false',
-        'Total Monthly Quota': '300'
+        date: '2025-06-01',
+        username: 'UserA',
+        model: 'gpt-4.1-2025-04-14',
+        quantity: '5.00',
+        exceeds_quota: 'false',
+        total_monthly_quota: '300'
       },
       {
-        Timestamp: '2025-06-15T11:00:00Z',
-        User: 'UserB',
-        Model: 'claude-3.5-sonnet-2024-10-22',
-        'Requests Used': '10.50',
-        'Exceeds Monthly Quota': 'false',
-        'Total Monthly Quota': '300'
+        date: '2025-06-15',
+        username: 'UserB',
+        model: 'claude-3.5-sonnet-2024-10-22',
+        quantity: '10.50',
+        exceeds_quota: 'false',
+        total_monthly_quota: '300'
       }
     ];
 
@@ -107,20 +107,20 @@ describe('Mixed Quota Support', () => {
   it('should suggest enterprise plan for all enterprise users', () => {
     const enterpriseOnlyData: CSVData[] = [
       {
-        Timestamp: '2025-06-01T10:00:00Z',
-        User: 'UserA',
-        Model: 'gpt-4.1-2025-04-14',
-        'Requests Used': '5.00',
-        'Exceeds Monthly Quota': 'false',
-        'Total Monthly Quota': '1000'
+        date: '2025-06-01',
+        username: 'UserA',
+        model: 'gpt-4.1-2025-04-14',
+        quantity: '5.00',
+        exceeds_quota: 'false',
+        total_monthly_quota: '1000'
       },
       {
-        Timestamp: '2025-06-15T11:00:00Z',
-        User: 'UserB',
-        Model: 'claude-3.5-sonnet-2024-10-22',
-        'Requests Used': '10.50',
-        'Exceeds Monthly Quota': 'false',
-        'Total Monthly Quota': '1000'
+        date: '2025-06-15',
+        username: 'UserB',
+        model: 'claude-3.5-sonnet-2024-10-22',
+        quantity: '10.50',
+        exceeds_quota: 'false',
+        total_monthly_quota: '1000'
       }
     ];
 

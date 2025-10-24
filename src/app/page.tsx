@@ -3,16 +3,16 @@
 import { useState } from 'react';
 import { CSVUploader } from '@/components/CSVUploader';
 import { DataAnalysis } from '@/components/DataAnalysis';
-import { CSVData } from '@/types/csv';
+import { IngestionResult } from '@/utils/ingestion';
 
 export default function Home() {
-  const [csvData, setCsvData] = useState<CSVData[]>([]);
+  const [ingestionResult, setIngestionResult] = useState<IngestionResult | null>(null);
   const [filename, setFilename] = useState<string>('');
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [error, setError] = useState<string>('');
 
-  const handleDataLoad = (data: CSVData[], filename: string) => {
-    setCsvData(data);
+  const handleDataLoad = (result: IngestionResult, filename: string) => {
+    setIngestionResult(result);
     setFilename(filename);
     setIsDataLoaded(true);
     setError('');
@@ -24,7 +24,7 @@ export default function Home() {
   };
 
   const handleReset = () => {
-    setCsvData([]);
+    setIngestionResult(null);
     setFilename('');
     setIsDataLoaded(false);
     setError('');
@@ -59,9 +59,9 @@ export default function Home() {
 
         {!isDataLoaded ? (
           <CSVUploader onDataLoad={handleDataLoad} onError={handleError} />
-        ) : (
-          <DataAnalysis csvData={csvData} filename={filename} onReset={handleReset} />
-        )}
+        ) : ingestionResult ? (
+          <DataAnalysis ingestionResult={ingestionResult} filename={filename} onReset={handleReset} />
+        ) : null}
       </div>
     </main>
   );

@@ -1,7 +1,12 @@
-'use client';
+"use client";
 
+import { useContext, useMemo } from 'react';
+import { WeeklyQuotaExhaustionBreakdown } from '@/utils/ingestion/analytics';
 import { Advisory, generateAdvisories } from '@/utils/analytics/advisory';
-import { UserSummary } from '@/utils/analytics/transformations';
+import { buildAdvisoriesFromArtifacts, buildConsumptionCategoriesFromArtifacts } from '@/utils/ingestion/analytics';
+import { AnalysisContext } from '@/context/AnalysisContext';
+import { QuotaArtifacts, UsageArtifacts } from '@/utils/ingestion/types';
+import { UserSummary } from '@/utils/analytics/powerUsers';
 import { ProcessedData } from '@/types/csv';
 import { WeeklyExhaustionData } from '@/utils/analytics/weeklyQuota';
 
@@ -142,12 +147,25 @@ function NoActionRequired() {
   );
 }
 
-export function AdvisorySection({ 
-  userData, 
-  processedData, 
-  weeklyExhaustion 
+export function AdvisorySection({
+  userData,
+  processedData,
+  weeklyExhaustion
 }: AdvisorySectionProps) {
-  const advisories = generateAdvisories(userData, processedData, weeklyExhaustion);
+  const analysisCtx = useContext(AnalysisContext);
+  const quotaArtifacts = analysisCtx?.quotaArtifacts as QuotaArtifacts | undefined;
+  const usageArtifacts = analysisCtx?.usageArtifacts as UsageArtifacts | undefined;
+  const weeklyArtifacts = analysisCtx?.weeklyExhaustion as WeeklyQuotaExhaustionBreakdown | undefined; // artifact form (if present)
+
+  const advisories = useMemo(() => {
+    if (usageArtifacts && quotaArtifacts && weeklyArtifacts && weeklyArtifacts.weeks) {
+      // Use artifact path: build categories then advisories
+      const categories = buildConsumptionCategoriesFromArtifacts(usageArtifacts, quotaArtifacts);
+      return buildAdvisoriesFromArtifacts(categories, weeklyArtifacts, usageArtifacts, quotaArtifacts);
+    }
+    // Fallback to legacy generator
+    return generateAdvisories(userData, processedData, weeklyExhaustion);
+  }, [usageArtifacts, quotaArtifacts, weeklyArtifacts, userData, processedData, weeklyExhaustion]);
   
   if (advisories.length === 0) {
     return <NoActionRequired />;

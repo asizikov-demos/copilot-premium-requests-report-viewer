@@ -1,17 +1,18 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useContext } from 'react';
 import { UserDailyStackedChart } from './charts/UserDailyStackedChart';
 import { UserConsumptionModalProps } from '@/types/csv';
-import { generateUserDailyModelData } from '@/utils/analytics';
-import { 
-  getUserData, 
-  calculateUserTotalRequests, 
-  calculateOverageRequests, 
-  calculateOverageCost 
+import {
+  getUserData,
+  calculateUserTotalRequests,
+  calculateOverageRequests,
+  calculateOverageCost
 } from '@/utils/userCalculations';
 import { PRICING } from '@/constants/pricing';
 import { FullScreenModal } from './primitives/FullScreenModal';
+import { AnalysisContext } from '@/context/AnalysisContext';
+import { buildUserDailyModelDataFromArtifacts, UsageArtifacts, QuotaArtifacts, DailyBucketsArtifacts, getUserQuota } from '@/utils/ingestion';
 
 // Generate colors for model bars
 const generateModelColors = (models: string[]): Record<string, string> => {
@@ -44,11 +45,41 @@ export function UserConsumptionModal({
   onClose
 }: UserConsumptionModalProps) {
   const [mounted, setMounted] = useState(false);
+  // Optional context (may be absent in isolated test rendering)
+  const analysisCtx = useContext(AnalysisContext);
+
+  // Artifact references (undefined when context absent)
+  const usageArtifacts = analysisCtx?.usageArtifacts as UsageArtifacts | undefined;
+  const dailyBucketsArtifacts = analysisCtx?.dailyBucketsArtifacts as DailyBucketsArtifacts | undefined;
+  const quotaArtifacts = analysisCtx?.quotaArtifacts as QuotaArtifacts | undefined;
+
+  const artifactUserQuota = quotaArtifacts ? getUserQuota(quotaArtifacts, user) : undefined;
+  const effectiveUserQuotaValue = artifactUserQuota !== undefined ? artifactUserQuota : userQuotaValue;
 
   // Generate daily model data for this user
   const userDailyData = useMemo(() => {
-    return generateUserDailyModelData(processedData, user);
-  }, [processedData, user]);
+    if (usageArtifacts && dailyBucketsArtifacts?.dailyUserModelTotals) {
+      return buildUserDailyModelDataFromArtifacts(dailyBucketsArtifacts, usageArtifacts, user);
+    }
+    // Minimal legacy fallback for tests (re-implemented locally after removing transformations.ts)
+    const userRows = processedData.filter(d => d.user === user);
+    if (userRows.length === 0) return [];
+    const allSorted = [...processedData].sort((a,b)=> a.epoch - b.epoch);
+    const start = allSorted[0].epoch; const end = allSorted[allSorted.length-1].epoch;
+    const models = Array.from(new Set(userRows.map(r=>r.model))).sort();
+    const byDate = new Map<string, typeof processedData>();
+    userRows.forEach(r => { const arr = byDate.get(r.dateKey); if (arr) arr.push(r); else byDate.set(r.dateKey,[r]); });
+    let cumulative = 0; const result: import('@/types/csv').UserDailyData[] = [];
+    for (let current = new Date(start); current.getTime() <= end; current.setUTCDate(current.getUTCDate()+1)) {
+      const dateStr = current.toISOString().slice(0,10);
+      const day = byDate.get(dateStr) || [];
+      const row: import('@/types/csv').UserDailyData = { date: dateStr, totalCumulative: 0 } as import('@/types/csv').UserDailyData;
+      let dailyTotal = 0; models.forEach(m => { row[m] = 0; });
+      for (const rec of day) { row[rec.model] = (row[rec.model] as number) + rec.requestsUsed; dailyTotal += rec.requestsUsed; }
+      cumulative += dailyTotal; row.totalCumulative = cumulative; result.push(row);
+    }
+    return result;
+  }, [processedData, user, usageArtifacts, dailyBucketsArtifacts]);
 
   // Get filtered user data (single source of truth)
   const userData = useMemo(() => {
@@ -64,11 +95,15 @@ export function UserConsumptionModal({
 
   // Calculate user's total requests using shared utility
   const userTotalRequests = useMemo(() => {
+    if (usageArtifacts) {
+      const agg = usageArtifacts.users.find(u => u.user === user);
+      if (agg) return agg.totalRequests;
+    }
     return calculateUserTotalRequests(processedData, user);
-  }, [processedData, user]);
+  }, [processedData, user, usageArtifacts]);
 
   // Calculate overage requests and cost using user's actual quota
-  const effectiveQuota = userQuotaValue === 'unlimited' ? Infinity : userQuotaValue;
+  const effectiveQuota = effectiveUserQuotaValue === 'unlimited' ? Infinity : effectiveUserQuotaValue;
   const overageRequests = useMemo(() => {
     return calculateOverageRequests(userTotalRequests, effectiveQuota);
   }, [userTotalRequests, effectiveQuota]);
@@ -226,9 +261,9 @@ export function UserConsumptionModal({
                 {' '} - Daily Usage Overview
               </p>
               <p className="text-xs sm:text-sm text-gray-500 truncate">
-                Total requests: {userTotalRequests.toFixed(1)} / {userQuotaValue === 'unlimited' ? 'Unlimited' : userQuotaValue} quota
+                Total requests: {userTotalRequests.toFixed(1)} / {effectiveUserQuotaValue === 'unlimited' ? 'Unlimited' : effectiveUserQuotaValue} quota
               </p>
-              {overageRequests > 0 && userQuotaValue !== 'unlimited' && (
+              {overageRequests > 0 && effectiveUserQuotaValue !== 'unlimited' && (
                 <p className="text-xs sm:text-sm text-red-600 font-medium truncate" role="alert">
                   Overage cost: ${overageCost.toFixed(2)} ({overageRequests.toFixed(1)} × ${PRICING.OVERAGE_RATE_PER_REQUEST.toFixed(2)})
                 </p>

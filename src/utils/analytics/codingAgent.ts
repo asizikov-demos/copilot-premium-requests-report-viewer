@@ -1,32 +1,8 @@
 import { ProcessedData } from '@/types/csv';
+export interface DailyCodingAgentUsageDatum { date: string; dailyRequests: number; cumulativeRequests: number; }
 
-// Existing adoption analysis stays in original file (import path preserved to avoid breaking tests).
-// This file adds a pure daily usage computation consumed by the overview component.
-
-export interface DailyCodingAgentUsageDatum {
-  date: string; // YYYY-MM-DD
-  dailyRequests: number;
-  cumulativeRequests: number;
-}
-
-export function computeDailyCodingAgentUsage(processedData: ProcessedData[]): DailyCodingAgentUsageDatum[] {
-  const dailyData = new Map<string, number>();
-  processedData.forEach(row => {
-    const lower = row.model.toLowerCase();
-    if (lower.includes('coding agent') || lower.includes('padawan')) {
-      // Keep UTC date fragment without timezone conversion
-      const date = new Date(row.timestamp).toISOString().split('T')[0];
-      dailyData.set(date, (dailyData.get(date) || 0) + row.requestsUsed);
-    }
-  });
-  const sorted = Array.from(dailyData.keys()).sort();
-  let cumulative = 0;
-  return sorted.map(date => {
-    const daily = dailyData.get(date) || 0;
-    cumulative += daily;
-    return { date, dailyRequests: daily, cumulativeRequests: cumulative };
-  });
-}
+// NOTE: Daily usage helper has migrated to artifact implementation: buildDailyCodingAgentUsageFromArtifacts.
+// This legacy file now only retains adoption analysis for backward compatibility until tests migrate.
 
 export function analyzeCodingAgentAdoption(data: ProcessedData[]): import('@/types/csv').CodingAgentAnalysis {
   if (data.length === 0) {

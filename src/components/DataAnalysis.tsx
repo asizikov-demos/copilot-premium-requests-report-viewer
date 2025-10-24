@@ -3,7 +3,6 @@
 import React from 'react';
 // Recharts usage extracted to dedicated chart component
 import { ModelRequestsBarChart } from './charts/ModelRequestsBarChart';
-import { CSVData } from '@/types/csv';
 import { UsersOverview } from './UsersOverview';
 import { PowerUsersOverview } from './PowerUsersOverview';
 import { CodingAgentOverview } from './CodingAgentOverview';
@@ -14,7 +13,7 @@ import { AnalysisProvider, useAnalysisContext } from '@/context/AnalysisContext'
 // The outer component now only supplies provider props
 
 interface DataAnalysisProps {
-  csvData: CSVData[];
+  ingestionResult: import('@/utils/ingestion').IngestionResult;
   filename: string;
   onReset: () => void;
 }
@@ -37,9 +36,6 @@ function DataAnalysisInner() {
     codingAgentAnalysis,
     processedData,
     weeklyExhaustion,
-    excludeEarlyJune,
-    setExcludeEarlyJune,
-    hasJune2025Data,
     availableMonths,
     hasMultipleMonthsData,
     selectedMonths,
@@ -48,23 +44,30 @@ function DataAnalysisInner() {
     chartData,
     planInfo,
     filename,
-    onReset
+    onReset,
+    quotaArtifacts,
+    usageArtifacts,
+    billingArtifacts
   } = useAnalysisContext();
 
   // Aggregate cost metrics if present (new format only). We deliberately do NOT
   // derive pricing from raw request counts; instead we trust provided billing columns.
-  const costMetricsAvailable = processedData.some(d => d.netAmount !== undefined);
-  const aggregatedCosts = costMetricsAvailable
-    ? processedData.reduce(
-        (acc, row) => {
-          if (row.netAmount !== undefined) acc.net += row.netAmount;
-          if (row.grossAmount !== undefined) acc.gross += row.grossAmount;
-          if (row.discountAmount !== undefined) acc.discount += row.discountAmount;
-          return acc;
-        },
-        { net: 0, gross: 0, discount: 0 }
-      )
-    : null;
+  // Prefer BillingAggregator artifacts; fallback to legacy scan only if absent
+  // Determine cost metrics availability. Prefer BillingAggregator artifacts; fallback to legacy processedData scan for backward compatibility (tests / legacy path).
+  let costMetricsAvailable = false;
+  let aggregatedCosts: { net: number; gross: number; discount: number } | null = null;
+  if (billingArtifacts?.hasAnyBillingData) {
+    costMetricsAvailable = true;
+    aggregatedCosts = billingArtifacts.totals;
+  } else if (processedData.some(d => d.netAmount !== undefined || d.grossAmount !== undefined || d.discountAmount !== undefined)) {
+    costMetricsAvailable = true;
+    aggregatedCosts = processedData.reduce((acc, row) => {
+      if (row.netAmount !== undefined) acc.net += row.netAmount;
+      if (row.grossAmount !== undefined) acc.gross += row.grossAmount;
+      if (row.discountAmount !== undefined) acc.discount += row.discountAmount;
+      return acc;
+    }, { net: 0, gross: 0, discount: 0 });
+  }
 
   return (
     <div className="w-full mx-auto">
@@ -160,6 +163,8 @@ function DataAnalysisInner() {
                 allModels={allModels}
                 selectedPlan={selectedPlan}
                 dailyCumulativeData={dailyCumulativeData}
+                quotaArtifacts={quotaArtifacts}
+                usageArtifacts={usageArtifacts}
                 onBack={() => setView('overview')}
               />
             </div>
@@ -169,7 +174,6 @@ function DataAnalysisInner() {
                 codingAgentUsers={codingAgentAnalysis.users}
                 totalUniqueUsers={codingAgentAnalysis.totalUniqueUsers}
                 adoptionRate={codingAgentAnalysis.adoptionRate}
-                processedData={processedData}
                 onBack={() => setView('overview')}
               />
             </div>
@@ -387,27 +391,6 @@ function DataAnalysisInner() {
                 </select>
               </div>
 
-              {/* Date Filter */}
-              {hasJune2025Data && (
-                <div className="mb-6">
-                  <div className="flex items-center">
-                    <input
-                      id="exclude-early-june"
-                      type="checkbox"
-                      checked={excludeEarlyJune}
-                      onChange={(e) => setExcludeEarlyJune(e.target.checked)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="exclude-early-june" className="ml-2 block text-sm text-gray-700">
-                      Exclude data before 19th of June
-                    </label>
-                  </div>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Filters out requests from June 1-18, 2025. These requests were not billable.
-                  </p>
-                </div>
-              )}
-
               {/* Billing Period Filter */}
               {hasMultipleMonthsData && (
                 <div className="mb-6">
@@ -524,9 +507,9 @@ function DataAnalysisInner() {
 }
 
 export function DataAnalysis(props: DataAnalysisProps) {
-  const { csvData, filename, onReset } = props;
+  const { ingestionResult, filename, onReset } = props;
   return (
-    <AnalysisProvider csvData={csvData} filename={filename} onReset={onReset}>
+    <AnalysisProvider ingestionResult={ingestionResult} filename={filename} onReset={onReset}>
       <DataAnalysisInner />
     </AnalysisProvider>
   );

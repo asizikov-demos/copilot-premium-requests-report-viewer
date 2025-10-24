@@ -14,14 +14,12 @@ export function computeWeeklyQuotaExhaustion(data: ProcessedData[]): WeeklyQuota
   for (const [user, rows] of userEntries.entries()) {
     const quotaValue = rows[0].quotaValue;
     if (quotaValue === 'unlimited' || typeof quotaValue !== 'number') continue;
-    const sorted = rows.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-    let cumulative = 0; let exhausted = false;
+    const sorted = rows.sort((a, b) => a.epoch - b.epoch);
+    let cumulative = 0;
     for (const r of sorted) {
       cumulative += r.requestsUsed;
-      if (!exhausted && cumulative >= quotaValue) {
-        exhausted = true;
-        const monthKey = `${r.timestamp.getUTCFullYear()}-${String(r.timestamp.getUTCMonth() + 1).padStart(2, '0')}`;
-        records.push({ user, exhaustionDate: r.timestamp, monthKey });
+      if (cumulative >= quotaValue) {
+        records.push({ user, exhaustionDate: r.timestamp, monthKey: r.monthKey });
         break;
       }
     }
@@ -35,8 +33,8 @@ export function computeWeeklyQuotaExhaustion(data: ProcessedData[]): WeeklyQuota
     const year = d.getUTCFullYear(); const month = d.getUTCMonth();
     const weekStartDay = weekNumber === 1 ? 1 : (weekNumber - 1) * 7 + 1;
     const weekEndDay = weekNumber < 5 ? weekStartDay + 6 : new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-    const startDate = new Date(Date.UTC(year, month, weekStartDay)).toISOString().split('T')[0];
-    const endDate = new Date(Date.UTC(year, month, weekEndDay)).toISOString().split('T')[0];
+    const startDate = `${year}-${String(month + 1).padStart(2,'0')}-${String(weekStartDay).padStart(2,'0')}`;
+    const endDate = `${year}-${String(month + 1).padStart(2,'0')}-${String(weekEndDay).padStart(2,'0')}`;
     const mapKey = `${rec.monthKey}-W${weekNumber}`;
     if (!weekMap.has(mapKey)) weekMap.set(mapKey, { key: { monthKey: rec.monthKey, weekNumber, startDate, endDate }, users: new Set() });
     weekMap.get(mapKey)!.users.add(rec.user);

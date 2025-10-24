@@ -3,15 +3,21 @@ import { ProcessedData } from '@/types/csv';
 import { UserSummary } from '@/utils/analytics';
 
 function makeProcessed(row: Partial<ProcessedData>): ProcessedData {
+  const timestamp = row.timestamp || new Date('2025-06-01T00:00:00Z');
+  const iso = timestamp.toISOString();
   return {
-    timestamp: row.timestamp || new Date('2025-06-01T00:00:00Z'),
+    timestamp: timestamp as Date,
     user: row.user || 'u',
     model: row.model || 'o3-mini',
     requestsUsed: row.requestsUsed ?? 0,
     exceedsQuota: row.exceedsQuota ?? false,
     totalQuota: row.totalQuota || '300',
-    quotaValue: row.quotaValue ?? 300
-  };
+    quotaValue: row.quotaValue ?? 300,
+    iso,
+    dateKey: iso.slice(0, 10),
+    monthKey: iso.slice(0, 7),
+    epoch: (timestamp as Date).getTime()
+  } as ProcessedData;
 }
 
 describe('insights analytics', () => {
@@ -44,6 +50,7 @@ describe('insights analytics', () => {
     ];
     const total = calculateUnusedValue(users);
     // unused: a=200, b=50 => 250 * overage rate (import pricing constant to avoid magic number).
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { PRICING } = require('@/constants/pricing');
     expect(total).toBeCloseTo((200 + 50) * PRICING.OVERAGE_RATE_PER_REQUEST, 6);
   });

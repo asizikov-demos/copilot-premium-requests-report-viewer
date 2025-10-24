@@ -1,5 +1,6 @@
-import { CSVData, NewCSVData, ProcessedData, AnalysisResults } from '@/types/csv';
+import { CSVData, ProcessedData, AnalysisResults } from '@/types/csv';
 import { parseQuotaValue, buildQuotaBreakdown } from './quota';
+import { buildDateKeys } from '../dateKeys';
 
 export interface UserSummary {
   user: string;
@@ -8,52 +9,30 @@ export interface UserSummary {
 }
 
 // Convert raw CSV rows into strongly typed processed data (UTC-sensitive: timestamps used as-is)
-// Detect row format (legacy vs new) using presence of discriminant keys.
-function detectRowFormat(row: CSVData | NewCSVData): 'legacy' | 'new' {
-  return (row as CSVData).Timestamp !== undefined ? 'legacy' : 'new';
-}
-
-// Convert raw mixed-format rows (legacy or new) into unified processed records.
-// This maintains backward compatibility while enabling expanded analytics.
-export function processCSVData(rawData: (CSVData | NewCSVData)[]): ProcessedData[] {
+export function processCSVData(rawData: CSVData[]): ProcessedData[] {
   return rawData.map(row => {
-    const format = detectRowFormat(row);
-    if (format === 'legacy') {
-      const legacy = row as CSVData;
-      return {
-        timestamp: new Date(legacy.Timestamp), // preserve UTC
-        user: legacy.User,
-        model: legacy.Model,
-        requestsUsed: parseFloat(legacy['Requests Used']),
-        exceedsQuota: legacy['Exceeds Monthly Quota'].toLowerCase() === 'true',
-        totalQuota: legacy['Total Monthly Quota'],
-        quotaValue: parseQuotaValue(legacy['Total Monthly Quota']),
-        sourceFormat: 'legacy'
-      };
-    } else {
-      const newer = row as NewCSVData;
-      // Build a UTC timestamp from YYYY-MM-DD (DO NOT localize)
-      const timestamp = new Date(`${newer.date}T00:00:00Z`);
-      const totalQuotaRaw = newer.total_monthly_quota || 'Unlimited';
-      return {
-        timestamp,
-        user: newer.username,
-        model: newer.model,
-        requestsUsed: parseFloat(newer.quantity),
-        exceedsQuota: newer.exceeds_quota ? newer.exceeds_quota.toLowerCase() === 'true' : false,
-        totalQuota: totalQuotaRaw,
-        quotaValue: parseQuotaValue(totalQuotaRaw),
-        product: newer.product,
-        sku: newer.sku,
-        organization: newer.organization,
-        costCenter: newer.cost_center_name,
-        appliedCostPerQuantity: newer.applied_cost_per_quantity ? parseFloat(newer.applied_cost_per_quantity) : undefined,
-        grossAmount: newer.gross_amount ? parseFloat(newer.gross_amount) : undefined,
-        discountAmount: newer.discount_amount ? parseFloat(newer.discount_amount) : undefined,
-        netAmount: newer.net_amount ? parseFloat(newer.net_amount) : undefined,
-        sourceFormat: 'new'
-      };
-    }
+    // Build a UTC timestamp from YYYY-MM-DD (DO NOT localize)
+    const timestamp = new Date(`${row.date}T00:00:00Z`);
+    const keys = buildDateKeys(timestamp);
+    const totalQuotaRaw = row.total_monthly_quota || 'Unlimited';
+    return {
+      timestamp,
+      user: row.username,
+      model: row.model,
+      requestsUsed: parseFloat(row.quantity),
+      exceedsQuota: row.exceeds_quota ? row.exceeds_quota.toLowerCase() === 'true' : false,
+      totalQuota: totalQuotaRaw,
+      quotaValue: parseQuotaValue(totalQuotaRaw),
+      product: row.product,
+      sku: row.sku,
+      organization: row.organization,
+      costCenter: row.cost_center_name,
+      appliedCostPerQuantity: row.applied_cost_per_quantity ? parseFloat(row.applied_cost_per_quantity) : undefined,
+      grossAmount: row.gross_amount ? parseFloat(row.gross_amount) : undefined,
+      discountAmount: row.discount_amount ? parseFloat(row.discount_amount) : undefined,
+      netAmount: row.net_amount ? parseFloat(row.net_amount) : undefined,
+      ...keys
+    };
   });
 }
 
@@ -76,8 +55,8 @@ export function analyzeData(data: ProcessedData[]): AnalysisResults {
 
   const sortedData = [...data].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
   const timeFrame = {
-    start: sortedData[0].timestamp.toISOString().split('T')[0],
-    end: sortedData[sortedData.length - 1].timestamp.toISOString().split('T')[0]
+    start: sortedData[0].dateKey,
+    end: sortedData[sortedData.length - 1].dateKey
   };
 
   const uniqueUsers = new Set(data.map(row => row.user));
@@ -133,49 +112,4 @@ export function analyzeUserData(data: ProcessedData[]): UserSummary[] {
     userSummary.modelBreakdown[row.model] += row.requestsUsed;
   });
   return Array.from(userMap.values()).sort((a, b) => b.totalRequests - a.totalRequests);
-}
-
-export interface DailyCumulativeData { date: string; [user: string]: string | number; }
-
-export function generateDailyCumulativeData(data: ProcessedData[]): DailyCumulativeData[] {
-  if (data.length === 0) return [];
-  const sortedData = [...data].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-  const users = Array.from(new Set(data.map(d => d.user))).sort();
-  const startDate = new Date(sortedData[0].timestamp);
-  const endDate = new Date(sortedData[sortedData.length - 1].timestamp);
-  const userTotals = new Map<string, number>();
-  users.forEach(u => userTotals.set(u, 0));
-  const result: DailyCumulativeData[] = [];
-  for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
-    const dateStr = date.toISOString().split('T')[0];
-    const dayRequests = sortedData.filter(d => d.timestamp.toISOString().split('T')[0] === dateStr);
-    dayRequests.forEach(r => userTotals.set(r.user, (userTotals.get(r.user) || 0) + r.requestsUsed));
-    const dataPoint: DailyCumulativeData = { date: dateStr };
-    users.forEach(u => { dataPoint[u] = userTotals.get(u) || 0; });
-    result.push(dataPoint);
-  }
-  return result;
-}
-
-export function generateUserDailyModelData(data: ProcessedData[], userName: string): import('@/types/csv').UserDailyData[] {
-  const userData = data.filter(d => d.user === userName);
-  if (userData.length === 0) return [];
-  const allSorted = [...data].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-  const startDate = new Date(allSorted[0].timestamp);
-  const endDate = new Date(allSorted[allSorted.length - 1].timestamp);
-  const sortedUserData = [...userData].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-  const userModels = Array.from(new Set(userData.map(d => d.model))).sort();
-  let cumulativeTotal = 0;
-  const result: import('@/types/csv').UserDailyData[] = [];
-  for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
-    const dateStr = date.toISOString().split('T')[0];
-    const dayRequests = sortedUserData.filter(d => d.timestamp.toISOString().split('T')[0] === dateStr);
-    const dailyByModel: Record<string, number> = {};
-    userModels.forEach(m => { dailyByModel[m] = 0; });
-    let dailyTotal = 0;
-    dayRequests.forEach(req => { dailyByModel[req.model] += req.requestsUsed; dailyTotal += req.requestsUsed; });
-    cumulativeTotal += dailyTotal;
-    result.push({ date: dateStr, totalCumulative: cumulativeTotal, ...dailyByModel });
-  }
-  return result;
 }

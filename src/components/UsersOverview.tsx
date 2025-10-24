@@ -2,21 +2,26 @@
 
 import { useState, useMemo } from 'react';
 import { UsersQuotaConsumptionChart } from './charts/UsersQuotaConsumptionChart';
-import { UserSummary, DailyCumulativeData, getUserQuotaValue } from '@/utils/analytics';
+import { UsersConsumptionHeatmap } from './charts/UsersConsumptionHeatmap';
+import { UserSummary } from '@/utils/analytics/powerUsers';
 import { ProcessedData } from '@/types/csv';
 import { UserConsumptionModal } from './UserConsumptionModal';
-import { computeOverageSummary } from '@/utils/analytics/overage';
 import { useSortableTable } from '@/hooks/useSortableTable';
 import { useUserConsumptionModal } from '@/hooks/useUserConsumptionModal';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { PRICING } from '@/constants/pricing';
+import { getUserQuota, QuotaArtifacts, UsageArtifacts, computeOverageSummaryFromArtifacts } from '@/utils/ingestion';
+
+type DailyCumulativeData = { date: string; [user: string]: string | number };
 
 interface UsersOverviewProps {
   userData: UserSummary[];
-  processedData: ProcessedData[]; // Add this for modal
+  processedData: ProcessedData[]; // bridge for modal only (will be removed after modal fully artifact-only in tests)
   allModels: string[];
   selectedPlan: 'business' | 'enterprise';
   dailyCumulativeData: DailyCumulativeData[];
+  quotaArtifacts: QuotaArtifacts;
+  usageArtifacts: UsageArtifacts; // NEW: used for overage + future enhancements
   onBack: () => void;
 }
 
@@ -42,8 +47,9 @@ const generateUserColors = (users: string[]): Record<string, string> => {
   return result;
 };
 
-export function UsersOverview({ userData, processedData, allModels, selectedPlan, dailyCumulativeData, onBack }: UsersOverviewProps) {
+export function UsersOverview({ userData, processedData, allModels, selectedPlan, dailyCumulativeData, quotaArtifacts, usageArtifacts, onBack }: UsersOverviewProps) {
   const [showChart, setShowChart] = useState(true);
+  const [chartType, setChartType] = useState<'heatmap' | 'lines'>('heatmap');
   const [currentPage, setCurrentPage] = useState(0);
   const isMobile = useIsMobile();
   const { selectedUser, open: openUserModal, close: closeUserModal, isOpen } = useUserConsumptionModal();
@@ -82,16 +88,16 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
 
   const currentQuota = planInfo[selectedPlan].monthlyQuota;
   
-  // Calculate total overage via utility (ensures consistency & testability)
+  // Calculate total overage directly from artifacts (O(U))
   const { totalOverageRequests, totalOverageCost } = useMemo(() => (
-    computeOverageSummary(userData, processedData)
-  ), [userData, processedData]);
+    computeOverageSummaryFromArtifacts(usageArtifacts, quotaArtifacts)
+  ), [usageArtifacts, quotaArtifacts]);
   
-  // Memoize quota types calculation for chart display
+  // Memoize quota types calculation for chart display - NOW using O(1) quota map!
   const quotaInfo = useMemo(() => {
     const quotaTypes = new Set<number>();
     userData.forEach(user => {
-      const userQuota = getUserQuotaValue(processedData, user.user);
+      const userQuota = getUserQuota(quotaArtifacts, user.user);
       if (userQuota !== 'unlimited') {
         quotaTypes.add(userQuota);
       }
@@ -99,7 +105,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
     const hasMixedQuotas = quotaTypes.size > 1;
     const hasMixedLicenses = quotaTypes.has(PRICING.BUSINESS_QUOTA) && quotaTypes.has(PRICING.ENTERPRISE_QUOTA);
     return { quotaTypes, hasMixedQuotas, hasMixedLicenses };
-  }, [userData, processedData]);
+  }, [userData, quotaArtifacts]);
 
   const { quotaTypes, hasMixedQuotas, hasMixedLicenses } = quotaInfo;
   
@@ -176,26 +182,75 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
         <div className="px-4 sm:px-6 py-4 bg-white border-b border-gray-200 flex-shrink-0 relative z-30">
           <div className="flex justify-between items-center mb-4">
             <h4 className="text-lg font-medium text-gray-900">Premium Request Quota Consumption</h4>
-            {isMobile && (
-              <button
-                onClick={() => setShowChart(false)}
-                className="text-gray-400 hover:text-gray-600"
-                aria-label="Hide chart"
-              >
-                ✕
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              <div className="flex bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setChartType('heatmap')}
+                  className={`px-3 py-1 text-sm font-medium rounded transition-colors ${
+                    chartType === 'heatmap'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Heatmap
+                </button>
+                <button
+                  onClick={() => setChartType('lines')}
+                  disabled={chartUsers.length > 1000}
+                  className={`px-3 py-1 text-sm font-medium rounded transition-colors ${
+                    chartType === 'lines'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  } ${chartUsers.length > 1000 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  title={chartUsers.length > 1000 ? `Cannot display ${chartUsers.length} users as lines` : undefined}
+                >
+                  Lines
+                </button>
+              </div>
+              {isMobile && (
+                <button
+                  onClick={() => setShowChart(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                  aria-label="Hide chart"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
           <div className="h-64 sm:h-80 2xl:h-96 relative z-30">
-            <UsersQuotaConsumptionChart
-              dailyCumulativeData={dailyCumulativeData}
-              users={chartUsers}
-              userColors={userColors}
-              currentQuota={currentQuota}
-              quotaTypes={quotaTypes}
-              hasMixedQuotas={hasMixedQuotas}
-              hasMixedLicenses={hasMixedLicenses}
-            />
+            {chartType === 'heatmap' ? (
+              <UsersConsumptionHeatmap
+                dailyCumulativeData={dailyCumulativeData}
+                users={chartUsers}
+                currentQuota={currentQuota}
+                quotaTypes={quotaTypes}
+                hasMixedQuotas={hasMixedQuotas}
+              />
+            ) : chartUsers.length > 1000 ? (
+              <div className="flex items-center justify-center h-full bg-gray-50 rounded-lg border-2 border-gray-200">
+                <div className="text-center p-8">
+                  <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Too Many Users to Display</h3>
+                  <p className="text-gray-600 max-w-md">
+                    The line chart cannot display more than 1,000 users ({chartUsers.length.toLocaleString()} users in dataset).
+                    Please use the Heatmap view for better visualization.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <UsersQuotaConsumptionChart
+                dailyCumulativeData={dailyCumulativeData}
+                users={chartUsers}
+                userColors={userColors}
+                currentQuota={currentQuota}
+                quotaTypes={quotaTypes}
+                hasMixedQuotas={hasMixedQuotas}
+                hasMixedLicenses={hasMixedLicenses}
+              />
+            )}
           </div>
         </div>
       )}
@@ -207,7 +262,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
           {isMobile && (
             <div className="p-4 space-y-3 sm:hidden">
               {paginatedUserData.map((user) => {
-                const userQuota = getUserQuotaValue(processedData, user.user);
+                const userQuota = getUserQuota(quotaArtifacts, user.user);
                 const isOverQuota = userQuota !== 'unlimited' && user.totalRequests > userQuota;
                 const quotaDisplay = userQuota === 'unlimited' ? 'Unlimited' : `${userQuota}`;
                 
@@ -318,7 +373,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {paginatedUserData.map((user, index) => {
-                const userQuota = getUserQuotaValue(processedData, user.user);
+                const userQuota = getUserQuota(quotaArtifacts, user.user);
                 const isOverQuota = userQuota !== 'unlimited' && user.totalRequests > userQuota;
                 const isAtQuota = userQuota !== 'unlimited' && user.totalRequests === userQuota;
                 const quotaDisplay = userQuota === 'unlimited' ? 'Unlimited' : userQuota.toString();
@@ -460,7 +515,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
         <UserConsumptionModal
           user={selectedUser}
           processedData={processedData}
-          userQuotaValue={getUserQuotaValue(processedData, selectedUser)}
+          userQuotaValue={getUserQuota(quotaArtifacts, selectedUser)}
           onClose={closeUserModal}
         />
       )}

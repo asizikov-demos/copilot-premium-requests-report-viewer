@@ -6,16 +6,31 @@ import { validCSVString, validCSVData } from '../fixtures/validCSVData';
 import { invalidCSVData } from '../fixtures/invalidCSVData';
 import { newFormatRows } from '../fixtures/newFormatCSVData';
 import { createMockFile } from '../helpers/testUtils';
+import type { IngestionResult } from '@/utils/ingestion';
 
-// Mock PapaParse
-jest.mock('papaparse', () => ({
-  parse: jest.fn((file, config) => {
-    if (!file.name.endsWith('.csv')) {
-      return;
-    }
-    // Default implementation that does nothing
-  })
-}));
+// Mock the ingestion module
+jest.mock('@/utils/ingestion', () => {
+  const actual = jest.requireActual('@/utils/ingestion');
+  return {
+    ...actual,
+    ingestStream: jest.fn(),
+  };
+});
+
+// Helper to create mock IngestionResult
+function createMockIngestionResult(rows: unknown[]): IngestionResult {
+  return {
+    outputs: {
+      'quota': { quotaByUser: new Map(), conflicts: new Map(), distinctQuotas: new Set(), hasMixedQuotas: false, hasMixedLicenses: false },
+      'usage': { userTotals: new Map(), modelBreakdown: new Map(), globalModelTotals: new Map(), topModelPerUser: new Map() },
+      'dailyBuckets': { dailyUserTotals: new Map(), startDate: new Date(), endDate: new Date() },
+      'rawData': rows
+    },
+    rowsProcessed: rows.length,
+    durationMs: 100,
+    warnings: []
+  };
+}
 
 describe('CSVUploader', () => {
   const mockOnDataLoad = jest.fn();
@@ -34,21 +49,17 @@ describe('CSVUploader', () => {
     expect(screen.getByText(/upload csv file/i)).toBeInTheDocument();
   });
 
-  it('should show supported CSV formats message', () => {
+  it('should show required columns message', () => {
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
-    expect(screen.getByText(/Supported formats:/i)).toBeInTheDocument();
-    expect(screen.getByText(/Legacy:/i)).toBeInTheDocument();
-    expect(screen.getByText(/New:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Required columns:/i)).toBeInTheDocument();
+    expect(screen.getByText(/date, username, model, quantity/i)).toBeInTheDocument();
   });
-  it('should handle new-format CSV parsing', async () => {
+  it('should handle CSV parsing', async () => {
     const mockFile = createMockFile('new-format.csv content', 'new-format.csv');
-    const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((_file: any, config: any) => {
+    const { ingestStream } = jest.requireMock('@/utils/ingestion');
+    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onComplete: (result: IngestionResult) => void }) => {
       setTimeout(() => {
-        // Simulate chunk callback with data
-        config.chunk?.({ data: newFormatRows, errors: [] }, {} as any);
-        // Then call complete
-        config.complete?.();
+        options.onComplete(createMockIngestionResult(newFormatRows));
       }, 0);
     });
 
@@ -57,17 +68,16 @@ describe('CSVUploader', () => {
     await user.upload(hiddenInput, mockFile);
 
     await waitFor(() => {
-      expect(mockOnDataLoad).toHaveBeenCalledWith(expect.arrayContaining(newFormatRows), 'new-format.csv');
+      expect(mockOnDataLoad).toHaveBeenCalledWith(expect.objectContaining({ rowsProcessed: newFormatRows.length }), 'new-format.csv');
     });
   });
 
   it('should handle successful CSV parsing', async () => {
     const mockFile = createMockFile(validCSVString, 'test.csv');
-    const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((_file: any, config: any) => {
+    const { ingestStream } = jest.requireMock('@/utils/ingestion');
+    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onComplete: (result: IngestionResult) => void }) => {
       setTimeout(() => {
-        config.chunk?.({ data: validCSVData, errors: [] }, {} as any);
-        config.complete?.();
+        options.onComplete(createMockIngestionResult(validCSVData));
       }, 0);
     });
 
@@ -77,7 +87,7 @@ describe('CSVUploader', () => {
     await user.upload(hiddenInput, mockFile);
 
     await waitFor(() => {
-      expect(mockOnDataLoad).toHaveBeenCalledWith(validCSVData, 'test.csv');
+      expect(mockOnDataLoad).toHaveBeenCalledWith(expect.objectContaining({ rowsProcessed: validCSVData.length }), 'test.csv');
     });
   });
 
@@ -94,8 +104,8 @@ describe('CSVUploader', () => {
       target: { files: [mockFile] }
     });
 
-    // Should not call Papa.parse for non-CSV files
-    expect(jest.requireMock('papaparse').parse).not.toHaveBeenCalled();
+    // Should not call ingestStream for non-CSV files
+    expect(jest.requireMock('@/utils/ingestion').ingestStream).not.toHaveBeenCalled();
     await waitFor(() => {
       expect(mockOnError).toHaveBeenCalledWith('Please select a CSV file');
     });
@@ -104,11 +114,10 @@ describe('CSVUploader', () => {
   it('should handle missing required columns', async () => {
     const mockFile = createMockFile(invalidCSVData.missingColumns, 'test.csv');
     
-    const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((_file: any, config: any) => {
+    const { ingestStream } = jest.requireMock('@/utils/ingestion');
+    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onError: (error: string) => void }) => {
       setTimeout(() => {
-        const mockParser = { abort: jest.fn() };
-        config.chunk?.({ data: [{ Timestamp: '2025-06-03T11:05:27Z', User: 'USerA', Model: 'gpt-4.1-2025-04-14' }], errors: [] }, mockParser);
+        options.onError('Missing required columns: quantity');
       }, 0);
     });
 
@@ -119,7 +128,7 @@ describe('CSVUploader', () => {
 
     await waitFor(() => {
       expect(mockOnError).toHaveBeenCalledWith(
-        expect.stringContaining('Missing required legacy columns')
+        expect.stringContaining('Missing required columns')
       );
     });
   });
@@ -127,10 +136,10 @@ describe('CSVUploader', () => {
   it('should handle empty CSV files', async () => {
     const mockFile = createMockFile(invalidCSVData.emptyFile, 'empty.csv');
     
-    const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((_file: any, config: any) => {
+    const { ingestStream } = jest.requireMock('@/utils/ingestion');
+    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onComplete: (result: IngestionResult) => void }) => {
       setTimeout(() => {
-        config.complete?.();
+        options.onComplete(createMockIngestionResult([]));
       }, 0);
     });
 
@@ -147,11 +156,10 @@ describe('CSVUploader', () => {
   it('should handle Papa Parse errors', async () => {
     const mockFile = createMockFile(validCSVString, 'test.csv');
     
-    const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((_file: any, config: any) => {
+    const { ingestStream } = jest.requireMock('@/utils/ingestion');
+    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onError: (error: string) => void }) => {
       setTimeout(() => {
-        const mockParser = { abort: jest.fn() };
-        config.chunk?.({ data: [], errors: [{ message: 'Parse error', type: 'Quotes', code: 'MissingQuotes', row: 1 }] }, mockParser);
+        options.onError('CSV parsing error: Parse error');
       }, 0);
     });
 
@@ -168,10 +176,10 @@ describe('CSVUploader', () => {
   it('should handle file reading errors', async () => {
     const mockFile = createMockFile(validCSVString, 'test.csv');
     
-    const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((_file: any, config: any) => {
+    const { ingestStream } = jest.requireMock('@/utils/ingestion');
+    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onError: (error: string) => void }) => {
       setTimeout(() => {
-        config.error(new Error('File reading failed'));
+        options.onError('File reading error: File reading failed');
       }, 0);
     });
 
@@ -188,10 +196,10 @@ describe('CSVUploader', () => {
   it('should show loading state during file processing', async () => {
     const mockFile = createMockFile(validCSVString, 'test.csv');
     
-    // Mock Papa.parse to not call complete immediately
-    const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation(() => {
-      // Don't call complete callback immediately
+    // Mock ingestStream to not call complete immediately
+    const { ingestStream } = jest.requireMock('@/utils/ingestion');
+    ingestStream.mockImplementation(() => {
+      // Don't call any callback immediately
     });
 
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
@@ -207,11 +215,10 @@ describe('CSVUploader', () => {
   it('should handle drag and drop functionality', async () => {
     const mockFile = createMockFile(validCSVString, 'test.csv');
     
-    const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((_file: any, config: any) => {
+    const { ingestStream } = jest.requireMock('@/utils/ingestion');
+    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onComplete: (result: IngestionResult) => void }) => {
       setTimeout(() => {
-        config.chunk?.({ data: validCSVData, errors: [] }, {} as any);
-        config.complete?.();
+        options.onComplete(createMockIngestionResult(validCSVData));
       }, 0);
     });
 
@@ -227,7 +234,7 @@ describe('CSVUploader', () => {
     });
 
     await waitFor(() => {
-      expect(mockOnDataLoad).toHaveBeenCalledWith(validCSVData, 'test.csv');
+      expect(mockOnDataLoad).toHaveBeenCalledWith(expect.objectContaining({ rowsProcessed: validCSVData.length }), 'test.csv');
     });
   });
 
@@ -261,13 +268,12 @@ describe('CSVUploader', () => {
     expect(docLink.closest('a')).toHaveAttribute('href', expect.stringContaining('docs.github.com'));
   });
 
-  it('should validate all required legacy columns are present (Timestamp present)', async () => {
+  it('should validate all required columns are present', async () => {
     const mockFile = createMockFile(invalidCSVData.missingRequiredColumns, 'test.csv');
-    const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((_file: any, config: any) => {
+    const { ingestStream } = jest.requireMock('@/utils/ingestion');
+    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onError: (error: string) => void }) => {
       setTimeout(() => {
-        const mockParser = { abort: jest.fn() };
-        config.chunk?.({ data: [{ Timestamp: '2025-06-03T11:05:27Z', User: 'USerA', Model: 'gpt-4.1-2025-04-14', 'Requests Used': '1.00' }], errors: [] }, mockParser);
+        options.onError('Missing required columns: date');
       }, 0);
     });
 
@@ -277,7 +283,7 @@ describe('CSVUploader', () => {
 
     await waitFor(() => {
       expect(mockOnError).toHaveBeenCalledWith(
-        expect.stringContaining('Missing required legacy columns: Exceeds Monthly Quota, Total Monthly Quota')
+        expect.stringContaining('Missing required columns: date')
       );
     });
   });
@@ -285,22 +291,19 @@ describe('CSVUploader', () => {
   it('should accept files with extra columns', async () => {
     const mockFile = createMockFile(invalidCSVData.extraColumns, 'test.csv');
     
-    const parse = jest.requireMock('papaparse').parse;
-    parse.mockImplementation((_file: any, config: any) => {
+    const { ingestStream } = jest.requireMock('@/utils/ingestion');
+    const testData = [{
+      date: '2025-06-03',
+      username: 'USerA',
+      model: 'gpt-4.1-2025-04-14',
+      quantity: '1.00',
+      exceeds_quota: 'false',
+      total_monthly_quota: 'Unlimited',
+      extra_column: 'extra_value'
+    }];
+    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onComplete: (result: IngestionResult) => void }) => {
       setTimeout(() => {
-        config.chunk?.({
-          data: [{
-            Timestamp: '2025-06-03T11:05:27Z',
-            User: 'USerA',
-            Model: 'gpt-4.1-2025-04-14',
-            'Requests Used': '1.00',
-            'Exceeds Monthly Quota': 'false',
-            'Total Monthly Quota': 'Unlimited',
-            'Extra Column': 'extra_value'
-          }],
-          errors: []
-        }, {} as any);
-        config.complete?.();
+        options.onComplete(createMockIngestionResult(testData));
       }, 0);
     });
 

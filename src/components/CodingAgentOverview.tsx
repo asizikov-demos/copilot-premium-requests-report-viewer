@@ -1,26 +1,36 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { CodingAgentUsageChart } from './charts/CodingAgentUsageChart';
-import { CodingAgentOverviewProps } from '@/types/csv';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import { computeDailyCodingAgentUsage } from '@/utils/analytics/codingAgent';
+import { AnalysisContext } from '@/context/AnalysisContext';
+import { DailyBucketsArtifacts, buildDailyCodingAgentUsageFromArtifacts } from '@/utils/ingestion';
+
+interface CodingAgentOverviewProps {
+  codingAgentUsers: import('@/types/csv').CodingAgentUser[];
+  totalUniqueUsers: number;
+  adoptionRate: number;
+  onBack: () => void;
+}
 
 export function CodingAgentOverview({ 
   codingAgentUsers, 
   totalUniqueUsers,
   adoptionRate, 
-  processedData,
   onBack 
 }: CodingAgentOverviewProps) {
   const isMobile = useIsMobile();
   const [showChart, setShowChart] = useState(true);
+  const analysisCtx = React.useContext(AnalysisContext);
+  const dailyBucketsArtifacts = analysisCtx?.dailyBucketsArtifacts as DailyBucketsArtifacts | undefined;
   
   // Memoize daily coding agent data calculation
-  const dailyCodingAgentData = useMemo(
-    () => computeDailyCodingAgentUsage(processedData),
-    [processedData]
-  );
+  const dailyCodingAgentData = useMemo(() => {
+    if (dailyBucketsArtifacts?.dailyUserModelTotals) {
+      return buildDailyCodingAgentUsageFromArtifacts(dailyBucketsArtifacts);
+    }
+    return [];
+  }, [dailyBucketsArtifacts]);
 
   return (
     <div className="space-y-6">

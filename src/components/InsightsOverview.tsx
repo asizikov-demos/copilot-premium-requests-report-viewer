@@ -4,7 +4,16 @@ import React, { useMemo, useState } from 'react';
 import { ProcessedData } from '@/types/csv';
 import { UserSummary } from '@/utils/analytics';
 import { categorizeUserConsumption, calculateFeatureUtilization, calculateUnusedValue, CONSUMPTION_THRESHOLDS } from '@/utils/analytics/insights';
-import { analyzeWeeklyQuotaExhaustion } from '@/utils/analytics/weeklyQuota';
+// Legacy weeklyQuota module removed; define minimal WeeklyExhaustionData interface locally.
+interface WeeklyExhaustionData {
+  week1Exhausted: string[];
+  week2Exhausted: string[];
+  week3Exhausted: string[];
+  currentPeriodOnly: boolean;
+}
+import { AnalysisContext } from '@/context/AnalysisContext';
+import { QuotaArtifacts, UsageArtifacts, FeatureUsageArtifacts } from '@/utils/ingestion/types';
+import { buildConsumptionCategoriesFromArtifacts, buildFeatureUtilizationFromArtifacts } from '@/utils/ingestion/analytics';
 import { ExpandableSection } from './primitives/ExpandableSection';
 import { UserCategoryTable } from './analysis/UserCategoryTable';
 import { AdvisorySection } from './insights/AdvisorySection';
@@ -12,29 +21,76 @@ import { WeeklyQuotaExhaustion } from './insights/WeeklyQuotaExhaustion';
 
 interface InsightsOverviewProps {
   userData: UserSummary[];
-  processedData: ProcessedData[];
+  processedData: ProcessedData[]; // transitional
+  quotaArtifacts?: QuotaArtifacts;
+  usageArtifacts?: UsageArtifacts;
+  featureUsageArtifacts?: FeatureUsageArtifacts;
+  // Weekly exhaustion artifact (computeWeeklyQuotaExhaustionFromArtifacts output). Typed loosely here since we only read weekNumber & usersExhaustedInWeek.
+  weeklyExhaustionArtifacts?: { weeks: Array<{ weekNumber: number; usersExhaustedInWeek: number; startDate: string; endDate: string }>; totalUsersExhausted: number };
   onBack: () => void;
 }
 
-export function InsightsOverview({ userData, processedData, onBack }: InsightsOverviewProps) {
+export function InsightsOverview({ userData, processedData, quotaArtifacts, usageArtifacts, featureUsageArtifacts, weeklyExhaustionArtifacts, onBack }: InsightsOverviewProps) {
   const [isPowerUsersExpanded, setIsPowerUsersExpanded] = useState(false);
   const [isAverageUsersExpanded, setIsAverageUsersExpanded] = useState(false);
   const [isLowAdoptionExpanded, setIsLowAdoptionExpanded] = useState(false);
+  const analysisCtx = React.useContext(AnalysisContext);
+  const quotaArtifactsFromCtx = analysisCtx?.quotaArtifacts as QuotaArtifacts | undefined;
+  const usageArtifactsFromCtx = analysisCtx?.usageArtifacts as UsageArtifacts | undefined;
+  const weeklyExhaustionArtifactsFromCtx = analysisCtx?.weeklyExhaustion as { weeks?: Array<{ weekNumber: number; usersExhaustedInWeek: number; startDate: string; endDate: string }>; totalUsersExhausted?: number } | undefined;
+  const featureUsageArtifactsFromCtx = analysisCtx?.featureUsageArtifacts as FeatureUsageArtifacts | undefined;
+
+  // Prefer explicitly passed artifacts (future-proof for isolated component tests) then context.
+  const quotaArtifactsEff = quotaArtifacts || quotaArtifactsFromCtx;
+  const usageArtifactsEff = usageArtifacts || usageArtifactsFromCtx;
+  const featureUsageArtifactsEff = featureUsageArtifacts || featureUsageArtifactsFromCtx;
+  const weeklyExhaustionArtifactsEff = weeklyExhaustionArtifacts || weeklyExhaustionArtifactsFromCtx;
   
-  const insightsData = useMemo(() => 
-    categorizeUserConsumption(userData, processedData),
-    [userData, processedData]
-  );
+  const insightsData = useMemo(() => {
+    if (usageArtifactsEff && quotaArtifactsEff) {
+      return buildConsumptionCategoriesFromArtifacts(usageArtifactsEff, quotaArtifactsEff);
+    }
+    return categorizeUserConsumption(userData, processedData);
+  }, [userData, processedData, usageArtifactsEff, quotaArtifactsEff]);
 
-  const featureUtilization = useMemo(() => 
-    calculateFeatureUtilization(processedData),
-    [processedData]
-  );
+  const featureUtilization = useMemo(() => {
+    if (featureUsageArtifactsEff) {
+      return buildFeatureUtilizationFromArtifacts(featureUsageArtifactsEff);
+    }
+    if (usageArtifactsEff) {
+      // Fallback intermediate path (can be removed later)
+      let totalCR=0,totalCA=0,totalSpark=0;
+      const crUsers=new Set<string>(), caUsers=new Set<string>(), sparkUsers=new Set<string>();
+      for (const u of usageArtifactsEff.users) {
+        for (const [model, qty] of Object.entries(u.modelBreakdown)) {
+          const lower = model.toLowerCase();
+          if (lower.includes('code review')) { totalCR += qty; crUsers.add(u.user); }
+          if (lower.includes('coding agent') || lower.includes('padawan')) { totalCA += qty; caUsers.add(u.user); }
+          if (lower.includes('spark')) { totalSpark += qty; sparkUsers.add(u.user); }
+        }
+      }
+      const avg = (t:number,c:number)=> c>0 ? t/c : 0;
+      return {
+        codeReview: { totalSessions: totalCR, averagePerUser: avg(totalCR, crUsers.size), userCount: crUsers.size },
+        codingAgent: { totalSessions: totalCA, averagePerUser: avg(totalCA, caUsers.size), userCount: caUsers.size },
+        spark: { totalSessions: totalSpark, averagePerUser: avg(totalSpark, sparkUsers.size), userCount: sparkUsers.size }
+      };
+    }
+    return calculateFeatureUtilization(processedData);
+  }, [processedData, usageArtifactsEff, featureUsageArtifactsEff]);
 
-  const weeklyExhaustion = useMemo(() => 
-    analyzeWeeklyQuotaExhaustion(processedData),
-    [processedData]
-  );
+  const weeklyExhaustion = useMemo<WeeklyExhaustionData>(() => {
+    if (weeklyExhaustionArtifactsEff && Array.isArray(weeklyExhaustionArtifactsEff.weeks)) {
+      const weeksArr = weeklyExhaustionArtifactsEff.weeks;
+      const w1 = weeksArr.find((w: { weekNumber: number }) => w.weekNumber === 1)?.usersExhaustedInWeek || 0;
+      const w2 = weeksArr.find((w: { weekNumber: number }) => w.weekNumber === 2)?.usersExhaustedInWeek || 0;
+      const w3 = weeksArr.find((w: { weekNumber: number }) => w.weekNumber === 3)?.usersExhaustedInWeek || 0;
+      const arr = (n: number) => Array.from({ length: n }, (_, i) => `user-${i+1}`);
+      return { week1Exhausted: arr(w1), week2Exhausted: arr(w2), week3Exhausted: arr(w3), currentPeriodOnly: true };
+    }
+    // Fallback placeholder (artifact missing) - no legacy computation.
+    return { week1Exhausted: [], week2Exhausted: [], week3Exhausted: [], currentPeriodOnly: true };
+  }, [weeklyExhaustionArtifactsEff]);
 
   // Compute unutilized value (only for users with numeric quotas)
   const averageUnusedValueUSD = useMemo(() => calculateUnusedValue(insightsData.averageUsers), [insightsData]);
