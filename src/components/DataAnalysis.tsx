@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-// Recharts usage extracted to dedicated chart component
 import { ModelRequestsBarChart } from './charts/ModelRequestsBarChart';
 import { UsersOverview } from './UsersOverview';
 import { PowerUsersOverview } from './PowerUsersOverview';
@@ -9,8 +8,6 @@ import { CodingAgentOverview } from './CodingAgentOverview';
 import { InsightsOverview } from './InsightsOverview';
 import { PRICING } from '@/constants/pricing';
 import { AnalysisProvider, useAnalysisContext } from '@/context/AnalysisContext';
-
-// The outer component now only supplies provider props
 
 interface DataAnalysisProps {
   ingestionResult: import('@/utils/ingestion').IngestionResult;

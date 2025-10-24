@@ -4,7 +4,7 @@ import React, { useMemo, useState } from 'react';
 import { ProcessedData } from '@/types/csv';
 import { UserSummary } from '@/utils/analytics';
 import { categorizeUserConsumption, calculateFeatureUtilization, calculateUnusedValue, CONSUMPTION_THRESHOLDS } from '@/utils/analytics/insights';
-// Legacy weeklyQuota module removed; define minimal WeeklyExhaustionData interface locally.
+
 interface WeeklyExhaustionData {
   week1Exhausted: string[];
   week2Exhausted: string[];

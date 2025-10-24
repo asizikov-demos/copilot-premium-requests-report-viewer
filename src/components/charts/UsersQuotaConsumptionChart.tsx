@@ -17,7 +17,6 @@ export interface UsersQuotaConsumptionChartProps {
   hasMixedLicenses: boolean;
 }
 
-// Dedicated chart component extracted from UsersOverview for clarity & reuse
 export function UsersQuotaConsumptionChart({
   dailyCumulativeData,
   users,
