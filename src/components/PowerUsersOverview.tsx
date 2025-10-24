@@ -15,8 +15,6 @@ interface PowerUsersOverviewProps {
   onThresholdChange: (threshold: number) => void;
 }
 
-// Score breakdown dialog extracted to dedicated component
-
 export function PowerUsersOverview({ powerUsers, totalQualifiedUsers, minRequestsThreshold, onBack, onThresholdChange }: PowerUsersOverviewProps) {
   const [selectedUser, setSelectedUser] = useState<PowerUserScore | null>(null);
   const [inputValue, setInputValue] = useState(minRequestsThreshold.toString());
