@@ -7,8 +7,6 @@ import { Tooltip } from './primitives/Tooltip';
 import { PowerUserScoreDialog } from './analysis/PowerUserScoreDialog';
 import { DEFAULT_MIN_REQUESTS, MAX_MIN_REQUESTS, DEBOUNCE_DELAY_MS, MAX_POWER_USERS_DISPLAYED, POWER_USER_SCORE_WEIGHTS } from '@/constants/powerUsers';
 
-// Deprecated inline Tooltip & dialog replaced by primitives / dedicated components
-
 interface PowerUsersOverviewProps {
   powerUsers: PowerUserScore[];
   totalQualifiedUsers: number;

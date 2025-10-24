@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { ProcessedData, AnalysisResults, PowerUsersAnalysis, CodingAgentAnalysis } from '@/types/csv';
 import { PRICING } from '@/constants/pricing';
-// New artifact-based analytics (incremental migration)
 import {
   deriveAnalysisFromArtifacts,
   buildDailyCumulativeDataFromArtifacts,
@@ -15,7 +14,6 @@ import {
 } from '@/utils/ingestion';
 
 interface UseAnalyzedDataArgs {
-  // Legacy pathway (to be removed after full migration):
   baseProcessed: ProcessedData[];
   // Filters
   selectedMonths: string[];

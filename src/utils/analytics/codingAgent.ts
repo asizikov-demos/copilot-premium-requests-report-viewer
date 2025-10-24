@@ -1,9 +1,6 @@
 import { ProcessedData } from '@/types/csv';
 export interface DailyCodingAgentUsageDatum { date: string; dailyRequests: number; cumulativeRequests: number; }
 
-// NOTE: Daily usage helper has migrated to artifact implementation: buildDailyCodingAgentUsageFromArtifacts.
-// This legacy file now only retains adoption analysis for backward compatibility until tests migrate.
-
 export function analyzeCodingAgentAdoption(data: ProcessedData[]): import('@/types/csv').CodingAgentAnalysis {
   if (data.length === 0) {
     return { totalUsers: 0, totalUniqueUsers: 0, totalCodingAgentRequests: 0, adoptionRate: 0, users: [] };

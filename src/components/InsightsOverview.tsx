@@ -4,7 +4,7 @@ import React, { useMemo, useState } from 'react';
 import { ProcessedData } from '@/types/csv';
 import { UserSummary } from '@/utils/analytics';
 import { categorizeUserConsumption, calculateFeatureUtilization, calculateUnusedValue, CONSUMPTION_THRESHOLDS } from '@/utils/analytics/insights';
-// Legacy weeklyQuota module removed; define minimal WeeklyExhaustionData interface locally.
+
 interface WeeklyExhaustionData {
   week1Exhausted: string[];
   week2Exhausted: string[];
@@ -58,7 +58,6 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
       return buildFeatureUtilizationFromArtifacts(featureUsageArtifactsEff);
     }
     if (usageArtifactsEff) {
-      // Fallback intermediate path (can be removed later)
       let totalCR=0,totalCA=0,totalSpark=0;
       const crUsers=new Set<string>(), caUsers=new Set<string>(), sparkUsers=new Set<string>();
       for (const u of usageArtifactsEff.users) {

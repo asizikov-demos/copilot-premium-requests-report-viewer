@@ -12,8 +12,6 @@ import { QuotaArtifacts, UsageArtifacts } from './types';
 /**
  * Temporary: reconstruct ProcessedData[] from raw CSV for components
  * that haven't been migrated to use aggregator outputs directly.
- * 
- * TODO: Remove once all components use aggregator artifacts.
  */
 export function buildProcessedDataLegacy(rawData: CSVData[]): ProcessedData[] {
   return rawData.map(row => {

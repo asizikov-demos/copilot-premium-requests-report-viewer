@@ -1,5 +1,5 @@
 import { PowerUserScore, PowerUsersAnalysis, ProcessedData } from '@/types/csv';
-// Local lightweight user summarization to decouple from removed legacy transformations.
+
 export interface UserSummary {
   user: string; totalRequests: number; modelBreakdown: Record<string, number>;
 }
