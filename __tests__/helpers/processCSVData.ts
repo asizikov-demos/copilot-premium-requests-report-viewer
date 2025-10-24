@@ -1,7 +1,6 @@
 import { CSVData, ProcessedData, AnalysisResults } from '@/types/csv';
 import { PRICING } from '@/constants/pricing';
 
-// Lightweight replicas of removed legacy helpers for test isolation.
 export function processCSVData(rawData: CSVData[]): ProcessedData[] {
   return rawData.map(row => {
     const timestamp = new Date(`${row.date}T00:00:00Z`);

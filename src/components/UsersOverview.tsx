@@ -16,7 +16,7 @@ type DailyCumulativeData = { date: string; [user: string]: string | number };
 
 interface UsersOverviewProps {
   userData: UserSummary[];
-  processedData: ProcessedData[]; // bridge for modal only (will be removed after modal fully artifact-only in tests)
+  processedData: ProcessedData[];
   allModels: string[];
   selectedPlan: 'business' | 'enterprise';
   dailyCumulativeData: DailyCumulativeData[];

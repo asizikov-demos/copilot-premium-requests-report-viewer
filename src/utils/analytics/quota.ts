@@ -59,6 +59,3 @@ export function buildQuotaBreakdown(data: ProcessedData[]): QuotaBreakdownResult
 
   return { unlimited, business, enterprise, mixed, suggestedPlan };
 }
-
-// NOTE: getUserQuotaValue removed. Prefer artifact-based getUserQuota (O(1)) or derive directly
-// from processed rows (first occurrence) where needed.

@@ -1,7 +1,5 @@
 /**
- * Adapter utilities to bridge new ingestion pipeline with existing analysis code.
- * These adapters reconstruct ProcessedData structures needed by current hooks/components.
- * As components migrate to use aggregator outputs directly, these can be removed.
+ * Adapter utilities to bridge the ingestion pipeline with existing analysis code.
  */
 
 import { ProcessedData } from '@/types/csv';

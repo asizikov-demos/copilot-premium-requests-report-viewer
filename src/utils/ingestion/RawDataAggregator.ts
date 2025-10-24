@@ -1,7 +1,5 @@
 /**
  * RawDataAggregator - collects all normalized rows for adapter bridge.
- * This is temporary scaffolding during migration; will be removed once
- * all components consume aggregator outputs directly.
  */
 
 import {
