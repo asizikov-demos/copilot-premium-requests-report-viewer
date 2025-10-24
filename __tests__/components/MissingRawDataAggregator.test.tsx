@@ -5,8 +5,16 @@ import type { IngestionResult } from '@/utils/ingestion';
 
 // Ensure ResponsiveContainer does not throw in test environment
 beforeAll(() => {
-  // @ts-expect-error Minimal stub for JSDOM environment
-  global.ResizeObserver = class { observe(){} unobserve(){} disconnect(){} };
+  // Typed minimal ResizeObserver stub for JSDOM test environment (no layout measurements required).
+  class ResizeObserver {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    observe(_target: Element, _options?: unknown): void {}
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    unobserve(_target: Element): void {}
+    disconnect(): void {}
+  }
+  // Assign to globalThis with a lightweight structural type to avoid 'any' and suppressions.
+  (globalThis as Record<string, unknown>).ResizeObserver = ResizeObserver;
 });
 
 function createIngestionResultWithoutRawData(): IngestionResult {

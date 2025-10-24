@@ -1,7 +1,7 @@
-import { NewCSVData } from '@/types/csv';
+import { CSVData } from '@/types/csv';
 
 // Minimal representative sample rows of the NEW expanded CSV format.
-export const newFormatRows: NewCSVData[] = [
+export const newFormatRows: CSVData[] = [
   {
     date: '2025-10-01',
     username: 'alice',

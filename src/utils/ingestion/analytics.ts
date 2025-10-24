@@ -12,6 +12,7 @@
 import { PRICING } from '@/constants/pricing';
 import type { AnalysisResults } from '@/types/csv';
 import type { QuotaArtifacts, UsageArtifacts, DailyBucketsArtifacts, FeatureUsageArtifacts } from './types';
+export type { DailyBucketsArtifacts } from './types';
 import type { FeatureUtilizationStats } from '@/utils/analytics/insights';
 import { calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
 import { PowerUsersAnalysis, PowerUserScore, CodingAgentAnalysis, UserDailyData } from '@/types/csv';

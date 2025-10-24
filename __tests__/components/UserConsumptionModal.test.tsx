@@ -32,15 +32,23 @@ describe('UserConsumptionModal', () => {
   const mockOnClose = jest.fn();
   
   const createMockProcessedData = (quotaValues: (number | 'unlimited')[]): ProcessedData[] => {
-    return quotaValues.map((quotaValue, index) => ({
-      timestamp: new Date(`2025-06-${10 + index}T10:00:00Z`),
-      user: `User1`, // All data for User1 to ensure we have data for the modal
-      model: 'gpt-4',
-      requestsUsed: 1,
-      exceedsQuota: false,
-      totalQuota: quotaValue === 'unlimited' ? 'Unlimited' : quotaValue.toString(),
-      quotaValue
-    }));
+    return quotaValues.map((quotaValue, index) => {
+      const timestamp = new Date(`2025-06-${10 + index}T10:00:00Z`);
+      const iso = timestamp.toISOString();
+      return {
+        timestamp,
+        user: 'User1', // All data for User1 to ensure we have data for the modal
+        model: 'gpt-4',
+        requestsUsed: 1,
+        exceedsQuota: false,
+        totalQuota: quotaValue === 'unlimited' ? 'Unlimited' : quotaValue.toString(),
+        quotaValue,
+        iso,
+        dateKey: iso.slice(0, 10),
+        monthKey: iso.slice(0, 7),
+        epoch: timestamp.getTime()
+      } as ProcessedData;
+    });
   };
 
   beforeEach(() => {
