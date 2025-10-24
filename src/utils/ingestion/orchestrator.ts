@@ -59,7 +59,7 @@ export function ingestStream(
       }
       
       // Process each row in chunk
-      for (const rawRow of data) {
+      for (const rawRow of data as Record<string, unknown>[]) {
         const normalized = normalizeRow(rawRow, warnings);
         if (!normalized) continue;
         
