@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import { useAnalysisContext } from '@/context/AnalysisContext';
 import { ModelDailyStackedChart } from '@/components/charts/ModelDailyStackedChart';
 import { buildDailyModelUsageFromArtifacts } from '@/utils/ingestion/analytics';
+import { generateModelColors } from '@/utils/modelColors';
 
 export function ModelUsageTrendsOverview() {
   const { usageArtifacts, dailyBucketsArtifacts, selectedMonths, setView } = useAnalysisContext();
@@ -24,30 +25,12 @@ export function ModelUsageTrendsOverview() {
       ? raw
       : raw.filter(d => selectedMonths.includes(d.date.slice(0, 7)));
 
-    const modelKeys = usageArtifacts ? Object.keys(usageArtifacts.modelTotals).sort() : [];
+    const modelKeys = Object.keys(usageArtifacts.modelTotals).sort();
     return { data: filtered, models: modelKeys };
   }, [usageArtifacts, dailyBucketsArtifacts, selectedMonths]);
 
   const modelColors: Record<string, string> = useMemo(() => {
-    const palette = [
-      '#3b82f6', // blue
-      '#10b981', // emerald
-      '#f59e0b', // amber
-      '#8b5cf6', // violet
-      '#ef4444', // red
-      '#06b6d4', // cyan
-      '#ec4899', // pink
-      '#22c55e', // green
-      '#6366f1', // indigo
-      '#f97316'  // orange
-    ];
-    const entries: Record<string, string> = {};
-    let idx = 0;
-    for (const m of models) {
-      entries[m] = palette[idx % palette.length];
-      idx++;
-    }
-    return entries;
+    return generateModelColors(models);
   }, [models]);
 
   return (

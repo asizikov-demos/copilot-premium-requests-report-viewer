@@ -26,8 +26,8 @@ export function ModelDailyStackedChart({ data, models, modelColors }: ModelDaily
           stroke="#6b7280"
           fontSize={12}
           tickFormatter={(value) => {
-            const d = new Date(`${value}T00:00:00Z`);
-            return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+            const date = new Date(value);
+            return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
           }}
         />
         <YAxis stroke="#6b7280" fontSize={12} />
