@@ -7,10 +7,12 @@ import { WeeklyExhaustionData } from '@/utils/analytics/weeklyQuota';
 
 import { chartTooltipContentStyle, chartTooltipLabelStyle } from '../charts/chartTooltipStyles';
 
+type ResponsiveHeight = number | `${number}%`;
+
 interface WeeklyQuotaExhaustionProps {
   weeklyExhaustion: WeeklyExhaustionData;
   totalUsers: number;
-  height?: number | string;
+  height?: ResponsiveHeight;
 }
 
 interface WeeklyQuotaDatum {
@@ -69,9 +71,9 @@ export function WeeklyQuotaExhaustion({ weeklyExhaustion, totalUsers, height = 2
             <YAxis allowDecimals={false} label={{ value: 'Users', angle: -90, position: 'insideLeft', dy: 35 }} />
             <Tooltip
               formatter={(value: number) => [`${value} users`, 'Users']}
-              labelFormatter={(label: string, items: { payload?: WeeklyQuotaDatum }[]) => {
-                const row = items?.[0]?.payload;
-                return row ? `${label} (${row.range})` : label;
+              labelFormatter={(label, items) => {
+                const row = items?.[0]?.payload as WeeklyQuotaDatum | undefined;
+                return row ? `${String(label)} (${row.range})` : String(label);
               }}
               contentStyle={chartTooltipContentStyle}
               labelStyle={chartTooltipLabelStyle}

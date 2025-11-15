@@ -10,15 +10,18 @@ export interface ModelDailyDatum {
   [model: string]: string | number;
 }
 
+type ResponsiveHeight = number | `${number}%`;
+
 export interface ModelDailyStackedChartProps {
   data: ModelDailyDatum[];
   models: string[];
   modelColors: Record<string, string>;
+  height?: ResponsiveHeight;
 }
 
-export function ModelDailyStackedChart({ data, models, modelColors }: ModelDailyStackedChartProps) {
+export function ModelDailyStackedChart({ data, models, modelColors, height = '100%' }: ModelDailyStackedChartProps) {
   return (
-    <ResponsiveContainer width="100%" height="100%">
+    <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
         <XAxis
