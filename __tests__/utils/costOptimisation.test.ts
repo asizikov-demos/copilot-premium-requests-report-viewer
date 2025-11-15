@@ -38,17 +38,20 @@ describe('computeCostOptimisationFromArtifacts', () => {
 
   it('selects only business users with >= 500 overage', () => {
     const usage = makeUsage([
-      { user: 'biz-low', totalRequests: PRICING.BUSINESS_QUOTA + 100 }, // below threshold
-      { user: 'biz-high', totalRequests: PRICING.BUSINESS_QUOTA + 600 }, // qualifies
+      { user: 'biz-low', totalRequests: PRICING.BUSINESS_QUOTA + 100 }, // far below threshold
+      { user: 'biz-approaching', totalRequests: PRICING.BUSINESS_QUOTA + 450 }, // 450 over 300 -> approaching break-even
+      { user: 'biz-high', totalRequests: PRICING.BUSINESS_QUOTA + 600 }, // qualifies for strong recommendation
       { user: 'ent-high', totalRequests: PRICING.ENTERPRISE_QUOTA + 800 } // non-business
     ]);
     const quota = makeQuota([
       { user: 'biz-low', quota: PRICING.BUSINESS_QUOTA },
+      { user: 'biz-approaching', quota: PRICING.BUSINESS_QUOTA },
       { user: 'biz-high', quota: PRICING.BUSINESS_QUOTA },
       { user: 'ent-high', quota: PRICING.ENTERPRISE_QUOTA }
     ]);
 
     const res = computeCostOptimisationFromArtifacts(usage, quota);
+    // Strong recommendation list
     expect(res.totalCandidates).toBe(1);
     expect(res.candidates).toHaveLength(1);
     const candidate = res.candidates[0];
@@ -56,6 +59,12 @@ describe('computeCostOptimisationFromArtifacts', () => {
     expect(candidate.quota).toBe(PRICING.BUSINESS_QUOTA);
     expect(candidate.overageRequests).toBe(600);
     expect(candidate.overageCost).toBeCloseTo(600 * PRICING.OVERAGE_RATE_PER_REQUEST, 5);
+
+    // Approaching break-even list
+    expect(res.approachingBreakEven).toHaveLength(1);
+    const approaching = res.approachingBreakEven[0];
+    expect(approaching.user).toBe('biz-approaching');
+    expect(approaching.overageRequests).toBe(450);
   });
 
   it('aggregates costs and potential savings across candidates', () => {

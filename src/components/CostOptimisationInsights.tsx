@@ -39,7 +39,7 @@ export function CostOptimisationInsights({ onBack }: CostOptimisationInsightsPro
     );
   }
 
-  const { candidates, totalCandidates, totalOverageCost, estimatedEnterpriseCost, totalPotentialSavings } = summary;
+  const { candidates, totalCandidates, totalOverageCost, estimatedEnterpriseCost, totalPotentialSavings, approachingBreakEven } = summary;
 
   return (
     <div className="min-h-[60vh] flex flex-col">
@@ -173,6 +173,54 @@ export function CostOptimisationInsights({ onBack }: CostOptimisationInsightsPro
           </div>
         )}
       </div>
+
+      {approachingBreakEven.length > 0 && (
+        <div className="mt-6 bg-white shadow rounded-lg overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-medium text-gray-900">Users approaching Enterprise break-even</h3>
+            <p className="mt-1 text-sm text-gray-600">
+              These Copilot Business users are within roughly 100 premium requests of the break-even point where GitHub
+              Copilot Enterprise becomes cost-neutral or cheaper based on overage spend.
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    User
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Total Requests
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Overage Requests
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Current Overage Cost
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {approachingBreakEven.map(user => (
+                  <tr key={user.user}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.user}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {user.totalRequests.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {user.overageRequests.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      ${user.overageCost.toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

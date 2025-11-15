@@ -19,6 +19,7 @@ export interface CostOptimisationSummary {
   totalOverageCost: number;
   estimatedEnterpriseCost: number;
   totalPotentialSavings: number;
+  approachingBreakEven: CostOptimisationCandidate[];
 }
 
 /**
@@ -30,6 +31,7 @@ export function computeCostOptimisationFromArtifacts(
   quota: QuotaArtifacts
 ): CostOptimisationSummary {
   const candidates: CostOptimisationCandidate[] = [];
+  const approachingBreakEven: CostOptimisationCandidate[] = [];
   const ENTERPRISE_UPGRADE_DELTA_USD = 20;
 
   for (const u of usage.users) {
@@ -37,7 +39,8 @@ export function computeCostOptimisationFromArtifacts(
     if (q !== PRICING.BUSINESS_QUOTA) continue;
 
     const overageRequests = Math.max(0, u.totalRequests - q);
-    if (overageRequests < 500) continue;
+    // Users with very low overage are not interesting for optimisation scenarios.
+    if (overageRequests < 100) continue;
 
     const overageCost = overageRequests * PRICING.OVERAGE_RATE_PER_REQUEST;
     const enterpriseQuota = PRICING.ENTERPRISE_QUOTA;
@@ -45,7 +48,7 @@ export function computeCostOptimisationFromArtifacts(
     const enterpriseUpgradeCost = ENTERPRISE_UPGRADE_DELTA_USD;
     const potentialSavings = Math.max(0, overageCost - enterpriseUpgradeCost);
 
-    candidates.push({
+    const baseCandidate: CostOptimisationCandidate = {
       user: u.user,
       totalRequests: u.totalRequests,
       quota: q,
@@ -55,7 +58,15 @@ export function computeCostOptimisationFromArtifacts(
       enterpriseExtraCapacity,
       potentialSavings,
       enterpriseUpgradeCost
-    });
+    };
+
+    // Strong recommendation: overage clearly above break-even (>= 500 PRUs)
+    if (overageRequests >= 500) {
+      candidates.push(baseCandidate);
+    } else if (overageRequests >= 400) {
+      // Approaching break-even: within ~100 PRUs of the tipping point.
+      approachingBreakEven.push(baseCandidate);
+    }
   }
 
   const totalOverageCost = candidates.reduce((sum, c) => sum + c.overageCost, 0);
@@ -67,6 +78,7 @@ export function computeCostOptimisationFromArtifacts(
     totalCandidates: candidates.length,
     totalOverageCost,
     estimatedEnterpriseCost,
-    totalPotentialSavings
+    totalPotentialSavings,
+    approachingBreakEven
   };
 }
