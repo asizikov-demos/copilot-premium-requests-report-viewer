@@ -46,7 +46,9 @@ describe('UserConsumptionModal', () => {
         iso,
         dateKey: iso.slice(0, 10),
         monthKey: iso.slice(0, 7),
-        epoch: timestamp.getTime()
+        epoch: timestamp.getTime(),
+        organization: 'Org1',
+        costCenter: 'CC-123'
       } as ProcessedData;
     });
   };
@@ -82,7 +84,7 @@ describe('UserConsumptionModal', () => {
 
     await waitFor(() => {
       expect(screen.getByText('User1')).toBeInTheDocument();
-      expect(screen.getByText(/Copilot Business.*Daily Usage Overview/)).toBeInTheDocument();
+      expect(screen.getByText(/Copilot Business/)).toBeInTheDocument();
       expect(screen.getByText(/Total requests:.*300 quota/)).toBeInTheDocument();
     });
   });
@@ -103,7 +105,7 @@ describe('UserConsumptionModal', () => {
 
     await waitFor(() => {
       expect(screen.getByText('User1')).toBeInTheDocument();
-      expect(screen.getByText(/Copilot Enterprise.*Daily Usage Overview/)).toBeInTheDocument();
+      expect(screen.getByText(/Copilot Enterprise/)).toBeInTheDocument();
       expect(screen.getByText(/Total requests:.*1000 quota/)).toBeInTheDocument();
     });
   });
@@ -124,7 +126,7 @@ describe('UserConsumptionModal', () => {
 
     await waitFor(() => {
       expect(screen.getByText('User1')).toBeInTheDocument();
-      expect(screen.getByText(/Copilot Business.*Daily Usage Overview/)).toBeInTheDocument();
+      expect(screen.getByText(/Copilot Business/)).toBeInTheDocument();
       expect(screen.getByText(/Total requests:.*300 quota/)).toBeInTheDocument();
     });
   });
@@ -145,7 +147,7 @@ describe('UserConsumptionModal', () => {
 
     await waitFor(() => {
       expect(screen.getByText('User1')).toBeInTheDocument();
-      expect(screen.getByText(/Unlimited Plan.*Daily Usage Overview/)).toBeInTheDocument();
+      expect(screen.getByText(/Unlimited Plan/)).toBeInTheDocument();
       expect(screen.getByText(/Total requests:.*Unlimited quota/)).toBeInTheDocument();
     });
   });
@@ -166,7 +168,7 @@ describe('UserConsumptionModal', () => {
 
     await waitFor(() => {
       expect(screen.getByText('User1')).toBeInTheDocument();
-      expect(screen.getByText(/Copilot Business.*Daily Usage Overview/)).toBeInTheDocument();
+      expect(screen.getByText(/Copilot Business/)).toBeInTheDocument();
       expect(screen.getByText(/Total requests:.*300 quota/)).toBeInTheDocument();
     });
   });
@@ -187,7 +189,7 @@ describe('UserConsumptionModal', () => {
 
     await waitFor(() => {
       expect(screen.getByText('User1')).toBeInTheDocument();
-      expect(screen.getByText(/Copilot Enterprise.*Daily Usage Overview/)).toBeInTheDocument();
+      expect(screen.getByText(/Copilot Enterprise/)).toBeInTheDocument();
       expect(screen.getByText(/Total requests:.*1000 quota/)).toBeInTheDocument();
     });
   });

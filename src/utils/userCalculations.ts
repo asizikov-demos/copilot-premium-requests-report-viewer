@@ -52,3 +52,23 @@ export function getUserData(
 ): ProcessedData[] {
   return processedData.filter(d => d.user === userName);
 }
+
+/**
+ * Get a representative organization and cost center for a user.
+ * Prefers the first non-empty values found in the processed data.
+ */
+export function getUserOrgMetadata(
+  processedData: ProcessedData[],
+  userName: string
+): { organization?: string; costCenter?: string } {
+  for (const row of processedData) {
+    if (row.user === userName) {
+      const organization = row.organization;
+      const costCenter = row.costCenter;
+      if (organization || costCenter) {
+        return { organization, costCenter };
+      }
+    }
+  }
+  return {};
+}
