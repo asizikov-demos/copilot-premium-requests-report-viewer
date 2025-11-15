@@ -18,7 +18,7 @@ import {
 
 // Types
 type CopilotPlan = 'business' | 'enterprise';
-type ViewType = 'overview' | 'users' | 'powerUsers' | 'codingAgent' | 'insights' | 'costOptimization';
+type ViewType = 'overview' | 'users' | 'powerUsers' | 'codingAgent' | 'insights' | 'costOptimization' | 'modelTrends';
 
 interface AnalysisProviderProps {
   ingestionResult: IngestionResult;

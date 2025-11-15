@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ModelRequestsBarChart } from './charts/ModelRequestsBarChart';
+import { ModelUsageTrendsOverview } from './ModelUsageTrendsOverview';
 import { UsersOverview } from './UsersOverview';
 import { PowerUsersOverview } from './PowerUsersOverview';
 import { CodingAgentOverview } from './CodingAgentOverview';
@@ -148,6 +149,16 @@ function DataAnalysisInner() {
           >
             💰 Cost Optimization
           </button>
+          <button
+            onClick={() => setView('modelTrends')}
+            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+              view === 'modelTrends'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            📈 Model Usage Trends
+          </button>
         </div>
       </div>
 
@@ -209,10 +220,15 @@ function DataAnalysisInner() {
                 onBack={() => setView('overview')}
               />
             </div>
+          ) : view === 'modelTrends' ? (
+            <div className="min-h-[80vh]">
+              <ModelUsageTrendsOverview />
+            </div>
           ) : (
             <>
               {/* Summary Stats */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                {/* Insights */}
                 <button
                   onClick={() => setView('insights')}
                   className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 w-full text-left"
@@ -246,39 +262,7 @@ function DataAnalysisInner() {
                   </div>
                 </button>
 
-                <button
-                  onClick={() => setView('costOptimization')}
-                  className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 w-full text-left"
-                >
-                  <div className="p-5">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
-                          <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 1.343-3 3m6 0a3 3 0 00-3-3m0 0V5m0 6v6m-7 1h14a2 2 0 002-2v-3a2 2 0 00-2-2H5a2 2 0 00-2 2v3a2 2 0 002 2z" />
-                          </svg>
-                        </div>
-                      </div>
-                      <div className="ml-5 w-0 flex-1">
-                        <dl>
-                          <dt className="text-sm font-bold text-gray-500 truncate">Cost Optimization</dt>
-                          <dd className="text-sm text-gray-600">
-                            Enterprise SKU recommendations
-                          </dd>
-                          <dd className="mt-1 text-xs text-gray-400">
-                            Reduce overage for heavy Business users
-                          </dd>
-                        </dl>
-                      </div>
-                      <div className="flex-shrink-0">
-                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-                </button>
-
+                {/* Total Unique Users */}
                 <button
                   onClick={() => setView('users')}
                   className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 w-full text-left"
@@ -307,6 +291,7 @@ function DataAnalysisInner() {
                   </div>
                 </button>
 
+                {/* Coding Agent Adoption */}
                 <button
                   onClick={() => setView('codingAgent')}
                   className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 w-full text-left"
@@ -340,6 +325,7 @@ function DataAnalysisInner() {
                   </div>
                 </button>
 
+                {/* Power Users */}
                 <button
                   onClick={() => setView('powerUsers')}
                   className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 w-full text-left"
@@ -361,6 +347,72 @@ function DataAnalysisInner() {
                           </dd>
                           <dd className="text-xs text-gray-500">
                             Top users with diverse usage
+                          </dd>
+                        </dl>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Cost Optimization */}
+                <button
+                  onClick={() => setView('costOptimization')}
+                  className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 w-full text-left"
+                >
+                  <div className="p-5">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
+                          <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 1.343-3 3m6 0a3 3 0 00-3-3m0 0V5m0 6v6m-7 1h14a2 2 0 002-2v-3a2 2 0 00-2-2H5a2 2 0 00-2 2v3a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                      </div>
+                      <div className="ml-5 w-0 flex-1">
+                        <dl>
+                          <dt className="text-sm font-bold text-gray-500 truncate">Cost Optimization</dt>
+                          <dd className="text-sm text-gray-600">
+                            Enterprise SKU recommendations
+                          </dd>
+                          <dd className="mt-1 text-xs text-gray-400">
+                            Reduce overage for heavy Business users
+                          </dd>
+                        </dl>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Model Usage Trends */}
+                <button
+                  onClick={() => setView('modelTrends')}
+                  className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 w-full text-left"
+                >
+                  <div className="p-5">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <div className="w-8 h-8 bg-sky-100 rounded-full flex items-center justify-center">
+                          <span className="text-sky-600 text-lg">📈</span>
+                        </div>
+                      </div>
+                      <div className="ml-5 w-0 flex-1">
+                        <dl>
+                          <dt className="text-sm font-bold text-gray-500 truncate">Model Usage Trends</dt>
+                          <dd className="text-sm text-gray-600">
+                            Daily stacked usage by model
+                          </dd>
+                          <dd className="mt-1 text-xs text-gray-400">
+                            Spot spikes and shifts over time
                           </dd>
                         </dl>
                       </div>

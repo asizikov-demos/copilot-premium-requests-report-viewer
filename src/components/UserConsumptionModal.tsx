@@ -14,30 +14,7 @@ import { PRICING } from '@/constants/pricing';
 import { FullScreenModal } from './primitives/FullScreenModal';
 import { AnalysisContext } from '@/context/AnalysisContext';
 import { buildUserDailyModelDataFromArtifacts, UsageArtifacts, QuotaArtifacts, DailyBucketsArtifacts, getUserQuota } from '@/utils/ingestion';
-
-// Generate colors for model bars
-const generateModelColors = (models: string[]): Record<string, string> => {
-  const colors = [
-    '#3B82F6', // blue-500
-    '#EF4444', // red-500
-    '#10B981', // emerald-500
-    '#F59E0B', // amber-500
-    '#8B5CF6', // violet-500
-    '#06B6D4', // cyan-500
-    '#84CC16', // lime-500
-    '#F97316', // orange-500
-    '#EC4899', // pink-500
-    '#6366F1', // indigo-500
-    '#14B8A6', // teal-500
-    '#F43F5E', // rose-500
-  ];
-  
-  const result: Record<string, string> = {};
-  models.forEach((model, index) => {
-    result[model] = colors[index % colors.length];
-  });
-  return result;
-};
+import { generateModelColors } from '@/utils/modelColors';
 
 export function UserConsumptionModal({
   user,

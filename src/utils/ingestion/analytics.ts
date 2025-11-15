@@ -418,6 +418,59 @@ export function buildUserDailyModelDataFromArtifacts(
 }
 
 // -----------------------------
+// Daily Model Usage (All Users) From Artifacts
+// -----------------------------
+
+export interface DailyModelUsageDatum {
+  date: string;
+  totalRequests: number;
+  // dynamic model keys mapping to daily counts
+  [model: string]: string | number;
+}
+
+/**
+ * Build per-day per-model stacked dataset for all users combined.
+ * Shape mirrors UserDailyData but aggregated across users, without cumulative line.
+ * Returns a dense series across the full date range; days with no activity are
+ * present with zero totals to keep the X-axis continuous.
+ */
+export function buildDailyModelUsageFromArtifacts(
+  daily: DailyBucketsArtifacts,
+  usage: UsageArtifacts
+): DailyModelUsageDatum[] {
+  if (!daily.dateRange || !daily.dailyUserModelTotals) return [];
+
+  const { min, max } = daily.dateRange;
+  const dates = enumerateDatesInclusive(min, max);
+
+  // Discover global model list from usage artifacts for stable ordering
+  const allModels = Object.keys(usage.modelTotals).sort();
+
+  const result: DailyModelUsageDatum[] = [];
+  for (const date of dates) {
+    const dayUserMap = daily.dailyUserModelTotals.get(date);
+    const row: DailyModelUsageDatum = { date, totalRequests: 0 };
+    let dayTotal = 0;
+
+    for (const model of allModels) {
+      let modelTotal = 0;
+      if (dayUserMap) {
+        for (const modelMap of dayUserMap.values()) {
+          modelTotal += modelMap.get(model) || 0;
+        }
+      }
+      row[model] = modelTotal;
+      dayTotal += modelTotal;
+    }
+
+    row.totalRequests = dayTotal;
+    result.push(row);
+  }
+
+  return result;
+}
+
+// -----------------------------
 // Feature Utilization From FeatureUsageArtifacts
 // -----------------------------
 /**
