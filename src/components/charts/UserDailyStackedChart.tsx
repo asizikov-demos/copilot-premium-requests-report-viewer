@@ -10,17 +10,21 @@ export interface UserDailyDatum {
   [model: string]: string | number;
 }
 
+type ResponsiveHeight = number | `${number}%`;
+
 export interface UserDailyStackedChartProps {
   data: UserDailyDatum[]; // dynamic model columns + totalCumulative
   models: string[];
   modelColors: Record<string, string>;
   quotaValue: number | 'unlimited';
   tooltip: React.ReactElement; // preconfigured tooltip component instance
+  height?: ResponsiveHeight;
 }
 
-export function UserDailyStackedChart({ data, models, modelColors, quotaValue, tooltip }: UserDailyStackedChartProps) {
+
+export function UserDailyStackedChart({ data, models, modelColors, quotaValue, tooltip, height = '100%' }: UserDailyStackedChartProps) {
   return (
-    <ResponsiveContainer width="100%" height="100%">
+    <ResponsiveContainer width="100%" height={height}>
       <ComposedChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
         <XAxis 

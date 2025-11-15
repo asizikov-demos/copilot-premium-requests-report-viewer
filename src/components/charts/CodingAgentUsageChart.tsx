@@ -11,13 +11,16 @@ export interface CodingAgentUsageDatum {
   cumulativeRequests: number;// cumulative total up to that day
 }
 
+type ResponsiveHeight = number | `${number}%`;
+
 interface CodingAgentUsageChartProps {
   data: CodingAgentUsageDatum[];
+  height?: ResponsiveHeight;
 }
 
-export function CodingAgentUsageChart({ data }: CodingAgentUsageChartProps) {
+export function CodingAgentUsageChart({ data, height = '100%' }: CodingAgentUsageChartProps) {
   return (
-    <ResponsiveContainer width="100%" height="100%">
+    <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data}>
         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
         <XAxis 

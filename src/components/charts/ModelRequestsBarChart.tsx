@@ -11,13 +11,16 @@ export interface ModelRequestsBarChartDatum {
   requests: number;   // total requests
 }
 
+
+type ResponsiveHeight = number | `${number}%`;
+
 interface ModelRequestsBarChartProps {
   data: ModelRequestsBarChartDatum[];
-  height?: number | string;
+  height?: ResponsiveHeight;
 }
 
 // Extracted from DataAnalysis overview section to standardize chart usage
-export function ModelRequestsBarChart({ data, height = '100%' }: ModelRequestsBarChartProps) {
+export function ModelRequestsBarChart({ data, height = '100%' as ResponsiveHeight }: ModelRequestsBarChartProps) {
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart
@@ -38,9 +41,9 @@ export function ModelRequestsBarChart({ data, height = '100%' }: ModelRequestsBa
             `${value} requests`,
             'Total Requests'
           ]}
-          labelFormatter={(label: string, payload: { payload?: ModelRequestsBarChartDatum }[]) => {
-            const item = payload?.[0]?.payload;
-            return item?.fullModel || label;
+          labelFormatter={(label, payload) => {
+            const item = payload?.[0]?.payload as ModelRequestsBarChartDatum | undefined;
+            return item?.fullModel || (label as string);
           }}
           contentStyle={chartTooltipContentStyle}
           labelStyle={chartTooltipLabelStyle}
