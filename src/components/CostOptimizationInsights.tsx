@@ -2,28 +2,28 @@
 
 import React, { useMemo } from 'react';
 import { useAnalysisContext } from '@/context/AnalysisContext';
-import { computeCostOptimisationFromArtifacts } from '@/utils/analytics/costOptimisation';
+import { computeCostOptimizationFromArtifacts } from '@/utils/analytics/costOptimization';
 import { PRICING } from '@/constants/pricing';
 
-interface CostOptimisationInsightsProps {
+interface CostOptimizationInsightsProps {
   onBack: () => void;
 }
 
-export function CostOptimisationInsights({ onBack }: CostOptimisationInsightsProps) {
+export function CostOptimizationInsights({ onBack }: CostOptimizationInsightsProps) {
   const { usageArtifacts, quotaArtifacts } = useAnalysisContext();
 
   const summary = useMemo(() => {
     if (!usageArtifacts || !quotaArtifacts) {
       return null;
     }
-    return computeCostOptimisationFromArtifacts(usageArtifacts, quotaArtifacts);
+    return computeCostOptimizationFromArtifacts(usageArtifacts, quotaArtifacts);
   }, [usageArtifacts, quotaArtifacts]);
 
   if (!summary) {
     return (
       <div className="min-h-[60vh] flex flex-col">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Cost Optimisation</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Cost Optimization</h2>
           <button
             onClick={onBack}
             className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
@@ -33,7 +33,7 @@ export function CostOptimisationInsights({ onBack }: CostOptimisationInsightsPro
           </button>
         </div>
         <p className="text-sm text-gray-600">
-          Cost optimisation insights are unavailable because quota or usage artifacts could not be derived from the CSV.
+          Cost optimization insights are unavailable because quota or usage artifacts could not be derived from the CSV.
         </p>
       </div>
     );
@@ -44,7 +44,7 @@ export function CostOptimisationInsights({ onBack }: CostOptimisationInsightsPro
   return (
     <div className="min-h-[60vh] flex flex-col">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Cost Optimisation</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Cost Optimization</h2>
         <button
           onClick={onBack}
           className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"

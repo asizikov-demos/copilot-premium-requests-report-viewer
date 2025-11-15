@@ -61,14 +61,10 @@ export function getUserOrgMetadata(
   processedData: ProcessedData[],
   userName: string
 ): { organization?: string; costCenter?: string } {
-  for (const row of processedData) {
-    if (row.user === userName) {
-      const organization = row.organization;
-      const costCenter = row.costCenter;
-      if (organization || costCenter) {
-        return { organization, costCenter };
-      }
-    }
+  const userRows = processedData.filter(d => d.user === userName);
+  const row = userRows.find(r => r.organization || r.costCenter);
+  if (row) {
+    return { organization: row.organization, costCenter: row.costCenter };
   }
   return {};
 }

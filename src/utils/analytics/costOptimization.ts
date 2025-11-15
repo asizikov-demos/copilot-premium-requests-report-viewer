@@ -1,7 +1,7 @@
 import type { UsageArtifacts, QuotaArtifacts } from '@/utils/ingestion';
-import { PRICING } from '@/constants/pricing';
+import { PRICING, COST_OPTIMIZATION_THRESHOLDS } from '@/constants/pricing';
 
-export interface CostOptimisationCandidate {
+export interface CostOptimizationCandidate {
   user: string;
   totalRequests: number;
   quota: number;
@@ -13,42 +13,41 @@ export interface CostOptimisationCandidate {
   enterpriseUpgradeCost: number;
 }
 
-export interface CostOptimisationSummary {
-  candidates: CostOptimisationCandidate[];
+export interface CostOptimizationSummary {
+  candidates: CostOptimizationCandidate[];
   totalCandidates: number;
   totalOverageCost: number;
   estimatedEnterpriseCost: number;
   totalPotentialSavings: number;
-  approachingBreakEven: CostOptimisationCandidate[];
+  approachingBreakEven: CostOptimizationCandidate[];
 }
 
 /**
  * Identify Copilot Business users (300 quota) whose overage is at least 500 requests.
  * These users are strong candidates for upgrading to Copilot Enterprise (1000 quota).
  */
-export function computeCostOptimisationFromArtifacts(
+export function computeCostOptimizationFromArtifacts(
   usage: UsageArtifacts,
   quota: QuotaArtifacts
-): CostOptimisationSummary {
-  const candidates: CostOptimisationCandidate[] = [];
-  const approachingBreakEven: CostOptimisationCandidate[] = [];
-  const ENTERPRISE_UPGRADE_DELTA_USD = 20;
+): CostOptimizationSummary {
+  const candidates: CostOptimizationCandidate[] = [];
+  const approachingBreakEven: CostOptimizationCandidate[] = [];
 
   for (const u of usage.users) {
     const q = quota.quotaByUser.get(u.user);
     if (q !== PRICING.BUSINESS_QUOTA) continue;
 
     const overageRequests = Math.max(0, u.totalRequests - q);
-    // Users with very low overage are not interesting for optimisation scenarios.
-    if (overageRequests < 100) continue;
+    // Users with very low overage are not interesting for optimization scenarios.
+    if (overageRequests < COST_OPTIMIZATION_THRESHOLDS.MIN_OVERAGE_THRESHOLD) continue;
 
     const overageCost = overageRequests * PRICING.OVERAGE_RATE_PER_REQUEST;
     const enterpriseQuota = PRICING.ENTERPRISE_QUOTA;
     const enterpriseExtraCapacity = enterpriseQuota - q;
-    const enterpriseUpgradeCost = ENTERPRISE_UPGRADE_DELTA_USD;
+    const enterpriseUpgradeCost = PRICING.ENTERPRISE_UPGRADE_DELTA;
     const potentialSavings = Math.max(0, overageCost - enterpriseUpgradeCost);
 
-    const baseCandidate: CostOptimisationCandidate = {
+    const baseCandidate: CostOptimizationCandidate = {
       user: u.user,
       totalRequests: u.totalRequests,
       quota: q,
@@ -61,16 +60,16 @@ export function computeCostOptimisationFromArtifacts(
     };
 
     // Strong recommendation: overage clearly above break-even (>= 500 PRUs)
-    if (overageRequests >= 500) {
+    if (overageRequests >= COST_OPTIMIZATION_THRESHOLDS.STRONG_CANDIDATE_THRESHOLD) {
       candidates.push(baseCandidate);
-    } else if (overageRequests >= 400) {
+    } else if (overageRequests >= COST_OPTIMIZATION_THRESHOLDS.APPROACHING_BREAKEVEN_THRESHOLD) {
       // Approaching break-even: within ~100 PRUs of the tipping point.
       approachingBreakEven.push(baseCandidate);
     }
   }
 
   const totalOverageCost = candidates.reduce((sum, c) => sum + c.overageCost, 0);
-  const estimatedEnterpriseCost = candidates.length * ENTERPRISE_UPGRADE_DELTA_USD;
+  const estimatedEnterpriseCost = candidates.length * PRICING.ENTERPRISE_UPGRADE_DELTA;
   const totalPotentialSavings = Math.max(0, totalOverageCost - estimatedEnterpriseCost);
 
   return {
