@@ -1,4 +1,4 @@
-import { computeCostOptimisationFromArtifacts } from '@/utils/analytics/costOptimisation';
+import { computeCostOptimizationFromArtifacts } from '@/utils/analytics/costOptimization';
 import type { UsageArtifacts, QuotaArtifacts } from '@/utils/ingestion';
 import { PRICING } from '@/constants/pricing';
 
@@ -19,7 +19,7 @@ function makeQuota(entries: Array<{ user: string; quota: number | 'unlimited' }>
   return { quotaByUser } as QuotaArtifacts;
 }
 
-describe('computeCostOptimisationFromArtifacts', () => {
+describe('computeCostOptimizationFromArtifacts', () => {
   it('returns empty summary when no users qualify', () => {
     const usage = makeUsage([
       { user: 'a', totalRequests: 250 },
@@ -29,7 +29,7 @@ describe('computeCostOptimisationFromArtifacts', () => {
       { user: 'a', quota: PRICING.BUSINESS_QUOTA },
       { user: 'b', quota: PRICING.BUSINESS_QUOTA }
     ]);
-    const res = computeCostOptimisationFromArtifacts(usage, quota);
+    const res = computeCostOptimizationFromArtifacts(usage, quota);
     expect(res.totalCandidates).toBe(0);
     expect(res.candidates).toHaveLength(0);
     expect(res.totalOverageCost).toBe(0);
@@ -50,7 +50,7 @@ describe('computeCostOptimisationFromArtifacts', () => {
       { user: 'ent-high', quota: PRICING.ENTERPRISE_QUOTA }
     ]);
 
-    const res = computeCostOptimisationFromArtifacts(usage, quota);
+    const res = computeCostOptimizationFromArtifacts(usage, quota);
     // Strong recommendation list
     expect(res.totalCandidates).toBe(1);
     expect(res.candidates).toHaveLength(1);
@@ -77,13 +77,13 @@ describe('computeCostOptimisationFromArtifacts', () => {
       { user: 'u2', quota: PRICING.BUSINESS_QUOTA }
     ]);
 
-    const res = computeCostOptimisationFromArtifacts(usage, quota);
+    const res = computeCostOptimizationFromArtifacts(usage, quota);
     expect(res.totalCandidates).toBe(2);
 
     const expectedOverage = 500 + 800;
     expect(res.totalOverageCost).toBeCloseTo(expectedOverage * PRICING.OVERAGE_RATE_PER_REQUEST, 5);
-    // Enterprise upgrade is a fixed USD20 per seat
-    expect(res.estimatedEnterpriseCost).toBeCloseTo(2 * 20, 5);
+    // Enterprise upgrade is a fixed per seat cost
+    expect(res.estimatedEnterpriseCost).toBeCloseTo(2 * PRICING.ENTERPRISE_UPGRADE_DELTA, 5);
     expect(res.totalPotentialSavings).toBeGreaterThanOrEqual(0);
   });
 });
