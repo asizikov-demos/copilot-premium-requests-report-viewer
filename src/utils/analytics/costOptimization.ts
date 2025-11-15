@@ -23,8 +23,8 @@ export interface CostOptimizationSummary {
 }
 
 /**
- * Identify Copilot Business users (300 quota) whose overage is at least 500 requests.
- * These users are strong candidates for upgrading to Copilot Enterprise (1000 quota).
+ * Identify Copilot Business users (BUSINESS_QUOTA) whose overage is at least STRONG_CANDIDATE_THRESHOLD requests.
+ * These users are strong candidates for upgrading to Copilot Enterprise (ENTERPRISE_QUOTA).
  */
 export function computeCostOptimizationFromArtifacts(
   usage: UsageArtifacts,
@@ -59,11 +59,11 @@ export function computeCostOptimizationFromArtifacts(
       enterpriseUpgradeCost
     };
 
-    // Strong recommendation: overage clearly above break-even (>= 500 PRUs)
+    // Strong recommendation: overage clearly above break-even (>= STRONG_CANDIDATE_THRESHOLD PRUs)
     if (overageRequests >= COST_OPTIMIZATION_THRESHOLDS.STRONG_CANDIDATE_THRESHOLD) {
       candidates.push(baseCandidate);
     } else if (overageRequests >= COST_OPTIMIZATION_THRESHOLDS.APPROACHING_BREAKEVEN_THRESHOLD) {
-      // Approaching break-even: within ~100 PRUs of the tipping point.
+      // Approaching break-even: within ~(STRONG_CANDIDATE_THRESHOLD - APPROACHING_BREAKEVEN_THRESHOLD) PRUs of the tipping point.
       approachingBreakEven.push(baseCandidate);
     }
   }
