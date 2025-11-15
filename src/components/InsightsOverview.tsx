@@ -344,7 +344,7 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
             Weekly Quota Exhaustion Pattern
           </h3>
           <p className="text-sm text-gray-500 mt-1">
-            Users who exhausted their quota before day 21 of the month
+            Users who exhausted their quota before day 28 of the month
           </p>
         </div>
         <div className="px-4 sm:px-6 py-6">

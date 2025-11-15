@@ -20,14 +20,26 @@ interface WeeklyQuotaDatum {
 }
 
 export function WeeklyQuotaExhaustion({ weeklyExhaustion, totalUsers, height = 280 }: WeeklyQuotaExhaustionProps) {
-  const { week1Exhausted, week2Exhausted, week3Exhausted } = weeklyExhaustion;
-  const totalEarly = week1Exhausted.length + week2Exhausted.length + week3Exhausted.length;
+  // Backward compatibility: older WeeklyExhaustionData instances may not include week4Exhausted.
+  const {
+    week1Exhausted,
+    week2Exhausted,
+    week3Exhausted,
+    week4Exhausted = []
+  } = weeklyExhaustion;
+
+  const totalEarly =
+    week1Exhausted.length +
+    week2Exhausted.length +
+    week3Exhausted.length +
+    week4Exhausted.length;
 
   const data: WeeklyQuotaDatum[] = useMemo(() => [
     { week: 'Week 1', users: week1Exhausted.length, range: 'Days 1-7' },
     { week: 'Week 2', users: week2Exhausted.length, range: 'Days 8-14' },
     { week: 'Week 3', users: week3Exhausted.length, range: 'Days 15-21' },
-  ], [week1Exhausted, week2Exhausted, week3Exhausted]);
+    { week: 'Week 4', users: week4Exhausted.length, range: 'Days 22-28' },
+  ], [week1Exhausted, week2Exhausted, week3Exhausted, week4Exhausted]);
 
   return (
     <div className="space-y-4" aria-label="Weekly quota exhaustion summary">
@@ -35,7 +47,7 @@ export function WeeklyQuotaExhaustion({ weeklyExhaustion, totalUsers, height = 2
         <div>
           <h4 className="font-medium text-gray-900">Early Quota Exhaustion</h4>
           <p className="text-sm text-gray-600 mt-1">
-            {totalEarly} of {totalUsers} users ({totalUsers > 0 ? ((totalEarly / totalUsers) * 100).toFixed(1) : '0'}) exhausted quota before day 21
+            {totalEarly} of {totalUsers} users ({totalUsers > 0 ? ((totalEarly / totalUsers) * 100).toFixed(1) : '0'}) exhausted quota before day 28
           </p>
         </div>
         {totalEarly === 0 && (

@@ -35,7 +35,7 @@ export function generateAdvisories(
       type: 'perRequestBilling',
       severity,
       title: 'Consider Per-Request Billing for Power Users',
-      description: `${earlyExhausterUsers.length} user${earlyExhausterUsers.length === 1 ? '' : 's'} (${(earlyExhausterPercentage * 100).toFixed(0)}%) exhaust their quota before day 21 of the month. These power users could benefit from per-request billing to avoid disruption.`,
+      description: `${earlyExhausterUsers.length} user${earlyExhausterUsers.length === 1 ? '' : 's'} (${(earlyExhausterPercentage * 100).toFixed(0)}%) exhaust their quota before day 28 of the month. These power users could benefit from per-request billing to avoid disruption.`,
       actionItems: [
         'Review power user consumption patterns in detail',
         'Set up per-request billing budgets for high-consumption users',

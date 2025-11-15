@@ -18,7 +18,7 @@ interface AdvisorySectionProps {
 
 // Highlight key phrases inside advisory descriptions without needing HTML in data layer
 function renderDescription(advisory: Advisory) {
-  const phrase = 'before day 21 of the month';
+  const phrase = 'before day 28 of the month';
   if (advisory.description.includes(phrase)) {
     const parts = advisory.description.split(phrase);
     return (
