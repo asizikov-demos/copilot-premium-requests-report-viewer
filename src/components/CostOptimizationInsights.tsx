@@ -3,7 +3,7 @@
 import React, { useMemo } from 'react';
 import { useAnalysisContext } from '@/context/AnalysisContext';
 import { computeCostOptimizationFromArtifacts } from '@/utils/analytics/costOptimization';
-import { PRICING } from '@/constants/pricing';
+import { PRICING, COST_OPTIMIZATION_THRESHOLDS } from '@/constants/pricing';
 
 interface CostOptimizationInsightsProps {
   onBack: () => void;
@@ -56,7 +56,7 @@ export function CostOptimizationInsights({ onBack }: CostOptimizationInsightsPro
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-white shadow rounded-lg p-4">
-          <h3 className="text-sm font-medium text-gray-700 mb-1">Business users exceeding quota by 500+ requests</h3>
+          <h3 className="text-sm font-medium text-gray-700 mb-1">Business users exceeding quota by {COST_OPTIMIZATION_THRESHOLDS.STRONG_CANDIDATE_THRESHOLD}+ requests</h3>
           <p className="text-2xl font-semibold text-blue-600">{totalCandidates}</p>
           <p className="mt-1 text-xs text-gray-500">
             Users on Copilot Business ({PRICING.BUSINESS_QUOTA} RPU) with substantial overage.
@@ -103,14 +103,14 @@ export function CostOptimizationInsights({ onBack }: CostOptimizationInsightsPro
             <h3 className="text-lg font-medium text-gray-900">Users recommended for Enterprise upgrade</h3>
             <p className="mt-1 text-sm text-gray-600">
               These users are on Copilot Business and exceed their included {PRICING.BUSINESS_QUOTA} premium requests by
-              at least 500 in the selected billing period.
+              at least {COST_OPTIMIZATION_THRESHOLDS.STRONG_CANDIDATE_THRESHOLD} in the selected billing period.
             </p>
           </div>
         </div>
         {candidates.length === 0 ? (
           <div className="p-6">
             <p className="text-sm text-gray-600">
-              No Copilot Business users currently exceed their monthly quota by 500 or more requests. No Enterprise
+              No Copilot Business users currently exceed their monthly quota by {COST_OPTIMIZATION_THRESHOLDS.STRONG_CANDIDATE_THRESHOLD} or more requests. No Enterprise
               upgrade recommendations at this time.
             </p>
           </div>
@@ -179,7 +179,7 @@ export function CostOptimizationInsights({ onBack }: CostOptimizationInsightsPro
           <div className="px-6 py-4 border-b border-gray-200">
             <h3 className="text-lg font-medium text-gray-900">Users approaching Enterprise break-even</h3>
             <p className="mt-1 text-sm text-gray-600">
-              These Copilot Business users are within roughly 100 premium requests of the break-even point where GitHub
+              These Copilot Business users are within roughly {COST_OPTIMIZATION_THRESHOLDS.STRONG_CANDIDATE_THRESHOLD - COST_OPTIMIZATION_THRESHOLDS.APPROACHING_BREAKEVEN_THRESHOLD} premium requests of the break-even point where GitHub
               Copilot Enterprise becomes cost-neutral or cheaper based on overage spend.
             </p>
           </div>
