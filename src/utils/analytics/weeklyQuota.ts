@@ -4,6 +4,7 @@ export interface WeeklyExhaustionData {
   week1Exhausted: string[]; // Users who hit 100% by day 7
   week2Exhausted: string[]; // Users who hit 100% by day 14
   week3Exhausted: string[]; // Users who hit 100% by day 21
+  week4Exhausted: string[]; // Users who hit 100% by day 28
   currentPeriodOnly: boolean;
 }
 
@@ -43,10 +44,11 @@ export function analyzeWeeklyQuotaExhaustion(
     }
   });
   
-  // Categorize by weeks (1-7, 8-14, 15-21)
+  // Categorize by weeks (1-7, 8-14, 15-21, 22-28)
   const week1Exhausted: string[] = [];
   const week2Exhausted: string[] = [];
   const week3Exhausted: string[] = [];
+  const week4Exhausted: string[] = [];
   
   userExhaustionDates.forEach((day, user) => {
     if (day <= 7) {
@@ -55,6 +57,8 @@ export function analyzeWeeklyQuotaExhaustion(
       week2Exhausted.push(user);
     } else if (day <= 21) {
       week3Exhausted.push(user);
+    } else if (day <= 28) {
+      week4Exhausted.push(user);
     }
   });
   
@@ -62,17 +66,19 @@ export function analyzeWeeklyQuotaExhaustion(
     week1Exhausted,
     week2Exhausted,
     week3Exhausted,
+    week4Exhausted,
     currentPeriodOnly: true
   };
 }
 
 /**
- * Gets all users who exhausted quota before day 21 (combines all three weeks)
+ * Gets all users who exhausted quota before day 28 (combines first four weeks)
  */
 export function getEarlyExhausterUsers(weeklyExhaustion: WeeklyExhaustionData): string[] {
   return [
     ...weeklyExhaustion.week1Exhausted,
     ...weeklyExhaustion.week2Exhausted,
-    ...weeklyExhaustion.week3Exhausted
+    ...weeklyExhaustion.week3Exhausted,
+    ...weeklyExhaustion.week4Exhausted
   ];
 }

@@ -7,7 +7,8 @@ import {
   getUserData,
   calculateUserTotalRequests,
   calculateOverageRequests,
-  calculateOverageCost
+  calculateOverageCost,
+  getUserOrgMetadata
 } from '@/utils/userCalculations';
 import { PRICING } from '@/constants/pricing';
 import { FullScreenModal } from './primitives/FullScreenModal';
@@ -85,6 +86,11 @@ export function UserConsumptionModal({
   const userData = useMemo(() => {
     return getUserData(processedData, user);
   }, [processedData, user]);
+
+  const { organization, costCenter } = useMemo(
+    () => getUserOrgMetadata(processedData, user),
+    [processedData, user]
+  );
 
   // Get models used by this user
   const userModels = useMemo(() => {
@@ -258,10 +264,13 @@ export function UserConsumptionModal({
                 {userActualPlan === 'unlimited'
                   ? 'Unlimited Plan'
                   : planInfo[userActualPlan as 'business' | 'enterprise'].name}
-                {' '} - Daily Usage Overview
-              </p>
-              <p className="text-xs sm:text-sm text-gray-500 truncate">
-                Total requests: {userTotalRequests.toFixed(1)} / {effectiveUserQuotaValue === 'unlimited' ? 'Unlimited' : effectiveUserQuotaValue} quota
+                {organization ? `, Organization: ${organization}` : ''}
+                {costCenter ? `, Cost Center: ${costCenter}` : ''}
+                {', Total requests: '}
+                {userTotalRequests.toFixed(1)}
+                {' / '}
+                {effectiveUserQuotaValue === 'unlimited' ? 'Unlimited' : effectiveUserQuotaValue}
+                {' quota'}
               </p>
               {overageRequests > 0 && effectiveUserQuotaValue !== 'unlimited' && (
                 <p className="text-xs sm:text-sm text-red-600 font-medium truncate" role="alert">
