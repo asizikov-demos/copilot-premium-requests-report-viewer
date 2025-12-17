@@ -3,6 +3,7 @@ import '@testing-library/jest-dom';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 
 import { UsersOverview } from '@/components/UsersOverview';
+import { PRICING } from '@/constants/pricing';
 import type { ProcessedData } from '@/types/csv';
 import type { UserSummary } from '@/utils/analytics/powerUsers';
 import type { QuotaArtifacts, UsageArtifacts } from '@/utils/ingestion';
@@ -68,8 +69,8 @@ describe('UsersOverview - sorting', () => {
 
     const quotaArtifacts = makeQuota([
       { user: 'Alice', quota: 'unlimited' },
-      { user: 'Bob', quota: 300 },
-      { user: 'Charlie', quota: 1000 },
+      { user: 'Bob', quota: PRICING.BUSINESS_QUOTA },
+      { user: 'Charlie', quota: PRICING.ENTERPRISE_QUOTA },
     ]);
 
     const usageArtifacts = makeUsage(userData);
