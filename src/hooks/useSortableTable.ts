@@ -29,18 +29,26 @@ export function useSortableTable<Row, ColumnKey extends string>(params: UseSorta
   const { data, defaultSort, getSortableValue } = params; // columns reserved for future validation
   const stable = params.stable !== false; // default true
 
-  const [sortBy, setSortBy] = useState<ColumnKey | null>(defaultSort?.column ?? null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>(defaultSort?.direction ?? 'desc');
+  const [sortState, setSortState] = useState<SortState<ColumnKey>>({
+    sortBy: defaultSort?.column ?? null,
+    sortDirection: defaultSort?.direction ?? 'desc'
+  });
+
+  const { sortBy, sortDirection } = sortState;
 
   const handleSort = useCallback((column: ColumnKey) => {
-    setSortBy(prev => {
-      if (prev === column) {
-        setSortDirection(d => (d === 'asc' ? 'desc' : 'asc'));
-        return prev; // keep same column
+    setSortState(prev => {
+      if (prev.sortBy === column) {
+        return {
+          sortBy: prev.sortBy,
+          sortDirection: prev.sortDirection === 'asc' ? 'desc' : 'asc'
+        };
       }
-      // new column
-      setSortDirection('desc');
-      return column;
+
+      return {
+        sortBy: column,
+        sortDirection: 'desc'
+      };
     });
   }, []);
 
@@ -60,7 +68,9 @@ export function useSortableTable<Row, ColumnKey extends string>(params: UseSorta
 
       let cmp = 0;
       if (typeof aNum === 'number' && typeof bNum === 'number' && !Number.isNaN(aNum) && !Number.isNaN(bNum)) {
-        cmp = aNum - bNum;
+        // Guard against cases like Infinity - Infinity resulting in NaN.
+        cmp = aNum === bNum ? 0 : aNum - bNum;
+        if (Number.isNaN(cmp)) cmp = 0;
       } else {
         const aStr = String(aRaw ?? '').toLowerCase();
         const bStr = String(bRaw ?? '').toLowerCase();

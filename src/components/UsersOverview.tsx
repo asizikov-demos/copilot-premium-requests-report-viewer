@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { UsersQuotaConsumptionChart } from './charts/UsersQuotaConsumptionChart';
 import { UsersConsumptionHeatmap } from './charts/UsersConsumptionHeatmap';
 import { UserSummary } from '@/utils/analytics/powerUsers';
@@ -56,9 +56,19 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
 
   const ROWS_PER_PAGE = 50;
 
-  // Columns: totalRequests + dynamic model names
-  type ColumnKey = 'totalRequests' | typeof allModels[number];
-  const columns = useMemo<ColumnKey[]>(() => ['totalRequests', ...allModels as ColumnKey[]], [allModels]);
+  // Columns: quota + totalRequests + dynamic model names
+  type ColumnKey = 'quota' | 'totalRequests' | typeof allModels[number];
+  const columns = useMemo<ColumnKey[]>(() => ['quota', 'totalRequests', ...allModels as ColumnKey[]], [allModels]);
+
+  const getSortableValue = useCallback((row: UserSummary, column: ColumnKey) => {
+    if (column === 'quota') {
+      const q = getUserQuota(quotaArtifacts, row.user);
+      return q === 'unlimited' ? Number.MAX_SAFE_INTEGER : q;
+    }
+
+    if (column === 'totalRequests') return row.totalRequests;
+    return row.modelBreakdown[column] || 0;
+  }, [quotaArtifacts]);
 
   const {
     sortedData: sortedUserData,
@@ -68,10 +78,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
   } = useSortableTable({
     data: userData,
     columns,
-    getSortableValue: (row, column) => {
-      if (column === 'totalRequests') return row.totalRequests;
-      return row.modelBreakdown[column] || 0;
-    },
+    getSortableValue,
     defaultSort: { column: 'totalRequests', direction: 'desc' }
   });
 
@@ -330,8 +337,20 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky left-0 z-30 min-w-40 border-r border-gray-200">
                   User
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-24 bg-gray-50">
-                  Quota
+                <th
+                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-24 cursor-pointer hover:bg-gray-100 select-none ${
+                    sortBy === 'quota' ? 'bg-gray-200' : 'bg-gray-50'
+                  }`}
+                  onClick={() => handleSortWithReset('quota')}
+                >
+                  <div className="flex items-center justify-between">
+                    Quota
+                    <span className="ml-1">
+                      {sortBy === 'quota' ? (
+                        sortDirection === 'desc' ? '↓' : '↑'
+                      ) : '↕'}
+                    </span>
+                  </div>
                 </th>
                 <th 
                   className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-32 cursor-pointer hover:bg-gray-100 select-none ${
