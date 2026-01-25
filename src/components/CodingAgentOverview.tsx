@@ -52,9 +52,10 @@ export function CodingAgentOverview({
           )}
           <button
             onClick={onBack}
-            className="text-sm font-medium text-zinc-600 hover:text-zinc-900 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-zinc-600 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 hover:border-zinc-300 transition-colors"
           >
-            ← Back
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
+            Back
           </button>
         </div>
       </div>
