@@ -199,7 +199,7 @@ export function CostOptimizationInsights({ onBack }: CostOptimizationInsightsPro
           <div className="px-6 py-4 border-b border-stone-100 bg-gradient-to-r from-amber-50 to-transparent">
             <h3 className="text-lg font-semibold text-stone-900">Users approaching Enterprise break-even</h3>
             <p className="text-sm text-stone-500 mt-1">
-              These Copilot Business users are within roughly {COST_OPTIMIZATION_THRESHOLDS.APPROACHING_THRESHOLD} premium requests of the break-even point where GitHub Copilot Enterprise becomes cost-neutral or cheaper based on overage spend.
+              These Copilot Business users are within roughly {COST_OPTIMIZATION_THRESHOLDS.APPROACHING_BREAKEVEN_THRESHOLD} premium requests of the break-even point where GitHub Copilot Enterprise becomes cost-neutral or cheaper based on overage spend.
             </p>
           </div>
           <div className="overflow-x-auto">
