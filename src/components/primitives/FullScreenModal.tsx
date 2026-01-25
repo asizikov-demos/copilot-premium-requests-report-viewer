@@ -89,7 +89,7 @@ export const FullScreenModal: React.FC<FullScreenModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-stretch justify-center bg-black/50"
+      className="fixed inset-0 z-50 flex items-stretch justify-center bg-black/40 backdrop-blur-sm"
       aria-hidden={false}
       role="dialog"
       aria-modal="true"
@@ -107,17 +107,17 @@ export const FullScreenModal: React.FC<FullScreenModalProps> = ({
         {customHeader ? (
           customHeader
         ) : (
-          <header className="flex items-start justify-between p-4 border-b border-gray-200">
-            <h2 id="modal-title" className="text-lg font-semibold text-gray-900">
+          <header className="flex items-start justify-between px-5 py-4 border-b border-zinc-100">
+            <h2 id="modal-title" className="text-lg font-semibold text-zinc-900">
               {title}
             </h2>
             <button
               onClick={onClose}
-              className="ml-4 inline-flex items-center justify-center rounded-md p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="ml-4 text-zinc-400 hover:text-zinc-600 transition-colors"
               aria-label="Close modal"
             >
-              <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </header>

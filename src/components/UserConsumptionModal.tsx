@@ -43,30 +43,30 @@ function UserDailyUsageTooltip({ active, payload, label }: TooltipProps) {
     const dailyTotal = modelData.reduce((sum: number, entry: TooltipEntry) => sum + entry.value, 0);
 
     return (
-      <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-        <p className="font-medium text-gray-900 mb-2">{formattedDate}</p>
+      <div className="bg-white p-3 border border-zinc-200 rounded-lg shadow-lg">
+        <p className="font-medium text-zinc-900 mb-2">{formattedDate}</p>
 
         {/* Daily breakdown */}
         {modelData.length > 0 ? (
           <div className="mb-2">
-            <p className="text-sm font-medium text-gray-700 mb-1">Daily Usage:</p>
+            <p className="text-xs font-medium text-zinc-600 mb-1">Daily Usage</p>
             {modelData.map((entry: TooltipEntry, entryIndex: number) => (
-              <p key={entryIndex} className="text-sm ml-2" style={{ color: entry.color }}>
-                • {entry.dataKey}: {entry.value.toFixed(1)} requests
+              <p key={entryIndex} className="text-xs ml-2" style={{ color: entry.color }}>
+                {entry.dataKey}: {entry.value.toFixed(1)}
               </p>
             ))}
-            <p className="text-sm font-semibold text-gray-900 ml-2 mt-1">
-              Daily Total: {dailyTotal.toFixed(1)} requests
+            <p className="text-xs font-semibold text-zinc-900 ml-2 mt-1">
+              Total: {dailyTotal.toFixed(1)}
             </p>
           </div>
         ) : (
-          <p className="text-sm text-gray-500 mb-2">No requests this day</p>
+          <p className="text-xs text-zinc-500 mb-2">No requests</p>
         )}
 
         {/* Cumulative total */}
         {cumulativeData && (
-          <p className="text-sm text-blue-600 font-semibold border-t border-gray-200 pt-2">
-            Cumulative Total: {cumulativeData.value.toFixed(1)} requests
+          <p className="text-xs text-blue-600 font-medium border-t border-zinc-100 pt-2">
+            Cumulative: {cumulativeData.value.toFixed(1)}
           </p>
         )}
       </div>
@@ -209,16 +209,16 @@ export function UserConsumptionModal({
       title={`${user} Daily Usage`}
       contentClassName="flex flex-col"
       customHeader={(
-        <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0" id="modal-title">
+        <div className="px-5 py-4 border-b border-zinc-100 flex items-center justify-between flex-shrink-0" id="modal-title">
           <div className="flex-1 min-w-0">
             <button
               onClick={handleCopyUser}
-              className="text-lg sm:text-xl font-semibold text-gray-900 truncate hover:text-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded inline-flex items-center gap-2 group"
+              className="text-lg font-semibold text-zinc-900 truncate hover:text-blue-600 transition-colors focus:outline-none rounded inline-flex items-center gap-2 group"
               title="Click to copy username"
             >
               {user}
               <svg
-                className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors"
+                className="w-4 h-4 text-zinc-300 group-hover:text-blue-600 transition-colors"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -226,51 +226,47 @@ export function UserConsumptionModal({
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeWidth={2}
+                  strokeWidth={1.5}
                   d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
                 />
               </svg>
             </button>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-6 mt-1">
-              <p className="text-xs sm:text-sm text-gray-500 truncate">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-1">
+              <p className="text-xs text-zinc-500 truncate">
                 {userActualPlan === 'unlimited'
-                  ? 'Unlimited Plan'
+                  ? 'Unlimited'
                   : planInfo[userActualPlan as 'business' | 'enterprise'].name}
-                {organization ? `, Organization: ${organization}` : ''}
-                {costCenter ? `, Cost Center: ${costCenter}` : ''}
-                {', Total requests: '}
-                {userTotalRequests.toFixed(1)}
-                {' / '}
-                {effectiveUserQuotaValue === 'unlimited' ? 'Unlimited' : effectiveUserQuotaValue}
-                {' quota'}
+                {organization ? ` • ${organization}` : ''}
+                {costCenter ? ` • ${costCenter}` : ''}
+                {' • '}
+                {userTotalRequests.toFixed(1)} / {effectiveUserQuotaValue === 'unlimited' ? '∞' : effectiveUserQuotaValue}
               </p>
               {overageRequests > 0 && effectiveUserQuotaValue !== 'unlimited' && (
-                <p className="text-xs sm:text-sm text-red-600 font-medium truncate" role="alert">
-                  Overage cost: ${overageCost.toFixed(2)} ({overageRequests.toFixed(1)} × ${PRICING.OVERAGE_RATE_PER_REQUEST.toFixed(2)})
+                <p className="text-xs text-red-600 font-medium truncate" role="alert">
+                  Overage: ${overageCost.toFixed(2)}
                 </p>
               )}
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors ml-4 flex-shrink-0"
+            className="text-zinc-400 hover:text-zinc-600 transition-colors ml-4 flex-shrink-0"
             aria-label="Close modal"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
       )}
     >
-      <div className="flex-1 p-2 sm:p-4 flex flex-col min-h-0">
+      <div className="flex-1 p-4 flex flex-col min-h-0">
         {userDailyData.length > 0 ? (
-          <div className="flex flex-col gap-2 flex-1 min-h-0">
-            <div className="text-xs sm:text-sm text-gray-600 bg-gray-50 p-2 rounded-lg flex flex-wrap gap-x-4 gap-y-1">
-              <p className="whitespace-nowrap"><strong>Chart Explanation:</strong></p>
-              <p className="whitespace-nowrap">• <strong>Stacked Bars:</strong> Daily requests per model</p>
-              <p className="whitespace-nowrap">• <strong>Black Line:</strong> Cumulative total requests</p>
-              <p className="whitespace-nowrap">• <strong>Red Line:</strong> Quota limit</p>
+          <div className="flex flex-col gap-3 flex-1 min-h-0">
+            <div className="text-xs text-zinc-500 bg-zinc-50 p-2 rounded-lg flex flex-wrap gap-x-4 gap-y-1">
+              <span><strong>Bars:</strong> Daily by model</span>
+              <span><strong>Black line:</strong> Cumulative</span>
+              <span><strong>Red line:</strong> Quota</span>
             </div>
             <div className="flex-1 min-h-0 w-full">
               <UserDailyStackedChart
@@ -283,22 +279,25 @@ export function UserConsumptionModal({
             </div>
           </div>
         ) : (
-          <div className="flex items-center justify-center h-64 text-gray-500">
-            No data available for this user
+          <div className="flex items-center justify-center h-64 text-zinc-500 text-sm">
+            No data available
           </div>
         )}
         {userModels.length > 0 && (
-          <div className="border-t border-gray-200 pt-2">
-            <h4 className="text-xs sm:text-sm font-medium text-gray-900 mb-1 sm:mb-2">Models Used</h4>
+          <div className="border-t border-zinc-100 pt-3 mt-3">
+            <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Models Used</h4>
             <div className="flex flex-wrap gap-x-4 gap-y-1">
               {sortedModels.map((model) => (
-                <div key={model} className="flex items-center space-x-1.5">
+                <div key={model} className="flex items-center gap-1.5">
                   <div
-                    className="w-2.5 h-2.5 rounded"
+                    className="w-2 h-2 rounded-sm"
                     style={{ backgroundColor: modelColors[model] }}
                   />
-                  <span className="text-xs text-gray-600 truncate max-w-[150px]" title={model}>
-                    {model.length > 20 ? `${model.substring(0, 20)}...` : model} × {modelUsageTotals[model]?.toFixed(1)}
+                  <span className="text-xs text-zinc-600 truncate max-w-[140px]" title={model}>
+                    {model.length > 18 ? `${model.substring(0, 18)}...` : model}
+                  </span>
+                  <span className="text-xs text-zinc-400 font-mono">
+                    {modelUsageTotals[model]?.toFixed(1)}
                   </span>
                 </div>
               ))}

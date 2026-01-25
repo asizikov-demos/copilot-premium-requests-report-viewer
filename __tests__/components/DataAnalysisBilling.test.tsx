@@ -37,8 +37,9 @@ describe('DataAnalysis billing summary', () => {
     await waitFor(() => {
       const billing = screen.getByLabelText('billing-summary');
       expect(billing).toBeInTheDocument();
-      expect(billing).toHaveTextContent(/Gross Amount:/i);
-      expect(billing).toHaveTextContent(/Net Amount:/i);
+      // New compact format uses abbreviated labels
+      expect(billing).toHaveTextContent(/Gross/i);
+      expect(billing).toHaveTextContent(/Net/i);
     });
   });
 });

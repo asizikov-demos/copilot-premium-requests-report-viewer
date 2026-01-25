@@ -37,26 +37,25 @@ export function ModelUsageTrendsOverview() {
     <div className="w-full space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Model Usage Trends</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Stacked daily view of premium requests by model. Dates are grouped by UTC day as provided in the CSV.
+          <h2 className="text-2xl font-semibold tracking-tight text-zinc-900">Model Usage Trends</h2>
+          <p className="text-sm text-zinc-500 mt-1">
+            Daily stacked view by model (UTC)
           </p>
         </div>
         <button
           type="button"
           onClick={() => setView('overview')}
-          className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="text-sm font-medium text-zinc-600 hover:text-zinc-900 transition-colors"
         >
-          <span className="mr-1">&larr;</span>
-          Back to Overview
+          ← Back
         </button>
       </div>
 
-      <div className="bg-white shadow rounded-lg p-6 min-h-[24rem]">
+      <div className="bg-white border border-zinc-200 rounded-xl p-5 min-h-[20rem]">
         {data.length === 0 || models.length === 0 ? (
-          <p className="text-sm text-gray-500">No model usage data available for the selected period.</p>
+          <p className="text-sm text-zinc-500">No model usage data available for the selected period.</p>
         ) : (
-          <div className="h-96 2xl:h-[32rem]">
+          <div className="h-80 2xl:h-96">
             <ModelDailyStackedChart data={data} models={models} modelColors={modelColors} />
           </div>
         )}

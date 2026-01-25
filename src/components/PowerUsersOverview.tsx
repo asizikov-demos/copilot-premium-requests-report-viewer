@@ -45,18 +45,18 @@ export function PowerUsersOverview({ powerUsers, totalQualifiedUsers, minRequest
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Power Users Overview</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Top {MAX_POWER_USERS_DISPLAYED} power users out of {totalQualifiedUsers} qualified users ({minRequestsThreshold}+ requests)
+          <h2 className="text-2xl font-semibold tracking-tight text-zinc-900">Power Users</h2>
+          <p className="text-sm text-zinc-500 mt-1">
+            Top {MAX_POWER_USERS_DISPLAYED} of {totalQualifiedUsers} qualified users ({minRequestsThreshold}+ requests)
           </p>
         </div>
         
-        <div className="flex flex-col sm:flex-row gap-2 items-end sm:items-center">
-          <div className="relative flex items-center gap-2">
-            <label htmlFor="threshold" className="text-xs text-gray-600 whitespace-nowrap">
-              Min Requests Threshold
+        <div className="flex flex-col sm:flex-row gap-3 items-end sm:items-center">
+          <div className="flex items-center gap-2">
+            <label htmlFor="threshold" className="text-xs text-zinc-500 whitespace-nowrap">
+              Min requests
             </label>
             <div className="relative flex items-center gap-1">
               <input
@@ -66,10 +66,10 @@ export function PowerUsersOverview({ powerUsers, totalQualifiedUsers, minRequest
                 max={MAX_MIN_REQUESTS}
                 value={inputValue}
                 onChange={(e) => handleInputChange(e.target.value)}
-                className={`w-20 px-2 py-1 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-600 ${
+                className={`w-20 px-2.5 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
                   isValidInput 
-                    ? 'border-gray-300' 
-                    : 'border-red-300 bg-red-50'
+                    ? 'border-zinc-200 bg-zinc-50 text-zinc-900' 
+                    : 'border-red-300 bg-red-50 text-red-900'
                 }`}
                 aria-invalid={!isValidInput}
                 aria-describedby={!isValidInput ? 'threshold-error' : undefined}
@@ -77,105 +77,100 @@ export function PowerUsersOverview({ powerUsers, totalQualifiedUsers, minRequest
               {minRequestsThreshold !== DEFAULT_MIN_REQUESTS && (
                 <button
                   onClick={() => handleInputChange(DEFAULT_MIN_REQUESTS.toString())}
-                  className="text-xs text-blue-600 hover:text-blue-800 px-1"
-                  title={`Reset to default (${DEFAULT_MIN_REQUESTS})`}
+                  className="text-xs text-zinc-400 hover:text-zinc-600 px-1"
+                  title={`Reset to ${DEFAULT_MIN_REQUESTS}`}
                 >
                   ↺
                 </button>
-              )}
-              {!isValidInput && touched && (
-                <div id="threshold-error" className="absolute top-full left-0 mt-1 text-xs text-red-600 whitespace-nowrap">
-                  Must be {DEFAULT_MIN_REQUESTS}–{MAX_MIN_REQUESTS.toLocaleString()}
-                </div>
               )}
             </div>
           </div>
           <button
             onClick={onBack}
-            className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="text-sm font-medium text-zinc-600 hover:text-zinc-900 transition-colors"
           >
-            ← Back to Summary
+            ← Back
           </button>
         </div>
       </div>
 
-      <div className="bg-white shadow rounded-lg overflow-hidden">
+      <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <table className="min-w-full">
+            <thead>
+              <tr className="border-b border-zinc-100">
+                <th className="px-5 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider bg-zinc-50">
                   Rank
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-5 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider bg-zinc-50">
                   User
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Power Score
+                <th className="px-5 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider bg-zinc-50">
+                  Score
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total Requests
+                <th className="px-5 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider bg-zinc-50">
+                  Requests
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Unique Models
+                <th className="px-5 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider bg-zinc-50">
+                  Models
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Score Breakdown
+                <th className="px-5 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider bg-zinc-50">
+                  Breakdown
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-zinc-50">
               {powerUsers.map((user, index) => (
                 <tr 
                   key={user.user} 
-                  className="hover:bg-gray-50 cursor-pointer"
+                  className="hover:bg-zinc-50 cursor-pointer transition-colors"
                   onClick={() => setSelectedUser(user)}
                 >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    #{index + 1}
+                  <td className="px-5 py-3 whitespace-nowrap text-sm text-zinc-400">
+                    {index + 1}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-zinc-900">
                     {user.user}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="text-sm font-medium text-gray-900 mr-2">
-                        {user.totalScore}/{POWER_USER_SCORE_WEIGHTS.total}
-                      </div>
-                      <div className="w-16 bg-gray-200 rounded-full h-2">
+                  <td className="px-5 py-3 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-mono text-zinc-900">
+                        {user.totalScore}
+                      </span>
+                      <div className="w-12 bg-zinc-100 rounded-full h-1.5">
                         <div 
-                          className="bg-blue-600 h-2 rounded-full" 
+                          className="bg-zinc-900 h-1.5 rounded-full" 
                           style={{ width: `${user.totalScore}%` }}
-                        ></div>
+                        />
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-5 py-3 whitespace-nowrap text-sm font-mono text-zinc-600">
                     {Math.round(user.totalRequests * 100) / 100}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-5 py-3 whitespace-nowrap text-sm text-zinc-600">
                     {user.modelUsage.uniqueModels}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <div className="flex space-x-1">
-                      <Tooltip content="Diversity: Score based on using multiple different models (0-30 points)">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 cursor-help">
-                          D: {user.breakdown.diversityScore}
+                  <td className="px-5 py-3 whitespace-nowrap">
+                    <div className="flex gap-1">
+                      <Tooltip content="Diversity: model variety (0-30)">
+                        <span className="px-1.5 py-0.5 text-xs font-medium rounded bg-blue-50 text-blue-700">
+                          D:{user.breakdown.diversityScore}
                         </span>
                       </Tooltip>
-                      <Tooltip content="Special: Score for using Code Review, Spark and Coding Agent features (0-20 points)">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 cursor-help">
-                          S: {user.breakdown.specialFeaturesScore}
+                      <Tooltip content="Special features (0-20)">
+                        <span className="px-1.5 py-0.5 text-xs font-medium rounded bg-emerald-50 text-emerald-700">
+                          S:{user.breakdown.specialFeaturesScore}
                         </span>
                       </Tooltip>
-                      <Tooltip content="Vision: Score for using vision-enabled models (0-15 points)">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 cursor-help">
-                          V: {user.breakdown.visionScore}
+                      <Tooltip content="Vision models (0-15)">
+                        <span className="px-1.5 py-0.5 text-xs font-medium rounded bg-purple-50 text-purple-700">
+                          V:{user.breakdown.visionScore}
                         </span>
                       </Tooltip>
-                      <Tooltip content="Balance: Score for optimal mix of heavy/light models - best at 20-40% heavy (0-35 points)">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800 cursor-help">
-                          B: {user.breakdown.balanceScore}
+                      <Tooltip content="Model balance (0-35)">
+                        <span className="px-1.5 py-0.5 text-xs font-medium rounded bg-orange-50 text-orange-700">
+                          B:{user.breakdown.balanceScore}
                         </span>
                       </Tooltip>
                     </div>

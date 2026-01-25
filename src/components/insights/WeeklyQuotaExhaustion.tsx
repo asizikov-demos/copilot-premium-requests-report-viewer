@@ -45,32 +45,32 @@ export function WeeklyQuotaExhaustion({ weeklyExhaustion, totalUsers, height = 2
 
   return (
     <div className="space-y-4" aria-label="Weekly quota exhaustion summary">
-      <div className="bg-gray-50 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" aria-live="polite">
+      <div className="bg-zinc-50 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3" aria-live="polite">
         <div>
-          <h4 className="font-medium text-gray-900">Early Quota Exhaustion</h4>
-          <p className="text-sm text-gray-600 mt-1">
-            {totalEarly} of {totalUsers} users ({totalUsers > 0 ? ((totalEarly / totalUsers) * 100).toFixed(1) : '0'}) exhausted quota before day 28
+          <h4 className="text-sm font-medium text-zinc-900">Early Quota Exhaustion</h4>
+          <p className="text-xs text-zinc-600 mt-0.5">
+            {totalEarly} of {totalUsers} users ({totalUsers > 0 ? ((totalEarly / totalUsers) * 100).toFixed(0) : '0'}%) exhausted before day 28
           </p>
         </div>
         {totalEarly === 0 && (
-          <span className="inline-flex items-center text-sm px-3 py-1 rounded-full bg-green-100 text-green-700 font-medium">
-            Balanced usage ✅
+          <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700">
+            Balanced usage
           </span>
         )}
       </div>
 
-      <div className="w-full h-[240px]">
+      <div className="w-full h-[220px]">
         <ResponsiveContainer width="100%" height={height}>
           <BarChart
             data={data}
-            margin={{ top: 20, right: 20, left: 10, bottom: 10 }}
-            barCategoryGap={50}
+            margin={{ top: 16, right: 16, left: 0, bottom: 8 }}
+            barCategoryGap={40}
           >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="week" />
-            <YAxis allowDecimals={false} label={{ value: 'Users', angle: -90, position: 'insideLeft', dy: 35 }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
+            <XAxis dataKey="week" tick={{ fontSize: 11 }} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={40} />
             <Tooltip
-              formatter={(value: number) => [`${value} users`, 'Users']}
+              formatter={(value: number) => [`${value}`, 'Users']}
               labelFormatter={(label, items) => {
                 const row = items?.[0]?.payload as WeeklyQuotaDatum | undefined;
                 return row ? `${String(label)} (${row.range})` : String(label);
@@ -78,11 +78,11 @@ export function WeeklyQuotaExhaustion({ weeklyExhaustion, totalUsers, height = 2
               contentStyle={chartTooltipContentStyle}
               labelStyle={chartTooltipLabelStyle}
             />
-            <Bar dataKey="users" fill="#EF4444" radius={[4,4,0,0]} />
+            <Bar dataKey="users" fill="#dc2626" radius={[4,4,0,0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <p className="text-xs text-gray-500">Bars show count of users who exhausted full quota in each early-week window.</p>
+      <p className="text-xs text-zinc-400">Users who exhausted quota in each week window.</p>
     </div>
   );
 }
