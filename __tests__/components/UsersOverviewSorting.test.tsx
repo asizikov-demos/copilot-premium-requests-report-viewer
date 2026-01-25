@@ -90,7 +90,6 @@ describe('UsersOverview - sorting', () => {
         userData={userData}
         processedData={processedData}
         allModels={['gpt-4']}
-        selectedPlan="business"
         dailyCumulativeData={dailyCumulativeData}
         quotaArtifacts={quotaArtifacts}
         usageArtifacts={usageArtifacts}

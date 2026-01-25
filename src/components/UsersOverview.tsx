@@ -80,19 +80,6 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
     getSortableValue,
     defaultSort: { column: 'totalRequests', direction: 'desc' }
   });
-
-  const planInfo = {
-    business: {
-      name: 'Copilot Business',
-      monthlyQuota: PRICING.BUSINESS_QUOTA
-    },
-    enterprise: {
-      name: 'Copilot Enterprise', 
-      monthlyQuota: PRICING.ENTERPRISE_QUOTA
-    }
-  };
-
-  const currentQuota = planInfo[selectedPlan].monthlyQuota;
   
   // Calculate total overage directly from artifacts (O(U))
   const { totalOverageRequests, totalOverageCost } = useMemo(() => (
@@ -114,6 +101,12 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
   }, [userData, quotaArtifacts]);
 
   const { quotaTypes, hasMixedQuotas, hasMixedLicenses } = quotaInfo;
+  
+  // Derive currentQuota from detected quota types for chart reference lines
+  // Use first detected quota type, fallback to BUSINESS_QUOTA as default
+  const currentQuota = quotaTypes.size > 0 
+    ? Array.from(quotaTypes)[0] 
+    : PRICING.BUSINESS_QUOTA;
   
   // Pagination calculations
   const totalPages = Math.ceil(sortedUserData.length / ROWS_PER_PAGE);
@@ -149,8 +142,12 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
             <p className="text-sm text-zinc-500">
               {hasMixedLicenses ? (
                 <>Business ({PRICING.BUSINESS_QUOTA}) & Enterprise ({PRICING.ENTERPRISE_QUOTA})</>
+              ) : quotaTypes.has(PRICING.ENTERPRISE_QUOTA) ? (
+                <>Copilot Enterprise — {PRICING.ENTERPRISE_QUOTA} requests/mo</>
+              ) : quotaTypes.has(PRICING.BUSINESS_QUOTA) ? (
+                <>Copilot Business — {PRICING.BUSINESS_QUOTA} requests/mo</>
               ) : (
-                <>{planInfo[selectedPlan].name} — {currentQuota} requests/mo</>
+                <>Unlimited quota</>
               )}
             </p>
             {totalOverageRequests > 0 && (

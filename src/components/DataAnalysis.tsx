@@ -121,7 +121,6 @@ function DataAnalysisInner() {
                 userData={userData}
                 processedData={processedData}
                 allModels={allModels}
-                selectedPlan={selectedPlan}
                 dailyCumulativeData={dailyCumulativeData}
                 quotaArtifacts={quotaArtifacts}
                 usageArtifacts={usageArtifacts}
