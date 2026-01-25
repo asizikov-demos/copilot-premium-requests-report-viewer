@@ -33,16 +33,16 @@ export default function Home() {
   return (
     <main className="min-h-screen">
       {/* Header */}
-      <header className="border-b border-zinc-200 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+      <header className="border-b border-black bg-black backdrop-blur-sm sticky top-0 z-50">
         <div className="px-6 lg:px-10">
           <div className="flex items-center justify-between h-14">
-            <h1 className="text-lg font-semibold tracking-tight text-zinc-900">
+            <h1 className="text-lg font-semibold tracking-tight text-white">
               Premium Requests Viewer
             </h1>
             {isDataLoaded && (
               <button
                 onClick={handleReset}
-                className="text-sm font-medium text-zinc-600 hover:text-zinc-900 transition-colors"
+                className="text-sm font-medium text-zinc-300 hover:text-white transition-colors"
               >
                 New Report
               </button>
