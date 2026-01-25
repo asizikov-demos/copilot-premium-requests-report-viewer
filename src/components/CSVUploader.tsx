@@ -11,34 +11,52 @@ import {
   RawDataAggregator,
   IngestionResult
 } from '@/utils/ingestion';
+import { getBasePath } from '@/constants/deployment';
 
 const SAMPLE_DATA_FILENAME = 'pru-example.csv';
 
-function normalizeBasePath(rawBasePath: string | undefined): string {
-  const trimmed = (rawBasePath ?? '').trim();
+/**
+ * Normalize a base path value to ensure it's safe for URL construction.
+ * - Treats "" and "/" as empty (no base path)
+ * - Rejects full URLs (http://, https://)
+ * - Ensures leading slash and no trailing slash for non-empty paths
+ */
+function normalizeBasePath(rawBasePath: string): string {
+  const trimmed = rawBasePath.trim();
+  
+  // Empty or root means no base path
   if (trimmed === '' || trimmed === '/') {
     return '';
   }
 
-  // Only allow path-like base paths (e.g., "/repo" or "/repo/sub").
-  // If someone misconfigures it to a full URL, log a warning and ignore it rather than fetching from an unexpected origin.
+  // Reject full URLs - base path should be path-only
   if (/^https?:\/\//i.test(trimmed)) {
     console.warn(
-      '[CSVUploader] Ignoring invalid NEXT_PUBLIC_BASE_PATH value that looks like a full URL:',
+      '[CSVUploader] Ignoring invalid base path that looks like a full URL:',
       trimmed
     );
     return '';
   }
 
+  // Ensure leading slash
   const withLeadingSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-  return withLeadingSlash.endsWith('/') ? withLeadingSlash.slice(0, -1) : withLeadingSlash;
+  
+  // Remove trailing slash
+  return withLeadingSlash.endsWith('/') 
+    ? withLeadingSlash.slice(0, -1) 
+    : withLeadingSlash;
 }
 
+/**
+ * Build a full URL for a public asset, accounting for deployment base path.
+ * Uses the same base path as Next.js routing to ensure consistency.
+ */
 function buildPublicAssetUrl(assetPath: string): string {
-  const basePath = normalizeBasePath(process.env.NEXT_PUBLIC_BASE_PATH);
+  const basePath = normalizeBasePath(getBasePath());
   const normalizedAssetPath = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
-
-  const pathOnlyUrl = `${basePath}${normalizedAssetPath}`;
+  
+  // Only prepend base path if it's non-empty to avoid "//" protocol-relative URLs
+  const pathOnlyUrl = basePath ? `${basePath}${normalizedAssetPath}` : normalizedAssetPath;
 
   // This module is a Client Component, but guard anyway to avoid referencing `window`
   // in any non-browser evaluation contexts.
