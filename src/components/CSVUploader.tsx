@@ -11,17 +11,52 @@ import {
   RawDataAggregator,
   IngestionResult
 } from '@/utils/ingestion';
+import { getBasePath } from '@/constants/deployment';
 
 const SAMPLE_DATA_FILENAME = 'pru-example.csv';
 
-// Match the basePath logic from next.config.ts
-const isProd = process.env.NODE_ENV === 'production';
-const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? 
-  (isProd ? '/copilot-premium-requests-report-viewer' : '');
+/**
+ * Normalize a base path value to ensure it's safe for URL construction.
+ * - Treats "" and "/" as empty (no base path)
+ * - Rejects full URLs (http://, https://)
+ * - Ensures leading slash and no trailing slash for non-empty paths
+ */
+function normalizeBasePath(rawBasePath: string): string {
+  const trimmed = rawBasePath.trim();
+  
+  // Empty or root means no base path
+  if (trimmed === '' || trimmed === '/') {
+    return '';
+  }
 
+  // Reject full URLs - base path should be path-only
+  if (/^https?:\/\//i.test(trimmed)) {
+    console.warn(
+      '[CSVUploader] Ignoring invalid base path that looks like a full URL:',
+      trimmed
+    );
+    return '';
+  }
+
+  // Ensure leading slash
+  const withLeadingSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  
+  // Remove trailing slash
+  return withLeadingSlash.endsWith('/') 
+    ? withLeadingSlash.slice(0, -1) 
+    : withLeadingSlash;
+}
+
+/**
+ * Build a full URL for a public asset, accounting for deployment base path.
+ * Uses the same base path as Next.js routing to ensure consistency.
+ */
 function buildPublicAssetUrl(assetPath: string): string {
+  const basePath = normalizeBasePath(getBasePath());
   const normalizedAssetPath = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
-  const pathOnlyUrl = BASE_PATH ? `${BASE_PATH}${normalizedAssetPath}` : normalizedAssetPath;
+  
+  // Only prepend base path if it's non-empty to avoid "//" protocol-relative URLs
+  const pathOnlyUrl = basePath ? `${basePath}${normalizedAssetPath}` : normalizedAssetPath;
 
   // This module is a Client Component, but guard anyway to avoid referencing `window`
   // in any non-browser evaluation contexts.

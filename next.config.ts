@@ -1,10 +1,9 @@
 import type { NextConfig } from "next";
-
-const isProd = process.env.NODE_ENV === 'production';
+import { getBasePath } from "./src/constants/deployment";
 
 const nextConfig: NextConfig = {
   output: 'export',
-  basePath: isProd ? '/copilot-premium-requests-report-viewer' : '',
+  basePath: getBasePath(),
   trailingSlash: true,
   images: {
     unoptimized: true
