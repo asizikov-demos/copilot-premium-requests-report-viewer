@@ -34,8 +34,8 @@ export default function Home() {
     <main className="min-h-screen">
       {/* Header */}
       <header className="border-b border-zinc-200 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+        <div className="px-6 lg:px-10">
+          <div className="flex items-center justify-between h-14">
             <h1 className="text-lg font-semibold tracking-tight text-zinc-900">
               Premium Requests Viewer
             </h1>
@@ -52,9 +52,9 @@ export default function Home() {
       </header>
 
       {/* Content */}
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+      <div className="px-6 lg:px-10 py-6 lg:py-8">
         {error && (
-          <div className="max-w-xl mx-auto mb-8">
+          <div className="max-w-xl mb-6">
             <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-100 rounded-lg">
               <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />

@@ -71,7 +71,7 @@ function DataAnalysisInner() {
   return (
     <div className="w-full">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight text-zinc-900">Analysis Results</h2>
@@ -85,7 +85,7 @@ function DataAnalysisInner() {
       </div>
 
       {/* Mobile Navigation */}
-      <div className="lg:hidden mb-6">
+      <div className="lg:hidden mb-4">
         <div className="flex flex-wrap gap-2">
           {[
             { key: 'overview', label: 'Overview' },
@@ -115,13 +115,13 @@ function DataAnalysisInner() {
       <div className={`${
         isDetailViewActive
           ? 'block' // Full width for users table
-          : 'grid grid-cols-1 xl:grid-cols-4 2xl:grid-cols-5 gap-8'
+          : 'grid grid-cols-1 xl:grid-cols-5 2xl:grid-cols-6 gap-6'
       }`}>
         {/* Main Content */}
         <div className={`${
           isDetailViewActive
             ? 'w-full' 
-            : 'xl:col-span-3 2xl:col-span-4 space-y-8'
+            : 'xl:col-span-4 2xl:col-span-5 space-y-6'
         }`}>
           {view === 'users' ? (
             <div className="min-h-[80vh]">
@@ -176,11 +176,11 @@ function DataAnalysisInner() {
           ) : (
             <>
               {/* Summary Stats */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 gap-4">
                 {/* Insights */}
                 <button
                   onClick={() => setView('insights')}
-                  className="group p-5 bg-white border border-zinc-200 rounded-xl hover:border-zinc-300 hover:shadow-sm transition-all text-left"
+                  className="group p-4 bg-white border border-zinc-200 rounded-xl hover:border-zinc-300 hover:shadow-sm transition-all text-left"
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -196,7 +196,7 @@ function DataAnalysisInner() {
                 {/* Total Unique Users */}
                 <button
                   onClick={() => setView('users')}
-                  className="group p-5 bg-white border border-zinc-200 rounded-xl hover:border-zinc-300 hover:shadow-sm transition-all text-left"
+                  className="group p-4 bg-white border border-zinc-200 rounded-xl hover:border-zinc-300 hover:shadow-sm transition-all text-left"
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -212,7 +212,7 @@ function DataAnalysisInner() {
                 {/* Coding Agent Adoption */}
                 <button
                   onClick={() => setView('codingAgent')}
-                  className="group p-5 bg-white border border-zinc-200 rounded-xl hover:border-zinc-300 hover:shadow-sm transition-all text-left"
+                  className="group p-4 bg-white border border-zinc-200 rounded-xl hover:border-zinc-300 hover:shadow-sm transition-all text-left"
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -233,7 +233,7 @@ function DataAnalysisInner() {
                 {/* Power Users */}
                 <button
                   onClick={() => setView('powerUsers')}
-                  className="group p-5 bg-white border border-zinc-200 rounded-xl hover:border-zinc-300 hover:shadow-sm transition-all text-left"
+                  className="group p-4 bg-white border border-zinc-200 rounded-xl hover:border-zinc-300 hover:shadow-sm transition-all text-left"
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -254,7 +254,7 @@ function DataAnalysisInner() {
                 {/* Cost Optimization */}
                 <button
                   onClick={() => setView('costOptimization')}
-                  className="group p-5 bg-white border border-zinc-200 rounded-xl hover:border-zinc-300 hover:shadow-sm transition-all text-left"
+                  className="group p-4 bg-white border border-zinc-200 rounded-xl hover:border-zinc-300 hover:shadow-sm transition-all text-left"
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -270,7 +270,7 @@ function DataAnalysisInner() {
                 {/* Model Usage Trends */}
                 <button
                   onClick={() => setView('modelTrends')}
-                  className="group p-5 bg-white border border-zinc-200 rounded-xl hover:border-zinc-300 hover:shadow-sm transition-all text-left"
+                  className="group p-4 bg-white border border-zinc-200 rounded-xl hover:border-zinc-300 hover:shadow-sm transition-all text-left"
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -285,26 +285,26 @@ function DataAnalysisInner() {
               </div>
 
               {/* Chart */}
-              <div className="bg-white border border-zinc-200 rounded-xl p-6">
-                <h3 className="text-sm font-medium text-zinc-900 mb-6">Requests by Model</h3>
-                <div className="h-80 2xl:h-96">
+              <div className="bg-white border border-zinc-200 rounded-xl p-5">
+                <h3 className="text-sm font-medium text-zinc-900 mb-4">Requests by Model</h3>
+                <div className="h-72 xl:h-80 2xl:h-96">
                   <ModelRequestsBarChart data={chartData} />
                 </div>
               </div>
 
               {/* Data Table */}
               <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
-                <div className="px-6 py-4 border-b border-zinc-100">
+                <div className="px-5 py-3 border-b border-zinc-100">
                   <h3 className="text-sm font-medium text-zinc-900">Model Details</h3>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="min-w-full">
                     <thead>
                       <tr className="border-b border-zinc-100">
-                        <th className="px-6 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                        <th className="px-5 py-2.5 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">
                           Model
                         </th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                        <th className="px-5 py-2.5 text-right text-xs font-medium text-zinc-500 uppercase tracking-wider">
                           Requests
                         </th>
                       </tr>
@@ -312,10 +312,10 @@ function DataAnalysisInner() {
                     <tbody className="divide-y divide-zinc-50">
                       {analysis.requestsByModel.map((item, index) => (
                         <tr key={index} className="hover:bg-zinc-50 transition-colors">
-                          <td className="px-6 py-3 text-sm font-medium text-zinc-900">
+                          <td className="px-5 py-2.5 text-sm font-medium text-zinc-900">
                             {item.model}
                           </td>
-                          <td className="px-6 py-3 text-sm text-zinc-600 text-right font-mono">
+                          <td className="px-5 py-2.5 text-sm text-zinc-600 text-right font-mono">
                             {item.totalRequests.toFixed(2)}
                           </td>
                         </tr>
@@ -331,17 +331,17 @@ function DataAnalysisInner() {
         {/* Info Panel - Hidden on mobile when showing users */}
         {!isDetailViewActive && (
           <div className="xl:col-span-1 2xl:col-span-1">
-            <div className="bg-white border border-zinc-200 rounded-xl p-5 sticky top-24">
+            <div className="bg-white border border-zinc-200 rounded-xl p-4 sticky top-20">
               {/* Plan Selector */}
-              <div className="mb-6">
-                <label htmlFor="plan-selector" className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">
+              <div className="mb-4">
+                <label htmlFor="plan-selector" className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1.5">
                   Plan Type
                 </label>
                 <select
                   id="plan-selector"
                   value={selectedPlan}
                   onChange={(e) => setSelectedPlan(e.target.value as CopilotPlan)}
-                  className="block w-full px-3 py-2 text-sm text-zinc-900 bg-zinc-50 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  className="block w-full px-3 py-1.5 text-sm text-zinc-900 bg-zinc-50 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                 >
                   <option value="business">Copilot Business</option>
                   <option value="enterprise">Copilot Enterprise</option>
@@ -350,8 +350,8 @@ function DataAnalysisInner() {
 
               {/* Billing Period Filter */}
               {hasMultipleMonthsData && (
-                <div className="mb-6">
-                  <label htmlFor="billing-period" className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">
+                <div className="mb-4">
+                  <label htmlFor="billing-period" className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1.5">
                     Billing Period
                   </label>
                   <select
@@ -362,7 +362,7 @@ function DataAnalysisInner() {
                       const selected = Array.from(e.target.selectedOptions, option => option.value);
                       setSelectedMonths(selected);
                     }}
-                    className="block w-full px-3 py-2 text-sm text-zinc-900 bg-zinc-50 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="block w-full px-3 py-1.5 text-sm text-zinc-900 bg-zinc-50 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     size={Math.min(availableMonths.length, 4)}
                   >
                     {availableMonths.map(month => (
