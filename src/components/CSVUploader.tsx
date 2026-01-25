@@ -14,31 +14,14 @@ import {
 
 const SAMPLE_DATA_FILENAME = 'pru-example.csv';
 
-function normalizeBasePath(rawBasePath: string | undefined): string {
-  const trimmed = (rawBasePath ?? '').trim();
-  if (trimmed === '' || trimmed === '/') {
-    return '';
-  }
-
-  // Only allow path-like base paths (e.g., "/repo" or "/repo/sub").
-  // If someone misconfigures it to a full URL, log a warning and ignore it rather than fetching from an unexpected origin.
-  if (/^https?:\/\//i.test(trimmed)) {
-    console.warn(
-      '[CSVUploader] Ignoring invalid NEXT_PUBLIC_BASE_PATH value that looks like a full URL:',
-      trimmed
-    );
-    return '';
-  }
-
-  const withLeadingSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-  return withLeadingSlash.endsWith('/') ? withLeadingSlash.slice(0, -1) : withLeadingSlash;
-}
+// Match the basePath logic from next.config.ts
+const isProd = process.env.NODE_ENV === 'production';
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? 
+  (isProd ? '/copilot-premium-requests-report-viewer' : '');
 
 function buildPublicAssetUrl(assetPath: string): string {
-  const basePath = normalizeBasePath(process.env.NEXT_PUBLIC_BASE_PATH);
   const normalizedAssetPath = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
-
-  const pathOnlyUrl = `${basePath}${normalizedAssetPath}`;
+  const pathOnlyUrl = BASE_PATH ? `${BASE_PATH}${normalizedAssetPath}` : normalizedAssetPath;
 
   // This module is a Client Component, but guard anyway to avoid referencing `window`
   // in any non-browser evaluation contexts.
