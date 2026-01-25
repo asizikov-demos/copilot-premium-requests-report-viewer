@@ -41,6 +41,11 @@ describe('CSVUploader', () => {
     jest.clearAllMocks();
   });
 
+  afterEach(() => {
+    // Ensure we don't leak fetch mocks between tests.
+    delete (global as { fetch?: unknown }).fetch;
+  });
+
   it('should render upload interface', () => {
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
     
@@ -93,7 +98,6 @@ describe('CSVUploader', () => {
 
   it('should handle file validation errors for non-CSV files', async () => {
     const mockFile = createMockFile('test content', 'test.txt', 'text/plain');
-    console.log('Created mock file:', mockFile);
     
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
     
@@ -235,6 +239,91 @@ describe('CSVUploader', () => {
 
     await waitFor(() => {
       expect(mockOnDataLoad).toHaveBeenCalledWith(expect.objectContaining({ rowsProcessed: validCSVData.length }), 'test.csv');
+    });
+  });
+
+  it('should load and ingest sample data when button is clicked', async () => {
+    const sampleCsv = 'date,username,model,quantity\n2025-10-01,user001,GPT-5,1';
+
+    // Mock fetch to return the sample CSV as a blob.
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      blob: async () => new Blob([sampleCsv], { type: 'text/csv' })
+    } as unknown as Response);
+
+    const { ingestStream } = jest.requireMock('@/utils/ingestion');
+    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onComplete: (result: IngestionResult) => void }) => {
+      setTimeout(() => {
+        options.onComplete(createMockIngestionResult([{ date: '2025-10-01', username: 'user001', model: 'GPT-5', quantity: '1' }]));
+      }, 0);
+    });
+
+    render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
+
+    const sampleButton = screen.getByRole('button', { name: /load sample data/i });
+    await user.click(sampleButton);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(expect.stringMatching(/\/data\/pru-example\.csv$/));
+      expect(mockOnDataLoad).toHaveBeenCalledWith(
+        expect.objectContaining({ rowsProcessed: 1 }),
+        'pru-example.csv'
+      );
+    });
+  });
+
+  it('should prevent concurrent sample downloads when clicked multiple times', async () => {
+    const sampleCsv = 'date,username,model,quantity\n2025-10-01,user001,GPT-5,1';
+
+    let resolveFetch: (value: unknown) => void;
+    const fetchPromise = new Promise((resolve) => {
+      resolveFetch = resolve;
+    });
+
+    global.fetch = jest.fn().mockReturnValue(fetchPromise as unknown as Promise<Response>);
+
+    const { ingestStream } = jest.requireMock('@/utils/ingestion');
+    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onComplete: (result: IngestionResult) => void }) => {
+      setTimeout(() => {
+        options.onComplete(createMockIngestionResult([{ date: '2025-10-01', username: 'user001', model: 'GPT-5', quantity: '1' }]));
+      }, 0);
+    });
+
+    render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
+
+    const sampleButton = screen.getByRole('button', { name: /load sample data/i });
+    await user.click(sampleButton);
+    await user.click(sampleButton);
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+
+    resolveFetch!({
+      ok: true,
+      blob: async () => new Blob([sampleCsv], { type: 'text/csv' })
+    } as unknown as Response);
+
+    await waitFor(() => {
+      expect(mockOnDataLoad).toHaveBeenCalledWith(
+        expect.objectContaining({ rowsProcessed: 1 }),
+        'pru-example.csv'
+      );
+    });
+  });
+
+  it('should surface an error if sample data fails to load', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      blob: async () => new Blob([], { type: 'text/csv' })
+    } as unknown as Response);
+
+    render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
+
+    const sampleButton = screen.getByRole('button', { name: /load sample data/i });
+    await user.click(sampleButton);
+
+    await waitFor(() => {
+      expect(mockOnError).toHaveBeenCalledWith(expect.stringContaining('Failed to load sample data'));
     });
   });
 

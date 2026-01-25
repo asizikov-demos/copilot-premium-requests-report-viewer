@@ -7,9 +7,7 @@ import type { IngestionResult } from '@/utils/ingestion';
 beforeAll(() => {
   // Typed minimal ResizeObserver stub for JSDOM test environment (no layout measurements required).
   class ResizeObserver {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     observe(_target: Element, _options?: unknown): void {}
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     unobserve(_target: Element): void {}
     disconnect(): void {}
   }
