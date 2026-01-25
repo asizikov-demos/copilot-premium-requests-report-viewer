@@ -62,31 +62,6 @@ export interface AnalysisResults {
   };
 }
 
-export interface PowerUserScore {
-  user: string;
-  totalScore: number;
-  totalRequests: number;
-  breakdown: {
-    diversityScore: number;
-    specialFeaturesScore: number;
-    visionScore: number;
-    balanceScore: number;
-  };
-  modelUsage: {
-    light: number;
-    medium: number;
-    heavy: number;
-    special: number;
-    vision: number;
-    uniqueModels: number;
-  };
-}
-
-export interface PowerUsersAnalysis {
-  powerUsers: PowerUserScore[];
-  totalQualifiedUsers: number;
-}
-
 // User-specific daily data for individual user charts
 export interface UserDailyData {
   date: string;

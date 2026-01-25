@@ -1,5 +1,5 @@
 import { ProcessedData } from '@/types/csv';
-import { UserSummary } from './powerUsers';
+import { UserSummary } from './types';
 import { PRICING } from '@/constants/pricing';
 
 export interface UserConsumptionCategory {

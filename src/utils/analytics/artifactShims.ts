@@ -1,12 +1,12 @@
-import { ProcessedData, PowerUsersAnalysis } from '@/types/csv';
+import { ProcessedData } from '@/types/csv';
 import { UsageArtifacts, QuotaArtifacts, DailyBucketsArtifacts } from '@/utils/ingestion/types';
-import { analyzePowerUsersFromArtifacts, computeWeeklyQuotaExhaustionFromArtifacts, computeOverageSummaryFromArtifacts, WeeklyQuotaExhaustionBreakdown } from '@/utils/ingestion/analytics';
+import { computeWeeklyQuotaExhaustionFromArtifacts, computeOverageSummaryFromArtifacts, WeeklyQuotaExhaustionBreakdown } from '@/utils/ingestion/analytics';
 import { calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
+import { UserSummary } from './types';
 
 // -----------------------------
 // Legacy Constants & Scoring (preserved for tests)
 // -----------------------------
-export interface UserSummary { user: string; totalRequests: number; modelBreakdown: Record<string, number>; }
 
 interface SpecialFeatureConfig { readonly keyword: string; readonly score: number; readonly description: string; }
 export const SPECIAL_FEATURES_CONFIG: readonly SpecialFeatureConfig[] = [
@@ -98,13 +98,6 @@ function buildDailyBucketsArtifacts(processed: ProcessedData[]): DailyBucketsArt
 // -----------------------------
 // Shim Functions (legacy signatures delegating to artifact implementations)
 // -----------------------------
-const DEFAULT_MIN_REQUESTS = 20;
-
-export function analyzePowerUsers(processedData: ProcessedData[], minRequestsThreshold: number = DEFAULT_MIN_REQUESTS): PowerUsersAnalysis {
-  if (processedData.length === 0) return { powerUsers: [], totalQualifiedUsers: 0 };
-  const usage = buildUsageArtifacts(processedData);
-  return analyzePowerUsersFromArtifacts(usage, minRequestsThreshold);
-}
 
 export function computeWeeklyQuotaExhaustion(processedData: ProcessedData[]): WeeklyQuotaExhaustionBreakdown {
   if (processedData.length === 0) return { totalUsersExhausted: 0, weeks: [] };

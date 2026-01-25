@@ -4,7 +4,6 @@ import React from 'react';
 import { ModelRequestsBarChart } from './charts/ModelRequestsBarChart';
 import { ModelUsageTrendsOverview } from './ModelUsageTrendsOverview';
 import { UsersOverview } from './UsersOverview';
-import { PowerUsersOverview } from './PowerUsersOverview';
 import { CodingAgentOverview } from './CodingAgentOverview';
 import { InsightsOverview } from './InsightsOverview';
 import { CostOptimizationInsights } from './CostOptimizationInsights';
@@ -17,21 +16,15 @@ interface DataAnalysisProps {
   onReset: () => void;
 }
 
-type CopilotPlan = 'business' | 'enterprise';
-
 function DataAnalysisInner() {
   const {
     selectedPlan,
-    setSelectedPlan,
     view,
     setView,
-    minRequestsThreshold,
-    setMinRequestsThreshold,
     analysis,
     userData,
     allModels,
     dailyCumulativeData,
-    powerUsersAnalysis,
     codingAgentAnalysis,
     processedData,
     weeklyExhaustion,
@@ -91,7 +84,6 @@ function DataAnalysisInner() {
             { key: 'overview', label: 'Overview' },
             { key: 'users', label: `Users (${analysis.totalUniqueUsers})` },
             { key: 'codingAgent', label: `Agents (${codingAgentAnalysis.totalUsers})` },
-            { key: 'powerUsers', label: `Power Users (${powerUsersAnalysis.powerUsers.length})` },
             { key: 'insights', label: 'Insights' },
             { key: 'costOptimization', label: 'Costs' },
             { key: 'modelTrends', label: 'Trends' },
@@ -145,16 +137,6 @@ function DataAnalysisInner() {
                 onBack={() => setView('overview')}
               />
             </div>
-          ) : view === 'powerUsers' ? (
-            <div className="min-h-[80vh]">
-              <PowerUsersOverview 
-                powerUsers={powerUsersAnalysis.powerUsers}
-                totalQualifiedUsers={powerUsersAnalysis.totalQualifiedUsers}
-                minRequestsThreshold={minRequestsThreshold}
-                onBack={() => setView('overview')}
-                onThresholdChange={setMinRequestsThreshold}
-              />
-            </div>
           ) : view === 'insights' ? (
             <div className="min-h-[80vh]">
               <InsightsOverview 
@@ -176,7 +158,7 @@ function DataAnalysisInner() {
           ) : (
             <>
               {/* Summary Stats */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-4">
                 {/* Insights */}
                 <button
                   onClick={() => setView('insights')}
@@ -222,27 +204,6 @@ function DataAnalysisInner() {
                       </p>
                       <p className="text-xs text-zinc-500 mt-0.5">
                         {codingAgentAnalysis.totalUsers} of {codingAgentAnalysis.totalUniqueUsers} users
-                      </p>
-                    </div>
-                    <svg className="w-5 h-5 text-zinc-300 group-hover:text-zinc-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </button>
-
-                {/* Power Users */}
-                <button
-                  onClick={() => setView('powerUsers')}
-                  className="group p-4 bg-white border border-zinc-200 rounded-xl hover:border-zinc-300 hover:shadow-sm transition-all text-left"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Power Users</p>
-                      <p className="mt-1 text-2xl font-semibold text-zinc-900">
-                        {powerUsersAnalysis.powerUsers.length}
-                      </p>
-                      <p className="text-xs text-zinc-500 mt-0.5">
-                        of {powerUsersAnalysis.totalQualifiedUsers} qualified
                       </p>
                     </div>
                     <svg className="w-5 h-5 text-zinc-300 group-hover:text-zinc-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -332,22 +293,6 @@ function DataAnalysisInner() {
         {!isDetailViewActive && (
           <div className="xl:col-span-1 2xl:col-span-1">
             <div className="bg-white border border-zinc-200 rounded-xl p-4 sticky top-20">
-              {/* Plan Selector */}
-              <div className="mb-4">
-                <label htmlFor="plan-selector" className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1.5">
-                  Plan Type
-                </label>
-                <select
-                  id="plan-selector"
-                  value={selectedPlan}
-                  onChange={(e) => setSelectedPlan(e.target.value as CopilotPlan)}
-                  className="block w-full px-3 py-1.5 text-sm text-zinc-900 bg-zinc-50 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                >
-                  <option value="business">Copilot Business</option>
-                  <option value="enterprise">Copilot Enterprise</option>
-                </select>
-              </div>
-
               {/* Billing Period Filter */}
               {hasMultipleMonthsData && (
                 <div className="mb-4">

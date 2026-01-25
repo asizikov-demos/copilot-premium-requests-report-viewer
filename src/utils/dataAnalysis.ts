@@ -4,6 +4,5 @@
 
 export * from './analytics/quota';
 export * from './analytics/filters';
-export * from './analytics/powerUsers';
 export * from './analytics/codingAgent';
 export * from './analytics/exhaustion';

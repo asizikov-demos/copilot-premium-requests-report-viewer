@@ -6,7 +6,7 @@ import { Advisory, generateAdvisories } from '@/utils/analytics/advisory';
 import { buildAdvisoriesFromArtifacts, buildConsumptionCategoriesFromArtifacts } from '@/utils/ingestion/analytics';
 import { AnalysisContext } from '@/context/AnalysisContext';
 import { QuotaArtifacts, UsageArtifacts } from '@/utils/ingestion/types';
-import { UserSummary } from '@/utils/analytics/powerUsers';
+import { UserSummary } from '@/utils/analytics/types';
 import { ProcessedData } from '@/types/csv';
 import { WeeklyExhaustionData } from '@/utils/analytics/weeklyQuota';
 

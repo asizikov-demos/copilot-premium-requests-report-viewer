@@ -1,10 +1,9 @@
 import { useMemo } from 'react';
-import { ProcessedData, AnalysisResults, PowerUsersAnalysis, CodingAgentAnalysis } from '@/types/csv';
+import { ProcessedData, AnalysisResults, CodingAgentAnalysis } from '@/types/csv';
 import { PRICING } from '@/constants/pricing';
 import {
   deriveAnalysisFromArtifacts,
   buildDailyCumulativeDataFromArtifacts,
-  analyzePowerUsersFromArtifacts,
   analyzeCodingAgentAdoptionFromArtifacts,
   computeWeeklyQuotaExhaustionFromArtifacts,
   UsageArtifacts,
@@ -17,7 +16,6 @@ interface UseAnalyzedDataArgs {
   baseProcessed: ProcessedData[];
   // Filters
   selectedMonths: string[];
-  minRequestsThreshold: number;
   // Optional artifact inputs for new ingestion pipeline. When all three are provided,
   // artifact-based analytics will be preferred.
   usageArtifacts?: UsageArtifacts;
@@ -31,7 +29,6 @@ interface UseAnalyzedDataReturn {
   userData: { user: string; totalRequests: number; modelBreakdown: Record<string, number>; }[];
   allModels: string[];
   dailyCumulativeData: { date: string; [user: string]: string | number; }[];
-  powerUsersAnalysis: PowerUsersAnalysis;
   codingAgentAnalysis: CodingAgentAnalysis;
   weeklyExhaustion: WeeklyQuotaExhaustionBreakdown;
 }
@@ -41,7 +38,7 @@ interface UseAnalyzedDataReturn {
  * Maintains strict UTC semantics by delegating to existing utilities that already
  * avoid local timezone conversions.
  */
-export function useAnalyzedData({ baseProcessed, selectedMonths, minRequestsThreshold, usageArtifacts, quotaArtifacts, dailyBucketsArtifacts }: UseAnalyzedDataArgs): UseAnalyzedDataReturn {
+export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts, quotaArtifacts, dailyBucketsArtifacts }: UseAnalyzedDataArgs): UseAnalyzedDataReturn {
   return useMemo(() => {
     const artifactsAvailable = !!(
       usageArtifacts && quotaArtifacts && dailyBucketsArtifacts &&
@@ -80,7 +77,6 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, minRequestsThre
         userData: [],
         allModels: Array.from(new Set(filtered.map(r=> r.model))).sort(),
         dailyCumulativeData: [],
-        powerUsersAnalysis: { powerUsers: [], totalQualifiedUsers: 0 },
         codingAgentAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodingAgentRequests: 0, adoptionRate: 0, users: [] },
         weeklyExhaustion: { totalUsersExhausted: 0, weeks: [] }
       };
@@ -92,7 +88,6 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, minRequestsThre
       : baseProcessed.filter(r => selectedMonths.includes(r.monthKey));
     const analysis = deriveAnalysisFromArtifacts(usageArtifacts!, quotaArtifacts!, dailyBucketsArtifacts!);
     const dailyCumulativeData = buildDailyCumulativeDataFromArtifacts(dailyBucketsArtifacts!);
-    const powerUsersAnalysis = analyzePowerUsersFromArtifacts(usageArtifacts!, minRequestsThreshold);
     const codingAgentAnalysis = analyzeCodingAgentAdoptionFromArtifacts(usageArtifacts!, quotaArtifacts!);
     const weeklyExhaustion = computeWeeklyQuotaExhaustionFromArtifacts(dailyBucketsArtifacts!, quotaArtifacts!);
     const userData = usageArtifacts!.users.map(u => ({ user: u.user, totalRequests: u.totalRequests, modelBreakdown: u.modelBreakdown })).sort((a, b) => b.totalRequests - a.totalRequests);
@@ -103,9 +98,8 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, minRequestsThre
       userData,
       allModels,
       dailyCumulativeData,
-      powerUsersAnalysis,
       codingAgentAnalysis,
       weeklyExhaustion
     };
-  }, [baseProcessed, selectedMonths, minRequestsThreshold, usageArtifacts, quotaArtifacts, dailyBucketsArtifacts]);
+  }, [baseProcessed, selectedMonths, usageArtifacts, quotaArtifacts, dailyBucketsArtifacts]);
 }

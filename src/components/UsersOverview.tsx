@@ -3,7 +3,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { UsersQuotaConsumptionChart } from './charts/UsersQuotaConsumptionChart';
 import { UsersConsumptionHeatmap } from './charts/UsersConsumptionHeatmap';
-import { UserSummary } from '@/utils/analytics/powerUsers';
 import { ProcessedData } from '@/types/csv';
 import { UserConsumptionModal } from './UserConsumptionModal';
 import { useSortableTable } from '@/hooks/useSortableTable';
@@ -12,13 +11,13 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 import { PRICING } from '@/constants/pricing';
 import { getUserQuota, QuotaArtifacts, UsageArtifacts, computeOverageSummaryFromArtifacts } from '@/utils/ingestion';
 
+type UserSummary = { user: string; totalRequests: number; modelBreakdown: Record<string, number>; };
 type DailyCumulativeData = { date: string; [user: string]: string | number };
 
 interface UsersOverviewProps {
   userData: UserSummary[];
   processedData: ProcessedData[];
   allModels: string[];
-  selectedPlan: 'business' | 'enterprise';
   dailyCumulativeData: DailyCumulativeData[];
   quotaArtifacts: QuotaArtifacts;
   usageArtifacts: UsageArtifacts; // NEW: used for overage + future enhancements
@@ -47,7 +46,7 @@ const generateUserColors = (users: string[]): Record<string, string> => {
   return result;
 };
 
-export function UsersOverview({ userData, processedData, allModels, selectedPlan, dailyCumulativeData, quotaArtifacts, usageArtifacts, onBack }: UsersOverviewProps) {
+export function UsersOverview({ userData, processedData, allModels, dailyCumulativeData, quotaArtifacts, usageArtifacts, onBack }: UsersOverviewProps) {
   const [showChart, setShowChart] = useState(true);
   const [chartType, setChartType] = useState<'heatmap' | 'lines'>('heatmap');
   const [currentPage, setCurrentPage] = useState(0);
