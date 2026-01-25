@@ -3,7 +3,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { UsersQuotaConsumptionChart } from './charts/UsersQuotaConsumptionChart';
 import { UsersConsumptionHeatmap } from './charts/UsersConsumptionHeatmap';
-import { UserSummary } from '@/utils/analytics/powerUsers';
 import { ProcessedData } from '@/types/csv';
 import { UserConsumptionModal } from './UserConsumptionModal';
 import { useSortableTable } from '@/hooks/useSortableTable';
@@ -12,13 +11,13 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 import { PRICING } from '@/constants/pricing';
 import { getUserQuota, QuotaArtifacts, UsageArtifacts, computeOverageSummaryFromArtifacts } from '@/utils/ingestion';
 
+type UserSummary = { user: string; totalRequests: number; modelBreakdown: Record<string, number>; };
 type DailyCumulativeData = { date: string; [user: string]: string | number };
 
 interface UsersOverviewProps {
   userData: UserSummary[];
   processedData: ProcessedData[];
   allModels: string[];
-  selectedPlan: 'business' | 'enterprise';
   dailyCumulativeData: DailyCumulativeData[];
   quotaArtifacts: QuotaArtifacts;
   usageArtifacts: UsageArtifacts; // NEW: used for overage + future enhancements
@@ -47,7 +46,7 @@ const generateUserColors = (users: string[]): Record<string, string> => {
   return result;
 };
 
-export function UsersOverview({ userData, processedData, allModels, selectedPlan, dailyCumulativeData, quotaArtifacts, usageArtifacts, onBack }: UsersOverviewProps) {
+export function UsersOverview({ userData, processedData, allModels, dailyCumulativeData, quotaArtifacts, usageArtifacts, onBack }: UsersOverviewProps) {
   const [showChart, setShowChart] = useState(true);
   const [chartType, setChartType] = useState<'heatmap' | 'lines'>('heatmap');
   const [currentPage, setCurrentPage] = useState(0);
@@ -81,19 +80,6 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
     getSortableValue,
     defaultSort: { column: 'totalRequests', direction: 'desc' }
   });
-
-  const planInfo = {
-    business: {
-      name: 'Copilot Business',
-      monthlyQuota: PRICING.BUSINESS_QUOTA
-    },
-    enterprise: {
-      name: 'Copilot Enterprise', 
-      monthlyQuota: PRICING.ENTERPRISE_QUOTA
-    }
-  };
-
-  const currentQuota = planInfo[selectedPlan].monthlyQuota;
   
   // Calculate total overage directly from artifacts (O(U))
   const { totalOverageRequests, totalOverageCost } = useMemo(() => (
@@ -115,6 +101,12 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
   }, [userData, quotaArtifacts]);
 
   const { quotaTypes, hasMixedQuotas, hasMixedLicenses } = quotaInfo;
+  
+  // Derive currentQuota from detected quota types for chart reference lines
+  // Use first detected quota type, fallback to BUSINESS_QUOTA as default
+  const currentQuota = quotaTypes.size > 0 
+    ? Array.from(quotaTypes)[0] 
+    : PRICING.BUSINESS_QUOTA;
   
   // Pagination calculations
   const totalPages = Math.ceil(sortedUserData.length / ROWS_PER_PAGE);
@@ -141,62 +133,64 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
   const { users: chartUsers, colors: userColors } = chartData;
 
   return (
-    <div className="bg-white shadow rounded-lg overflow-hidden h-full flex flex-col">
+    <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden h-full flex flex-col">
       {/* Enhanced Header */}
-      <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 flex-shrink-0">
+      <div className="px-5 py-4 border-b border-zinc-100 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 flex-shrink-0">
         <div className="flex-1">
-          <h3 className="text-lg font-medium text-gray-900">Users Overview</h3>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-6 mt-1">
-            <p className="text-sm text-gray-500">
+          <h3 className="text-lg font-semibold text-zinc-900">Users Overview</h3>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mt-1">
+            <p className="text-sm text-zinc-500">
               {hasMixedLicenses ? (
-                <>
-                  Mixed Licenses - Business ({PRICING.BUSINESS_QUOTA}) & Enterprise ({PRICING.ENTERPRISE_QUOTA}) premium requests/month
-                </>
+                <>Business ({PRICING.BUSINESS_QUOTA}) & Enterprise ({PRICING.ENTERPRISE_QUOTA})</>
+              ) : quotaTypes.has(PRICING.ENTERPRISE_QUOTA) ? (
+                <>Copilot Enterprise — {PRICING.ENTERPRISE_QUOTA} requests/mo</>
+              ) : quotaTypes.has(PRICING.BUSINESS_QUOTA) ? (
+                <>Copilot Business — {PRICING.BUSINESS_QUOTA} requests/mo</>
               ) : (
-                `${planInfo[selectedPlan].name} - ${currentQuota} premium requests/month`
+                <>Unlimited quota</>
               )}
             </p>
             {totalOverageRequests > 0 && (
-              <p className="text-sm text-red-600 font-medium">
-                Overage cost: ${totalOverageCost.toFixed(2)} ({totalOverageRequests.toFixed(1)} requests × ${PRICING.OVERAGE_RATE_PER_REQUEST.toFixed(2)})
+              <p className="text-sm font-medium text-red-600">
+                Overage: ${totalOverageCost.toFixed(2)}
               </p>
             )}
           </div>
         </div>
         
         <div className="flex flex-col sm:flex-row gap-2">
-          {/* Mobile Chart Toggle */}
           {isMobile && (
             <button
               onClick={() => setShowChart(!showChart)}
-              className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              className="px-3 py-1.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors"
             >
-              {showChart ? '📋 Show Table' : '📈 Show Chart'}
+              {showChart ? 'Show Table' : 'Show Chart'}
             </button>
           )}
           
           <button
             onClick={onBack}
-            className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-zinc-600 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 hover:border-zinc-300 transition-colors"
           >
-            ← Back to Summary
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
+            Back
           </button>
         </div>
       </div>
       
       {/* Conditional Chart - Collapsible on Mobile */}
       {(!isMobile || showChart) && (
-        <div className="px-4 sm:px-6 py-4 bg-white border-b border-gray-200 flex-shrink-0 relative z-30">
+        <div className="px-5 py-4 bg-zinc-50/50 border-b border-zinc-100 flex-shrink-0 relative z-30">
           <div className="flex justify-between items-center mb-4">
-            <h4 className="text-lg font-medium text-gray-900">Premium Request Quota Consumption</h4>
+            <h4 className="text-sm font-medium text-zinc-900">Quota Consumption</h4>
             <div className="flex items-center gap-3">
-              <div className="flex bg-gray-100 rounded-lg p-1">
+              <div className="flex bg-white border border-zinc-200 rounded-lg p-0.5">
                 <button
                   onClick={() => setChartType('heatmap')}
-                  className={`px-3 py-1 text-sm font-medium rounded transition-colors ${
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
                     chartType === 'heatmap'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-zinc-900 text-white'
+                      : 'text-zinc-600 hover:text-zinc-900'
                   }`}
                 >
                   Heatmap
@@ -204,12 +198,12 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
                 <button
                   onClick={() => setChartType('lines')}
                   disabled={chartUsers.length > 1000}
-                  className={`px-3 py-1 text-sm font-medium rounded transition-colors ${
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
                     chartType === 'lines'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  } ${chartUsers.length > 1000 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  title={chartUsers.length > 1000 ? `Cannot display ${chartUsers.length} users as lines` : undefined}
+                      ? 'bg-zinc-900 text-white'
+                      : 'text-zinc-600 hover:text-zinc-900'
+                  } ${chartUsers.length > 1000 ? 'opacity-40 cursor-not-allowed' : ''}`}
+                  title={chartUsers.length > 1000 ? `Cannot display ${chartUsers.length} users` : undefined}
                 >
                   Lines
                 </button>
@@ -217,7 +211,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
               {isMobile && (
                 <button
                   onClick={() => setShowChart(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-zinc-400 hover:text-zinc-600"
                   aria-label="Hide chart"
                 >
                   ✕
@@ -225,7 +219,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
               )}
             </div>
           </div>
-          <div className="h-64 sm:h-80 2xl:h-96 relative z-30">
+          <div className="h-56 sm:h-72 2xl:h-80 relative z-30">
             {chartType === 'heatmap' ? (
               <UsersConsumptionHeatmap
                 dailyCumulativeData={dailyCumulativeData}
@@ -235,15 +229,11 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
                 hasMixedQuotas={hasMixedQuotas}
               />
             ) : chartUsers.length > 1000 ? (
-              <div className="flex items-center justify-center h-full bg-gray-50 rounded-lg border-2 border-gray-200">
-                <div className="text-center p-8">
-                  <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Too Many Users to Display</h3>
-                  <p className="text-gray-600 max-w-md">
-                    The line chart cannot display more than 1,000 users ({chartUsers.length.toLocaleString()} users in dataset).
-                    Please use the Heatmap view for better visualization.
+              <div className="flex items-center justify-center h-full bg-zinc-50 rounded-lg">
+                <div className="text-center p-6">
+                  <p className="text-sm font-medium text-zinc-900 mb-1">Too many users</p>
+                  <p className="text-xs text-zinc-500">
+                    Use heatmap for {chartUsers.length.toLocaleString()} users
                   </p>
                 </div>
               </div>
@@ -267,7 +257,7 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
         <div className="flex-1 overflow-auto">
           {/* Mobile Summary Cards */}
           {isMobile && (
-            <div className="p-4 space-y-3 sm:hidden">
+            <div className="p-4 space-y-2 sm:hidden">
               {paginatedUserData.map((user) => {
                 const userQuota = getUserQuota(quotaArtifacts, user.user);
                 const isOverQuota = userQuota !== 'unlimited' && user.totalRequests > userQuota;
@@ -277,50 +267,44 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
                 <button
                   key={user.user}
                   onClick={() => openUserModal(user.user)}
-                  className="w-full bg-gray-50 rounded-lg p-4 border hover:bg-gray-100 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="w-full bg-zinc-50 rounded-lg p-4 hover:bg-zinc-100 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <div className="flex justify-between items-start mb-2">
-                    <h5 className="font-medium text-blue-600 truncate flex-1 mr-2">
+                  <div className="flex justify-between items-start mb-1">
+                    <span className="font-medium text-zinc-900 truncate flex-1 mr-2">
                       {user.user}
-                    </h5>
-                    <span className={`text-sm font-semibold ${
-                      isOverQuota ? 'text-red-600' : 'text-blue-600'
-                    }`}>
+                    </span>
+                    <span className={`text-sm font-mono ${isOverQuota ? 'text-red-600' : 'text-zinc-900'}`}>
                       {user.totalRequests.toFixed(1)}
                     </span>
                   </div>
-                  <div className="text-xs text-gray-500 mb-1">
+                  <div className="text-xs text-zinc-500">
                     Quota: {quotaDisplay}
-                  </div>
-                  {isOverQuota && (
-                    <div className="text-xs text-red-500 mb-2">
-                      Exceeds quota by {(user.totalRequests - (userQuota as number)).toFixed(1)}
-                    </div>
-                  )}
-                  <div className="text-xs text-gray-500">
-                    Top model: {Object.entries(user.modelBreakdown)
-                      .sort(([,a], [,b]) => b - a)[0]?.[0] || 'None'}
+                    {isOverQuota && (
+                      <span className="text-red-500 ml-2">
+                        +{(user.totalRequests - (userQuota as number)).toFixed(1)} over
+                      </span>
+                    )}
                   </div>
                 </button>
               )})}
               
               {/* Mobile Pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between pt-2 border-t">
+                <div className="flex items-center justify-between pt-3 border-t border-zinc-100">
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
                     disabled={currentPage === 0}
-                    className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-1.5 text-sm font-medium text-zinc-600 hover:text-zinc-900 disabled:opacity-40"
                   >
                     ← Previous
                   </button>
-                  <span className="text-sm text-gray-600">
-                    Page {currentPage + 1} of {totalPages}
+                  <span className="text-xs text-zinc-500">
+                    {currentPage + 1} / {totalPages}
                   </span>
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
                     disabled={currentPage === totalPages - 1}
-                    className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-1.5 text-sm font-medium text-zinc-600 hover:text-zinc-900 disabled:opacity-40"
                   >
                     Next →
                   </button>
@@ -330,105 +314,96 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
           )}
 
           {/* Desktop Table */}
-          <div className="hidden sm:block border-t border-gray-200">
-            <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50 sticky top-0 z-20">
+          <div className="hidden sm:block">
+            <table className="min-w-full">
+            <thead className="bg-zinc-50 sticky top-0 z-20">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky left-0 z-30 min-w-40 border-r border-gray-200">
+                <th className="px-5 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider bg-zinc-50 sticky left-0 z-30 min-w-40 border-r border-zinc-100">
                   User
                 </th>
                 <th
-                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-24 cursor-pointer hover:bg-gray-100 select-none ${
-                    sortBy === 'quota' ? 'bg-gray-200' : 'bg-gray-50'
+                  className={`px-5 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider min-w-24 cursor-pointer hover:bg-zinc-100 select-none transition-colors ${
+                    sortBy === 'quota' ? 'bg-zinc-100' : 'bg-zinc-50'
                   }`}
                   onClick={() => handleSortWithReset('quota')}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1">
                     Quota
-                    <span className="ml-1">
-                      {sortBy === 'quota' ? (
-                        sortDirection === 'desc' ? '↓' : '↑'
-                      ) : '↕'}
+                    <span className="text-zinc-400">
+                      {sortBy === 'quota' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
                     </span>
                   </div>
                 </th>
                 <th 
-                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-32 cursor-pointer hover:bg-gray-100 select-none ${
-                    sortBy === 'totalRequests' ? 'bg-gray-200' : 'bg-gray-50'
+                  className={`px-5 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider min-w-32 cursor-pointer hover:bg-zinc-100 select-none transition-colors ${
+                    sortBy === 'totalRequests' ? 'bg-zinc-100' : 'bg-zinc-50'
                   }`}
                   onClick={() => handleSortWithReset('totalRequests')}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1">
                     Total Requests
-                    <span className="ml-1">
-                      {sortBy === 'totalRequests' ? (
-                        sortDirection === 'desc' ? '↓' : '↑'
-                      ) : '↕'}
+                    <span className="text-zinc-400">
+                      {sortBy === 'totalRequests' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
                     </span>
                   </div>
                 </th>
                 {allModels.map((model) => (
                   <th
                     key={model}
-                    className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-32 cursor-pointer hover:bg-gray-100 select-none ${
-                      sortBy === model ? 'bg-gray-200' : 'bg-gray-50'
+                    className={`px-5 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider min-w-28 cursor-pointer hover:bg-zinc-100 select-none transition-colors ${
+                      sortBy === model ? 'bg-zinc-100' : 'bg-zinc-50'
                     }`}
                     title={model}
                     onClick={() => handleSortWithReset(model)}
                   >
-                    <div className="flex items-center justify-between">
-                      <span>
-                        {model.length > 20 ? `${model.substring(0, 20)}...` : model}
+                    <div className="flex items-center gap-1">
+                      <span className="truncate max-w-20">
+                        {model.length > 18 ? `${model.substring(0, 18)}...` : model}
                       </span>
-                      <span className="ml-1">
-                        {sortBy === model ? (
-                          sortDirection === 'desc' ? '↓' : '↑'
-                        ) : '↕'}
+                      <span className="text-zinc-400 flex-shrink-0">
+                        {sortBy === model ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
                       </span>
                     </div>
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {paginatedUserData.map((user, index) => {
+            <tbody className="divide-y divide-zinc-50">
+              {paginatedUserData.map((user) => {
                 const userQuota = getUserQuota(quotaArtifacts, user.user);
                 const isOverQuota = userQuota !== 'unlimited' && user.totalRequests > userQuota;
-                const isAtQuota = userQuota !== 'unlimited' && user.totalRequests === userQuota;
                 const quotaDisplay = userQuota === 'unlimited' ? 'Unlimited' : userQuota.toString();
                 
                 return (
-                <tr key={user.user} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium sticky left-0 z-10 border-r border-gray-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                <tr key={user.user} className="hover:bg-zinc-50 transition-colors">
+                  <td className="px-5 py-3 whitespace-nowrap text-sm font-medium sticky left-0 z-10 bg-white border-r border-zinc-50">
                     <button
                       onClick={() => openUserModal(user.user)}
-                      className="max-w-32 truncate text-left text-blue-600 hover:text-blue-800 hover:underline cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded"
-                      title={`View ${user.user}&apos;s consumption details`}
+                      className="text-blue-600 hover:text-blue-800 hover:underline focus:outline-none"
+                      title={`View ${user.user}&apos;s details`}
                     >
                       {user.user}
                     </button>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-5 py-3 whitespace-nowrap text-sm text-zinc-500 font-mono">
                     {quotaDisplay}
                   </td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold ${
-                    isOverQuota || isAtQuota
-                      ? 'text-red-600' 
-                      : 'text-blue-600'
+                  <td className={`px-5 py-3 whitespace-nowrap text-sm font-mono font-medium ${
+                    isOverQuota ? 'text-red-600' : 'text-zinc-900'
                   }`}>
                     {user.totalRequests.toFixed(2)}
                     {isOverQuota && (
-                      <span className="ml-2 text-xs text-red-500">
-                        (Exceeds quota by {(user.totalRequests - (userQuota as number)).toFixed(2)})
+                      <span className="ml-1.5 text-xs text-red-500 font-normal">
+                        (+{(user.totalRequests - (userQuota as number)).toFixed(1)})
                       </span>
                     )}
                   </td>
                   {allModels.map((model) => (
                     <td
                       key={`${user.user}-${model}`}
-                      className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                      className="px-5 py-3 whitespace-nowrap text-sm text-zinc-500 font-mono"
                     >
-                      {user.modelBreakdown[model]?.toFixed(2) || '0.00'}
+                      {user.modelBreakdown[model]?.toFixed(2) || '—'}
                     </td>
                   ))}
                 </tr>
@@ -438,84 +413,57 @@ export function UsersOverview({ userData, processedData, allModels, selectedPlan
           
           {/* Desktop Pagination */}
           {totalPages > 1 && (
-            <div className="bg-white px-6 py-4 flex items-center justify-between border-t border-gray-200">
-              <div className="flex-1 flex justify-between sm:hidden">
+            <div className="bg-white px-5 py-3 flex items-center justify-between border-t border-zinc-100">
+              <p className="text-sm text-zinc-500">
+                {currentPage * ROWS_PER_PAGE + 1}–{Math.min((currentPage + 1) * ROWS_PER_PAGE, sortedUserData.length)} of {sortedUserData.length}
+              </p>
+              <div className="flex items-center gap-1">
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
                   disabled={currentPage === 0}
-                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-1.5 text-zinc-400 hover:text-zinc-600 disabled:opacity-40 transition-colors"
                 >
-                  Previous
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
+                  </svg>
                 </button>
+                
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i;
+                  } else if (currentPage < 3) {
+                    pageNum = i;
+                  } else if (currentPage > totalPages - 4) {
+                    pageNum = totalPages - 5 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-8 h-8 text-sm font-medium rounded-md transition-colors ${
+                        currentPage === pageNum
+                          ? 'bg-zinc-900 text-white'
+                          : 'text-zinc-600 hover:bg-zinc-100'
+                      }`}
+                    >
+                      {pageNum + 1}
+                    </button>
+                  );
+                })}
+                
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
                   disabled={currentPage === totalPages - 1}
-                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-1.5 text-zinc-400 hover:text-zinc-600 disabled:opacity-40 transition-colors"
                 >
-                  Next
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
+                  </svg>
                 </button>
-              </div>
-              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm text-gray-700">
-                    Showing <span className="font-medium">{currentPage * ROWS_PER_PAGE + 1}</span> to{' '}
-                    <span className="font-medium">{Math.min((currentPage + 1) * ROWS_PER_PAGE, sortedUserData.length)}</span> of{' '}
-                    <span className="font-medium">{sortedUserData.length}</span> users
-                  </p>
-                </div>
-                <div>
-                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
-                      disabled={currentPage === 0}
-                      className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <span className="sr-only">Previous</span>
-                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-                    
-                    {/* Page numbers */}
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (totalPages <= 5) {
-                        pageNum = i;
-                      } else if (currentPage < 3) {
-                        pageNum = i;
-                      } else if (currentPage > totalPages - 4) {
-                        pageNum = totalPages - 5 + i;
-                      } else {
-                        pageNum = currentPage - 2 + i;
-                      }
-                      
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => setCurrentPage(pageNum)}
-                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                            currentPage === pageNum
-                              ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                          }`}
-                        >
-                          {pageNum + 1}
-                        </button>
-                      );
-                    })}
-                    
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
-                      disabled={currentPage === totalPages - 1}
-                      className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <span className="sr-only">Next</span>
-                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-                  </nav>
-                </div>
               </div>
             </div>
           )}

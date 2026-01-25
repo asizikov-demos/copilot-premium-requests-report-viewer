@@ -18,7 +18,7 @@ import {
 
 // Types
 type CopilotPlan = 'business' | 'enterprise';
-type ViewType = 'overview' | 'users' | 'powerUsers' | 'codingAgent' | 'insights' | 'costOptimization' | 'modelTrends';
+type ViewType = 'overview' | 'users' | 'codingAgent' | 'insights' | 'costOptimization' | 'modelTrends';
 
 interface AnalysisProviderProps {
   ingestionResult: IngestionResult;
@@ -47,7 +47,6 @@ interface AnalysisContextValue {
   userData: ReturnType<typeof useAnalyzedData>['userData'];
   allModels: string[];
   dailyCumulativeData: ReturnType<typeof useAnalyzedData>['dailyCumulativeData'];
-  powerUsersAnalysis: ReturnType<typeof useAnalyzedData>['powerUsersAnalysis'];
   codingAgentAnalysis: ReturnType<typeof useAnalyzedData>['codingAgentAnalysis'];
   weeklyExhaustion: ReturnType<typeof useAnalyzedData>['weeklyExhaustion'];
 
@@ -58,10 +57,7 @@ interface AnalysisContextValue {
   hasMultipleMonthsData: boolean;
 
   // Thresholds & state
-  minRequestsThreshold: number;
-  setMinRequestsThreshold: (v: number) => void;
   selectedPlan: CopilotPlan;
-  setSelectedPlan: (p: CopilotPlan) => void;
   view: ViewType;
   setView: (v: ViewType) => void;
 
@@ -80,13 +76,9 @@ interface AnalysisContextValue {
 // that mount a component in isolation like UserConsumptionModal).
 export const AnalysisContext = createContext<AnalysisContextValue | null>(null);
 
-const DEFAULT_MIN_REQUESTS = 20;
-
 export function AnalysisProvider({ ingestionResult, filename, onReset, children }: AnalysisProviderProps) {
   // Local UI state that was previously in DataAnalysis
-  const [userSelectedPlan, setUserSelectedPlan] = useState<CopilotPlan | null>(null);
   const [view, setView] = useState<ViewType>('overview');
-  const [minRequestsThreshold, setMinRequestsThreshold] = useState(DEFAULT_MIN_REQUESTS);
 
   // Extract aggregator outputs
   const { quotaArtifacts, usageArtifacts, dailyBucketsArtifacts, billingArtifacts } = useMemo(() => {
@@ -117,23 +109,19 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
     userData,
     allModels,
     dailyCumulativeData,
-    powerUsersAnalysis,
     codingAgentAnalysis,
     processedData,
     weeklyExhaustion
   } = useAnalyzedData({
     baseProcessed,
     selectedMonths,
-    minRequestsThreshold,
     usageArtifacts,
     quotaArtifacts,
     dailyBucketsArtifacts
   });
 
-  // Prefer the suggested plan from data unless the user explicitly picked a plan.
-  const suggestedPlan = analysis.quotaBreakdown.suggestedPlan ?? 'business';
-  const selectedPlan = userSelectedPlan ?? suggestedPlan;
-  const setSelectedPlan = (p: CopilotPlan) => setUserSelectedPlan(p);
+  // Use the suggested plan from data (auto-derived from report content)
+  const selectedPlan = analysis.quotaBreakdown.suggestedPlan ?? 'business';
 
   const chartData = useMemo(() => (
     analysis.requestsByModel.map(item => ({
@@ -170,17 +158,13 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
     userData,
     allModels,
     dailyCumulativeData,
-    powerUsersAnalysis,
     codingAgentAnalysis,
     weeklyExhaustion,
     selectedMonths,
     setSelectedMonths,
     availableMonths,
     hasMultipleMonthsData,
-    minRequestsThreshold,
-    setMinRequestsThreshold,
     selectedPlan,
-    setSelectedPlan,
     view,
     setView,
     isDetailViewActive,

@@ -4,12 +4,12 @@ import React from 'react';
 import { ModelRequestsBarChart } from './charts/ModelRequestsBarChart';
 import { ModelUsageTrendsOverview } from './ModelUsageTrendsOverview';
 import { UsersOverview } from './UsersOverview';
-import { PowerUsersOverview } from './PowerUsersOverview';
 import { CodingAgentOverview } from './CodingAgentOverview';
 import { InsightsOverview } from './InsightsOverview';
 import { CostOptimizationInsights } from './CostOptimizationInsights';
 import { PRICING } from '@/constants/pricing';
 import { AnalysisProvider, useAnalysisContext } from '@/context/AnalysisContext';
+import { getModelColor } from '@/utils/modelColors';
 
 interface DataAnalysisProps {
   ingestionResult: import('@/utils/ingestion').IngestionResult;
@@ -17,21 +17,15 @@ interface DataAnalysisProps {
   onReset: () => void;
 }
 
-type CopilotPlan = 'business' | 'enterprise';
-
 function DataAnalysisInner() {
   const {
     selectedPlan,
-    setSelectedPlan,
     view,
     setView,
-    minRequestsThreshold,
-    setMinRequestsThreshold,
     analysis,
     userData,
     allModels,
     dailyCumulativeData,
-    powerUsersAnalysis,
     codingAgentAnalysis,
     processedData,
     weeklyExhaustion,
@@ -69,96 +63,46 @@ function DataAnalysisInner() {
   }
 
   return (
-    <div className="w-full mx-auto">
-      {/* Header - Mobile Optimized */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-8">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Data Analysis Results</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            {analysis.timeFrame.start} to {analysis.timeFrame.end} • {filename}
-          </p>
+    <div className="w-full">
+      {/* Header */}
+      <div className="mb-8 animate-fade-in-up">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div>
+            <h2 className="display-heading text-3xl lg:text-4xl text-stone-900">Analysis Results</h2>
+            <div className="flex items-center gap-3 mt-2">
+              <span className="text-sm text-stone-500 font-medium">
+                {analysis.timeFrame.start} — {analysis.timeFrame.end}
+              </span>
+              <span className="w-1 h-1 rounded-full bg-stone-300"></span>
+              <span className="font-mono text-xs px-2 py-1 bg-stone-100 rounded-md text-stone-600">{filename}</span>
+            </div>
+          </div>
         </div>
-        <button
-          onClick={onReset}
-          className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex-shrink-0"
-        >
-          Upload New File
-        </button>
       </div>
 
-      {/* Mobile Navigation Pills */}
+      {/* Mobile Navigation */}
       <div className="lg:hidden mb-6">
-        <div className="flex flex-wrap gap-2 p-4 bg-gray-50 rounded-lg">
-          <button
-            onClick={() => setView('overview')}
-            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              view === 'overview'
-                ? 'bg-blue-600 text-white' 
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            📊 Overview
-          </button>
-          <button
-            onClick={() => setView('users')}
-            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              view === 'users'
-                ? 'bg-blue-600 text-white' 
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            👥 Users ({analysis.totalUniqueUsers})
-          </button>
-          <button
-            onClick={() => setView('codingAgent')}
-            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              view === 'codingAgent'
-                ? 'bg-blue-600 text-white' 
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            🤖 Coding Agent ({codingAgentAnalysis.totalUsers})
-          </button>
-          <button
-            onClick={() => setView('powerUsers')}
-            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              view === 'powerUsers'
-                ? 'bg-blue-600 text-white' 
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            ⭐ Power Users ({powerUsersAnalysis.powerUsers.length})
-          </button>
-          <button
-            onClick={() => setView('insights')}
-            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              view === 'insights'
-                ? 'bg-blue-600 text-white' 
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            💡 Insights Overview
-          </button>
-          <button
-            onClick={() => setView('costOptimization')}
-            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              view === 'costOptimization'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            💰 Cost Optimization
-          </button>
-          <button
-            onClick={() => setView('modelTrends')}
-            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              view === 'modelTrends'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            📈 Model Usage Trends
-          </button>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { key: 'overview', label: 'Overview' },
+            { key: 'users', label: `Users (${analysis.totalUniqueUsers})` },
+            { key: 'codingAgent', label: `Agents (${codingAgentAnalysis.totalUsers})` },
+            { key: 'insights', label: 'Insights' },
+            { key: 'costOptimization', label: 'Costs' },
+            { key: 'modelTrends', label: 'Trends' },
+          ].map((item) => (
+            <button
+              key={item.key}
+              onClick={() => setView(item.key as typeof view)}
+              className={`px-4 py-2 text-sm font-medium rounded-full transition-all ${
+                view === item.key
+                  ? 'bg-stone-900 text-white shadow-md' 
+                  : 'bg-white text-stone-600 hover:bg-stone-50 border border-stone-200 hover:border-stone-300'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -166,13 +110,13 @@ function DataAnalysisInner() {
       <div className={`${
         isDetailViewActive
           ? 'block' // Full width for users table
-          : 'grid grid-cols-1 xl:grid-cols-4 2xl:grid-cols-5 gap-8'
+          : 'grid grid-cols-1 xl:grid-cols-5 2xl:grid-cols-6 gap-6'
       }`}>
         {/* Main Content */}
         <div className={`${
           isDetailViewActive
             ? 'w-full' 
-            : 'xl:col-span-3 2xl:col-span-4 space-y-8'
+            : 'xl:col-span-4 2xl:col-span-5 space-y-6'
         }`}>
           {view === 'users' ? (
             <div className="min-h-[80vh]">
@@ -180,7 +124,6 @@ function DataAnalysisInner() {
                 userData={userData}
                 processedData={processedData}
                 allModels={allModels}
-                selectedPlan={selectedPlan}
                 dailyCumulativeData={dailyCumulativeData}
                 quotaArtifacts={quotaArtifacts}
                 usageArtifacts={usageArtifacts}
@@ -194,16 +137,6 @@ function DataAnalysisInner() {
                 totalUniqueUsers={codingAgentAnalysis.totalUniqueUsers}
                 adoptionRate={codingAgentAnalysis.adoptionRate}
                 onBack={() => setView('overview')}
-              />
-            </div>
-          ) : view === 'powerUsers' ? (
-            <div className="min-h-[80vh]">
-              <PowerUsersOverview 
-                powerUsers={powerUsersAnalysis.powerUsers}
-                totalQualifiedUsers={powerUsersAnalysis.totalQualifiedUsers}
-                minRequestsThreshold={minRequestsThreshold}
-                onBack={() => setView('overview')}
-                onThresholdChange={setMinRequestsThreshold}
               />
             </div>
           ) : view === 'insights' ? (
@@ -227,237 +160,164 @@ function DataAnalysisInner() {
           ) : (
             <>
               {/* Summary Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-4">
                 {/* Insights */}
                 <button
                   onClick={() => setView('insights')}
-                  className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 w-full text-left"
+                  className="group stat-card card-elevated p-5 rounded-xl text-left opacity-0 animate-fade-in-up delay-1"
                 >
-                  <div className="p-5">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
-                          <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                           </svg>
                         </div>
+                        <p className="text-xs font-bold text-stone-400 uppercase tracking-wider">Insights</p>
                       </div>
-                      <div className="ml-5 w-0 flex-1">
-                        <dl>
-                          <dt className="text-sm font-bold text-gray-500 truncate">Insights</dt>
-                          <dd className="text-sm text-gray-600">
-                            User consumption analysis
-                          </dd>
-                          <dd className="mt-1 text-xs text-gray-400">
-                            Usage patterns & adoption
-                          </dd>
-                        </dl>
-                      </div>
-                      <div className="flex-shrink-0">
-                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
+                      <p className="text-sm font-medium text-stone-700">User consumption analysis</p>
                     </div>
+                    <svg className="w-5 h-5 text-stone-300 group-hover:text-orange-500 group-hover:translate-x-1 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </div>
                 </button>
 
                 {/* Total Unique Users */}
                 <button
                   onClick={() => setView('users')}
-                  className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 w-full text-left"
+                  className="group stat-card card-elevated p-5 rounded-xl text-left opacity-0 animate-fade-in-up delay-2"
                 >
-                  <div className="p-5">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                          <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                           </svg>
                         </div>
+                        <p className="text-xs font-bold text-stone-400 uppercase tracking-wider">Total Users</p>
                       </div>
-                      <div className="ml-5 w-0 flex-1">
-                        <dl>
-                          <dt className="text-sm font-bold text-gray-500 truncate">Total Unique Users</dt>
-                          <dd className="text-lg font-medium text-gray-900">{analysis.totalUniqueUsers}</dd>
-                        </dl>
-                      </div>
-                      <div className="flex-shrink-0">
-                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
+                      <p className="text-2xl font-bold text-stone-900">{analysis.totalUniqueUsers}</p>
                     </div>
+                    <svg className="w-5 h-5 text-stone-300 group-hover:text-orange-500 group-hover:translate-x-1 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </div>
                 </button>
 
                 {/* Coding Agent Adoption */}
                 <button
                   onClick={() => setView('codingAgent')}
-                  className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 w-full text-left"
+                  className="group stat-card card-elevated p-5 rounded-xl text-left opacity-0 animate-fade-in-up delay-3"
                 >
-                  <div className="p-5">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-                          <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                           </svg>
                         </div>
+                        <p className="text-xs font-bold text-stone-400 uppercase tracking-wider">Agent Adoption</p>
                       </div>
-                      <div className="ml-5 w-0 flex-1">
-                        <dl>
-                          <dt className="text-sm font-bold text-gray-500 truncate">Coding Agent Adoption</dt>
-                          <dd className="text-lg font-medium text-gray-900">
-                            {codingAgentAnalysis.adoptionRate.toFixed(1)}% ({codingAgentAnalysis.totalUsers}/{codingAgentAnalysis.totalUniqueUsers})
-                          </dd>
-                          <dd className="text-xs text-gray-500">
-                            Users adopting coding agents
-                          </dd>
-                        </dl>
-                      </div>
-                      <div className="flex-shrink-0">
-                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
+                      <div className="flex items-baseline gap-2">
+                        <p className="text-2xl font-bold text-stone-900">{codingAgentAnalysis.adoptionRate.toFixed(0)}%</p>
+                        <p className="text-xs text-stone-500">{codingAgentAnalysis.totalUsers} of {codingAgentAnalysis.totalUniqueUsers} users</p>
                       </div>
                     </div>
-                  </div>
-                </button>
-
-                {/* Power Users */}
-                <button
-                  onClick={() => setView('powerUsers')}
-                  className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 w-full text-left"
-                >
-                  <div className="p-5">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                          <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                          </svg>
-                        </div>
-                      </div>
-                      <div className="ml-5 w-0 flex-1">
-                        <dl>
-                          <dt className="text-sm font-bold text-gray-500 truncate">Power Users</dt>
-                          <dd className="text-lg font-medium text-gray-900">
-                            {powerUsersAnalysis.powerUsers.length} / {powerUsersAnalysis.totalQualifiedUsers}
-                          </dd>
-                          <dd className="text-xs text-gray-500">
-                            Top users with diverse usage
-                          </dd>
-                        </dl>
-                      </div>
-                      <div className="flex-shrink-0">
-                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </div>
+                    <svg className="w-5 h-5 text-stone-300 group-hover:text-orange-500 group-hover:translate-x-1 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </div>
                 </button>
 
                 {/* Cost Optimization */}
                 <button
                   onClick={() => setView('costOptimization')}
-                  className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 w-full text-left"
+                  className="group stat-card card-elevated p-5 rounded-xl text-left opacity-0 animate-fade-in-up delay-4"
                 >
-                  <div className="p-5">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
-                          <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 1.343-3 3m6 0a3 3 0 00-3-3m0 0V5m0 6v6m-7 1h14a2 2 0 002-2v-3a2 2 0 00-2-2H5a2 2 0 00-2 2v3a2 2 0 002 2z" />
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center flex-shrink-0">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                         </div>
+                        <p className="text-xs font-bold text-stone-400 uppercase tracking-wider">Cost Optimization</p>
                       </div>
-                      <div className="ml-5 w-0 flex-1">
-                        <dl>
-                          <dt className="text-sm font-bold text-gray-500 truncate">Cost Optimization</dt>
-                          <dd className="text-sm text-gray-600">
-                            Enterprise SKU recommendations
-                          </dd>
-                          <dd className="mt-1 text-xs text-gray-400">
-                            Reduce overage for heavy Business users
-                          </dd>
-                        </dl>
-                      </div>
-                      <div className="flex-shrink-0">
-                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
+                      <p className="text-sm font-medium text-stone-700">SKU recommendations</p>
                     </div>
+                    <svg className="w-5 h-5 text-stone-300 group-hover:text-orange-500 group-hover:translate-x-1 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </div>
                 </button>
 
                 {/* Model Usage Trends */}
                 <button
                   onClick={() => setView('modelTrends')}
-                  className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 w-full text-left"
+                  className="group stat-card card-elevated p-5 rounded-xl text-left opacity-0 animate-fade-in-up delay-5"
                 >
-                  <div className="p-5">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-sky-100 rounded-full flex items-center justify-center">
-                          <span className="text-sky-600 text-lg">📈</span>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                          </svg>
                         </div>
+                        <p className="text-xs font-bold text-stone-400 uppercase tracking-wider">Usage Trends</p>
                       </div>
-                      <div className="ml-5 w-0 flex-1">
-                        <dl>
-                          <dt className="text-sm font-bold text-gray-500 truncate">Model Usage Trends</dt>
-                          <dd className="text-sm text-gray-600">
-                            Daily stacked usage by model
-                          </dd>
-                          <dd className="mt-1 text-xs text-gray-400">
-                            Spot spikes and shifts over time
-                          </dd>
-                        </dl>
-                      </div>
-                      <div className="flex-shrink-0">
-                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
+                      <p className="text-sm font-medium text-stone-700">Daily model breakdown</p>
                     </div>
+                    <svg className="w-5 h-5 text-stone-300 group-hover:text-orange-500 group-hover:translate-x-1 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </div>
                 </button>
               </div>
 
               {/* Chart */}
-              <div className="bg-white shadow rounded-lg p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-6">Total Requests by Model</h3>
-                <div className="h-96 2xl:h-[32rem]">
+              <div className="card-elevated rounded-2xl p-6 opacity-0 animate-scale-in" style={{ animationDelay: '200ms' }}>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-semibold text-stone-900">Requests by Model</h3>
+                  <span className="text-xs text-stone-400 font-medium">Total: {analysis.requestsByModel.reduce((sum, m) => sum + m.totalRequests, 0).toFixed(0)} requests</span>
+                </div>
+                <div className="h-72 xl:h-80 2xl:h-96">
                   <ModelRequestsBarChart data={chartData} />
                 </div>
               </div>
 
               {/* Data Table */}
-              <div className="bg-white shadow rounded-lg overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-medium text-gray-900">Requests by Model (Detailed)</h3>
+              <div className="card-elevated rounded-2xl overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+                <div className="px-6 py-4 border-b border-stone-100 bg-gradient-to-r from-stone-50 to-transparent">
+                  <h3 className="text-lg font-semibold text-stone-900">Model Details</h3>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <table className="min-w-full">
+                    <thead>
+                      <tr className="border-b border-stone-100">
+                        <th className="px-6 py-3 text-left text-xs font-bold text-stone-500 uppercase tracking-wider">
                           Model
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Total Requests
+                        <th className="px-6 py-3 text-right text-xs font-bold text-stone-500 uppercase tracking-wider">
+                          Requests
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="divide-y divide-stone-50">
                       {analysis.requestsByModel.map((item, index) => (
-                        <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {item.model}
+                        <tr key={index} className="table-row-hover transition-colors">
+                          <td className="px-6 py-3.5 text-sm font-medium text-stone-900">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getModelColor(item.model) }}></div>
+                              {item.model}
+                            </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-6 py-3.5 text-sm text-stone-600 text-right font-mono">
                             {item.totalRequests.toFixed(2)}
                           </td>
                         </tr>
@@ -473,28 +333,12 @@ function DataAnalysisInner() {
         {/* Info Panel - Hidden on mobile when showing users */}
         {!isDetailViewActive && (
           <div className="xl:col-span-1 2xl:col-span-1">
-            <div className="bg-white shadow rounded-lg p-4 sm:p-6 sticky top-6">
-              {/* Plan Selector */}
-              <div className="mb-6">
-                <label htmlFor="plan-selector" className="block text-sm font-medium text-gray-700 mb-2">
-                  Plan Type
-                </label>
-                <select
-                  id="plan-selector"
-                  value={selectedPlan}
-                  onChange={(e) => setSelectedPlan(e.target.value as CopilotPlan)}
-                  className="block w-full pl-3 pr-10 py-2 text-base text-black border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-                >
-                  <option value="business">Copilot Business</option>
-                  <option value="enterprise">Copilot Enterprise</option>
-                </select>
-              </div>
-
+            <div className="glass-panel rounded-2xl p-5 sticky top-24 opacity-0 animate-slide-in-right" style={{ animationDelay: '250ms' }}>
               {/* Billing Period Filter */}
               {hasMultipleMonthsData && (
-                <div className="mb-6">
-                  <label htmlFor="billing-period" className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Billing Period
+                <div className="mb-5">
+                  <label htmlFor="billing-period" className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">
+                    Billing Period
                   </label>
                   <select
                     id="billing-period"
@@ -504,7 +348,7 @@ function DataAnalysisInner() {
                       const selected = Array.from(e.target.selectedOptions, option => option.value);
                       setSelectedMonths(selected);
                     }}
-                    className="block w-full pl-3 pr-10 py-2 text-base text-black border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                    className="block w-full px-3 py-2 text-sm text-stone-900 bg-white border border-stone-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent shadow-sm"
                     size={Math.min(availableMonths.length, 4)}
                   >
                     {availableMonths.map(month => (
@@ -513,89 +357,101 @@ function DataAnalysisInner() {
                       </option>
                     ))}
                   </select>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Hold Ctrl/Cmd to select multiple months. Leave empty to show all months.
+                  <p className="mt-2 text-xs text-stone-400">
+                    Hold Ctrl/Cmd to select multiple
                   </p>
                 </div>
               )}
 
               {/* Information Block */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Information</h3>
-                <div className="space-y-4">
-                  {/* Quota Breakdown */}
-                  {analysis.quotaBreakdown.mixed && (
-                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                      <h4 className="text-sm font-medium text-amber-800 mb-2">Mixed License Types Detected</h4>
-                      <div className="text-xs text-amber-700 space-y-1">
-                        {analysis.quotaBreakdown.business.length > 0 && (
-                          <div>• Business ({PRICING.BUSINESS_QUOTA}): {analysis.quotaBreakdown.business.length} users</div>
-                        )}
-                        {analysis.quotaBreakdown.enterprise.length > 0 && (
-                          <div>• Enterprise ({PRICING.ENTERPRISE_QUOTA}): {analysis.quotaBreakdown.enterprise.length} users</div>
-                        )}
-                        {analysis.quotaBreakdown.unlimited.length > 0 && (
-                          <div>• Unlimited: {analysis.quotaBreakdown.unlimited.length} users</div>
-                        )}
-                      </div>
+              <div className="space-y-4">
+                <h3 className="text-xs font-bold text-stone-500 uppercase tracking-wider">Summary</h3>
+                
+                {/* Quota Breakdown */}
+                {analysis.quotaBreakdown.mixed && (
+                  <div className="badge-amber p-3 rounded-xl">
+                    <p className="text-xs font-semibold text-amber-800 mb-2">Mixed Licenses</p>
+                    <div className="text-xs text-amber-700 space-y-1">
+                      {analysis.quotaBreakdown.business.length > 0 && (
+                        <p className="flex justify-between">
+                          <span>Business ({PRICING.BUSINESS_QUOTA})</span>
+                          <span className="font-semibold">{analysis.quotaBreakdown.business.length}</span>
+                        </p>
+                      )}
+                      {analysis.quotaBreakdown.enterprise.length > 0 && (
+                        <p className="flex justify-between">
+                          <span>Enterprise ({PRICING.ENTERPRISE_QUOTA})</span>
+                          <span className="font-semibold">{analysis.quotaBreakdown.enterprise.length}</span>
+                        </p>
+                      )}
+                      {analysis.quotaBreakdown.unlimited.length > 0 && (
+                        <p className="flex justify-between">
+                          <span>Unlimited</span>
+                          <span className="font-semibold">{analysis.quotaBreakdown.unlimited.length}</span>
+                        </p>
+                      )}
                     </div>
-                  )}
-                  
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="text-sm font-medium text-gray-700">Monthly Quota:</span>
-                    <span className="text-sm font-semibold text-blue-600">
-                      {analysis.quotaBreakdown.mixed 
-                        ? `Mixed (${planInfo[selectedPlan].monthlyQuota} selected)`
-                        : `${planInfo[selectedPlan].monthlyQuota} premium requests`
-                      }
-                    </span>
                   </div>
-                  
-                  {analysis.quotaBreakdown.suggestedPlan && !analysis.quotaBreakdown.mixed && (
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <div className="text-xs text-blue-700">
-                        💡 Auto-selected {planInfo[analysis.quotaBreakdown.suggestedPlan].name} based on CSV quota data
+                )}
+                
+                <div className="flex items-center justify-between p-3 bg-stone-50 rounded-xl border border-stone-100">
+                  <span className="text-xs font-medium text-stone-500">Monthly Quota</span>
+                  <span className="text-sm font-bold text-stone-900">
+                    {analysis.quotaBreakdown.mixed 
+                      ? 'Mixed'
+                      : planInfo[selectedPlan].monthlyQuota
+                    }
+                  </span>
+                </div>
+                
+                {analysis.quotaBreakdown.suggestedPlan && !analysis.quotaBreakdown.mixed && (
+                  <div className="badge-blue p-3 rounded-xl">
+                    <p className="text-xs">
+                      Auto-selected <span className="font-semibold">{planInfo[analysis.quotaBreakdown.suggestedPlan].name}</span>
+                    </p>
+                  </div>
+                )}
+
+                {/* Weekly Exhaustion Breakdown */}
+                {weeklyExhaustion.weeks.length > 0 && (
+                  <div className="p-3 bg-stone-50 rounded-xl border border-stone-100">
+                    <p className="text-xs font-semibold text-stone-700 mb-2">Weekly Exhaustion</p>
+                    <p className="text-xs text-stone-500 mb-3">Users exhausting quota by week</p>
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex justify-between items-center py-1 border-b border-stone-100">
+                        <span className="font-semibold text-stone-700">Total</span>
+                        <span className="font-bold text-orange-600">{weeklyExhaustion.totalUsersExhausted}</span>
+                      </div>
+                      {weeklyExhaustion.weeks.map(w => (
+                        <div key={`${w.weekNumber}-${w.startDate}`} className="flex justify-between text-stone-600">
+                          <span>Week {w.weekNumber}</span>
+                          <span className="font-medium">{w.usersExhaustedInWeek}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Cost Metrics (New Format) */}
+                {costMetricsAvailable && aggregatedCosts && (
+                  <div className="p-4 bg-gradient-to-br from-stone-50 to-stone-100 rounded-xl border border-stone-200">
+                    <p className="text-xs font-bold text-stone-700 mb-3">Billing Summary</p>
+                    <div className="space-y-2 text-sm" aria-label="billing-summary">
+                      <div className="flex justify-between">
+                        <span className="text-stone-500">Gross</span>
+                        <span className="font-mono font-medium text-stone-700">${aggregatedCosts.gross.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-stone-500">Discounts</span>
+                        <span className="font-mono font-medium text-emerald-600">-${aggregatedCosts.discount.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between pt-2 mt-2 border-t-2 border-stone-200">
+                        <span className="text-stone-900 font-bold">Net</span>
+                        <span className="font-mono font-bold text-stone-900 text-base">${aggregatedCosts.net.toFixed(2)}</span>
                       </div>
                     </div>
-                  )}
-
-                  {/* Weekly Exhaustion Breakdown */}
-                  {weeklyExhaustion.weeks.length > 0 && (
-                    <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                      <h4 className="text-sm font-medium text-gray-800 mb-2">Weekly Quota Exhaustion</h4>
-                      <p className="text-xs text-gray-600 mb-2">Users are counted in the week they first exhausted their included premium requests (non-cumulative).</p>
-                      <ul className="space-y-1 text-xs text-gray-700">
-                        <li className="font-medium">Total users exhausted: {weeklyExhaustion.totalUsersExhausted}</li>
-                        {weeklyExhaustion.weeks.map(w => (
-                          <li key={`${w.weekNumber}-${w.startDate}`}>
-                            Week {w.weekNumber} ({w.startDate} – {w.endDate}): {w.usersExhaustedInWeek}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Cost Metrics (New Format) */}
-                  {costMetricsAvailable && aggregatedCosts && (
-                    <div className="mt-4 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
-                      <h4 className="text-sm font-medium text-indigo-800 mb-2">Billing Summary (Provided)</h4>
-                      <ul className="space-y-1 text-xs text-indigo-700" aria-label="billing-summary">
-                        <li>
-                          <span className="font-medium">Gross Amount:</span> ${aggregatedCosts.gross.toFixed(2)}
-                        </li>
-                        <li>
-                          <span className="font-medium">Discounts:</span> ${aggregatedCosts.discount.toFixed(2)}
-                        </li>
-                        <li>
-                          <span className="font-medium">Net Amount:</span> ${aggregatedCosts.net.toFixed(2)}
-                        </li>
-                        <li className="text-[10px] text-indigo-600 mt-1">
-                          Costs are summed directly from CSV billing columns (no recomputation). Values shown in USD.
-                        </li>
-                      </ul>
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

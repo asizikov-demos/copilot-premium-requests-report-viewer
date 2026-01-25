@@ -197,19 +197,32 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
+    <div className="w-full max-w-xl mx-auto">
+      {/* Hero section */}
+      <div className="text-center mb-12 animate-fade-in-up">
+        <h2 className="display-heading text-4xl sm:text-5xl text-stone-900 mb-4">
+          Analyze your usage data
+        </h2>
+        <p className="text-lg text-stone-500 max-w-md mx-auto leading-relaxed">
+          Upload your GitHub Copilot premium requests report to visualize usage patterns and optimize costs.
+        </p>
+      </div>
+
+      {/* Upload area */}
       <div
         className={`
-          relative border-2 border-dashed rounded-lg p-8 text-center transition-colors duration-200
+          relative rounded-2xl border-2 border-dashed transition-all duration-300 cursor-pointer
+          opacity-0 animate-scale-in
           ${isDragOver 
-            ? 'border-blue-400 bg-blue-50' 
-            : 'border-gray-300 hover:border-gray-400'
+            ? 'border-orange-400 bg-orange-50/50 shadow-lg shadow-orange-100' 
+            : 'border-stone-200 hover:border-stone-300 hover:shadow-md bg-white'
           }
-          ${isBusy ? 'opacity-50 pointer-events-none' : ''}
+          ${isBusy ? 'opacity-60 pointer-events-none' : ''}
         `}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
+        onClick={handleButtonClick}
       >
         <input
           ref={fileInputRef}
@@ -220,158 +233,152 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
           disabled={isBusy}
         />
         
-        <div className="space-y-4">
-          <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-            {isLoading ? (
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            ) : (
-              <svg
-                className="w-8 h-8 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                />
-              </svg>
-            )}
-          </div>
-          
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {isLoading
-                ? 'Processing CSV file...'
-                : isSampleLoading
-                  ? 'Downloading sample data...'
-                  : 'Upload CSV File'}
-            </h3>
-            
-            {isLoading && progress > 0 && (
-              <div className="mb-4">
-                <div className="flex justify-between text-xs text-gray-600 mb-1">
-                  <span>Processing...</span>
-                  <span>{progress}%</span>
+        <div className="px-6 py-14 sm:py-20">
+          <div className="flex flex-col items-center gap-5">
+            {/* Icon */}
+            <div className={`
+              w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-300
+              ${isDragOver 
+                ? 'bg-gradient-to-br from-orange-400 to-orange-600 shadow-lg shadow-orange-200' 
+                : 'bg-gradient-to-br from-stone-100 to-stone-200'
+              }
+            `}>
+              {isLoading ? (
+                <div className="w-7 h-7 border-2 border-stone-300 border-t-orange-600 rounded-full animate-spin" />
+              ) : (
+                <svg
+                  className={`w-7 h-7 transition-colors ${isDragOver ? 'text-white' : 'text-stone-500'}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M9 8.25H7.5a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25H15m0-3l-3-3m0 0l-3 3m3-3v11.25"
+                  />
+                </svg>
+              )}
+            </div>
+
+            {/* Text */}
+            <div className="text-center">
+              {isLoading ? (
+                <div className="space-y-4">
+                  <p className="text-base font-semibold text-stone-900">Processing file...</p>
+                  <div className="w-56 mx-auto">
+                    <div className="h-2 bg-stone-100 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-orange-400 to-orange-600 rounded-full transition-all duration-300"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  </div>
+                  {totalRows.current > 0 && (
+                    <p className="text-sm text-stone-500">
+                      {totalRows.current.toLocaleString()} rows processed
+                    </p>
+                  )}
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
-                    style={{ width: `${progress}%` }}
-                  ></div>
-                </div>
-                {totalRows.current > 0 && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    {totalRows.current.toLocaleString()} rows processed
+              ) : isSampleLoading ? (
+                <p className="text-base font-semibold text-stone-900">Loading sample data...</p>
+              ) : (
+                <>
+                  <p className="text-base font-semibold text-stone-900 mb-1">
+                    Drop your CSV file here
                   </p>
-                )}
-              </div>
-            )}
-            
-            <p className="text-gray-500 mb-4">
-              {isLoading ? 'Please wait while we process your file...' : 'Drag and drop your CSV file here, or click to browse'}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-2 justify-center">
-              <button
-                onClick={handleButtonClick}
-                disabled={isBusy}
-                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoading ? 'Processing...' : 'Choose File'}
-              </button>
-              <button
-                onClick={loadSampleData}
-                disabled={isBusy}
-                className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Load Sample Data
-              </button>
+                  <p className="text-sm text-stone-500">
+                    or click to browse
+                  </p>
+                </>
+              )}
             </div>
           </div>
-          
-          <div className="text-xs text-gray-400">
-            Required columns: date, username, model, quantity
-            <br />
-            Optional: exceeds_quota, total_monthly_quota, cost columns, organization, cost_center_name
-          </div>
-          <div className="text-xs text-blue-500 mt-1">
-            <a
-              href="https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/manage-and-track-spending/monitor-premium-requests#downloading-a-copilot-premium-request-usage-report"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-blue-700"
-            >
-              How to obtain this report file
-            </a>
-          </div>
-          <div className="text-xs text-blue-500 mt-1">
-            <button
-              onClick={() => setShowPrivacyDialog(true)}
-              className="underline hover:text-blue-700 bg-transparent border-none p-0 cursor-pointer"
-            >
-              Privacy Information
-            </button>
-          </div>
+        </div>
+      </div>
+
+      {/* Sample data button */}
+      <div className="mt-5 text-center opacity-0 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+        <button
+          onClick={(e) => { e.stopPropagation(); loadSampleData(); }}
+          disabled={isBusy}
+          className="px-5 py-2.5 text-sm font-semibold text-orange-600 hover:text-white hover:bg-orange-600 border border-orange-200 hover:border-orange-600 rounded-full transition-all duration-200 disabled:opacity-50"
+        >
+          Try with sample data
+        </button>
+      </div>
+
+      {/* Help text */}
+      <div className="mt-10 space-y-3 text-center opacity-0 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+        <p className="text-xs text-stone-400 font-medium tracking-wide">
+          Required: date, username, model, quantity
+        </p>
+        <div className="flex items-center justify-center gap-4 text-xs">
+          <a
+            href="https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/manage-and-track-spending/monitor-premium-requests#downloading-a-copilot-premium-request-usage-report"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-stone-500 hover:text-orange-600 transition-colors font-medium"
+          >
+            How to get this report →
+          </a>
+          <span className="text-stone-300">•</span>
+          <button
+            onClick={() => setShowPrivacyDialog(true)}
+            className="text-stone-500 hover:text-orange-600 transition-colors font-medium"
+          >
+            Privacy info
+          </button>
         </div>
       </div>
       
       {/* Privacy Dialog */}
       {showPrivacyDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6 relative">
-            <button
-              onClick={() => setShowPrivacyDialog(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 focus:outline-none"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+        <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-7 shadow-2xl border border-stone-100 animate-scale-in">
+            <div className="flex items-start justify-between mb-5">
+              <h3 className="text-xl font-bold text-stone-900">Privacy Information</h3>
+              <button
+                onClick={() => setShowPrivacyDialog(false)}
+                className="text-stone-400 hover:text-stone-600 transition-colors p-1 hover:bg-stone-100 rounded-lg"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
             
-            <div className="pr-8">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Privacy Information</h3>
+            <div className="space-y-4 text-sm text-stone-600 leading-relaxed">
+              <p>
+                <span className="font-semibold text-stone-900">Your data stays local.</span>{' '}
+                This is a front-end only application. No data leaves your browser.
+              </p>
               
-              <div className="space-y-3 text-sm text-gray-700">
-                <p>
-                  <strong>Your data is completely secure:</strong> This is a front-end only application. 
-                  No data leaves your browser and nothing is sent to any external servers.
-                </p>
-                
-                <p>
-                  All CSV processing and analysis happens locally in your browser, ensuring your 
-                  usage data remains private and secure.
-                </p>
-                
-                <p>
-                  <strong>Open Source:</strong> This application is open source and available for review at:
-                </p>
-                
-                <div className="bg-gray-50 p-3 rounded border">
-                  <a
-                    href="https://github.com/asizikov-demos/copilot-premium-requests-report-viewer"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800 underline break-all"
-                  >
-                    github.com/asizikov-demos/copilot-premium-requests-report-viewer
-                  </a>
-                </div>
-                
-                <p>
-                  You can review the source code, copy it, or modify it according to your needs.
-                </p>
-              </div>
+              <p>
+                All CSV processing happens locally, ensuring your usage data remains private.
+              </p>
               
-              <div className="mt-6 flex justify-end">
-                <button
-                  onClick={() => setShowPrivacyDialog(false)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              <div className="p-4 bg-stone-50 rounded-xl border border-stone-100">
+                <p className="text-xs text-stone-500 mb-1 font-medium">Open source</p>
+                <a
+                  href="https://github.com/asizikov-demos/copilot-premium-requests-report-viewer"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-orange-600 hover:text-orange-700 font-medium break-all"
                 >
-                  Got it
-                </button>
+                  github.com/asizikov-demos/copilot-premium-requests-report-viewer
+                </a>
               </div>
+            </div>
+            
+            <div className="mt-7">
+              <button
+                onClick={() => setShowPrivacyDialog(false)}
+                className="w-full px-4 py-3 bg-stone-900 text-white text-sm font-semibold rounded-xl hover:bg-stone-800 transition-colors shadow-lg hover:shadow-xl"
+              >
+                Got it
+              </button>
             </div>
           </div>
         </div>

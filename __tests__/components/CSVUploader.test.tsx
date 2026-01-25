@@ -49,14 +49,14 @@ describe('CSVUploader', () => {
   it('should render upload interface', () => {
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
     
-    expect(screen.getByText(/drag and drop your csv file here/i)).toBeInTheDocument();
-    expect(screen.getByText(/choose file/i)).toBeInTheDocument();
-    expect(screen.getByText(/upload csv file/i)).toBeInTheDocument();
+    expect(screen.getByText(/drop your csv file here/i)).toBeInTheDocument();
+    expect(screen.getByText(/or click to browse/i)).toBeInTheDocument();
+    expect(screen.getByText(/analyze your usage data/i)).toBeInTheDocument();
   });
 
   it('should show required columns message', () => {
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
-    expect(screen.getByText(/Required columns:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Required:/i)).toBeInTheDocument();
     expect(screen.getByText(/date, username, model, quantity/i)).toBeInTheDocument();
   });
   it('should handle CSV parsing', async () => {
@@ -212,8 +212,7 @@ describe('CSVUploader', () => {
     await user.upload(hiddenInput, mockFile);
 
     // Should show loading state
-    expect(screen.getByText(/processing csv file/i)).toBeInTheDocument();
-    expect(screen.getByText(/processing\.\.\./i)).toBeInTheDocument();
+    expect(screen.getByText(/processing file/i)).toBeInTheDocument();
   });
 
   it('should handle drag and drop functionality', async () => {
@@ -228,7 +227,7 @@ describe('CSVUploader', () => {
 
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
     
-    const dropZone = screen.getByText(/drag and drop your csv file here/i).closest('div');
+    const dropZone = screen.getByText(/drop your csv file here/i).closest('div');
     
     // Test drop - this is the main functionality we care about
     fireEvent.drop(dropZone!, {
@@ -260,7 +259,7 @@ describe('CSVUploader', () => {
 
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
 
-    const sampleButton = screen.getByRole('button', { name: /load sample data/i });
+    const sampleButton = screen.getByRole('button', { name: /try with sample data/i });
     await user.click(sampleButton);
 
     await waitFor(() => {
@@ -291,7 +290,7 @@ describe('CSVUploader', () => {
 
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
 
-    const sampleButton = screen.getByRole('button', { name: /load sample data/i });
+    const sampleButton = screen.getByRole('button', { name: /try with sample data/i });
     await user.click(sampleButton);
     await user.click(sampleButton);
 
@@ -319,7 +318,7 @@ describe('CSVUploader', () => {
 
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
 
-    const sampleButton = screen.getByRole('button', { name: /load sample data/i });
+    const sampleButton = screen.getByRole('button', { name: /try with sample data/i });
     await user.click(sampleButton);
 
     await waitFor(() => {
@@ -330,29 +329,29 @@ describe('CSVUploader', () => {
   it('should show privacy dialog when privacy button is clicked', async () => {
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
     
-    const privacyButton = screen.getByText(/privacy information/i);
+    const privacyButton = screen.getByText(/privacy info/i);
     await user.click(privacyButton);
     
-    expect(screen.getByText(/Your data is completely secure/i)).toBeInTheDocument();
-    expect(screen.getByText(/This is a front-end only application/i)).toBeInTheDocument();
+    expect(screen.getByText(/Your data stays local/i)).toBeInTheDocument();
+    expect(screen.getByText(/front-end only application/i)).toBeInTheDocument();
   });
 
   it('should close privacy dialog when close button is clicked', async () => {
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
     
-    const privacyButton = screen.getByText(/privacy information/i);
+    const privacyButton = screen.getByText(/privacy info/i);
     await user.click(privacyButton);
     
     const closeButton = screen.getByRole('button', { name: /got it/i });
     await user.click(closeButton);
     
-    expect(screen.queryByText(/Your data is completely secure/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Your data stays local/i)).not.toBeInTheDocument();
   });
 
   it('should show documentation link', () => {
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
     
-    const docLink = screen.getByText(/how to obtain this report file/i);
+    const docLink = screen.getByText(/how to get this report/i);
     expect(docLink).toBeInTheDocument();
     expect(docLink.closest('a')).toHaveAttribute('href', expect.stringContaining('docs.github.com'));
   });

@@ -15,7 +15,7 @@ import type { QuotaArtifacts, UsageArtifacts, DailyBucketsArtifacts, FeatureUsag
 export type { DailyBucketsArtifacts } from './types';
 import type { FeatureUtilizationStats } from '@/utils/analytics/insights';
 import { calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
-import { PowerUsersAnalysis, PowerUserScore, CodingAgentAnalysis, UserDailyData } from '@/types/csv';
+import { CodingAgentAnalysis, UserDailyData } from '@/types/csv';
 // Legacy DailyCodingAgentUsageDatum type recreated locally (originally from codingAgent.ts)
 export interface DailyCodingAgentUsageDatum { date: string; dailyRequests: number; cumulativeRequests: number; }
 import { CONSUMPTION_THRESHOLDS, UserConsumptionCategory, InsightsOverviewData } from '@/utils/analytics/insights';
@@ -235,104 +235,6 @@ export function computeWeeklyQuotaExhaustionFromArtifacts(
     .sort((a, b) => a.key.monthKey === b.key.monthKey ? a.key.weekNumber - b.key.weekNumber : a.key.monthKey.localeCompare(b.key.monthKey))
     .map(entry => ({ weekNumber: entry.key.weekNumber, startDate: entry.key.startDate, endDate: entry.key.endDate, usersExhaustedInWeek: entry.users.size }));
   return { totalUsersExhausted: records.length, weeks };
-}
-
-// -----------------------------
-// Power Users From Artifacts
-// -----------------------------
-const POWER_DEFAULT_MIN_REQUESTS = 20;
-const POWER_MAX_DISPLAY = 20;
-
-// Reuse categorical logic (light/medium/heavy/special/vision) inline to avoid coupling to legacy file.
-const POWER_LIGHT = ['gemini-2.0-flash', 'o3-mini', 'o-4-mini'];
-const POWER_HEAVY = ['claude-opus-4', 'claude-3.7-sonnet-thought', 'o3', 'o4', 'gpt-4.5'];
-const POWER_SPECIAL_KEYWORDS = ['code review', 'coding agent', 'padawan', 'spark'];
-export const MAX_SPECIAL_FEATURES_SCORE = 20;
-export const SPECIAL_FEATURES_CONFIG = [
-  { keyword: 'code review', score: 8, description: 'Code Review feature usage' },
-  { keyword: 'coding agent', score: 8, description: 'Coding Agent feature usage' },
-  { keyword: 'padawan', score: 8, description: 'Padawan feature usage' },
-  { keyword: 'spark', score: 4, description: 'Spark feature usage' }
-] as const;
-
-function categorizeModelForPower(model: string): 'light' | 'medium' | 'heavy' | 'special' {
-  const lower = model.toLowerCase();
-  if (POWER_SPECIAL_KEYWORDS.some(k => lower.includes(k))) return 'special';
-  if (POWER_HEAVY.some(k => lower.includes(k))) return 'heavy';
-  if (POWER_LIGHT.some(k => lower.includes(k))) return 'light';
-  return 'medium';
-}
-
-function isVision(model: string): boolean { return model.toLowerCase().includes('-vision'); }
-
-export function calculateSpecialFeaturesScore(models: string[]): number {
-  const set = new Set(models.map(m => m.toLowerCase()));
-  let score = 0; const used = new Set<string>();
-  const groups = [
-    { type: 'code_review', keywords: ['code review'], score: 8 },
-    { type: 'coding_agent', keywords: ['coding agent', 'padawan'], score: 8 },
-    { type: 'spark', keywords: ['spark'], score: 4 }
-  ];
-  for (const g of groups) {
-    if (g.keywords.some(k => set.has(k)) && !used.has(g.type)) { score += g.score; used.add(g.type); }
-  }
-  return Math.min(score, MAX_SPECIAL_FEATURES_SCORE);
-}
-
-function buildPowerUserScoreFromArtifact(user: { user: string; modelBreakdown: Record<string, number>; totalRequests: number; }): PowerUserScore {
-  const models = Object.keys(user.modelBreakdown);
-  const totalRequests = user.totalRequests;
-  let light=0, medium=0, heavy=0, special=0, vision=0, uniqueModels=0;
-  for (const m of models) {
-    const qty = user.modelBreakdown[m];
-    const cat = categorizeModelForPower(m);
-    switch (cat) {
-      case 'light': light += qty; uniqueModels++; break;
-      case 'medium': medium += qty; uniqueModels++; break;
-      case 'heavy': heavy += qty; uniqueModels++; break;
-      case 'special': special += qty; break;
-    }
-    if (isVision(m)) vision += qty;
-  }
-  const diversityScore = Math.min(uniqueModels / 4, 1) * 30;
-  const specialFeaturesScore = calculateSpecialFeaturesScore(models);
-  const visionScore = totalRequests > 0 ? Math.min((vision / totalRequests) / 0.2, 1) * 15 : 0;
-  const heavyRatio = totalRequests > 0 ? heavy / totalRequests : 0;
-  let balanceScore = 0;
-  if (heavyRatio >= 0.2 && heavyRatio <= 0.4) balanceScore = 35; else if (heavyRatio < 0.1 || heavyRatio > 0.6) balanceScore = 0; else {
-    if (heavyRatio < 0.2) balanceScore = 35 * (heavyRatio / 0.2); else balanceScore = 35 * (1 - (heavyRatio - 0.4) / 0.2);
-  }
-  const totalScore = diversityScore + specialFeaturesScore + visionScore + balanceScore;
-  const round = (n: number) => Math.round(n * 100) / 100;
-  return {
-    user: user.user,
-    totalScore: round(totalScore),
-    totalRequests,
-    breakdown: {
-      diversityScore: round(diversityScore),
-      specialFeaturesScore: round(specialFeaturesScore),
-      visionScore: round(visionScore),
-      balanceScore: round(balanceScore)
-    },
-    modelUsage: {
-      light: round(light),
-      medium: round(medium),
-      heavy: round(heavy),
-      special: round(special),
-      vision: round(vision),
-      uniqueModels
-    }
-  };
-}
-
-export function analyzePowerUsersFromArtifacts(
-  usage: UsageArtifacts,
-  minRequestsThreshold: number = POWER_DEFAULT_MIN_REQUESTS
-): PowerUsersAnalysis {
-  const qualified = usage.users.filter(u => u.totalRequests >= minRequestsThreshold);
-  const scores = qualified.map(u => buildPowerUserScoreFromArtifact(u));
-  const top = scores.sort((a, b) => b.totalScore - a.totalScore).slice(0, POWER_MAX_DISPLAY);
-  return { powerUsers: top, totalQualifiedUsers: qualified.length };
 }
 
 // -----------------------------

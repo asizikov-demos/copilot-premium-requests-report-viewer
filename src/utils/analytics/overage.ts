@@ -1,4 +1,4 @@
-import { UserSummary } from './powerUsers';
+import { UserSummary } from './types';
 import { ProcessedData } from '@/types/csv';
 import { calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
 

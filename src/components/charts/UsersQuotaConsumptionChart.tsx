@@ -55,6 +55,7 @@ export function UsersQuotaConsumptionChart({
           ]}
           contentStyle={chartTooltipContentStyle}
           labelStyle={chartTooltipLabelStyle}
+          wrapperStyle={{ zIndex: 1000 }}
         />
         {/* Quota reference lines */}
         {hasMixedQuotas ? (

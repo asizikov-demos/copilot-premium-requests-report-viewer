@@ -34,6 +34,6 @@ describe('AnalysisProvider without rawData aggregator', () => {
     const ingestionResult = createIngestionResultWithoutRawData();
     render(<DataAnalysis ingestionResult={ingestionResult} filename="no-raw.csv" onReset={() => {}} />);
     // Header should render
-    expect(screen.getByText('Data Analysis Results')).toBeInTheDocument();
+    expect(screen.getByText('Analysis Results')).toBeInTheDocument();
   });
 });

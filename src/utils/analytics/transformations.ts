@@ -1,12 +1,10 @@
 import { CSVData, ProcessedData, AnalysisResults } from '@/types/csv';
 import { parseQuotaValue, buildQuotaBreakdown } from './quota';
 import { buildDateKeys } from '../dateKeys';
+import { UserSummary } from './types';
 
-export interface UserSummary {
-  user: string;
-  totalRequests: number;
-  modelBreakdown: Record<string, number>;
-}
+// Re-export for backwards compatibility
+export type { UserSummary } from './types';
 
 // Convert raw CSV rows into strongly typed processed data (UTC-sensitive: timestamps used as-is)
 export function processCSVData(rawData: CSVData[]): ProcessedData[] {
