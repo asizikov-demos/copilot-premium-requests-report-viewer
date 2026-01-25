@@ -58,10 +58,13 @@ interface CSVUploaderProps {
 export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSampleLoading, setIsSampleLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showPrivacyDialog, setShowPrivacyDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const totalRows = useRef(0);
+
+  const isBusy = isLoading || isSampleLoading;
 
   const startIngestion = (file: File) => {
     if (!file || !file.name.toLowerCase().endsWith('.csv')) {
@@ -122,6 +125,9 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
   };
 
   const loadSampleData = async () => {
+    if (isBusy) return;
+
+    setIsSampleLoading(true);
     try {
       const sampleUrl = buildPublicAssetUrl(`/data/${SAMPLE_DATA_FILENAME}`);
       const response = await fetch(sampleUrl);
@@ -135,8 +141,9 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to load sample data';
       onError(message);
-      setIsLoading(false);
       setProgress(0);
+    } finally {
+      setIsSampleLoading(false);
     }
   };
 
@@ -180,7 +187,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
             ? 'border-blue-400 bg-blue-50' 
             : 'border-gray-300 hover:border-gray-400'
           }
-          ${isLoading ? 'opacity-50 pointer-events-none' : ''}
+          ${isBusy ? 'opacity-50 pointer-events-none' : ''}
         `}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -192,7 +199,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
           accept=".csv"
           onChange={handleFileInputChange}
           className="hidden"
-          disabled={isLoading}
+          disabled={isBusy}
         />
         
         <div className="space-y-4">
@@ -218,7 +225,11 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
           
           <div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {isLoading ? 'Processing CSV file...' : 'Upload CSV File'}
+              {isLoading
+                ? 'Processing CSV file...'
+                : isSampleLoading
+                  ? 'Downloading sample data...'
+                  : 'Upload CSV File'}
             </h3>
             
             {isLoading && progress > 0 && (
@@ -247,14 +258,14 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
             <div className="flex flex-col sm:flex-row gap-2 justify-center">
               <button
                 onClick={handleButtonClick}
-                disabled={isLoading}
+                disabled={isBusy}
                 className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? 'Processing...' : 'Choose File'}
               </button>
               <button
                 onClick={loadSampleData}
-                disabled={isLoading}
+                disabled={isBusy}
                 className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Load Sample Data

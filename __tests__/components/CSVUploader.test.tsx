@@ -272,6 +272,44 @@ describe('CSVUploader', () => {
     });
   });
 
+  it('should prevent concurrent sample downloads when clicked multiple times', async () => {
+    const sampleCsv = 'date,username,model,quantity\n2025-10-01,user001,GPT-5,1';
+
+    let resolveFetch: (value: unknown) => void;
+    const fetchPromise = new Promise((resolve) => {
+      resolveFetch = resolve;
+    });
+
+    global.fetch = jest.fn().mockReturnValue(fetchPromise as unknown as Promise<Response>);
+
+    const { ingestStream } = jest.requireMock('@/utils/ingestion');
+    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onComplete: (result: IngestionResult) => void }) => {
+      setTimeout(() => {
+        options.onComplete(createMockIngestionResult([{ date: '2025-10-01', username: 'user001', model: 'GPT-5', quantity: '1' }]));
+      }, 0);
+    });
+
+    render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
+
+    const sampleButton = screen.getByRole('button', { name: /load sample data/i });
+    await user.click(sampleButton);
+    await user.click(sampleButton);
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+
+    resolveFetch!({
+      ok: true,
+      blob: async () => new Blob([sampleCsv], { type: 'text/csv' })
+    } as unknown as Response);
+
+    await waitFor(() => {
+      expect(mockOnDataLoad).toHaveBeenCalledWith(
+        expect.objectContaining({ rowsProcessed: 1 }),
+        'pru-example.csv'
+      );
+    });
+  });
+
   it('should surface an error if sample data fails to load', async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: false,
