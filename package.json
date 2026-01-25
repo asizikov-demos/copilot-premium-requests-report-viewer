@@ -21,6 +21,7 @@
     "recharts": "^3.4.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.1",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.4.0",

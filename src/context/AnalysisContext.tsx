@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useMemo, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useMemo, useState, ReactNode } from 'react';
 import { ProcessedData } from '@/types/csv';
 import { useAnalysisFilters } from '@/hooks/useAnalysisFilters';
 import { useAnalyzedData } from '@/hooks/useAnalyzedData';
@@ -84,7 +84,7 @@ const DEFAULT_MIN_REQUESTS = 20;
 
 export function AnalysisProvider({ ingestionResult, filename, onReset, children }: AnalysisProviderProps) {
   // Local UI state that was previously in DataAnalysis
-  const [selectedPlan, setSelectedPlan] = useState<CopilotPlan>('business');
+  const [userSelectedPlan, setUserSelectedPlan] = useState<CopilotPlan | null>(null);
   const [view, setView] = useState<ViewType>('overview');
   const [minRequestsThreshold, setMinRequestsThreshold] = useState(DEFAULT_MIN_REQUESTS);
 
@@ -130,12 +130,10 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
     dailyBucketsArtifacts
   });
 
-  // Auto-select plan when suggested by quota breakdown
-  useEffect(() => {
-    if (analysis.quotaBreakdown.suggestedPlan) {
-      setSelectedPlan(analysis.quotaBreakdown.suggestedPlan);
-    }
-  }, [analysis.quotaBreakdown.suggestedPlan]);
+  // Prefer the suggested plan from data unless the user explicitly picked a plan.
+  const suggestedPlan = analysis.quotaBreakdown.suggestedPlan ?? 'business';
+  const selectedPlan = userSelectedPlan ?? suggestedPlan;
+  const setSelectedPlan = (p: CopilotPlan) => setUserSelectedPlan(p);
 
   const chartData = useMemo(() => (
     analysis.requestsByModel.map(item => ({

@@ -12,6 +12,44 @@ import {
   IngestionResult
 } from '@/utils/ingestion';
 
+const SAMPLE_DATA_FILENAME = 'pru-example.csv';
+
+function normalizeBasePath(rawBasePath: string | undefined): string {
+  const trimmed = (rawBasePath ?? '').trim();
+  if (trimmed === '' || trimmed === '/') {
+    return '';
+  }
+
+  // Only allow path-like base paths (e.g., "/repo" or "/repo/sub").
+  // If someone misconfigures it to a full URL, log a warning and ignore it rather than fetching from an unexpected origin.
+  if (/^https?:\/\//i.test(trimmed)) {
+    console.warn(
+      '[CSVUploader] Ignoring invalid NEXT_PUBLIC_BASE_PATH value that looks like a full URL:',
+      trimmed
+    );
+    return '';
+  }
+
+  const withLeadingSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  return withLeadingSlash.endsWith('/') ? withLeadingSlash.slice(0, -1) : withLeadingSlash;
+}
+
+function buildPublicAssetUrl(assetPath: string): string {
+  const basePath = normalizeBasePath(process.env.NEXT_PUBLIC_BASE_PATH);
+  const normalizedAssetPath = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
+
+  const pathOnlyUrl = `${basePath}${normalizedAssetPath}`;
+
+  // This module is a Client Component, but guard anyway to avoid referencing `window`
+  // in any non-browser evaluation contexts.
+  if (typeof window === 'undefined') {
+    return pathOnlyUrl;
+  }
+
+  // Use an absolute URL so fetch is unambiguous across deployments.
+  return new URL(pathOnlyUrl, window.location.origin).toString();
+}
+
 interface CSVUploaderProps {
   onDataLoad: (result: IngestionResult, filename: string) => void;
   onError: (error: string) => void;
@@ -25,7 +63,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const totalRows = useRef(0);
 
-  const handleFileSelect = (file: File) => {
+  const startIngestion = (file: File) => {
     if (!file || !file.name.toLowerCase().endsWith('.csv')) {
       onError('Please select a CSV file');
       return;
@@ -83,6 +121,25 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
     );
   };
 
+  const loadSampleData = async () => {
+    try {
+      const sampleUrl = buildPublicAssetUrl(`/data/${SAMPLE_DATA_FILENAME}`);
+      const response = await fetch(sampleUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to load sample data (${response.status})`);
+      }
+
+      const blob = await response.blob();
+      const sampleFile = new File([blob], SAMPLE_DATA_FILENAME, { type: 'text/csv' });
+      startIngestion(sampleFile);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load sample data';
+      onError(message);
+      setIsLoading(false);
+      setProgress(0);
+    }
+  };
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(true);
@@ -99,14 +156,14 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
     
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
-      handleFileSelect(files[0]);
+      startIngestion(files[0]);
     }
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length > 0) {
-      handleFileSelect(files[0]);
+      startIngestion(files[0]);
     }
   };
 
@@ -187,13 +244,22 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
             <p className="text-gray-500 mb-4">
               {isLoading ? 'Please wait while we process your file...' : 'Drag and drop your CSV file here, or click to browse'}
             </p>
-            <button
-              onClick={handleButtonClick}
-              disabled={isLoading}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Processing...' : 'Choose File'}
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2 justify-center">
+              <button
+                onClick={handleButtonClick}
+                disabled={isLoading}
+                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? 'Processing...' : 'Choose File'}
+              </button>
+              <button
+                onClick={loadSampleData}
+                disabled={isLoading}
+                className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Load Sample Data
+              </button>
+            </div>
           </div>
           
           <div className="text-xs text-gray-400">

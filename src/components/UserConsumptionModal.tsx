@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, useContext } from 'react';
+import React, { useMemo, useContext } from 'react';
 import { UserDailyStackedChart } from './charts/UserDailyStackedChart';
 import { UserConsumptionModalProps } from '@/types/csv';
 import {
@@ -16,13 +16,72 @@ import { AnalysisContext } from '@/context/AnalysisContext';
 import { buildUserDailyModelDataFromArtifacts, UsageArtifacts, QuotaArtifacts, DailyBucketsArtifacts, getUserQuota } from '@/utils/ingestion';
 import { generateModelColors } from '@/utils/modelColors';
 
+interface TooltipEntry {
+  dataKey: string;
+  value: number;
+  color: string;
+}
+
+interface TooltipProps {
+  active?: boolean;
+  payload?: TooltipEntry[];
+  label?: string;
+}
+
+function UserDailyUsageTooltip({ active, payload, label }: TooltipProps) {
+  if (active && payload && payload.length && label) {
+    const date = new Date(label);
+    const formattedDate = date.toLocaleDateString('en-US', { timeZone: 'UTC' });
+
+    // Separate cumulative line from model bars
+    const cumulativeData = payload.find((entry: TooltipEntry) => entry.dataKey === 'totalCumulative');
+    const modelData = payload.filter(
+      (entry: TooltipEntry) => entry.dataKey !== 'totalCumulative' && entry.value > 0
+    );
+
+    // Calculate daily total from model data
+    const dailyTotal = modelData.reduce((sum: number, entry: TooltipEntry) => sum + entry.value, 0);
+
+    return (
+      <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+        <p className="font-medium text-gray-900 mb-2">{formattedDate}</p>
+
+        {/* Daily breakdown */}
+        {modelData.length > 0 ? (
+          <div className="mb-2">
+            <p className="text-sm font-medium text-gray-700 mb-1">Daily Usage:</p>
+            {modelData.map((entry: TooltipEntry, entryIndex: number) => (
+              <p key={entryIndex} className="text-sm ml-2" style={{ color: entry.color }}>
+                • {entry.dataKey}: {entry.value.toFixed(1)} requests
+              </p>
+            ))}
+            <p className="text-sm font-semibold text-gray-900 ml-2 mt-1">
+              Daily Total: {dailyTotal.toFixed(1)} requests
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500 mb-2">No requests this day</p>
+        )}
+
+        {/* Cumulative total */}
+        {cumulativeData && (
+          <p className="text-sm text-blue-600 font-semibold border-t border-gray-200 pt-2">
+            Cumulative Total: {cumulativeData.value.toFixed(1)} requests
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  return null;
+}
+
 export function UserConsumptionModal({
   user,
   processedData,
   userQuotaValue,
   onClose
 }: UserConsumptionModalProps) {
-  const [mounted, setMounted] = useState(false);
   // Optional context (may be absent in isolated test rendering)
   const analysisCtx = useContext(AnalysisContext);
 
@@ -114,10 +173,6 @@ export function UserConsumptionModal({
     return [...userModels].sort((a, b) => (modelUsageTotals[b] || 0) - (modelUsageTotals[a] || 0));
   }, [userModels, modelUsageTotals]);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   const planInfo = {
     business: { name: 'Copilot Business', monthlyQuota: PRICING.BUSINESS_QUOTA },
     enterprise: { name: 'Copilot Enterprise', monthlyQuota: PRICING.ENTERPRISE_QUOTA }
@@ -137,64 +192,6 @@ export function UserConsumptionModal({
     }
   }, [userQuotaValue]);
 
-  // Define proper types for tooltip data
-  interface TooltipEntry {
-    dataKey: string;
-    value: number;
-    color: string;
-  }
-
-  interface TooltipProps {
-    active?: boolean;
-    payload?: TooltipEntry[];
-    label?: string;
-  }
-
-  // Custom tooltip component
-  const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
-    if (active && payload && payload.length && label) {
-      const date = new Date(label);
-      const formattedDate = date.toLocaleDateString('en-US', { timeZone: 'UTC' });
-      
-      // Separate cumulative line from model bars
-      const cumulativeData = payload.find((entry: TooltipEntry) => entry.dataKey === 'totalCumulative');
-      const modelData = payload.filter((entry: TooltipEntry) => entry.dataKey !== 'totalCumulative' && entry.value > 0);
-      
-      // Calculate daily total from model data
-      const dailyTotal = modelData.reduce((sum: number, entry: TooltipEntry) => sum + entry.value, 0);
-      
-      return (
-        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-          <p className="font-medium text-gray-900 mb-2">{formattedDate}</p>
-          
-          {/* Daily breakdown */}
-          {modelData.length > 0 ? (
-            <div className="mb-2">
-              <p className="text-sm font-medium text-gray-700 mb-1">Daily Usage:</p>
-              {modelData.map((entry: TooltipEntry, entryIndex: number) => (
-                <p key={entryIndex} className="text-sm ml-2" style={{ color: entry.color }}>
-                  • {entry.dataKey}: {entry.value.toFixed(1)} requests
-                </p>
-              ))}
-              <p className="text-sm font-semibold text-gray-900 ml-2 mt-1">
-                Daily Total: {dailyTotal.toFixed(1)} requests
-              </p>
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500 mb-2">No requests this day</p>
-          )}
-          
-          {/* Cumulative total */}
-          {cumulativeData && (
-            <p className="text-sm text-blue-600 font-semibold border-t border-gray-200 pt-2">
-              Cumulative Total: {cumulativeData.value.toFixed(1)} requests
-            </p>
-          )}
-        </div>
-      );
-    }
-    return null;
-  };
 
   // Handle copy to clipboard
   const handleCopyUser = async () => {
@@ -205,11 +202,9 @@ export function UserConsumptionModal({
     }
   };
 
-  if (!mounted) return null;
-
   return (
     <FullScreenModal
-      open={mounted}
+      open={true}
       onClose={onClose}
       title={`${user} Daily Usage`}
       contentClassName="flex flex-col"
@@ -283,7 +278,7 @@ export function UserConsumptionModal({
                 models={userModels}
                 modelColors={modelColors}
                 quotaValue={userQuotaValue}
-                tooltip={<CustomTooltip />}
+                tooltip={<UserDailyUsageTooltip />}
               />
             </div>
           </div>

@@ -1,6 +1,5 @@
 "use client";
-import React, { ReactNode, useState, useRef, useEffect, useCallback } from 'react';
-
+import React, { ReactNode, useState, useRef, useEffect, useCallback, useId } from 'react';
 interface TooltipProps {
   content: ReactNode;
   children: ReactNode;
@@ -25,7 +24,8 @@ export const Tooltip: React.FC<TooltipProps> = ({
   const [visible, setVisible] = useState(false);
   const [timerId, setTimerId] = useState<NodeJS.Timeout | null>(null);
   const triggerRef = useRef<HTMLSpanElement | null>(null);
-  const idRef = useRef(`tooltip-${Math.random().toString(36).slice(2)}`);
+  const reactId = useId();
+  const tooltipId = `tooltip-${reactId}`;
 
   const show = useCallback(() => {
     if (timerId) clearTimeout(timerId);
@@ -50,7 +50,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
     <span
       className="relative inline-flex"
       ref={triggerRef}
-      aria-describedby={visible ? idRef.current : undefined}
+      aria-describedby={visible ? tooltipId : undefined}
       onMouseEnter={show}
       onMouseLeave={hide}
       onFocus={show}
@@ -59,7 +59,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
       {children}
       {visible && (
         <span
-          id={idRef.current}
+          id={tooltipId}
           role="tooltip"
             className={`pointer-events-none absolute z-50 px-2 py-1 rounded bg-gray-900 text-white text-xs shadow-lg whitespace-nowrap ${className} ${
             side === 'top' ? 'bottom-full left-1/2 -translate-x-1/2 mb-2' : ''
