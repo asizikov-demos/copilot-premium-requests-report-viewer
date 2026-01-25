@@ -39,6 +39,7 @@ export function ModelDailyStackedChart({ data, models, modelColors, height = '10
           labelStyle={chartTooltipLabelStyle}
           labelFormatter={(value) => value as string}
           formatter={(value: number, name: string) => [value.toFixed(2), name]}
+          wrapperStyle={{ zIndex: 1000 }}
         />
         <Legend />
         {models.map((model) => (

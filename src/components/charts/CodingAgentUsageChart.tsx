@@ -44,6 +44,7 @@ export function CodingAgentUsageChart({ data, height = '100%' }: CodingAgentUsag
           ]}
           contentStyle={chartTooltipContentStyle}
           labelStyle={chartTooltipLabelStyle}
+          wrapperStyle={{ zIndex: 1000 }}
         />
         <Line
           type="monotone"
