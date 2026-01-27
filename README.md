@@ -2,6 +2,8 @@
 
 A Next.js application for analyzing CSV data containing user request analytics and quota information from GitHub Copilot Premium Models usage reports. This tool provides detailed insights into usage patterns, quota consumption, and cost analysis.
 
+![Screenshot of the application dashboard](readme/01-overview.png)
+
 ## Sharable Url
 
 https://gh.io/pru-view 
@@ -25,6 +27,9 @@ https://gh.io/pru-view
 - **Plan Comparison**: Support for Copilot Business (300 requests/month) and Enterprise (1000 requests/month)
 - **Overage Calculations**: Automatic calculation of excess usage costs at $0.04 per request
 - **Cost Indication**: Dynamic cost calculations based on selected plan
+- **Cost Optimization Tips**: Suggestions for reducing overage costs
+
+![Screenshot of the Cost Optimization feature](readme/02-cost-optimization.png)
 
 ### 📱 **User Experience**
 - **Drag-and-Drop Upload**: Easy CSV file uploading
