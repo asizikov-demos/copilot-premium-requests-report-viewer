@@ -38,8 +38,8 @@ export function CodingAgentUsageChart({ data, height = '100%' }: CodingAgentUsag
             const date = new Date(label);
             return date.toLocaleDateString('en-US', { timeZone: 'UTC' });
           }}
-          formatter={(value: number, name: string) => [
-            `${value.toFixed(1)} requests`,
+          formatter={(value, name) => [
+            `${Number(value).toFixed(1)} requests`,
             name === 'Daily Requests' ? 'Daily' : 'Cumulative'
           ]}
           contentStyle={chartTooltipContentStyle}

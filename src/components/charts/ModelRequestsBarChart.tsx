@@ -55,8 +55,8 @@ export function ModelRequestsBarChart({ data, height = '100%' as ResponsiveHeigh
           tickLine={{ stroke: '#d6d3d1' }}
         />
         <Tooltip 
-          formatter={(value: number) => [
-            `${value.toLocaleString()} requests`,
+          formatter={(value) => [
+            `${Number(value).toLocaleString()} requests`,
             'Total Requests'
           ]}
           labelFormatter={(label, payload) => {
