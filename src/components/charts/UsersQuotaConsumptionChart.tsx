@@ -49,9 +49,9 @@ export function UsersQuotaConsumptionChart({
             const date = new Date(label);
             return date.toLocaleDateString('en-US', { timeZone: 'UTC' });
           }}
-          formatter={(value: number, name: string) => [
-            `${value.toFixed(1)} requests`,
-            name
+          formatter={(value, name) => [
+            `${Number(value).toFixed(1)} requests`,
+            String(name)
           ]}
           contentStyle={chartTooltipContentStyle}
           labelStyle={chartTooltipLabelStyle}

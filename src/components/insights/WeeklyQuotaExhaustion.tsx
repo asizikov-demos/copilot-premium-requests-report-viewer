@@ -70,7 +70,7 @@ export function WeeklyQuotaExhaustion({ weeklyExhaustion, totalUsers, height = 2
             <XAxis dataKey="week" tick={{ fontSize: 11 }} />
             <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={40} />
             <Tooltip
-              formatter={(value: number) => [`${value}`, 'Users']}
+              formatter={(value) => [`${value}`, 'Users']}
               labelFormatter={(label, items) => {
                 const row = items?.[0]?.payload as WeeklyQuotaDatum | undefined;
                 return row ? `${String(label)} (${row.range})` : String(label);
