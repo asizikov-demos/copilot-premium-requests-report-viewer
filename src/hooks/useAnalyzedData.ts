@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
-import { ProcessedData, AnalysisResults, CodingAgentAnalysis } from '@/types/csv';
+import { ProcessedData, AnalysisResults, CodingAgentAnalysis, CodeReviewAnalysis } from '@/types/csv';
 import { PRICING } from '@/constants/pricing';
 import {
   deriveAnalysisFromArtifacts,
   buildDailyCumulativeDataFromArtifacts,
   analyzeCodingAgentAdoptionFromArtifacts,
+  analyzeCodeReviewAdoptionFromArtifacts,
   computeWeeklyQuotaExhaustionFromArtifacts,
   UsageArtifacts,
   QuotaArtifacts,
@@ -30,6 +31,7 @@ interface UseAnalyzedDataReturn {
   allModels: string[];
   dailyCumulativeData: { date: string; [user: string]: string | number; }[];
   codingAgentAnalysis: CodingAgentAnalysis;
+  codeReviewAnalysis: CodeReviewAnalysis;
   weeklyExhaustion: WeeklyQuotaExhaustionBreakdown;
 }
 
@@ -78,6 +80,7 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
         allModels: Array.from(new Set(filtered.map(r=> r.model))).sort(),
         dailyCumulativeData: [],
         codingAgentAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodingAgentRequests: 0, adoptionRate: 0, users: [] },
+        codeReviewAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodeReviewRequests: 0, adoptionRate: 0, users: [] },
         weeklyExhaustion: { totalUsersExhausted: 0, weeks: [] }
       };
     }
@@ -89,6 +92,7 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
     const analysis = deriveAnalysisFromArtifacts(usageArtifacts!, quotaArtifacts!, dailyBucketsArtifacts!);
     const dailyCumulativeData = buildDailyCumulativeDataFromArtifacts(dailyBucketsArtifacts!);
     const codingAgentAnalysis = analyzeCodingAgentAdoptionFromArtifacts(usageArtifacts!, quotaArtifacts!);
+    const codeReviewAnalysis = analyzeCodeReviewAdoptionFromArtifacts(usageArtifacts!, quotaArtifacts!);
     const weeklyExhaustion = computeWeeklyQuotaExhaustionFromArtifacts(dailyBucketsArtifacts!, quotaArtifacts!);
     const userData = usageArtifacts!.users.map(u => ({ user: u.user, totalRequests: u.totalRequests, modelBreakdown: u.modelBreakdown })).sort((a, b) => b.totalRequests - a.totalRequests);
     const allModels = Object.keys(usageArtifacts!.modelTotals).sort();
@@ -99,6 +103,7 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
       allModels,
       dailyCumulativeData,
       codingAgentAnalysis,
+      codeReviewAnalysis,
       weeklyExhaustion
     };
   }, [baseProcessed, selectedMonths, usageArtifacts, quotaArtifacts, dailyBucketsArtifacts]);

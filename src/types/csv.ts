@@ -95,6 +95,24 @@ export interface CodingAgentAnalysis {
   users: CodingAgentUser[];
 }
 
+// Code Review Adoption types
+export interface CodeReviewUser {
+  user: string;
+  totalRequests: number;
+  codeReviewRequests: number;
+  codeReviewPercentage: number;
+  quota: number | 'unlimited';
+  models: string[];
+}
+
+export interface CodeReviewAnalysis {
+  totalUsers: number;
+  totalUniqueUsers: number;
+  totalCodeReviewRequests: number;
+  adoptionRate: number;
+  users: CodeReviewUser[];
+}
+
 export interface CodingAgentOverviewProps {
   codingAgentUsers: CodingAgentUser[];
   totalUniqueUsers: number;
