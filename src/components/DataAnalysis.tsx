@@ -27,6 +27,7 @@ function DataAnalysisInner() {
     allModels,
     dailyCumulativeData,
     codingAgentAnalysis,
+    codeReviewAnalysis,
     processedData,
     weeklyExhaustion,
     availableMonths,
@@ -136,6 +137,7 @@ function DataAnalysisInner() {
                 codingAgentUsers={codingAgentAnalysis.users}
                 totalUniqueUsers={codingAgentAnalysis.totalUniqueUsers}
                 adoptionRate={codingAgentAnalysis.adoptionRate}
+                codeReviewAnalysis={codeReviewAnalysis}
                 onBack={() => setView('overview')}
               />
             </div>
@@ -207,7 +209,7 @@ function DataAnalysisInner() {
                   </div>
                 </button>
 
-                {/* Coding Agent Adoption */}
+                {/* Agents Adoption */}
                 <button
                   onClick={() => setView('codingAgent')}
                   className="group stat-card card-elevated p-5 rounded-xl text-left opacity-0 animate-fade-in-up delay-3"
@@ -220,11 +222,11 @@ function DataAnalysisInner() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                           </svg>
                         </div>
-                        <p className="text-xs font-bold text-stone-400 uppercase tracking-wider">Agent Adoption</p>
+                        <p className="text-xs font-bold text-stone-400 uppercase tracking-wider">Agents Adoption</p>
                       </div>
-                      <div className="flex items-baseline gap-2">
-                        <p className="text-2xl font-bold text-stone-900">{codingAgentAnalysis.adoptionRate.toFixed(0)}%</p>
-                        <p className="text-xs text-stone-500">{codingAgentAnalysis.totalUsers} of {codingAgentAnalysis.totalUniqueUsers} users</p>
+                      <div className="flex items-baseline gap-3">
+                        <p className="text-2xl font-bold text-stone-900">{codingAgentAnalysis.adoptionRate.toFixed(0)}% <span className="text-xs font-medium text-stone-500">CCA</span></p>
+                        <p className="text-2xl font-bold text-stone-900">{codeReviewAnalysis.adoptionRate.toFixed(0)}% <span className="text-xs font-medium text-stone-500">CCR</span></p>
                       </div>
                     </div>
                     <svg className="w-5 h-5 text-stone-300 group-hover:text-orange-500 group-hover:translate-x-1 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
