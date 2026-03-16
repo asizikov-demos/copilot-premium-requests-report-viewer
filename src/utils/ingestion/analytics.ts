@@ -11,6 +11,7 @@
 
 import { PRICING } from '@/constants/pricing';
 import type { AnalysisResults } from '@/types/csv';
+import type { CodeReviewAnalysis } from '@/types/csv';
 import type { QuotaArtifacts, UsageArtifacts, DailyBucketsArtifacts, FeatureUsageArtifacts } from './types';
 export type { DailyBucketsArtifacts } from './types';
 import type { FeatureUtilizationStats } from '@/utils/analytics/insights';
@@ -25,6 +26,31 @@ import { Advisory as LegacyAdvisory } from '@/utils/analytics/advisory';
 export function buildTimeFrame(daily: DailyBucketsArtifacts): { start: string; end: string } {
   if (!daily.dateRange) return { start: '', end: '' };
   return { start: daily.dateRange.min, end: daily.dateRange.max };
+}
+
+/**
+ * Build a UsageArtifacts from already-filtered ProcessedData rows.
+ * Used when billing period (selectedMonths) is active to produce month-sliced
+ * artifacts for downstream analysis functions.
+ */
+export function buildUsageArtifactsFromProcessedData(filtered: import('@/types/csv').ProcessedData[]): UsageArtifacts {
+  const userMap = new Map<string, { totalRequests: number; modelBreakdown: Record<string, number> }>();
+  const modelTotals: Record<string, number> = {};
+  for (const r of filtered) {
+    if (!userMap.has(r.user)) {
+      userMap.set(r.user, { totalRequests: 0, modelBreakdown: {} });
+    }
+    const u = userMap.get(r.user)!;
+    u.totalRequests += r.requestsUsed;
+    u.modelBreakdown[r.model] = (u.modelBreakdown[r.model] || 0) + r.requestsUsed;
+    modelTotals[r.model] = (modelTotals[r.model] || 0) + r.requestsUsed;
+  }
+  const users = Array.from(userMap.entries()).map(([user, data]) => ({
+    user,
+    totalRequests: data.totalRequests,
+    modelBreakdown: data.modelBreakdown,
+  }));
+  return { users, modelTotals, userCount: users.length, modelCount: Object.keys(modelTotals).length };
 }
 
 /**
@@ -259,7 +285,7 @@ export function analyzeCodingAgentAdoptionFromArtifacts(usage: UsageArtifacts, q
       user: u.user,
       totalRequests: u.totalRequests,
       codingAgentRequests: caRequests,
-      codingAgentPercentage: (caRequests / u.totalRequests) * 100,
+      codingAgentPercentage: u.totalRequests > 0 ? (caRequests / u.totalRequests) * 100 : 0,
       quota: quotaVal,
       models
     });
@@ -545,6 +571,62 @@ export function buildDailyCodingAgentUsageFromArtifacts(
       for (const [model, qty] of modelMap.entries()) {
         const lower = model.toLowerCase();
         if (lower.includes('coding agent') || lower.includes('padawan')) {
+          daySum += qty;
+        }
+      }
+    }
+    if (daySum > 0) dayTotals.push({ date, total: daySum });
+  }
+  if (dayTotals.length === 0) return [];
+  dayTotals.sort((a, b) => a.date.localeCompare(b.date));
+  let cumulative = 0;
+  return dayTotals.map(d => {
+    cumulative += d.total;
+    return { date: d.date, dailyRequests: d.total, cumulativeRequests: cumulative } as DailyCodingAgentUsageDatum;
+  });
+}
+
+// -----------------------------
+// Code Review Adoption From Artifacts
+// -----------------------------
+export function analyzeCodeReviewAdoptionFromArtifacts(usage: UsageArtifacts, quota: QuotaArtifacts): CodeReviewAnalysis {
+  if (usage.users.length === 0) return { totalUsers: 0, totalUniqueUsers: 0, totalCodeReviewRequests: 0, adoptionRate: 0, users: [] };
+  const totalUniqueUsers = usage.userCount;
+  const codeReviewUsers: CodeReviewAnalysis['users'] = [];
+  let totalCodeReviewRequests = 0;
+  for (const u of usage.users) {
+    const models = Object.keys(u.modelBreakdown).filter(m => m.toLowerCase().includes('code review'));
+    if (models.length === 0) continue;
+    const crRequests = models.reduce((sum, m) => sum + u.modelBreakdown[m], 0);
+    totalCodeReviewRequests += crRequests;
+    const quotaVal = quota.quotaByUser.get(u.user) ?? 'unlimited';
+    codeReviewUsers.push({
+      user: u.user,
+      totalRequests: u.totalRequests,
+      codeReviewRequests: crRequests,
+      codeReviewPercentage: u.totalRequests > 0 ? (crRequests / u.totalRequests) * 100 : 0,
+      quota: quotaVal,
+      models
+    });
+  }
+  codeReviewUsers.sort((a, b) => b.codeReviewRequests - a.codeReviewRequests);
+  const adoptionRate = totalUniqueUsers > 0 ? (codeReviewUsers.length / totalUniqueUsers) * 100 : 0;
+  return { totalUsers: codeReviewUsers.length, totalUniqueUsers, totalCodeReviewRequests, adoptionRate, users: codeReviewUsers };
+}
+
+// -----------------------------
+// Daily Code Review Usage From Artifacts
+// -----------------------------
+export function buildDailyCodeReviewUsageFromArtifacts(
+  daily: DailyBucketsArtifacts
+): DailyCodingAgentUsageDatum[] {
+  if (!daily.dailyUserModelTotals) return [];
+  const dayTotals: Array<{ date: string; total: number }> = [];
+  for (const [date, userMap] of daily.dailyUserModelTotals.entries()) {
+    let daySum = 0;
+    for (const modelMap of userMap.values()) {
+      for (const [model, qty] of modelMap.entries()) {
+        if (model.toLowerCase().includes('code review')) {
           daySum += qty;
         }
       }
