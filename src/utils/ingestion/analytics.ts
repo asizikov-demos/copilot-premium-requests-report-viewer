@@ -260,7 +260,7 @@ export function analyzeCodingAgentAdoptionFromArtifacts(usage: UsageArtifacts, q
       user: u.user,
       totalRequests: u.totalRequests,
       codingAgentRequests: caRequests,
-      codingAgentPercentage: (caRequests / u.totalRequests) * 100,
+      codingAgentPercentage: u.totalRequests > 0 ? (caRequests / u.totalRequests) * 100 : 0,
       quota: quotaVal,
       models
     });
@@ -579,7 +579,7 @@ export function analyzeCodeReviewAdoptionFromArtifacts(usage: UsageArtifacts, qu
       user: u.user,
       totalRequests: u.totalRequests,
       codeReviewRequests: crRequests,
-      codeReviewPercentage: (crRequests / u.totalRequests) * 100,
+      codeReviewPercentage: u.totalRequests > 0 ? (crRequests / u.totalRequests) * 100 : 0,
       quota: quotaVal,
       models
     });

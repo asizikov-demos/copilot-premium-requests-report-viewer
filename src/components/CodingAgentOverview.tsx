@@ -133,7 +133,7 @@ export function CodingAgentOverview({
                 onClick={() => setShowAllUsers(!showAllUsers)}
                 className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
               >
-                {showAllUsers ? 'Show top 5' : `Show all ${codingAgentUsers.length} users`}
+                {showAllUsers ? `Show top ${TABLE_PREVIEW_COUNT}` : `Show all ${codingAgentUsers.length} users`}
               </button>
             </div>
           )}
@@ -192,7 +192,7 @@ export function CodingAgentOverview({
                     onClick={() => setShowAllReviewUsers(!showAllReviewUsers)}
                     className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
                   >
-                    {showAllReviewUsers ? 'Show top 5' : `Show all ${codeReviewAnalysis.users.length} users`}
+                    {showAllReviewUsers ? `Show top ${TABLE_PREVIEW_COUNT}` : `Show all ${codeReviewAnalysis.users.length} users`}
                   </button>
                 </div>
               )}
