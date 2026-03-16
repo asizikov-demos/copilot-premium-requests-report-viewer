@@ -6,6 +6,7 @@ import {
   buildDailyCumulativeDataFromArtifacts,
   analyzeCodingAgentAdoptionFromArtifacts,
   analyzeCodeReviewAdoptionFromArtifacts,
+  buildUsageArtifactsFromProcessedData,
   computeWeeklyQuotaExhaustionFromArtifacts,
   UsageArtifacts,
   QuotaArtifacts,
@@ -91,8 +92,12 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
       : baseProcessed.filter(r => selectedMonths.includes(r.monthKey));
     const analysis = deriveAnalysisFromArtifacts(usageArtifacts!, quotaArtifacts!, dailyBucketsArtifacts!);
     const dailyCumulativeData = buildDailyCumulativeDataFromArtifacts(dailyBucketsArtifacts!);
-    const codingAgentAnalysis = analyzeCodingAgentAdoptionFromArtifacts(usageArtifacts!, quotaArtifacts!);
-    const codeReviewAnalysis = analyzeCodeReviewAdoptionFromArtifacts(usageArtifacts!, quotaArtifacts!);
+    // When billing period filter is active, derive agent/review analyses from month-sliced data
+    const effectiveUsage = selectedMonths.length > 0
+      ? buildUsageArtifactsFromProcessedData(filtered)
+      : usageArtifacts!;
+    const codingAgentAnalysis = analyzeCodingAgentAdoptionFromArtifacts(effectiveUsage, quotaArtifacts!);
+    const codeReviewAnalysis = analyzeCodeReviewAdoptionFromArtifacts(effectiveUsage, quotaArtifacts!);
     const weeklyExhaustion = computeWeeklyQuotaExhaustionFromArtifacts(dailyBucketsArtifacts!, quotaArtifacts!);
     const userData = usageArtifacts!.users.map(u => ({ user: u.user, totalRequests: u.totalRequests, modelBreakdown: u.modelBreakdown })).sort((a, b) => b.totalRequests - a.totalRequests);
     const allModels = Object.keys(usageArtifacts!.modelTotals).sort();

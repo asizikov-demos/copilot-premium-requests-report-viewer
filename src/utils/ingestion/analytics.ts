@@ -29,6 +29,31 @@ export function buildTimeFrame(daily: DailyBucketsArtifacts): { start: string; e
 }
 
 /**
+ * Build a UsageArtifacts from already-filtered ProcessedData rows.
+ * Used when billing period (selectedMonths) is active to produce month-sliced
+ * artifacts for downstream analysis functions.
+ */
+export function buildUsageArtifactsFromProcessedData(filtered: import('@/types/csv').ProcessedData[]): UsageArtifacts {
+  const userMap = new Map<string, { totalRequests: number; modelBreakdown: Record<string, number> }>();
+  const modelTotals: Record<string, number> = {};
+  for (const r of filtered) {
+    if (!userMap.has(r.user)) {
+      userMap.set(r.user, { totalRequests: 0, modelBreakdown: {} });
+    }
+    const u = userMap.get(r.user)!;
+    u.totalRequests += r.requestsUsed;
+    u.modelBreakdown[r.model] = (u.modelBreakdown[r.model] || 0) + r.requestsUsed;
+    modelTotals[r.model] = (modelTotals[r.model] || 0) + r.requestsUsed;
+  }
+  const users = Array.from(userMap.entries()).map(([user, data]) => ({
+    user,
+    totalRequests: data.totalRequests,
+    modelBreakdown: data.modelBreakdown,
+  }));
+  return { users, modelTotals, userCount: users.length, modelCount: Object.keys(modelTotals).length };
+}
+
+/**
  * Build quota breakdown lists & suggested plan using quotaArtifacts.
  * Replicates logic of legacy buildQuotaBreakdown but avoids scanning ProcessedData.
  */

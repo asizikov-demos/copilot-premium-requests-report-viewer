@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { CodingAgentUsageChart } from './charts/CodingAgentUsageChart';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import { AnalysisContext } from '@/context/AnalysisContext';
+import { useAnalysisContext } from '@/context/AnalysisContext';
 import { DailyBucketsArtifacts, buildDailyCodingAgentUsageFromArtifacts, buildDailyCodeReviewUsageFromArtifacts } from '@/utils/ingestion';
 import type { CodeReviewAnalysis } from '@/types/csv';
 
@@ -26,23 +26,29 @@ export function CodingAgentOverview({
   const [showChart, setShowChart] = useState(true);
   const [showAllUsers, setShowAllUsers] = useState(false);
   const [showAllReviewUsers, setShowAllReviewUsers] = useState(false);
-  const analysisCtx = React.useContext(AnalysisContext);
-  const dailyBucketsArtifacts = analysisCtx?.dailyBucketsArtifacts as DailyBucketsArtifacts | undefined;
+  const { dailyBucketsArtifacts, selectedMonths } = useAnalysisContext();
+  const typedDailyBuckets = dailyBucketsArtifacts as DailyBucketsArtifacts | undefined;
   
-  // Memoize daily coding agent data calculation
+  // Memoize daily coding agent data, filtered by selected billing months
   const dailyCodingAgentData = useMemo(() => {
-    if (dailyBucketsArtifacts?.dailyUserModelTotals) {
-      return buildDailyCodingAgentUsageFromArtifacts(dailyBucketsArtifacts);
+    if (typedDailyBuckets?.dailyUserModelTotals) {
+      const raw = buildDailyCodingAgentUsageFromArtifacts(typedDailyBuckets);
+      return selectedMonths.length === 0
+        ? raw
+        : raw.filter(d => selectedMonths.includes(d.date.slice(0, 7)));
     }
     return [];
-  }, [dailyBucketsArtifacts]);
+  }, [typedDailyBuckets, selectedMonths]);
 
   const dailyCodeReviewData = useMemo(() => {
-    if (dailyBucketsArtifacts?.dailyUserModelTotals) {
-      return buildDailyCodeReviewUsageFromArtifacts(dailyBucketsArtifacts);
+    if (typedDailyBuckets?.dailyUserModelTotals) {
+      const raw = buildDailyCodeReviewUsageFromArtifacts(typedDailyBuckets);
+      return selectedMonths.length === 0
+        ? raw
+        : raw.filter(d => selectedMonths.includes(d.date.slice(0, 7)));
     }
     return [];
-  }, [dailyBucketsArtifacts]);
+  }, [typedDailyBuckets, selectedMonths]);
 
   const TABLE_PREVIEW_COUNT = 5;
   const visibleUsers = showAllUsers ? codingAgentUsers : codingAgentUsers.slice(0, TABLE_PREVIEW_COUNT);
