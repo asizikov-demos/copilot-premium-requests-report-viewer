@@ -1,12 +1,10 @@
 # Copilot Instructions
 
-<!-- Use this file to provide workspace-specific custom instructions to Copilot. For more details, visit https://code.visualstudio.com/docs/copilot/copilot-customization#_use-a-githubcopilotinstructionsmd-file -->
-
 ## Project Overview
 This is a Next.js TypeScript application for analyzing CSV data containing user request analytics and quota information.
 
 ## Key Technologies
-- Next.js 15 with App Router
+- Next.js 16 with App Router
 - TypeScript
 - Tailwind CSS
 - Recharts for data visualization
@@ -14,7 +12,6 @@ This is a Next.js TypeScript application for analyzing CSV data containing user 
 
 ## Code Style Guidelines
 - Use functional components with React hooks
-- Prefer TypeScript interfaces over types for object shapes
 - Use Tailwind CSS for all styling
 - Follow Next.js App Router conventions
 - Use meaningful component and variable names
@@ -44,6 +41,9 @@ The application supports mixed quota types in the Total Monthly Quota column:
 - "300" - Business SKU (300 premium requests per month)
 - "1000" - Enterprise SKU (1000 premium requests per month)
 - Mixed environments are supported with appropriate UI indicators
+
+## Git Workflow
+When it's time to commit, push, or create a PR, delegate to the `git-workflow` agent (`.github/agents/git-workflow.agent.md`).
 
 ## Component Architecture
 - Keep components small and focused on single responsibilities
