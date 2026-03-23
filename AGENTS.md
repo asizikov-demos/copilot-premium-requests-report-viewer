@@ -43,7 +43,7 @@ The application supports mixed quota types in the Total Monthly Quota column:
 - Mixed environments are supported with appropriate UI indicators
 
 ## Git Workflow
-When it's time to commit, push, or create a PR, delegate to the `git-workflow` agent (`.github/agents/git-workflow.agent.md`).
+When it's time to commit, push, create or update a PR, or clean up after a merge, delegate to the `git-workflow` skill (`.github/skills/git-workflow/SKILL.md`).
 
 ## Component Architecture
 - Keep components small and focused on single responsibilities
