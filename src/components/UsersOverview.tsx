@@ -9,10 +9,11 @@ import { useSortableTable } from '@/hooks/useSortableTable';
 import { useUserConsumptionModal } from '@/hooks/useUserConsumptionModal';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { PRICING } from '@/constants/pricing';
+import type { UserSummary } from '@/utils/analytics';
 import { getUserQuota, QuotaArtifacts, UsageArtifacts, computeOverageSummaryFromArtifacts } from '@/utils/ingestion';
 
-type UserSummary = { user: string; totalRequests: number; modelBreakdown: Record<string, number>; };
 type DailyCumulativeData = { date: string; [user: string]: string | number };
+const ALL_FILTERS_VALUE = '__all__';
 
 interface UsersOverviewProps {
   userData: UserSummary[];
@@ -50,6 +51,8 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
   const [showChart, setShowChart] = useState(true);
   const [chartType, setChartType] = useState<'heatmap' | 'lines'>('heatmap');
   const [currentPage, setCurrentPage] = useState(0);
+  const [selectedOrganization, setSelectedOrganization] = useState(ALL_FILTERS_VALUE);
+  const [selectedCostCenter, setSelectedCostCenter] = useState(ALL_FILTERS_VALUE);
   const isMobile = useIsMobile();
   const { selectedUser, open: openUserModal, close: closeUserModal, isOpen } = useUserConsumptionModal();
 
@@ -69,27 +72,70 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
     return row.modelBreakdown[column] || 0;
   }, [quotaArtifacts]);
 
+  const organizationOptions = useMemo(() => {
+    const organizations = userData
+      .map((user) => user.organization)
+      .filter((organization): organization is string => Boolean(organization));
+
+    return Array.from(new Set(organizations)).sort((a, b) => a.localeCompare(b));
+  }, [userData]);
+
+  const costCenterOptions = useMemo(() => {
+    const costCenters = userData
+      .map((user) => user.costCenter)
+      .filter((costCenter): costCenter is string => Boolean(costCenter));
+
+    return Array.from(new Set(costCenters)).sort((a, b) => a.localeCompare(b));
+  }, [userData]);
+
+  const effectiveSelectedOrganization = organizationOptions.includes(selectedOrganization)
+    ? selectedOrganization
+    : ALL_FILTERS_VALUE;
+
+  const effectiveSelectedCostCenter = costCenterOptions.includes(selectedCostCenter)
+    ? selectedCostCenter
+    : ALL_FILTERS_VALUE;
+
+  const filteredUserData = useMemo(() => (
+    userData.filter((user) => {
+      const matchesOrganization = effectiveSelectedOrganization === ALL_FILTERS_VALUE || user.organization === effectiveSelectedOrganization;
+      const matchesCostCenter = effectiveSelectedCostCenter === ALL_FILTERS_VALUE || user.costCenter === effectiveSelectedCostCenter;
+
+      return matchesOrganization && matchesCostCenter;
+    })
+  ), [userData, effectiveSelectedOrganization, effectiveSelectedCostCenter]);
+
   const {
     sortedData: sortedUserData,
     sortBy,
     sortDirection,
     handleSort
   } = useSortableTable({
-    data: userData,
+    data: filteredUserData,
     columns,
     getSortableValue,
     defaultSort: { column: 'totalRequests', direction: 'desc' }
   });
   
+  const filteredUsageArtifacts = useMemo(() => {
+    const filteredUsers = new Set(filteredUserData.map((user) => user.user));
+
+    return {
+      ...usageArtifacts,
+      users: usageArtifacts.users.filter((user) => filteredUsers.has(user.user)),
+      userCount: filteredUsers.size
+    };
+  }, [usageArtifacts, filteredUserData]);
+
   // Calculate total overage directly from artifacts (O(U))
   const { totalOverageRequests, totalOverageCost } = useMemo(() => (
-    computeOverageSummaryFromArtifacts(usageArtifacts, quotaArtifacts)
-  ), [usageArtifacts, quotaArtifacts]);
+    computeOverageSummaryFromArtifacts(filteredUsageArtifacts, quotaArtifacts)
+  ), [filteredUsageArtifacts, quotaArtifacts]);
   
   // Memoize quota types calculation for chart display - NOW using O(1) quota map!
   const quotaInfo = useMemo(() => {
     const quotaTypes = new Set<number>();
-    userData.forEach(user => {
+    filteredUserData.forEach(user => {
       const userQuota = getUserQuota(quotaArtifacts, user.user);
       if (userQuota !== 'unlimited') {
         quotaTypes.add(userQuota);
@@ -98,7 +144,7 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
     const hasMixedQuotas = quotaTypes.size > 1;
     const hasMixedLicenses = quotaTypes.has(PRICING.BUSINESS_QUOTA) && quotaTypes.has(PRICING.ENTERPRISE_QUOTA);
     return { quotaTypes, hasMixedQuotas, hasMixedLicenses };
-  }, [userData, quotaArtifacts]);
+  }, [filteredUserData, quotaArtifacts]);
 
   const { quotaTypes, hasMixedQuotas, hasMixedLicenses } = quotaInfo;
   
@@ -109,10 +155,11 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
     : PRICING.BUSINESS_QUOTA;
   
   // Pagination calculations
-  const totalPages = Math.ceil(sortedUserData.length / ROWS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(sortedUserData.length / ROWS_PER_PAGE));
+  const activePage = Math.min(currentPage, totalPages - 1);
   const paginatedUserData = useMemo(() => 
-    sortedUserData.slice(currentPage * ROWS_PER_PAGE, (currentPage + 1) * ROWS_PER_PAGE),
-    [sortedUserData, currentPage]
+    sortedUserData.slice(activePage * ROWS_PER_PAGE, (activePage + 1) * ROWS_PER_PAGE),
+    [sortedUserData, activePage]
   );
 
   // Reset to first page when sorting changes
@@ -123,59 +170,112 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
   
   // Memoize chart data to prevent recalculation on pagination/sorting
   const chartData = useMemo(() => {
-    const users = userData.map(u => u.user);
+    const users = filteredUserData.map((user) => user.user);
     return {
       users,
       colors: generateUserColors(users)
     };
-  }, [userData]);
+  }, [filteredUserData]);
 
   const { users: chartUsers, colors: userColors } = chartData;
 
   return (
     <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden h-full flex flex-col">
       {/* Enhanced Header */}
-      <div className="px-5 py-4 border-b border-zinc-100 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 flex-shrink-0">
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold text-zinc-900">Users Overview</h3>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mt-1">
-            <p className="text-sm text-zinc-500">
-              {hasMixedLicenses ? (
-                <>Business ({PRICING.BUSINESS_QUOTA}) & Enterprise ({PRICING.ENTERPRISE_QUOTA})</>
-              ) : quotaTypes.has(PRICING.ENTERPRISE_QUOTA) ? (
-                <>Copilot Enterprise — {PRICING.ENTERPRISE_QUOTA} requests/mo</>
-              ) : quotaTypes.has(PRICING.BUSINESS_QUOTA) ? (
-                <>Copilot Business — {PRICING.BUSINESS_QUOTA} requests/mo</>
-              ) : (
-                <>Unlimited quota</>
-              )}
-            </p>
-            {totalOverageRequests > 0 && (
-              <p className="text-sm font-medium text-red-600">
-                Overage: ${totalOverageCost.toFixed(2)}
+      <div className="px-5 py-4 border-b border-zinc-100 flex flex-col gap-4 flex-shrink-0">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-zinc-900">Users Overview</h3>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mt-1">
+              <p className="text-sm text-zinc-500">
+                {hasMixedLicenses ? (
+                  <>Business ({PRICING.BUSINESS_QUOTA}) & Enterprise ({PRICING.ENTERPRISE_QUOTA})</>
+                ) : quotaTypes.has(PRICING.ENTERPRISE_QUOTA) ? (
+                  <>Copilot Enterprise — {PRICING.ENTERPRISE_QUOTA} requests/mo</>
+                ) : quotaTypes.has(PRICING.BUSINESS_QUOTA) ? (
+                  <>Copilot Business — {PRICING.BUSINESS_QUOTA} requests/mo</>
+                ) : (
+                  <>Unlimited quota</>
+                )}
               </p>
+              {totalOverageRequests > 0 && (
+                <p className="text-sm font-medium text-red-600">
+                  Overage: ${totalOverageCost.toFixed(2)}
+                </p>
+              )}
+              <p className="text-sm text-zinc-500">
+                Showing {filteredUserData.length} of {userData.length} users
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row gap-2">
+            {isMobile && (
+              <button
+                onClick={() => setShowChart(!showChart)}
+                className="px-3 py-1.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors"
+              >
+                {showChart ? 'Show Table' : 'Show Chart'}
+              </button>
             )}
+            
+            <button
+              onClick={onBack}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-zinc-600 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 hover:border-zinc-300 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
+              Back
+            </button>
           </div>
         </div>
-        
-        <div className="flex flex-col sm:flex-row gap-2">
-          {isMobile && (
-            <button
-              onClick={() => setShowChart(!showChart)}
-              className="px-3 py-1.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors"
-            >
-              {showChart ? 'Show Table' : 'Show Chart'}
-            </button>
-          )}
-          
-          <button
-            onClick={onBack}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-zinc-600 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 hover:border-zinc-300 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
-            Back
-          </button>
-        </div>
+
+        {(organizationOptions.length > 0 || costCenterOptions.length > 0) && (
+          <div className="flex flex-col lg:flex-row lg:items-end gap-3">
+            {organizationOptions.length > 0 && (
+              <label className="flex flex-col gap-1.5 text-sm text-zinc-600">
+                <span className="font-medium text-zinc-700">Organization</span>
+                <select
+                  value={effectiveSelectedOrganization}
+                  onChange={(event) => {
+                    setSelectedOrganization(event.target.value);
+                    setCurrentPage(0);
+                  }}
+                  aria-label="Organization"
+                  className="min-w-56 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                >
+                  <option value={ALL_FILTERS_VALUE}>All organizations</option>
+                  {organizationOptions.map((organization) => (
+                    <option key={organization} value={organization}>
+                      {organization}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            {costCenterOptions.length > 0 && (
+              <label className="flex flex-col gap-1.5 text-sm text-zinc-600">
+                <span className="font-medium text-zinc-700">Cost center</span>
+                <select
+                  value={effectiveSelectedCostCenter}
+                  onChange={(event) => {
+                    setSelectedCostCenter(event.target.value);
+                    setCurrentPage(0);
+                  }}
+                  aria-label="Cost center"
+                  className="min-w-56 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                >
+                  <option value={ALL_FILTERS_VALUE}>All cost centers</option>
+                  {costCenterOptions.map((costCenter) => (
+                    <option key={costCenter} value={costCenter}>
+                      {costCenter}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
+        )}
       </div>
       
       {/* Conditional Chart - Collapsible on Mobile */}
@@ -293,17 +393,17 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                 <div className="flex items-center justify-between pt-3 border-t border-zinc-100">
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
-                    disabled={currentPage === 0}
+                    disabled={activePage === 0}
                     className="px-3 py-1.5 text-sm font-medium text-zinc-600 hover:text-zinc-900 disabled:opacity-40"
                   >
                     ← Previous
                   </button>
                   <span className="text-xs text-zinc-500">
-                    {currentPage + 1} / {totalPages}
+                    {activePage + 1} / {totalPages}
                   </span>
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
-                    disabled={currentPage === totalPages - 1}
+                    disabled={activePage === totalPages - 1}
                     className="px-3 py-1.5 text-sm font-medium text-zinc-600 hover:text-zinc-900 disabled:opacity-40"
                   >
                     Next →
@@ -415,12 +515,12 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
           {totalPages > 1 && (
             <div className="bg-white px-5 py-3 flex items-center justify-between border-t border-zinc-100">
               <p className="text-sm text-zinc-500">
-                {currentPage * ROWS_PER_PAGE + 1}–{Math.min((currentPage + 1) * ROWS_PER_PAGE, sortedUserData.length)} of {sortedUserData.length}
+                {activePage * ROWS_PER_PAGE + 1}–{Math.min((activePage + 1) * ROWS_PER_PAGE, sortedUserData.length)} of {sortedUserData.length}
               </p>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
-                  disabled={currentPage === 0}
+                  disabled={activePage === 0}
                   className="p-1.5 text-zinc-400 hover:text-zinc-600 disabled:opacity-40 transition-colors"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -432,12 +532,12 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                   let pageNum;
                   if (totalPages <= 5) {
                     pageNum = i;
-                  } else if (currentPage < 3) {
+                  } else if (activePage < 3) {
                     pageNum = i;
-                  } else if (currentPage > totalPages - 4) {
+                  } else if (activePage > totalPages - 4) {
                     pageNum = totalPages - 5 + i;
                   } else {
-                    pageNum = currentPage - 2 + i;
+                    pageNum = activePage - 2 + i;
                   }
                   
                   return (
@@ -445,7 +545,7 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                       key={pageNum}
                       onClick={() => setCurrentPage(pageNum)}
                       className={`w-8 h-8 text-sm font-medium rounded-md transition-colors ${
-                        currentPage === pageNum
+                        activePage === pageNum
                           ? 'bg-zinc-900 text-white'
                           : 'text-zinc-600 hover:bg-zinc-100'
                       }`}
@@ -457,7 +557,7 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                 
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
-                  disabled={currentPage === totalPages - 1}
+                  disabled={activePage === totalPages - 1}
                   className="p-1.5 text-zinc-400 hover:text-zinc-600 disabled:opacity-40 transition-colors"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -474,6 +574,12 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
       {userData.length === 0 && (
         <div className="px-6 py-8 text-center text-gray-500 flex-shrink-0">
           No user data available
+        </div>
+      )}
+
+      {userData.length > 0 && filteredUserData.length === 0 && (
+        <div className="px-6 py-8 text-center text-gray-500 flex-shrink-0">
+          No users match the current filters
         </div>
       )}
       

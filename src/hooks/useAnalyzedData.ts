@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { ProcessedData, AnalysisResults, CodingAgentAnalysis, CodeReviewAnalysis } from '@/types/csv';
 import { PRICING } from '@/constants/pricing';
+import type { UserSummary } from '@/utils/analytics';
 import {
   deriveAnalysisFromArtifacts,
   buildDailyCumulativeDataFromArtifacts,
@@ -28,7 +29,7 @@ interface UseAnalyzedDataArgs {
 interface UseAnalyzedDataReturn {
   processedData: ProcessedData[]; // filtered (retained for billing row-level fields)
   analysis: AnalysisResults;
-  userData: { user: string; totalRequests: number; modelBreakdown: Record<string, number>; }[];
+  userData: UserSummary[];
   allModels: string[];
   dailyCumulativeData: { date: string; [user: string]: string | number; }[];
   codingAgentAnalysis: CodingAgentAnalysis;
@@ -99,7 +100,13 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
     const codingAgentAnalysis = analyzeCodingAgentAdoptionFromArtifacts(effectiveUsage, quotaArtifacts!);
     const codeReviewAnalysis = analyzeCodeReviewAdoptionFromArtifacts(effectiveUsage, quotaArtifacts!);
     const weeklyExhaustion = computeWeeklyQuotaExhaustionFromArtifacts(dailyBucketsArtifacts!, quotaArtifacts!);
-    const userData = usageArtifacts!.users.map(u => ({ user: u.user, totalRequests: u.totalRequests, modelBreakdown: u.modelBreakdown })).sort((a, b) => b.totalRequests - a.totalRequests);
+    const userData = usageArtifacts!.users.map(u => ({
+      user: u.user,
+      totalRequests: u.totalRequests,
+      modelBreakdown: u.modelBreakdown,
+      organization: u.organization,
+      costCenter: u.costCenter
+    })).sort((a, b) => b.totalRequests - a.totalRequests);
     const allModels = Object.keys(usageArtifacts!.modelTotals).sort();
     return {
       processedData: filtered,
