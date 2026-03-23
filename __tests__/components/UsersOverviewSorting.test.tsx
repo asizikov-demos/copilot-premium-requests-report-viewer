@@ -45,17 +45,29 @@ function makeQuota(entries: Array<{ user: string; quota: number | 'unlimited' }>
 
 function makeUsage(users: UserSummary[]): UsageArtifacts {
   const modelTotals: Record<string, number> = {};
+  const organizations = new Set<string>();
+  const costCenters = new Set<string>();
   for (const u of users) {
     for (const [model, qty] of Object.entries(u.modelBreakdown)) {
       modelTotals[model] = (modelTotals[model] ?? 0) + qty;
     }
+    if (u.organization) organizations.add(u.organization);
+    if (u.costCenter) costCenters.add(u.costCenter);
   }
 
   return {
-    users: users.map(u => ({ user: u.user, totalRequests: u.totalRequests, modelBreakdown: u.modelBreakdown })),
+    users: users.map(u => ({
+      user: u.user,
+      totalRequests: u.totalRequests,
+      modelBreakdown: u.modelBreakdown,
+      organization: u.organization,
+      costCenter: u.costCenter
+    })),
     modelTotals,
     userCount: users.length,
     modelCount: Object.keys(modelTotals).length,
+    organizations: Array.from(organizations).sort((a, b) => a.localeCompare(b)),
+    costCenters: Array.from(costCenters).sort((a, b) => a.localeCompare(b)),
   };
 }
 
@@ -121,5 +133,43 @@ describe('UsersOverview - sorting', () => {
     // Second click toggles to asc: lowest quota first, Unlimited last.
     fireEvent.click(quotaTh as HTMLElement);
     expect(getRowUserOrder()).toEqual(['Bob', 'Charlie', 'Alice']);
+  });
+
+  it('filters users by organization and cost center when metadata is available', () => {
+    const userData: UserSummary[] = [
+      { user: 'Alice', totalRequests: 10, modelBreakdown: { 'gpt-4': 10 }, organization: 'Org A', costCenter: 'Platform' },
+      { user: 'Bob', totalRequests: 20, modelBreakdown: { 'gpt-4': 20 }, organization: 'Org B', costCenter: 'Security' },
+      { user: 'Charlie', totalRequests: 15, modelBreakdown: { 'gpt-4': 15 }, organization: 'Org A', costCenter: 'Security' },
+    ];
+
+    const quotaArtifacts = makeQuota([
+      { user: 'Alice', quota: PRICING.BUSINESS_QUOTA },
+      { user: 'Bob', quota: PRICING.BUSINESS_QUOTA },
+      { user: 'Charlie', quota: PRICING.BUSINESS_QUOTA },
+    ]);
+
+    render(
+      <UsersOverview
+        userData={userData}
+        processedData={[]}
+        allModels={['gpt-4']}
+        dailyCumulativeData={[{ date: '2025-01-01T00:00:00Z', Alice: 1, Bob: 1, Charlie: 1 }]}
+        quotaArtifacts={quotaArtifacts}
+        usageArtifacts={makeUsage(userData)}
+        onBack={() => {}}
+      />
+    );
+
+    const table = screen.getByRole('table');
+    const getRowUserOrder = (): string[] => {
+      const rows = within(table).getAllByRole('row').slice(1);
+      return rows.map(row => within(row).getByRole('button').textContent ?? '');
+    };
+
+    fireEvent.change(screen.getByLabelText('Organization'), { target: { value: 'Org A' } });
+    expect(getRowUserOrder()).toEqual(['Charlie', 'Alice']);
+
+    fireEvent.change(screen.getByLabelText('Cost center'), { target: { value: 'Security' } });
+    expect(getRowUserOrder()).toEqual(['Charlie']);
   });
 });

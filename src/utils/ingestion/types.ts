@@ -111,6 +111,8 @@ export interface UserAggregate {
   topModel?: string;
   topModelValue?: number;
   quotaValue?: number | 'unlimited';
+  organization?: string;
+  costCenter?: string;
 }
 
 /**
@@ -121,6 +123,8 @@ export interface UsageArtifacts {
   modelTotals: Record<string, number>;
   userCount: number;
   modelCount: number;
+  organizations?: string[];
+  costCenters?: string[];
 }
 
 /**

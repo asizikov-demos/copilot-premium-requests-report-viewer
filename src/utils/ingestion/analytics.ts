@@ -34,23 +34,56 @@ export function buildTimeFrame(daily: DailyBucketsArtifacts): { start: string; e
  * artifacts for downstream analysis functions.
  */
 export function buildUsageArtifactsFromProcessedData(filtered: import('@/types/csv').ProcessedData[]): UsageArtifacts {
-  const userMap = new Map<string, { totalRequests: number; modelBreakdown: Record<string, number> }>();
+  const userMap = new Map<string, {
+    totalRequests: number;
+    modelBreakdown: Record<string, number>;
+    organization?: string;
+    costCenter?: string;
+  }>();
   const modelTotals: Record<string, number> = {};
+  const organizations = new Set<string>();
+  const costCenters = new Set<string>();
   for (const r of filtered) {
     if (!userMap.has(r.user)) {
-      userMap.set(r.user, { totalRequests: 0, modelBreakdown: {} });
+      userMap.set(r.user, {
+        totalRequests: 0,
+        modelBreakdown: {},
+        organization: r.organization,
+        costCenter: r.costCenter
+      });
     }
     const u = userMap.get(r.user)!;
     u.totalRequests += r.requestsUsed;
     u.modelBreakdown[r.model] = (u.modelBreakdown[r.model] || 0) + r.requestsUsed;
+    if (!u.organization && r.organization) {
+      u.organization = r.organization;
+    }
+    if (!u.costCenter && r.costCenter) {
+      u.costCenter = r.costCenter;
+    }
     modelTotals[r.model] = (modelTotals[r.model] || 0) + r.requestsUsed;
+    if (r.organization) {
+      organizations.add(r.organization);
+    }
+    if (r.costCenter) {
+      costCenters.add(r.costCenter);
+    }
   }
   const users = Array.from(userMap.entries()).map(([user, data]) => ({
     user,
     totalRequests: data.totalRequests,
     modelBreakdown: data.modelBreakdown,
+    organization: data.organization,
+    costCenter: data.costCenter,
   }));
-  return { users, modelTotals, userCount: users.length, modelCount: Object.keys(modelTotals).length };
+  return {
+    users,
+    modelTotals,
+    userCount: users.length,
+    modelCount: Object.keys(modelTotals).length,
+    organizations: Array.from(organizations).sort((a, b) => a.localeCompare(b)),
+    costCenters: Array.from(costCenters).sort((a, b) => a.localeCompare(b))
+  };
 }
 
 /**
@@ -663,4 +696,3 @@ export function buildMonthListFromArtifacts(daily: DailyBucketsArtifacts): { val
     return { value: key, label: `${MONTH_NAMES[monthIndex]} ${yearStr}` };
   });
 }
-

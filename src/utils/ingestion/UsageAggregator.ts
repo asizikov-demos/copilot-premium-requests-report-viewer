@@ -18,6 +18,9 @@ export class UsageAggregator implements Aggregator<UsageArtifacts> {
   private userModelTotals = new Map<string, Map<string, number>>();
   private modelTotals = new Map<string, number>();
   private topModelPerUser = new Map<string, { model: string; value: number }>();
+  private userMetadata = new Map<string, { organization?: string; costCenter?: string }>();
+  private organizations = new Set<string>();
+  private costCenters = new Set<string>();
   
   init(_ctx: AggregatorContext): void {
     void _ctx;
@@ -26,11 +29,14 @@ export class UsageAggregator implements Aggregator<UsageArtifacts> {
     this.userModelTotals.clear();
     this.modelTotals.clear();
     this.topModelPerUser.clear();
+    this.userMetadata.clear();
+    this.organizations.clear();
+    this.costCenters.clear();
   }
   
   onRow(row: NormalizedRow, _ctx: AggregatorContext): void {
     void _ctx;
-    const { user, model, quantity } = row;
+    const { user, model, quantity, organization, costCenter } = row;
     
     // User totals
     this.userTotals.set(user, (this.userTotals.get(user) || 0) + quantity);
@@ -43,6 +49,22 @@ export class UsageAggregator implements Aggregator<UsageArtifacts> {
     }
     const newModelTotal = (modelMap.get(model) || 0) + quantity;
     modelMap.set(model, newModelTotal);
+
+    if (organization) {
+      this.organizations.add(organization);
+    }
+    if (costCenter) {
+      this.costCenters.add(costCenter);
+    }
+
+    const metadata = this.userMetadata.get(user) ?? {};
+    if (!metadata.organization && organization) {
+      metadata.organization = organization;
+    }
+    if (!metadata.costCenter && costCenter) {
+      metadata.costCenter = costCenter;
+    }
+    this.userMetadata.set(user, metadata);
     
     // Global model totals
     this.modelTotals.set(model, (this.modelTotals.get(model) || 0) + quantity);
@@ -67,13 +89,16 @@ export class UsageAggregator implements Aggregator<UsageArtifacts> {
       }
       
       const topEntry = this.topModelPerUser.get(user);
+      const metadata = this.userMetadata.get(user);
       
       users.push({
         user,
         totalRequests,
         modelBreakdown,
         topModel: topEntry?.model,
-        topModelValue: topEntry?.value
+        topModelValue: topEntry?.value,
+        organization: metadata?.organization,
+        costCenter: metadata?.costCenter
       });
     }
     
@@ -81,7 +106,9 @@ export class UsageAggregator implements Aggregator<UsageArtifacts> {
       users,
       modelTotals: Object.fromEntries(this.modelTotals),
       userCount: this.userTotals.size,
-      modelCount: this.modelTotals.size
+      modelCount: this.modelTotals.size,
+      organizations: Array.from(this.organizations).sort((a, b) => a.localeCompare(b)),
+      costCenters: Array.from(this.costCenters).sort((a, b) => a.localeCompare(b))
     };
   }
 }
