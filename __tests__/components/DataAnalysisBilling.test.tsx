@@ -2,6 +2,7 @@ import '@testing-library/jest-dom';
 import { render, screen, waitFor } from '@testing-library/react';
 import { DataAnalysis } from '@/components/DataAnalysis';
 import { newFormatRows } from '../fixtures/newFormatCSVData';
+import type { CSVData } from '@/types/csv';
 import type { IngestionResult } from '@/utils/ingestion';
 
 // Mock ResizeObserver for Recharts ResponsiveContainer in JSDOM
@@ -40,6 +41,68 @@ describe('DataAnalysis billing summary', () => {
       // New compact format uses abbreviated labels
       expect(billing).toHaveTextContent(/Gross/i);
       expect(billing).toHaveTextContent(/Net/i);
+    });
+  });
+
+  it('renders cost per product and per-model billing details on the overview page', async () => {
+    const billingRows: CSVData[] = [
+      {
+        date: '2025-10-01',
+        username: 'alice',
+        product: 'copilot',
+        sku: 'copilot_premium_request',
+        model: 'Claude Sonnet 4',
+        quantity: '3.6',
+        exceeds_quota: 'False',
+        total_monthly_quota: '1000',
+        applied_cost_per_quantity: '0.04',
+        gross_amount: '0.144',
+        discount_amount: '0.010',
+        net_amount: '0.134',
+      },
+      {
+        date: '2025-10-02',
+        username: 'bob',
+        product: 'copilot',
+        sku: 'copilot_premium_request',
+        model: 'Coding Agent',
+        quantity: '2',
+        exceeds_quota: 'False',
+        total_monthly_quota: '1000',
+        applied_cost_per_quantity: '0.04',
+        gross_amount: '0.080',
+        discount_amount: '0.020',
+        net_amount: '0.060',
+      },
+      {
+        date: '2025-10-03',
+        username: 'carol',
+        product: 'copilot',
+        sku: 'copilot_premium_request',
+        model: 'Code Review',
+        quantity: '1',
+        exceeds_quota: 'False',
+        total_monthly_quota: '1000',
+        applied_cost_per_quantity: '0.04',
+        gross_amount: '0.040',
+        discount_amount: '0.005',
+        net_amount: '0.035',
+      },
+    ];
+
+    const ingestionResult = createMockIngestionResult(billingRows);
+    render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Cost per Product')).toBeInTheDocument();
+      expect(screen.getByText('Copilot')).toBeInTheDocument();
+      expect(screen.getAllByText('Coding Agent').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Code Review').length).toBeGreaterThan(0);
+
+      expect(screen.getByText('Claude Sonnet 4')).toBeInTheDocument();
+      expect(screen.getAllByText('$0.14').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('-$0.01').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('$0.13').length).toBeGreaterThan(0);
     });
   });
 });

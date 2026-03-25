@@ -99,36 +99,51 @@ function DataAnalysisInner() {
     billingArtifacts
   } = useAnalysisContext();
 
-  let costMetricsAvailable = false;
-  let aggregatedCosts: { net: number; gross: number; discount: number } | null = null;
-  if (billingArtifacts?.hasAnyBillingData) {
-    costMetricsAvailable = true;
-    aggregatedCosts = billingArtifacts.totals;
-  } else if (processedData.some(d => d.netAmount !== undefined || d.grossAmount !== undefined || d.discountAmount !== undefined)) {
-    costMetricsAvailable = true;
-    aggregatedCosts = processedData.reduce((acc, row) => {
-      if (row.netAmount !== undefined) acc.net += row.netAmount;
-      if (row.grossAmount !== undefined) acc.gross += row.grossAmount;
-      if (row.discountAmount !== undefined) acc.discount += row.discountAmount;
+  const processedCosts = useMemo(() => {
+    const hasBillingData = processedData.some(
+      (row) =>
+        row.netAmount !== undefined ||
+        row.grossAmount !== undefined ||
+        row.discountAmount !== undefined
+    );
+
+    if (!hasBillingData) {
+      return null;
+    }
+
+    return processedData.reduce((acc, row) => {
+      acc.net += row.netAmount ?? 0;
+      acc.gross += row.grossAmount ?? 0;
+      acc.discount += row.discountAmount ?? 0;
       return acc;
     }, { net: 0, gross: 0, discount: 0 });
-  }
+  }, [processedData]);
 
-  // Per-model cost aggregation for the Model Details table
-  const modelCosts = useMemo(() => {
-    const map = new Map<string, { gross: number; discount: number; net: number }>();
+  const costMetricsAvailable = processedCosts !== null || billingArtifacts?.hasAnyBillingData === true;
+  const aggregatedCosts = processedCosts ?? (billingArtifacts?.hasAnyBillingData ? billingArtifacts.totals : null);
+
+  const modelRows = useMemo(() => {
+    const map = new Map<string, { model: string; requests: number; gross: number; discount: number; net: number }>();
     for (const row of processedData) {
-      if (row.grossAmount === undefined && row.discountAmount === undefined && row.netAmount === undefined) continue;
-      const prev = map.get(row.model) ?? { gross: 0, discount: 0, net: 0 };
+      const prev = map.get(row.model) ?? {
+        model: row.model,
+        requests: 0,
+        gross: 0,
+        discount: 0,
+        net: 0,
+      };
+      prev.requests += row.requestsUsed;
       prev.gross += row.grossAmount ?? 0;
       prev.discount += row.discountAmount ?? 0;
       prev.net += row.netAmount ?? 0;
       map.set(row.model, prev);
     }
-    return map;
+    return Array.from(map.values()).sort((left, right) => right.requests - left.requests);
   }, [processedData]);
 
-  const hasModelCosts = modelCosts.size > 0;
+  const hasModelCosts = modelRows.some(
+    (row) => row.gross > 0 || row.discount > 0 || row.net > 0
+  );
 
   // Per-product cost aggregation (Coding Agent, Code Review, Copilot)
   type ProductCost = { label: string; requests: number; gross: number; discount: number; net: number };
@@ -338,8 +353,7 @@ function DataAnalysisInner() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-stone-50">
-                      {analysis.requestsByModel.map((item, index) => {
-                        const costs = modelCosts.get(item.model);
+                      {modelRows.map((item, index) => {
                         return (
                           <tr key={index} className="table-row-hover transition-colors">
                             <td className="px-6 py-3.5 text-sm font-medium text-stone-900">
@@ -349,18 +363,18 @@ function DataAnalysisInner() {
                               </div>
                             </td>
                             <td className="px-6 py-3.5 text-sm text-stone-600 text-right font-mono">
-                              {item.totalRequests.toFixed(2)}
+                              {item.requests.toFixed(2)}
                             </td>
                             {hasModelCosts && (
                               <>
                                 <td className="px-6 py-3.5 text-sm text-stone-600 text-right font-mono">
-                                  ${(costs?.gross ?? 0).toFixed(2)}
+                                  ${item.gross.toFixed(2)}
                                 </td>
                                 <td className="px-6 py-3.5 text-sm text-emerald-600 text-right font-mono">
-                                  -${(costs?.discount ?? 0).toFixed(2)}
+                                  -${item.discount.toFixed(2)}
                                 </td>
                                 <td className="px-6 py-3.5 text-sm font-semibold text-stone-900 text-right font-mono">
-                                  ${(costs?.net ?? 0).toFixed(2)}
+                                  ${item.net.toFixed(2)}
                                 </td>
                               </>
                             )}
