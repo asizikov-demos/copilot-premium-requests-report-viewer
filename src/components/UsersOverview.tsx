@@ -22,7 +22,7 @@ interface UsersOverviewProps {
   dailyCumulativeData: DailyCumulativeData[];
   quotaArtifacts: QuotaArtifacts;
   usageArtifacts: UsageArtifacts; // NEW: used for overage + future enhancements
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 // Generate colors for user lines
@@ -219,13 +219,15 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
               </button>
             )}
             
-            <button
-              onClick={onBack}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-zinc-600 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 hover:border-zinc-300 transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
-              Back
-            </button>
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-zinc-600 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 hover:border-zinc-300 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
+                Back
+              </button>
+            )}
           </div>
         </div>
 
