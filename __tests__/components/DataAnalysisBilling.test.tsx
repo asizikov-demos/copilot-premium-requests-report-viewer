@@ -18,7 +18,7 @@ function createMockIngestionResult(rows: unknown[]): IngestionResult {
   return {
     outputs: {
       'quota': { quotaByUser: new Map(), conflicts: new Map(), distinctQuotas: new Set(), hasMixedQuotas: false, hasMixedLicenses: false },
-      'usage': { userTotals: new Map(), modelBreakdown: new Map(), globalModelTotals: new Map(), topModelPerUser: new Map() },
+      'usage': { users: [], userTotals: new Map(), modelBreakdown: new Map(), globalModelTotals: new Map(), topModelPerUser: new Map(), modelTotals: {}, userCount: 0, modelCount: 0 },
       'dailyBuckets': { dailyUserTotals: new Map(), startDate: new Date(), endDate: new Date() },
       'rawData': rows
     },

@@ -6,7 +6,7 @@ import { computeCostOptimizationFromArtifacts } from '@/utils/analytics/costOpti
 import { PRICING, COST_OPTIMIZATION_THRESHOLDS } from '@/constants/pricing';
 
 interface CostOptimizationInsightsProps {
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 export function CostOptimizationInsights({ onBack }: CostOptimizationInsightsProps) {
@@ -24,13 +24,15 @@ export function CostOptimizationInsights({ onBack }: CostOptimizationInsightsPro
       <div className="min-h-[60vh] flex flex-col">
         <div className="flex items-center justify-between mb-6">
           <h2 className="display-heading text-3xl text-stone-900">Cost Optimization</h2>
-          <button
-            onClick={onBack}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-stone-600 bg-white border border-stone-200 rounded-xl hover:bg-stone-50 hover:border-stone-300 transition-all shadow-sm"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
-            Back to Overview
-          </button>
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-stone-600 bg-white border border-stone-200 rounded-xl hover:bg-stone-50 hover:border-stone-300 transition-all shadow-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
+              Back to Overview
+            </button>
+          )}
         </div>
         <div className="p-6 bg-stone-50 border border-stone-200 rounded-xl">
           <p className="text-sm text-stone-600">
@@ -53,13 +55,15 @@ export function CostOptimizationInsights({ onBack }: CostOptimizationInsightsPro
           <h2 className="display-heading text-3xl text-stone-900">Cost Optimization</h2>
           <p className="text-sm text-stone-500 mt-1">SKU upgrade analysis for reducing overage spend</p>
         </div>
-        <button
-          onClick={onBack}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-stone-600 bg-white border border-stone-200 rounded-xl hover:bg-stone-50 hover:border-stone-300 transition-all shadow-sm"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
-          Back to Overview
-        </button>
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-stone-600 bg-white border border-stone-200 rounded-xl hover:bg-stone-50 hover:border-stone-300 transition-all shadow-sm"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
+            Back to Overview
+          </button>
+        )}
       </div>
 
       {/* Metrics Grid */}
