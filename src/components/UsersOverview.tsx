@@ -369,7 +369,7 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                 <button
                   key={user.user}
                   onClick={() => openUserModal(user.user)}
-                  className="w-full bg-[#f6f8fa] rounded-md p-4 hover:bg-[#f6f8fa] transition-colors duration-150 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full bg-[#f6f8fa] rounded-md p-4 hover:bg-[#eef1f4] transition-colors duration-150 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <div className="flex justify-between items-start mb-1">
                     <span className="font-medium text-[#1f2328] truncate flex-1 mr-2">
@@ -425,7 +425,7 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                 </th>
                 <th
                   className={`px-4 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-[0.05em] min-w-24 cursor-pointer hover:bg-[#f6f8fa] select-none transition-colors duration-150 ${
-                    sortBy === 'quota' ? 'bg-[#f6f8fa]' : 'bg-[#f6f8fa]'
+                    sortBy === 'quota' ? 'bg-[#eef1f4]' : 'bg-[#f6f8fa]'
                   }`}
                   onClick={() => handleSortWithReset('quota')}
                 >

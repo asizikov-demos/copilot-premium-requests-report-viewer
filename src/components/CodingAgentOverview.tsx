@@ -139,7 +139,7 @@ export function CodingAgentOverview({
             <div className="px-5 py-3 border-t border-[#d1d9e0]">
               <button
                 onClick={() => setShowAllUsers(!showAllUsers)}
-                className="text-sm font-medium text-[#6366f1] hover:text-indigo-700 transition-colors"
+                className="text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
               >
                 {showAllUsers ? `Show top ${TABLE_PREVIEW_COUNT}` : `Show all ${codingAgentUsers.length} users`}
               </button>
@@ -198,7 +198,7 @@ export function CodingAgentOverview({
                 <div className="px-5 py-3 border-t border-[#d1d9e0]">
                   <button
                     onClick={() => setShowAllReviewUsers(!showAllReviewUsers)}
-                    className="text-sm font-medium text-[#6366f1] hover:text-indigo-700 transition-colors"
+                    className="text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
                   >
                     {showAllReviewUsers ? `Show top ${TABLE_PREVIEW_COUNT}` : `Show all ${codeReviewAnalysis.users.length} users`}
                   </button>

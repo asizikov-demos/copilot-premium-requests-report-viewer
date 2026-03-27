@@ -65,7 +65,7 @@ function UserDailyUsageTooltip({ active, payload, label }: TooltipProps) {
 
         {/* Cumulative total */}
         {cumulativeData && (
-          <p className="text-xs text-blue-600 font-medium border-t border-[#d1d9e0] pt-2">
+          <p className="text-xs text-indigo-600 font-medium border-t border-[#d1d9e0] pt-2">
             Cumulative: {cumulativeData.value.toFixed(1)}
           </p>
         )}
