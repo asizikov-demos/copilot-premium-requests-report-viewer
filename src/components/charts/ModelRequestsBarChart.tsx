@@ -64,7 +64,7 @@ export function ModelRequestsBarChart({ data, height = '100%' as ResponsiveHeigh
         >
           {data.map((entry) => (
             <Cell 
-              key={entry.model} 
+              key={entry.fullModel || entry.model} 
               fill={getModelColor(entry.fullModel || entry.model)}
             />
           ))}
