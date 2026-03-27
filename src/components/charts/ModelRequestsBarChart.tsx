@@ -7,7 +7,7 @@ import { chartTooltipContentStyle, chartTooltipLabelStyle } from './chartTooltip
 
 export interface ModelRequestsBarChartDatum {
   model: string;      // shortened model label for axis
-  fullModel?: string; // full model name for tooltip
+  fullModel: string;  // full model name used for tooltip, React keys, and color mapping
   requests: number;   // total requests
 }
 
@@ -49,7 +49,7 @@ export function ModelRequestsBarChart({ data, height = '100%' as ResponsiveHeigh
           ]}
           labelFormatter={(label, payload) => {
             const item = payload?.[0]?.payload as ModelRequestsBarChartDatum | undefined;
-            return item?.fullModel || (label as string);
+            return item?.fullModel ?? (label as string);
           }}
           contentStyle={chartTooltipContentStyle}
           labelStyle={chartTooltipLabelStyle}
@@ -64,8 +64,8 @@ export function ModelRequestsBarChart({ data, height = '100%' as ResponsiveHeigh
         >
           {data.map((entry) => (
             <Cell 
-              key={entry.fullModel || entry.model} 
-              fill={getModelColor(entry.fullModel || entry.model)}
+              key={entry.fullModel} 
+              fill={getModelColor(entry.fullModel)}
             />
           ))}
         </Bar>

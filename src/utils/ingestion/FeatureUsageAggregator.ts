@@ -14,6 +14,7 @@
  * with incremental O(1) updates during ingestion.
  */
 import { Aggregator, AggregatorContext, NormalizedRow, FeatureUsageArtifacts } from './types';
+import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
 
 export class FeatureUsageAggregator implements Aggregator<FeatureUsageArtifacts> {
   readonly id = 'featureUsage';
@@ -38,18 +39,19 @@ export class FeatureUsageAggregator implements Aggregator<FeatureUsageArtifacts>
 
   onRow(row: NormalizedRow, _ctx: AggregatorContext): void {
     void _ctx;
-    const lower = row.model.toLowerCase();
     const qty = row.quantity;
 
-    if (lower.includes('code review')) {
+    if (isCodeReviewModel(row.model)) {
       this.codeReviewTotal += qty;
       this.codeReviewUsers.add(row.user);
     }
-    // Treat both 'coding agent' and 'padawan' as Coding Agent feature usage
-    if (lower.includes('coding agent') || lower.includes('padawan')) {
+
+    if (isCodingAgentModel(row.model)) {
       this.codingAgentTotal += qty;
       this.codingAgentUsers.add(row.user);
     }
+
+    const lower = row.model.toLowerCase();
     if (lower.includes('spark')) {
       this.sparkTotal += qty;
       this.sparkUsers.add(row.user);

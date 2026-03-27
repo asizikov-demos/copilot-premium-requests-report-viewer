@@ -321,7 +321,7 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
               )}
             </div>
           </div>
-          <div className="h-56 sm:h-72 2xl:h-80 relative z-30">
+          <div className="h-72 sm:h-96 2xl:h-[28rem] relative z-30">
             {chartType === 'heatmap' ? (
               <UsersConsumptionHeatmap
                 dailyCumulativeData={dailyCumulativeData}

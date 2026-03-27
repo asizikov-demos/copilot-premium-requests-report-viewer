@@ -1,6 +1,7 @@
 import { ProcessedData } from '@/types/csv';
 import { UserSummary } from './types';
 import { PRICING } from '@/constants/pricing';
+import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
 
 export interface UserConsumptionCategory {
   user: string;
@@ -33,15 +34,15 @@ export function calculateFeatureUtilization(processedData: ProcessedData[]): Fea
   const sparkUsers = new Map<string, number>();
   let totalCodeReviewSessions = 0; let totalCodingAgentSessions = 0; let totalSparkSessions = 0;
   processedData.forEach(row => {
-    const modelLower = row.model.toLowerCase();
-    if (modelLower.includes('code review')) {
+    if (isCodeReviewModel(row.model)) {
       totalCodeReviewSessions += row.requestsUsed;
       codeReviewUsers.set(row.user, (codeReviewUsers.get(row.user) || 0) + row.requestsUsed);
     }
-    if (modelLower.includes('coding agent') || modelLower.includes('padawan')) {
+    if (isCodingAgentModel(row.model)) {
       totalCodingAgentSessions += row.requestsUsed;
       codingAgentUsers.set(row.user, (codingAgentUsers.get(row.user) || 0) + row.requestsUsed);
     }
+    const modelLower = row.model.toLowerCase();
     if (modelLower.includes('spark')) {
       totalSparkSessions += row.requestsUsed;
       sparkUsers.set(row.user, (sparkUsers.get(row.user) || 0) + row.requestsUsed);
