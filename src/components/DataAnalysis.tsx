@@ -174,13 +174,13 @@ function DataAnalysisInner() {
       <div className="mb-6 animate-fade-in-up">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
-            <h2 className="display-heading text-3xl lg:text-4xl text-stone-900">Analysis Results</h2>
+            <h2 className="display-heading text-3xl lg:text-4xl text-[#1f2328]">Analysis Results</h2>
             <div className="flex items-center gap-3 mt-2">
-              <span className="text-sm text-stone-500 font-medium">
+              <span className="text-sm text-[#636c76] font-medium">
                 {analysis.timeFrame.start} — {analysis.timeFrame.end}
               </span>
-              <span className="w-1 h-1 rounded-full bg-stone-300"></span>
-              <span className="font-mono text-xs px-2 py-1 bg-stone-100 rounded-md text-stone-600">{filename}</span>
+              <span className="w-1 h-1 rounded-full bg-[#d1d9e0]"></span>
+              <span className="font-mono text-xs px-2 py-1 bg-[#f6f8fa] rounded-md text-[#636c76]">{filename}</span>
             </div>
           </div>
         </div>
@@ -193,10 +193,10 @@ function DataAnalysisInner() {
             <button
               key={item.key}
               onClick={() => setView(item.key)}
-              className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-full transition-all ${
+              className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md transition-all duration-150 ${
                 view === item.key
-                  ? 'bg-stone-900 text-white shadow-md'
-                  : 'bg-white text-stone-600 hover:bg-stone-50 border border-stone-200 hover:border-stone-300'
+                  ? 'bg-white text-[#1f2328] shadow-sm border-b-2 border-indigo-500 font-semibold'
+                  : 'bg-white text-[#636c76] hover:bg-[#f6f8fa] border border-[#d1d9e0] hover:border-[#d1d9e0]'
               }`}
             >
               {item.icon}
@@ -210,17 +210,17 @@ function DataAnalysisInner() {
       <div className="flex gap-6">
         {/* Left Sidebar */}
         <aside className="hidden lg:block w-56 shrink-0">
-          <div className="glass-panel rounded-2xl sticky top-24 opacity-0 animate-slide-in-right" style={{ animationDelay: '100ms' }}>
+          <div className="bg-white border border-[#d1d9e0] rounded-md sticky top-24 opacity-0 animate-slide-in-right" style={{ animationDelay: '100ms' }}>
             {/* Navigation */}
             <nav className="p-3 space-y-1">
               {NAV_ITEMS.map((item) => (
                 <button
                   key={item.key}
                   onClick={() => setView(item.key)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-150 ${
                     view === item.key
-                      ? 'bg-stone-900 text-white shadow-md'
-                      : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
+                      ? 'bg-[#f6f8fa] text-[#1f2328] font-semibold'
+                      : 'text-[#636c76] hover:bg-[#f6f8fa] hover:text-[#1f2328]'
                   }`}
                 >
                   {item.icon}
@@ -231,8 +231,8 @@ function DataAnalysisInner() {
 
             {/* Billing Period Filter */}
             {hasMultipleMonthsData && (
-              <div className="border-t border-stone-200/60 p-4">
-                <label htmlFor="billing-period" className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">
+              <div className="border-t border-[#d1d9e0] p-4">
+                <label htmlFor="billing-period" className="block text-xs font-bold text-[#636c76] uppercase tracking-wider mb-2">
                   Billing Period
                 </label>
                 <select
@@ -243,7 +243,7 @@ function DataAnalysisInner() {
                     const selected = Array.from(e.target.selectedOptions, option => option.value);
                     setSelectedMonths(selected);
                   }}
-                  className="block w-full px-3 py-2 text-sm text-stone-900 bg-white border border-stone-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent shadow-sm"
+                  className="block w-full px-3 py-2 text-sm text-[#1f2328] bg-white border border-[#d1d9e0] rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm"
                   size={Math.min(availableMonths.length, 4)}
                 >
                   {availableMonths.map(month => (
@@ -252,7 +252,7 @@ function DataAnalysisInner() {
                     </option>
                   ))}
                 </select>
-                <p className="mt-2 text-xs text-stone-400">
+                <p className="mt-2 text-xs text-[#636c76]">
                   Hold Ctrl/Cmd to select multiple
                 </p>
               </div>
@@ -292,29 +292,29 @@ function DataAnalysisInner() {
             <div className="space-y-6">
               {/* Cost per Product */}
               {productCosts.length > 0 && costMetricsAvailable && (
-                <div className="card-elevated rounded-2xl overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-                  <div className="px-6 py-4 border-b border-stone-100 bg-gradient-to-r from-stone-50 to-transparent">
-                    <h3 className="text-lg font-semibold text-stone-900">Cost per Product</h3>
+                <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+                  <div className="px-6 py-4 border-b border-[#d1d9e0] bg-[#f6f8fa]">
+                    <h3 className="text-lg font-semibold text-[#1f2328]">Cost per Product</h3>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="min-w-full">
                       <thead>
-                        <tr className="border-b border-stone-100">
-                          <th className="px-6 py-3 text-left text-xs font-bold text-stone-500 uppercase tracking-wider">Product</th>
-                          <th className="px-6 py-3 text-right text-xs font-bold text-stone-500 uppercase tracking-wider">Requests</th>
-                          <th className="px-6 py-3 text-right text-xs font-bold text-stone-500 uppercase tracking-wider">Gross</th>
-                          <th className="px-6 py-3 text-right text-xs font-bold text-stone-500 uppercase tracking-wider">Discount</th>
-                          <th className="px-6 py-3 text-right text-xs font-bold text-stone-500 uppercase tracking-wider">Net</th>
+                        <tr className="border-b border-[#d1d9e0]">
+                          <th className="px-6 py-3 text-left text-xs font-bold text-[#636c76] uppercase tracking-wider">Product</th>
+                          <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Requests</th>
+                          <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Gross</th>
+                          <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Discount</th>
+                          <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Net</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-stone-50">
+                      <tbody className="divide-y divide-[#d1d9e0]">
                         {productCosts.map((product) => (
-                          <tr key={product.label} className="table-row-hover transition-colors">
-                            <td className="px-6 py-3.5 text-sm font-medium text-stone-900">{product.label}</td>
-                            <td className="px-6 py-3.5 text-sm text-stone-600 text-right font-mono">{product.requests.toFixed(2)}</td>
-                            <td className="px-6 py-3.5 text-sm text-stone-600 text-right font-mono">${product.gross.toFixed(2)}</td>
+                          <tr key={product.label} className="table-row-hover transition-colors duration-150">
+                            <td className="px-6 py-3.5 text-sm font-medium text-[#1f2328]">{product.label}</td>
+                            <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">{product.requests.toFixed(2)}</td>
+                            <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">${product.gross.toFixed(2)}</td>
                             <td className="px-6 py-3.5 text-sm text-emerald-600 text-right font-mono">-${product.discount.toFixed(2)}</td>
-                            <td className="px-6 py-3.5 text-sm font-semibold text-stone-900 text-right font-mono">${product.net.toFixed(2)}</td>
+                            <td className="px-6 py-3.5 text-sm font-semibold text-[#1f2328] text-right font-mono">${product.net.toFixed(2)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -323,57 +323,57 @@ function DataAnalysisInner() {
                 </div>
               )}
 
-              <div className="card-elevated rounded-2xl p-6 opacity-0 animate-scale-in" style={{ animationDelay: '200ms' }}>
+              <div className="bg-white border border-[#d1d9e0] rounded-md p-6 opacity-0 animate-scale-in" style={{ animationDelay: '200ms' }}>
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-semibold text-stone-900">Requests by Model</h3>
-                  <span className="text-xs text-stone-400 font-medium">Total: {analysis.requestsByModel.reduce((sum, m) => sum + m.totalRequests, 0).toFixed(0)} requests</span>
+                  <h3 className="text-lg font-semibold text-[#1f2328]">Requests by Model</h3>
+                  <span className="text-xs text-[#636c76] font-medium">Total: {analysis.requestsByModel.reduce((sum, m) => sum + m.totalRequests, 0).toFixed(0)} requests</span>
                 </div>
                 <div className="h-72 xl:h-80 2xl:h-96">
                   <ModelRequestsBarChart data={chartData} />
                 </div>
               </div>
 
-              <div className="card-elevated rounded-2xl overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-                <div className="px-6 py-4 border-b border-stone-100 bg-gradient-to-r from-stone-50 to-transparent">
-                  <h3 className="text-lg font-semibold text-stone-900">Model Details</h3>
+              <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+                <div className="px-6 py-4 border-b border-[#d1d9e0] bg-[#f6f8fa]">
+                  <h3 className="text-lg font-semibold text-[#1f2328]">Model Details</h3>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="min-w-full">
                     <thead>
-                      <tr className="border-b border-stone-100">
-                        <th className="px-6 py-3 text-left text-xs font-bold text-stone-500 uppercase tracking-wider">Model</th>
-                        <th className="px-6 py-3 text-right text-xs font-bold text-stone-500 uppercase tracking-wider">Requests</th>
+                      <tr className="border-b border-[#d1d9e0]">
+                        <th className="px-6 py-3 text-left text-xs font-bold text-[#636c76] uppercase tracking-wider">Model</th>
+                        <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Requests</th>
                         {hasModelCosts && (
                           <>
-                            <th className="px-6 py-3 text-right text-xs font-bold text-stone-500 uppercase tracking-wider">Gross</th>
-                            <th className="px-6 py-3 text-right text-xs font-bold text-stone-500 uppercase tracking-wider">Discount</th>
-                            <th className="px-6 py-3 text-right text-xs font-bold text-stone-500 uppercase tracking-wider">Net</th>
+                            <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Gross</th>
+                            <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Discount</th>
+                            <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Net</th>
                           </>
                         )}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-stone-50">
+                    <tbody className="divide-y divide-[#d1d9e0]">
                       {modelRows.map((item, index) => {
                         return (
-                          <tr key={index} className="table-row-hover transition-colors">
-                            <td className="px-6 py-3.5 text-sm font-medium text-stone-900">
+                          <tr key={index} className="table-row-hover transition-colors duration-150">
+                            <td className="px-6 py-3.5 text-sm font-medium text-[#1f2328]">
                               <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getModelColor(item.model) }}></div>
                                 {item.model}
                               </div>
                             </td>
-                            <td className="px-6 py-3.5 text-sm text-stone-600 text-right font-mono">
+                            <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
                               {item.requests.toFixed(2)}
                             </td>
                             {hasModelCosts && (
                               <>
-                                <td className="px-6 py-3.5 text-sm text-stone-600 text-right font-mono">
+                                <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
                                   ${item.gross.toFixed(2)}
                                 </td>
                                 <td className="px-6 py-3.5 text-sm text-emerald-600 text-right font-mono">
                                   -${item.discount.toFixed(2)}
                                 </td>
-                                <td className="px-6 py-3.5 text-sm font-semibold text-stone-900 text-right font-mono">
+                                <td className="px-6 py-3.5 text-sm font-semibold text-[#1f2328] text-right font-mono">
                                   ${item.net.toFixed(2)}
                                 </td>
                               </>
@@ -391,13 +391,13 @@ function DataAnalysisInner() {
 
         {/* Right Summary Panel */}
         <aside className="hidden xl:block w-56 shrink-0">
-          <div className="glass-panel rounded-2xl p-5 sticky top-24 opacity-0 animate-slide-in-right" style={{ animationDelay: '250ms' }}>
+          <div className="bg-white border border-[#d1d9e0] rounded-md p-5 sticky top-24 opacity-0 animate-slide-in-right" style={{ animationDelay: '250ms' }}>
             <div className="space-y-4">
-              <h3 className="text-xs font-bold text-stone-500 uppercase tracking-wider">Summary</h3>
+              <h3 className="text-xs font-bold text-[#636c76] uppercase tracking-wider">Summary</h3>
 
               {/* Quota Breakdown */}
               {analysis.quotaBreakdown.mixed && (
-                <div className="badge-amber p-3 rounded-xl">
+                <div className="badge-amber p-3 rounded-md">
                   <p className="text-xs font-semibold text-amber-800 mb-2">Mixed Licenses</p>
                   <div className="text-xs text-amber-700 space-y-1">
                     {analysis.quotaBreakdown.business.length > 0 && (
@@ -422,9 +422,9 @@ function DataAnalysisInner() {
                 </div>
               )}
 
-              <div className="flex items-center justify-between p-3 bg-stone-50 rounded-xl border border-stone-100">
-                <span className="text-xs font-medium text-stone-500">Monthly Quota</span>
-                <span className="text-sm font-bold text-stone-900">
+              <div className="flex items-center justify-between p-3 bg-[#f6f8fa] rounded-md border border-[#d1d9e0]">
+                <span className="text-xs font-medium text-[#636c76]">Monthly Quota</span>
+                <span className="text-sm font-bold text-[#1f2328]">
                   {analysis.quotaBreakdown.mixed
                     ? 'Mixed'
                     : planInfo[selectedPlan].monthlyQuota
@@ -433,7 +433,7 @@ function DataAnalysisInner() {
               </div>
 
               {analysis.quotaBreakdown.suggestedPlan && !analysis.quotaBreakdown.mixed && (
-                <div className="badge-blue p-3 rounded-xl">
+                <div className="badge-blue p-3 rounded-md">
                   <p className="text-xs">
                     Auto-selected <span className="font-semibold">{planInfo[analysis.quotaBreakdown.suggestedPlan].name}</span>
                   </p>
@@ -442,16 +442,16 @@ function DataAnalysisInner() {
 
               {/* Weekly Exhaustion Breakdown */}
               {weeklyExhaustion.weeks.length > 0 && (
-                <div className="p-3 bg-stone-50 rounded-xl border border-stone-100">
-                  <p className="text-xs font-semibold text-stone-700 mb-2">Weekly Exhaustion</p>
-                  <p className="text-xs text-stone-500 mb-3">Users exhausting quota by week</p>
+                <div className="p-3 bg-[#f6f8fa] rounded-md border border-[#d1d9e0]">
+                  <p className="text-xs font-semibold text-[#1f2328] mb-2">Weekly Exhaustion</p>
+                  <p className="text-xs text-[#636c76] mb-3">Users exhausting quota by week</p>
                   <div className="space-y-1.5 text-xs">
-                    <div className="flex justify-between items-center py-1 border-b border-stone-100">
-                      <span className="font-semibold text-stone-700">Total</span>
-                      <span className="font-bold text-orange-600">{weeklyExhaustion.totalUsersExhausted}</span>
+                    <div className="flex justify-between items-center py-1 border-b border-[#d1d9e0]">
+                      <span className="font-semibold text-[#1f2328]">Total</span>
+                      <span className="font-bold text-indigo-600">{weeklyExhaustion.totalUsersExhausted}</span>
                     </div>
                     {weeklyExhaustion.weeks.map(w => (
-                      <div key={`${w.weekNumber}-${w.startDate}`} className="flex justify-between text-stone-600">
+                      <div key={`${w.weekNumber}-${w.startDate}`} className="flex justify-between text-[#636c76]">
                         <span>Week {w.weekNumber}</span>
                         <span className="font-medium">{w.usersExhaustedInWeek}</span>
                       </div>
@@ -462,20 +462,20 @@ function DataAnalysisInner() {
 
               {/* Cost Metrics */}
               {costMetricsAvailable && aggregatedCosts && (
-                <div className="p-4 bg-gradient-to-br from-stone-50 to-stone-100 rounded-xl border border-stone-200">
-                  <p className="text-xs font-bold text-stone-700 mb-3">Billing Summary</p>
+                <div className="p-4 bg-[#f6f8fa] rounded-md border border-[#d1d9e0]">
+                  <p className="text-xs font-bold text-[#1f2328] mb-3">Billing Summary</p>
                   <div className="space-y-2 text-sm" aria-label="billing-summary">
                     <div className="flex justify-between">
-                      <span className="text-stone-500">Gross</span>
-                      <span className="font-mono font-medium text-stone-700">${aggregatedCosts.gross.toFixed(2)}</span>
+                      <span className="text-[#636c76]">Gross</span>
+                      <span className="font-mono font-medium text-[#1f2328]">${aggregatedCosts.gross.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-stone-500">Discounts</span>
+                      <span className="text-[#636c76]">Discounts</span>
                       <span className="font-mono font-medium text-emerald-600">-${aggregatedCosts.discount.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between pt-2 mt-2 border-t-2 border-stone-200">
-                      <span className="text-stone-900 font-bold">Net</span>
-                      <span className="font-mono font-bold text-stone-900 text-base">${aggregatedCosts.net.toFixed(2)}</span>
+                    <div className="flex justify-between pt-2 mt-2 border-t-2 border-[#d1d9e0]">
+                      <span className="text-[#1f2328] font-bold">Net</span>
+                      <span className="font-mono font-bold text-[#1f2328] text-base">${aggregatedCosts.net.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
