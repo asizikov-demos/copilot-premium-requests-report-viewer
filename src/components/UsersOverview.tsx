@@ -180,14 +180,14 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
   const { users: chartUsers, colors: userColors } = chartData;
 
   return (
-    <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden h-full flex flex-col">
+    <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden h-full flex flex-col">
       {/* Enhanced Header */}
-      <div className="px-5 py-4 border-b border-zinc-100 flex flex-col gap-4 flex-shrink-0">
+      <div className="px-5 py-4 border-b border-[#d1d9e0] flex flex-col gap-4 flex-shrink-0">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-zinc-900">Users Overview</h3>
+            <h3 className="text-lg font-semibold text-[#1f2328]">Users Overview</h3>
             <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mt-1">
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-[#636c76]">
                 {hasMixedLicenses ? (
                   <>Business ({PRICING.BUSINESS_QUOTA}) & Enterprise ({PRICING.ENTERPRISE_QUOTA})</>
                 ) : quotaTypes.has(PRICING.ENTERPRISE_QUOTA) ? (
@@ -203,7 +203,7 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                   Overage: ${totalOverageCost.toFixed(2)}
                 </p>
               )}
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-[#636c76]">
                 Showing {filteredUserData.length} of {userData.length} users
               </p>
             </div>
@@ -213,7 +213,7 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
             {isMobile && (
               <button
                 onClick={() => setShowChart(!showChart)}
-                className="px-3 py-1.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors"
+                className="px-3 py-1.5 text-sm font-medium text-[#636c76] bg-[#f6f8fa] hover:bg-[#d1d9e0] rounded-md transition-colors duration-150"
               >
                 {showChart ? 'Show Table' : 'Show Chart'}
               </button>
@@ -222,7 +222,7 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
             {onBack && (
               <button
                 onClick={onBack}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-zinc-600 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 hover:border-zinc-300 transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#636c76] bg-white border border-[#d1d9e0] rounded-md hover:bg-[#fcfdff] hover:border-[#636c76] transition-colors duration-150"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
                 Back
@@ -234,8 +234,8 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
         {(organizationOptions.length > 0 || costCenterOptions.length > 0) && (
           <div className="flex flex-col lg:flex-row lg:items-end gap-3">
             {organizationOptions.length > 0 && (
-              <label className="flex flex-col gap-1.5 text-sm text-zinc-600">
-                <span className="font-medium text-zinc-700">Organization</span>
+              <label className="flex flex-col gap-1.5 text-sm text-[#636c76]">
+                <span className="font-medium text-[#1f2328]">Organization</span>
                 <select
                   value={effectiveSelectedOrganization}
                   onChange={(event) => {
@@ -243,7 +243,7 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                     setCurrentPage(0);
                   }}
                   aria-label="Organization"
-                  className="min-w-56 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className="min-w-56 rounded-md border border-[#d1d9e0] bg-white px-3 py-2 text-sm text-[#1f2328] shadow-sm outline-none transition duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                 >
                   <option value={ALL_FILTERS_VALUE}>All organizations</option>
                   {organizationOptions.map((organization) => (
@@ -256,8 +256,8 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
             )}
 
             {costCenterOptions.length > 0 && (
-              <label className="flex flex-col gap-1.5 text-sm text-zinc-600">
-                <span className="font-medium text-zinc-700">Cost center</span>
+              <label className="flex flex-col gap-1.5 text-sm text-[#636c76]">
+                <span className="font-medium text-[#1f2328]">Cost center</span>
                 <select
                   value={effectiveSelectedCostCenter}
                   onChange={(event) => {
@@ -265,7 +265,7 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                     setCurrentPage(0);
                   }}
                   aria-label="Cost center"
-                  className="min-w-56 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className="min-w-56 rounded-md border border-[#d1d9e0] bg-white px-3 py-2 text-sm text-[#1f2328] shadow-sm outline-none transition duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                 >
                   <option value={ALL_FILTERS_VALUE}>All cost centers</option>
                   {costCenterOptions.map((costCenter) => (
@@ -282,17 +282,17 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
       
       {/* Conditional Chart - Collapsible on Mobile */}
       {(!isMobile || showChart) && (
-        <div className="px-5 py-4 bg-zinc-50/50 border-b border-zinc-100 flex-shrink-0 relative z-30">
+        <div className="px-5 py-4 bg-[#f6f8fa] border-b border-[#d1d9e0] flex-shrink-0 relative z-30">
           <div className="flex justify-between items-center mb-4">
-            <h4 className="text-sm font-medium text-zinc-900">Quota Consumption</h4>
+            <h4 className="text-sm font-medium text-[#1f2328]">Quota Consumption</h4>
             <div className="flex items-center gap-3">
-              <div className="flex bg-white border border-zinc-200 rounded-lg p-0.5">
+              <div className="flex bg-white border border-[#d1d9e0] rounded-md p-0.5">
                 <button
                   onClick={() => setChartType('heatmap')}
-                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors duration-150 ${
                     chartType === 'heatmap'
-                      ? 'bg-zinc-900 text-white'
-                      : 'text-zinc-600 hover:text-zinc-900'
+                      ? 'bg-indigo-500 text-white'
+                      : 'text-[#636c76] hover:text-[#1f2328]'
                   }`}
                 >
                   Heatmap
@@ -300,10 +300,10 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                 <button
                   onClick={() => setChartType('lines')}
                   disabled={chartUsers.length > 1000}
-                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors duration-150 ${
                     chartType === 'lines'
-                      ? 'bg-zinc-900 text-white'
-                      : 'text-zinc-600 hover:text-zinc-900'
+                      ? 'bg-indigo-500 text-white'
+                      : 'text-[#636c76] hover:text-[#1f2328]'
                   } ${chartUsers.length > 1000 ? 'opacity-40 cursor-not-allowed' : ''}`}
                   title={chartUsers.length > 1000 ? `Cannot display ${chartUsers.length} users` : undefined}
                 >
@@ -313,7 +313,7 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
               {isMobile && (
                 <button
                   onClick={() => setShowChart(false)}
-                  className="text-zinc-400 hover:text-zinc-600"
+                  className="text-[#636c76] hover:text-[#1f2328]"
                   aria-label="Hide chart"
                 >
                   ✕
@@ -331,10 +331,10 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                 hasMixedQuotas={hasMixedQuotas}
               />
             ) : chartUsers.length > 1000 ? (
-              <div className="flex items-center justify-center h-full bg-zinc-50 rounded-lg">
+              <div className="flex items-center justify-center h-full bg-[#f6f8fa] rounded-md">
                 <div className="text-center p-6">
-                  <p className="text-sm font-medium text-zinc-900 mb-1">Too many users</p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-sm font-medium text-[#1f2328] mb-1">Too many users</p>
+                  <p className="text-xs text-[#636c76]">
                     Use heatmap for {chartUsers.length.toLocaleString()} users
                   </p>
                 </div>
@@ -369,17 +369,17 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                 <button
                   key={user.user}
                   onClick={() => openUserModal(user.user)}
-                  className="w-full bg-zinc-50 rounded-lg p-4 hover:bg-zinc-100 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-[#f6f8fa] rounded-md p-4 hover:bg-[#eef1f4] transition-colors duration-150 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <div className="flex justify-between items-start mb-1">
-                    <span className="font-medium text-zinc-900 truncate flex-1 mr-2">
+                    <span className="font-medium text-[#1f2328] truncate flex-1 mr-2">
                       {user.user}
                     </span>
-                    <span className={`text-sm font-mono ${isOverQuota ? 'text-red-600' : 'text-zinc-900'}`}>
+                    <span className={`text-sm font-mono ${isOverQuota ? 'text-red-600' : 'text-[#1f2328]'}`}>
                       {user.totalRequests.toFixed(1)}
                     </span>
                   </div>
-                  <div className="text-xs text-zinc-500">
+                  <div className="text-xs text-[#636c76]">
                     Quota: {quotaDisplay}
                     {isOverQuota && (
                       <span className="text-red-500 ml-2">
@@ -392,21 +392,21 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
               
               {/* Mobile Pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between pt-3 border-t border-zinc-100">
+                <div className="flex items-center justify-between pt-3 border-t border-[#d1d9e0]">
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
                     disabled={activePage === 0}
-                    className="px-3 py-1.5 text-sm font-medium text-zinc-600 hover:text-zinc-900 disabled:opacity-40"
+                    className="px-3 py-1.5 text-sm font-medium text-[#636c76] hover:text-[#1f2328] disabled:opacity-40"
                   >
                     ← Previous
                   </button>
-                  <span className="text-xs text-zinc-500">
+                  <span className="text-xs text-[#636c76]">
                     {activePage + 1} / {totalPages}
                   </span>
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
                     disabled={activePage === totalPages - 1}
-                    className="px-3 py-1.5 text-sm font-medium text-zinc-600 hover:text-zinc-900 disabled:opacity-40"
+                    className="px-3 py-1.5 text-sm font-medium text-[#636c76] hover:text-[#1f2328] disabled:opacity-40"
                   >
                     Next →
                   </button>
@@ -418,33 +418,33 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
           {/* Desktop Table */}
           <div className="hidden sm:block">
             <table className="min-w-full">
-            <thead className="bg-zinc-50 sticky top-0 z-20">
+            <thead className="bg-[#f6f8fa] sticky top-0 z-20">
               <tr>
-                <th className="px-5 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider bg-zinc-50 sticky left-0 z-30 min-w-40 border-r border-zinc-100">
+                <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-[0.05em] bg-[#f6f8fa] sticky left-0 z-30 min-w-40 border-r border-[#d1d9e0]">
                   User
                 </th>
                 <th
-                  className={`px-5 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider min-w-24 cursor-pointer hover:bg-zinc-100 select-none transition-colors ${
-                    sortBy === 'quota' ? 'bg-zinc-100' : 'bg-zinc-50'
+                  className={`px-4 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-[0.05em] min-w-24 cursor-pointer hover:bg-[#f6f8fa] select-none transition-colors duration-150 ${
+                    sortBy === 'quota' ? 'bg-[#eef1f4]' : 'bg-[#f6f8fa]'
                   }`}
                   onClick={() => handleSortWithReset('quota')}
                 >
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 justify-end">
                     Quota
-                    <span className="text-zinc-400">
+                    <span className="text-[#636c76]">
                       {sortBy === 'quota' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
                     </span>
                   </div>
                 </th>
                 <th 
-                  className={`px-5 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider min-w-32 cursor-pointer hover:bg-zinc-100 select-none transition-colors ${
-                    sortBy === 'totalRequests' ? 'bg-zinc-100' : 'bg-zinc-50'
+                  className={`px-4 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-[0.05em] min-w-32 cursor-pointer hover:bg-[#f6f8fa] select-none transition-colors duration-150 ${
+                    sortBy === 'totalRequests' ? 'bg-[#f6f8fa]' : 'bg-[#f6f8fa]'
                   }`}
                   onClick={() => handleSortWithReset('totalRequests')}
                 >
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 justify-end">
                     Total Requests
-                    <span className="text-zinc-400">
+                    <span className="text-[#636c76]">
                       {sortBy === 'totalRequests' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
                     </span>
                   </div>
@@ -452,17 +452,17 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                 {allModels.map((model) => (
                   <th
                     key={model}
-                    className={`px-5 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider min-w-28 cursor-pointer hover:bg-zinc-100 select-none transition-colors ${
-                      sortBy === model ? 'bg-zinc-100' : 'bg-zinc-50'
+                    className={`px-4 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-[0.05em] min-w-28 cursor-pointer hover:bg-[#f6f8fa] select-none transition-colors duration-150 ${
+                      sortBy === model ? 'bg-[#f6f8fa]' : 'bg-[#f6f8fa]'
                     }`}
                     title={model}
                     onClick={() => handleSortWithReset(model)}
                   >
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 justify-end">
                       <span className="truncate max-w-20">
                         {model.length > 18 ? `${model.substring(0, 18)}...` : model}
                       </span>
-                      <span className="text-zinc-400 flex-shrink-0">
+                      <span className="text-[#636c76] flex-shrink-0">
                         {sortBy === model ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
                       </span>
                     </div>
@@ -470,28 +470,28 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-50">
+            <tbody className="divide-y divide-[#f6f8fa]">
               {paginatedUserData.map((user) => {
                 const userQuota = getUserQuota(quotaArtifacts, user.user);
                 const isOverQuota = userQuota !== 'unlimited' && user.totalRequests > userQuota;
                 const quotaDisplay = userQuota === 'unlimited' ? 'Unlimited' : userQuota.toString();
                 
                 return (
-                <tr key={user.user} className="hover:bg-zinc-50 transition-colors">
-                  <td className="px-5 py-3 whitespace-nowrap text-sm font-medium sticky left-0 z-10 bg-white border-r border-zinc-50">
+                <tr key={user.user} className="hover:bg-[#fcfdff] transition-colors duration-150">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium sticky left-0 z-10 bg-white border-r border-[#d1d9e0]">
                     <button
                       onClick={() => openUserModal(user.user)}
-                      className="text-blue-600 hover:text-blue-800 hover:underline focus:outline-none"
+                      className="text-indigo-600 hover:text-indigo-800 hover:underline focus:outline-none"
                       title={`View ${user.user}&apos;s details`}
                     >
                       {user.user}
                     </button>
                   </td>
-                  <td className="px-5 py-3 whitespace-nowrap text-sm text-zinc-500 font-mono">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-[#636c76] font-mono tabular-nums text-right">
                     {quotaDisplay}
                   </td>
-                  <td className={`px-5 py-3 whitespace-nowrap text-sm font-mono font-medium ${
-                    isOverQuota ? 'text-red-600' : 'text-zinc-900'
+                  <td className={`px-4 py-3 whitespace-nowrap text-sm font-mono font-medium tabular-nums text-right ${
+                    isOverQuota ? 'text-red-600' : 'text-[#1f2328]'
                   }`}>
                     {user.totalRequests.toFixed(2)}
                     {isOverQuota && (
@@ -503,7 +503,7 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                   {allModels.map((model) => (
                     <td
                       key={`${user.user}-${model}`}
-                      className="px-5 py-3 whitespace-nowrap text-sm text-zinc-500 font-mono"
+                      className="px-4 py-3 whitespace-nowrap text-sm text-[#636c76] font-mono tabular-nums text-right"
                     >
                       {user.modelBreakdown[model]?.toFixed(2) || '—'}
                     </td>
@@ -515,15 +515,15 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
           
           {/* Desktop Pagination */}
           {totalPages > 1 && (
-            <div className="bg-white px-5 py-3 flex items-center justify-between border-t border-zinc-100">
-              <p className="text-sm text-zinc-500">
+            <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-[#d1d9e0]">
+              <p className="text-sm text-[#636c76]">
                 {activePage * ROWS_PER_PAGE + 1}–{Math.min((activePage + 1) * ROWS_PER_PAGE, sortedUserData.length)} of {sortedUserData.length}
               </p>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
                   disabled={activePage === 0}
-                  className="p-1.5 text-zinc-400 hover:text-zinc-600 disabled:opacity-40 transition-colors"
+                  className="p-1.5 text-[#636c76] hover:text-[#1f2328] disabled:opacity-40 transition-colors duration-150"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
@@ -546,10 +546,10 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                     <button
                       key={pageNum}
                       onClick={() => setCurrentPage(pageNum)}
-                      className={`w-8 h-8 text-sm font-medium rounded-md transition-colors ${
+                      className={`w-8 h-8 text-sm font-medium rounded-md border transition-colors duration-150 ${
                         activePage === pageNum
-                          ? 'bg-zinc-900 text-white'
-                          : 'text-zinc-600 hover:bg-zinc-100'
+                          ? 'bg-indigo-500 text-white border-indigo-500'
+                          : 'text-[#636c76] border-[#d1d9e0] hover:bg-[#f6f8fa]'
                       }`}
                     >
                       {pageNum + 1}
@@ -560,7 +560,7 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
                   disabled={activePage === totalPages - 1}
-                  className="p-1.5 text-zinc-400 hover:text-zinc-600 disabled:opacity-40 transition-colors"
+                  className="p-1.5 text-[#636c76] hover:text-[#1f2328] disabled:opacity-40 transition-colors duration-150"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
@@ -574,13 +574,13 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
       )}
       
       {userData.length === 0 && (
-        <div className="px-6 py-8 text-center text-gray-500 flex-shrink-0">
+        <div className="px-6 py-8 text-center text-[#636c76] flex-shrink-0">
           No user data available
         </div>
       )}
 
       {userData.length > 0 && filteredUserData.length === 0 && (
-        <div className="px-6 py-8 text-center text-gray-500 flex-shrink-0">
+        <div className="px-6 py-8 text-center text-[#636c76] flex-shrink-0">
           No users match the current filters
         </div>
       )}

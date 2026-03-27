@@ -35,41 +35,41 @@ function renderDescription(advisory: Advisory) {
 function AdvisoryCard({ advisory }: { advisory: Advisory }) {
   const severityStyles = {
     high: {
-      container: 'bg-red-50 border-red-100',
-      title: 'text-red-900',
-      description: 'text-red-700',
+      container: 'bg-[#fef2f2] border-[#fecdd3]',
+      title: 'text-[#cf222e]',
+      description: 'text-[#cf222e]',
     },
     medium: {
-      container: 'bg-amber-50 border-amber-100',
-      title: 'text-amber-900',
-      description: 'text-amber-700',
+      container: 'bg-[#fffbeb] border-[#fde68a]',
+      title: 'text-[#d97706]',
+      description: 'text-[#d97706]',
     },
     low: {
-      container: 'bg-blue-50 border-blue-100',
-      title: 'text-blue-900',
-      description: 'text-blue-700',
+      container: 'bg-[#eef2ff] border-[#c7d2fe]',
+      title: 'text-[#6366f1]',
+      description: 'text-[#6366f1]',
     }
   };
   
   const styles = severityStyles[advisory.severity];
   
   return (
-    <div className={`border rounded-xl p-5 ${styles.container}`}>
+    <div className={`border rounded-md p-5 ${styles.container}`}>
       <div className="flex items-start justify-between mb-2">
         <h4 className={`text-sm font-medium ${styles.title}`}>
           {advisory.title}
         </h4>
-        <span className={`ml-3 px-2 py-0.5 text-xs font-medium rounded-full bg-white/60 ${styles.description}`}>
+        <span className={`ml-3 px-2 py-0.5 text-xs font-medium rounded-md bg-white border border-[#d1d9e0] ${styles.description}`}>
           {advisory.affectedUsers} users
         </span>
       </div>
       
-      <p className={`text-xs mb-3 ${styles.description}`}>
+      <p className={`text-xs mb-3 opacity-80 ${styles.description}`}>
         {renderDescription(advisory)}
       </p>
       
       {advisory.estimatedImpact && (
-        <div className={`text-xs font-medium mb-3 px-3 py-2 bg-white/50 rounded-lg ${styles.description}`}>
+        <div className={`text-xs font-medium mb-3 px-3 py-2 bg-white/80 rounded-md border border-[#d1d9e0] ${styles.description}`}>
           {advisory.estimatedImpact}
         </div>
       )}
@@ -107,11 +107,11 @@ function AdvisoryCard({ advisory }: { advisory: Advisory }) {
 
 function NoActionRequired() {
   return (
-    <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-5">
-      <h4 className="text-sm font-medium text-emerald-900 mb-1">
+    <div className="bg-[#f0fdf4] border border-[#bbf7d0] rounded-md p-5">
+      <h4 className="text-sm font-medium text-[#2da44e] mb-1">
         No Action Required
       </h4>
-      <p className="text-xs text-emerald-700">
+      <p className="text-xs text-[#2da44e] opacity-80">
         Usage patterns are healthy with good adoption and balanced quota consumption.
       </p>
     </div>
@@ -145,11 +145,11 @@ export function AdvisorySection({
   return (
     <div className="space-y-4">
       {advisories.length > 1 && (
-        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-          <h4 className="text-xs font-medium text-blue-900 mb-0.5">
+        <div className="bg-[#eef2ff] border border-[#c7d2fe] rounded-md p-4">
+          <h4 className="text-xs font-medium text-[#6366f1] mb-0.5">
             {advisories.length} Recommendations
           </h4>
-          <p className="text-xs text-blue-700">
+          <p className="text-xs text-[#6366f1] opacity-80">
             Review these to optimize your deployment.
           </p>
         </div>

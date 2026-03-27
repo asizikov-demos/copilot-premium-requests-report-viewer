@@ -7,7 +7,7 @@ import { buildDailyModelUsageFromArtifacts } from '@/utils/ingestion/analytics';
 import { generateModelColors } from '@/utils/modelColors';
 
 export function ModelUsageTrendsOverview() {
-  const { usageArtifacts, dailyBucketsArtifacts, selectedMonths, setView } = useAnalysisContext();
+  const { usageArtifacts, dailyBucketsArtifacts, selectedMonths } = useAnalysisContext();
 
   const { data, models } = useMemo(() => {
     // For now, we ignore month filtering at the aggregation level and rely on
@@ -35,26 +35,16 @@ export function ModelUsageTrendsOverview() {
 
   return (
     <div className="w-full space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-zinc-900">Model Usage Trends</h2>
-          <p className="text-sm text-zinc-500 mt-1">
-            Daily stacked view by model (UTC)
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setView('overview')}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-zinc-600 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 hover:border-zinc-300 transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
-          Back
-        </button>
+      <div>
+        <h2 className="text-2xl font-semibold tracking-tight text-[#1f2328]">Model Usage Trends</h2>
+        <p className="text-sm text-[#636c76] mt-1">
+          Daily stacked view by model (UTC)
+        </p>
       </div>
 
-      <div className="bg-white border border-zinc-200 rounded-xl p-5 min-h-[20rem]">
+      <div className="bg-white border border-[#d1d9e0] rounded-md p-5 min-h-[20rem]">
         {data.length === 0 || models.length === 0 ? (
-          <p className="text-sm text-zinc-500">No model usage data available for the selected period.</p>
+          <p className="text-sm text-[#636c76]">No model usage data available for the selected period.</p>
         ) : (
           <div className="h-80 2xl:h-96">
             <ModelDailyStackedChart data={data} models={models} modelColors={modelColors} />

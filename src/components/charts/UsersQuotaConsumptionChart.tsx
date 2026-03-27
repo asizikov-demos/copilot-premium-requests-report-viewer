@@ -29,19 +29,17 @@ export function UsersQuotaConsumptionChart({
   return (
     <ResponsiveContainer width="100%" height="100%">
       <LineChart data={dailyCumulativeData} aria-label={`users-quota-consumption-${hasMixedLicenses ? 'mixed-licenses' : 'uniform-license'}`}> 
-        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
         <XAxis 
           dataKey="date" 
-          stroke="#6b7280"
-          fontSize={12}
+          tick={{ fill: '#636c76', fontSize: 11 }}
           tickFormatter={(value) => {
             const date = new Date(value);
             return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
           }}
         />
         <YAxis 
-          stroke="#6b7280" 
-          fontSize={12}
+          tick={{ fill: '#636c76', fontSize: 11 }}
           domain={[0, (dataMax: number) => Math.max(currentQuota, dataMax)]}
         />
         <Tooltip 

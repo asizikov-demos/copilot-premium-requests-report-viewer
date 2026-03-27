@@ -43,29 +43,29 @@ function UserDailyUsageTooltip({ active, payload, label }: TooltipProps) {
     const dailyTotal = modelData.reduce((sum: number, entry: TooltipEntry) => sum + entry.value, 0);
 
     return (
-      <div className="bg-white p-3 border border-zinc-200 rounded-lg shadow-lg">
-        <p className="font-medium text-zinc-900 mb-2">{formattedDate}</p>
+      <div className="bg-white p-3 border border-[#d1d9e0] rounded-md shadow-sm">
+        <p className="font-medium text-[#1f2328] mb-2">{formattedDate}</p>
 
         {/* Daily breakdown */}
         {modelData.length > 0 ? (
           <div className="mb-2">
-            <p className="text-xs font-medium text-zinc-600 mb-1">Daily Usage</p>
+            <p className="text-xs font-medium text-[#636c76] mb-1">Daily Usage</p>
             {modelData.map((entry: TooltipEntry, entryIndex: number) => (
               <p key={entryIndex} className="text-xs ml-2" style={{ color: entry.color }}>
                 {entry.dataKey}: {entry.value.toFixed(1)}
               </p>
             ))}
-            <p className="text-xs font-semibold text-zinc-900 ml-2 mt-1">
+            <p className="text-xs font-semibold text-[#1f2328] ml-2 mt-1">
               Total: {dailyTotal.toFixed(1)}
             </p>
           </div>
         ) : (
-          <p className="text-xs text-zinc-500 mb-2">No requests</p>
+          <p className="text-xs text-[#636c76] mb-2">No requests</p>
         )}
 
         {/* Cumulative total */}
         {cumulativeData && (
-          <p className="text-xs text-blue-600 font-medium border-t border-zinc-100 pt-2">
+          <p className="text-xs text-indigo-600 font-medium border-t border-[#d1d9e0] pt-2">
             Cumulative: {cumulativeData.value.toFixed(1)}
           </p>
         )}
@@ -209,16 +209,16 @@ export function UserConsumptionModal({
       title={`${user} Daily Usage`}
       contentClassName="flex flex-col"
       customHeader={(
-        <div className="px-5 py-4 border-b border-zinc-100 flex items-center justify-between flex-shrink-0" id="modal-title">
+        <div className="px-5 py-4 border-b border-[#d1d9e0] flex items-center justify-between flex-shrink-0" id="modal-title">
           <div className="flex-1 min-w-0">
             <button
               onClick={handleCopyUser}
-              className="text-lg font-semibold text-zinc-900 truncate hover:text-blue-600 transition-colors focus:outline-none rounded inline-flex items-center gap-2 group"
+              className="text-lg font-semibold text-[#1f2328] truncate hover:text-indigo-600 transition-colors duration-150 focus:outline-none rounded inline-flex items-center gap-2 group"
               title="Click to copy username"
             >
               {user}
               <svg
-                className="w-4 h-4 text-zinc-300 group-hover:text-blue-600 transition-colors"
+                className="w-4 h-4 text-[#636c76] group-hover:text-indigo-600 transition-colors duration-150"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -232,7 +232,7 @@ export function UserConsumptionModal({
               </svg>
             </button>
             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-1">
-              <p className="text-xs text-zinc-500 truncate">
+              <p className="text-xs text-[#636c76] truncate">
                 {userActualPlan === 'unlimited'
                   ? 'Unlimited'
                   : planInfo[userActualPlan as 'business' | 'enterprise'].name}
@@ -250,7 +250,7 @@ export function UserConsumptionModal({
           </div>
           <button
             onClick={onClose}
-            className="text-zinc-400 hover:text-zinc-600 transition-colors ml-4 flex-shrink-0"
+            className="text-[#636c76] hover:text-[#1f2328] transition-colors duration-150 ml-4 flex-shrink-0"
             aria-label="Close modal"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -263,7 +263,7 @@ export function UserConsumptionModal({
       <div className="flex-1 p-4 flex flex-col min-h-0">
         {userDailyData.length > 0 ? (
           <div className="flex flex-col gap-3 flex-1 min-h-0">
-            <div className="text-xs text-zinc-500 bg-zinc-50 p-2 rounded-lg flex flex-wrap gap-x-4 gap-y-1">
+            <div className="text-xs text-[#636c76] bg-[#f6f8fa] p-2 rounded-md flex flex-wrap gap-x-4 gap-y-1">
               <span><strong>Bars:</strong> Daily by model</span>
               <span><strong>Black line:</strong> Cumulative</span>
               <span><strong>Red line:</strong> Quota</span>
@@ -279,13 +279,13 @@ export function UserConsumptionModal({
             </div>
           </div>
         ) : (
-          <div className="flex items-center justify-center h-64 text-zinc-500 text-sm">
+          <div className="flex items-center justify-center h-64 text-[#636c76] text-sm">
             No data available
           </div>
         )}
         {userModels.length > 0 && (
-          <div className="border-t border-zinc-100 pt-3 mt-3">
-            <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Models Used</h4>
+          <div className="border-t border-[#d1d9e0] pt-3 mt-3">
+            <h4 className="text-[11px] font-semibold text-[#636c76] uppercase tracking-[0.05em] mb-2">Models Used</h4>
             <div className="flex flex-wrap gap-x-4 gap-y-1">
               {sortedModels.map((model) => (
                 <div key={model} className="flex items-center gap-1.5">
@@ -293,10 +293,10 @@ export function UserConsumptionModal({
                     className="w-2 h-2 rounded-sm"
                     style={{ backgroundColor: modelColors[model] }}
                   />
-                  <span className="text-xs text-zinc-600 truncate max-w-[140px]" title={model}>
+                  <span className="text-xs text-[#636c76] truncate max-w-[140px]" title={model}>
                     {model.length > 18 ? `${model.substring(0, 18)}...` : model}
                   </span>
-                  <span className="text-xs text-zinc-400 font-mono">
+                  <span className="text-xs text-[#636c76] font-mono">
                     {modelUsageTotals[model]?.toFixed(1)}
                   </span>
                 </div>

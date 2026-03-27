@@ -45,15 +45,15 @@ export function WeeklyQuotaExhaustion({ weeklyExhaustion, totalUsers, height = 2
 
   return (
     <div className="space-y-4" aria-label="Weekly quota exhaustion summary">
-      <div className="bg-zinc-50 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3" aria-live="polite">
+      <div className="bg-[#f6f8fa] rounded-md p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3" aria-live="polite">
         <div>
-          <h4 className="text-sm font-medium text-zinc-900">Early Quota Exhaustion</h4>
-          <p className="text-xs text-zinc-600 mt-0.5">
+          <h4 className="text-sm font-medium text-[#1f2328]">Early Quota Exhaustion</h4>
+          <p className="text-xs text-[#636c76] mt-0.5">
             {totalEarly} of {totalUsers} users ({totalUsers > 0 ? ((totalEarly / totalUsers) * 100).toFixed(0) : '0'}%) exhausted before day 28
           </p>
         </div>
         {totalEarly === 0 && (
-          <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700">
+          <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-[#f0fdf4] text-[#2da44e] border border-[#bbf7d0]">
             Balanced usage
           </span>
         )}
@@ -66,7 +66,7 @@ export function WeeklyQuotaExhaustion({ weeklyExhaustion, totalUsers, height = 2
             margin={{ top: 16, right: 16, left: 0, bottom: 8 }}
             barCategoryGap={40}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#d1d9e0" />
             <XAxis dataKey="week" tick={{ fontSize: 11 }} />
             <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={40} />
             <Tooltip
@@ -82,7 +82,7 @@ export function WeeklyQuotaExhaustion({ weeklyExhaustion, totalUsers, height = 2
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <p className="text-xs text-zinc-400">Users who exhausted quota in each week window.</p>
+      <p className="text-xs text-[#636c76]">Users who exhausted quota in each week window.</p>
     </div>
   );
 }

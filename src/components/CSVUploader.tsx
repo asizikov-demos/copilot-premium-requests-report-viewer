@@ -200,10 +200,10 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
     <div className="w-full max-w-xl mx-auto">
       {/* Hero section */}
       <div className="text-center mb-12 animate-fade-in-up">
-        <h2 className="display-heading text-4xl sm:text-5xl text-stone-900 mb-4">
+        <h2 className="display-heading text-4xl sm:text-5xl text-[#1f2328] mb-4">
           Analyze your usage data
         </h2>
-        <p className="text-lg text-stone-500 max-w-md mx-auto leading-relaxed">
+        <p className="text-lg text-[#636c76] max-w-md mx-auto leading-relaxed">
           Upload your GitHub Copilot premium requests report to visualize usage patterns and optimize costs.
         </p>
       </div>
@@ -211,11 +211,11 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
       {/* Upload area */}
       <div
         className={`
-          relative rounded-2xl border-2 border-dashed transition-all duration-300 cursor-pointer
+          relative rounded-md border-2 border-dashed transition-all duration-150 cursor-pointer
           opacity-0 animate-scale-in
           ${isDragOver 
-            ? 'border-orange-400 bg-orange-50/50 shadow-lg shadow-orange-100' 
-            : 'border-stone-200 hover:border-stone-300 hover:shadow-md bg-white'
+            ? 'border-indigo-500 bg-indigo-50' 
+            : 'border-[#d1d9e0] hover:border-[#d1d9e0] hover:shadow-sm bg-white'
           }
           ${isBusy ? 'opacity-60 pointer-events-none' : ''}
         `}
@@ -237,17 +237,17 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
           <div className="flex flex-col items-center gap-5">
             {/* Icon */}
             <div className={`
-              w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-300
+              w-16 h-16 rounded-md flex items-center justify-center transition-all duration-150
               ${isDragOver 
-                ? 'bg-gradient-to-br from-orange-400 to-orange-600 shadow-lg shadow-orange-200' 
-                : 'bg-gradient-to-br from-stone-100 to-stone-200'
+                ? 'bg-indigo-500 shadow-sm' 
+                : 'bg-[#f6f8fa]'
               }
             `}>
               {isLoading ? (
-                <div className="w-7 h-7 border-2 border-stone-300 border-t-orange-600 rounded-full animate-spin" />
+                <div className="w-7 h-7 border-2 border-[#d1d9e0] border-t-indigo-500 rounded-full animate-spin" />
               ) : (
                 <svg
-                  className={`w-7 h-7 transition-colors ${isDragOver ? 'text-white' : 'text-stone-500'}`}
+                  className={`w-7 h-7 transition-colors ${isDragOver ? 'text-white' : 'text-[#636c76]'}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -266,29 +266,29 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
             <div className="text-center">
               {isLoading ? (
                 <div className="space-y-4">
-                  <p className="text-base font-semibold text-stone-900">Processing file...</p>
+                  <p className="text-base font-semibold text-[#1f2328]">Processing file...</p>
                   <div className="w-56 mx-auto">
-                    <div className="h-2 bg-stone-100 rounded-full overflow-hidden">
+                    <div className="h-2 bg-[#f6f8fa] rounded-full overflow-hidden">
                       <div 
-                        className="h-full bg-gradient-to-r from-orange-400 to-orange-600 rounded-full transition-all duration-300"
+                        className="h-full bg-indigo-500 rounded-full transition-all duration-150"
                         style={{ width: `${progress}%` }}
                       />
                     </div>
                   </div>
                   {totalRows.current > 0 && (
-                    <p className="text-sm text-stone-500">
+                    <p className="text-sm text-[#636c76]">
                       {totalRows.current.toLocaleString()} rows processed
                     </p>
                   )}
                 </div>
               ) : isSampleLoading ? (
-                <p className="text-base font-semibold text-stone-900">Loading sample data...</p>
+                <p className="text-base font-semibold text-[#1f2328]">Loading sample data...</p>
               ) : (
                 <>
-                  <p className="text-base font-semibold text-stone-900 mb-1">
+                  <p className="text-base font-semibold text-[#1f2328] mb-1">
                     Drop your CSV file here
                   </p>
-                  <p className="text-sm text-stone-500">
+                  <p className="text-sm text-[#636c76]">
                     or click to browse
                   </p>
                 </>
@@ -303,7 +303,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
         <button
           onClick={(e) => { e.stopPropagation(); loadSampleData(); }}
           disabled={isBusy}
-          className="px-5 py-2.5 text-sm font-semibold text-orange-600 hover:text-white hover:bg-orange-600 border border-orange-200 hover:border-orange-600 rounded-full transition-all duration-200 disabled:opacity-50"
+          className="px-5 py-2.5 text-sm font-semibold text-white bg-[#2da44e] hover:bg-[#2c974b] border border-[#2da44e] hover:border-[#2c974b] rounded-md transition-all duration-150 disabled:opacity-50"
         >
           Try with sample data
         </button>
@@ -311,7 +311,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
 
       {/* Help text */}
       <div className="mt-10 space-y-3 text-center opacity-0 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-        <p className="text-xs text-stone-400 font-medium tracking-wide">
+        <p className="text-xs text-[#636c76] font-medium tracking-wide">
           Required: date, username, model, quantity
         </p>
         <div className="flex items-center justify-center gap-4 text-xs">
@@ -319,14 +319,14 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
             href="https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/manage-and-track-spending/monitor-premium-requests#downloading-a-copilot-premium-request-usage-report"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-stone-500 hover:text-orange-600 transition-colors font-medium"
+            className="text-[#636c76] hover:text-indigo-500 transition-colors duration-150 font-medium"
           >
             How to get this report →
           </a>
-          <span className="text-stone-300">•</span>
+          <span className="text-[#d1d9e0]">•</span>
           <button
             onClick={() => setShowPrivacyDialog(true)}
-            className="text-stone-500 hover:text-orange-600 transition-colors font-medium"
+            className="text-[#636c76] hover:text-indigo-500 transition-colors duration-150 font-medium"
           >
             Privacy info
           </button>
@@ -335,13 +335,13 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
       
       {/* Privacy Dialog */}
       {showPrivacyDialog && (
-        <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-7 shadow-2xl border border-stone-100 animate-scale-in">
+        <div className="fixed inset-0 bg-[#1f2328]/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-md max-w-md w-full p-7 shadow-sm border border-[#d1d9e0] animate-scale-in">
             <div className="flex items-start justify-between mb-5">
-              <h3 className="text-xl font-bold text-stone-900">Privacy Information</h3>
+              <h3 className="text-xl font-bold text-[#1f2328]">Privacy Information</h3>
               <button
                 onClick={() => setShowPrivacyDialog(false)}
-                className="text-stone-400 hover:text-stone-600 transition-colors p-1 hover:bg-stone-100 rounded-lg"
+                className="text-[#636c76] hover:text-[#1f2328] transition-colors duration-150 p-1 hover:bg-[#f6f8fa] rounded-md"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -349,9 +349,9 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
               </button>
             </div>
             
-            <div className="space-y-4 text-sm text-stone-600 leading-relaxed">
+            <div className="space-y-4 text-sm text-[#636c76] leading-relaxed">
               <p>
-                <span className="font-semibold text-stone-900">Your data stays local.</span>{' '}
+                <span className="font-semibold text-[#1f2328]">Your data stays local.</span>{' '}
                 This is a front-end only application. No data leaves your browser.
               </p>
               
@@ -359,13 +359,13 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
                 All CSV processing happens locally, ensuring your usage data remains private.
               </p>
               
-              <div className="p-4 bg-stone-50 rounded-xl border border-stone-100">
-                <p className="text-xs text-stone-500 mb-1 font-medium">Open source</p>
+              <div className="p-4 bg-[#f6f8fa] rounded-md border border-[#d1d9e0]">
+                <p className="text-xs text-[#636c76] mb-1 font-medium">Open source</p>
                 <a
                   href="https://github.com/asizikov-demos/copilot-premium-requests-report-viewer"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-orange-600 hover:text-orange-700 font-medium break-all"
+                  className="text-sm text-indigo-500 hover:text-indigo-600 font-medium break-all"
                 >
                   github.com/asizikov-demos/copilot-premium-requests-report-viewer
                 </a>
@@ -375,7 +375,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
             <div className="mt-7">
               <button
                 onClick={() => setShowPrivacyDialog(false)}
-                className="w-full px-4 py-3 bg-stone-900 text-white text-sm font-semibold rounded-xl hover:bg-stone-800 transition-colors shadow-lg hover:shadow-xl"
+                className="w-full px-4 py-3 bg-[#24292f] text-white text-sm font-semibold rounded-md hover:bg-[#32383f] transition-colors duration-150 shadow-sm"
               >
                 Got it
               </button>

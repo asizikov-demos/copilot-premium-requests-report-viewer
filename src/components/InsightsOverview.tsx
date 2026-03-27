@@ -108,15 +108,15 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-zinc-900">Consumption Insights</h2>
-          <p className="text-sm text-zinc-500 mt-1">
+          <h2 className="text-2xl font-semibold tracking-tight text-[#1f2328]">Consumption Insights</h2>
+          <p className="text-sm text-[#636c76] mt-1">
             Usage patterns, adoption levels, and recommendations
           </p>
         </div>
         {onBack && (
           <button
             onClick={onBack}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-zinc-600 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 hover:border-zinc-300 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#636c76] bg-white border border-[#d1d9e0] rounded-md hover:bg-[#f6f8fa] hover:border-[#d1d9e0] transition-colors duration-150"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
             Back
@@ -125,61 +125,61 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
       </div>
 
       {/* User Categories Summary */}
-      <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-zinc-100">
-          <h3 className="text-sm font-medium text-zinc-900">User Categories</h3>
-          <p className="text-xs text-zinc-500 mt-0.5">
+      <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
+        <div className="px-5 py-4 border-b border-[#d1d9e0]">
+          <h3 className="text-sm font-medium text-[#1f2328]">User Categories</h3>
+          <p className="text-xs text-[#636c76] mt-0.5">
             Breakdown by consumption patterns
           </p>
         </div>
         <div className="p-5">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Power Users */}
-            <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-lg">
+            <div className="p-4 bg-[#f0fdf4] border border-[#bbf7d0] rounded-md">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-emerald-600 uppercase tracking-wider">Power Users</p>
-                  <p className="text-2xl font-semibold text-emerald-900 mt-1">
+                  <p className="text-xs font-medium text-[#2da44e] uppercase tracking-[0.05em]">Power Users</p>
+                  <p className="text-2xl font-semibold text-[#1f2328] mt-1">
                     {insightsData.powerUsers.length}
                   </p>
-                  <p className="text-xs text-emerald-600 mt-0.5">90%+ quota usage</p>
+                  <p className="text-xs text-[#2da44e] mt-0.5">90%+ quota usage</p>
                 </div>
-                <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                <div className="w-8 h-8 bg-[#2da44e] rounded-md flex items-center justify-center text-white text-sm font-bold">
                   ✓
                 </div>
               </div>
             </div>
 
             {/* Average Users */}
-            <div className="p-4 bg-amber-50 border border-amber-100 rounded-lg">
+            <div className="p-4 bg-[#fffbeb] border border-[#fde68a] rounded-md">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-amber-600 uppercase tracking-wider">Average Users</p>
-                  <p className="text-2xl font-semibold text-amber-900 mt-1">
+                  <p className="text-xs font-medium text-[#d97706] uppercase tracking-[0.05em]">Average Users</p>
+                  <p className="text-2xl font-semibold text-[#1f2328] mt-1">
                     {insightsData.averageUsers.length}
                   </p>
-                  <p className="text-xs text-amber-600 mt-0.5">45–90% usage</p>
+                  <p className="text-xs text-[#d97706] mt-0.5">45–90% usage</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-amber-700">Unutilized</p>
-                  <p className="text-sm font-medium text-amber-900">${averageUnusedValueUSD.toFixed(0)}</p>
+                  <p className="text-xs text-[#d97706]">Unutilized</p>
+                  <p className="text-sm font-medium text-[#1f2328]">${averageUnusedValueUSD.toFixed(0)}</p>
                 </div>
               </div>
             </div>
 
             {/* Low Adoption */}
-            <div className="p-4 bg-red-50 border border-red-100 rounded-lg">
+            <div className="p-4 bg-[#fef2f2] border border-[#fecdd3] rounded-md">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-red-600 uppercase tracking-wider">Low Adoption</p>
-                  <p className="text-2xl font-semibold text-red-900 mt-1">
+                  <p className="text-xs font-medium text-[#cf222e] uppercase tracking-[0.05em]">Low Adoption</p>
+                  <p className="text-2xl font-semibold text-[#1f2328] mt-1">
                     {insightsData.lowAdoptionUsers.length}
                   </p>
-                  <p className="text-xs text-red-600 mt-0.5">&lt;45% usage</p>
+                  <p className="text-xs text-[#cf222e] mt-0.5">&lt;45% usage</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-red-700">Unutilized</p>
-                  <p className="text-sm font-medium text-red-900">${lowUnusedValueUSD.toFixed(0)}</p>
+                  <p className="text-xs text-[#cf222e]">Unutilized</p>
+                  <p className="text-sm font-medium text-[#1f2328]">${lowUnusedValueUSD.toFixed(0)}</p>
                 </div>
               </div>
             </div>
@@ -223,7 +223,7 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
           >
             <UserCategoryTable users={insightsData.lowAdoptionUsers} color="red" limit={20} />
             {insightsData.lowAdoptionUsers.length > 20 && (
-              <div className="px-6 py-3 bg-gray-50 text-sm text-gray-500 text-center">
+              <div className="px-6 py-3 bg-[#f6f8fa] text-sm text-[#636c76] text-center">
                 Showing top 20 of {insightsData.lowAdoptionUsers.length} users
               </div>
             )}
@@ -232,44 +232,44 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
       </div>
 
       {/* Feature Utilization Block */}
-      <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-zinc-100">
-          <h3 className="text-sm font-medium text-zinc-900">Feature Utilization</h3>
-          <p className="text-xs text-zinc-500 mt-0.5">
+      <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
+        <div className="px-5 py-4 border-b border-[#d1d9e0]">
+          <h3 className="text-sm font-medium text-[#1f2328]">Feature Utilization</h3>
+          <p className="text-xs text-[#636c76] mt-0.5">
             Specialized Copilot feature usage
           </p>
         </div>
         <div className="p-5">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Code Review */}
-            <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg">
-              <p className="text-xs font-medium text-blue-600 uppercase tracking-wider mb-2">Code Review</p>
-              <p className="text-2xl font-semibold text-blue-900">
+            <div className="p-4 bg-white border border-[#d1d9e0] rounded-md border-l-[3px] border-l-blue-500">
+              <p className="text-xs font-medium text-[#636c76] uppercase tracking-[0.05em] mb-2">Code Review</p>
+              <p className="text-2xl font-semibold text-[#1f2328]">
                 {Math.round(featureUtilization.codeReview.totalSessions)}
               </p>
-              <p className="text-xs text-blue-600 mt-1">
+              <p className="text-xs text-[#636c76] mt-1">
                 {featureUtilization.codeReview.averagePerUser.toFixed(1)} avg per user • {featureUtilization.codeReview.userCount} users
               </p>
             </div>
 
             {/* Coding Agent */}
-            <div className="p-4 bg-purple-50 border border-purple-100 rounded-lg">
-              <p className="text-xs font-medium text-purple-600 uppercase tracking-wider mb-2">Coding Agent</p>
-              <p className="text-2xl font-semibold text-purple-900">
+            <div className="p-4 bg-white border border-[#d1d9e0] rounded-md border-l-[3px] border-l-purple-500">
+              <p className="text-xs font-medium text-[#636c76] uppercase tracking-[0.05em] mb-2">Coding Agent</p>
+              <p className="text-2xl font-semibold text-[#1f2328]">
                 {Math.round(featureUtilization.codingAgent.totalSessions)}
               </p>
-              <p className="text-xs text-purple-600 mt-1">
+              <p className="text-xs text-[#636c76] mt-1">
                 {featureUtilization.codingAgent.averagePerUser.toFixed(1)} avg per user • {featureUtilization.codingAgent.userCount} users
               </p>
             </div>
 
             {/* Spark */}
-            <div className="p-4 bg-orange-50 border border-orange-100 rounded-lg">
-              <p className="text-xs font-medium text-orange-600 uppercase tracking-wider mb-2">Spark</p>
-              <p className="text-2xl font-semibold text-orange-900">
+            <div className="p-4 bg-white border border-[#d1d9e0] rounded-md border-l-[3px] border-l-[#6366f1]">
+              <p className="text-xs font-medium text-[#636c76] uppercase tracking-[0.05em] mb-2">Spark</p>
+              <p className="text-2xl font-semibold text-[#1f2328]">
                 {Math.round(featureUtilization.spark.totalSessions)}
               </p>
-              <p className="text-xs text-orange-600 mt-1">
+              <p className="text-xs text-[#636c76] mt-1">
                 {featureUtilization.spark.averagePerUser.toFixed(1)} avg per user • {featureUtilization.spark.userCount} users
               </p>
             </div>
@@ -278,10 +278,10 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
       </div>
 
       {/* Weekly Quota Exhaustion */}
-      <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-zinc-100">
-          <h3 className="text-sm font-medium text-zinc-900">Weekly Quota Exhaustion</h3>
-          <p className="text-xs text-zinc-500 mt-0.5">
+      <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
+        <div className="px-5 py-4 border-b border-[#d1d9e0]">
+          <h3 className="text-sm font-medium text-[#1f2328]">Weekly Quota Exhaustion</h3>
+          <p className="text-xs text-[#636c76] mt-0.5">
             Users exhausting quota before day 28
           </p>
         </div>
@@ -294,10 +294,10 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
       </div>
 
       {/* Recommendations & Advisory */}
-      <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-zinc-100">
-          <h3 className="text-sm font-medium text-zinc-900">Recommendations</h3>
-          <p className="text-xs text-zinc-500 mt-0.5">
+      <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
+        <div className="px-5 py-4 border-b border-[#d1d9e0]">
+          <h3 className="text-sm font-medium text-[#1f2328]">Recommendations</h3>
+          <p className="text-xs text-[#636c76] mt-0.5">
             Actionable optimization insights
           </p>
         </div>

@@ -33,11 +33,11 @@ const GEMINI_COLORS: Record<string, string> = {
   'Gemini 2.5 Pro': '#1d4ed8',
 };
 
-// Agent/Special models - Orange/Amber spectrum
+// Agent/Special models - Indigo/Cyan spectrum
 const AGENT_COLORS: Record<string, string> = {
-  'Coding Agent model': '#f97316',
-  'Code Review model': '#fb923c',
-  'Auto: Claude Sonnet': '#fdba74',
+  'Coding Agent model': '#6366f1',
+  'Code Review model': '#8b5cf6',
+  'Auto: Claude Sonnet': '#06b6d4',
 };
 
 // All model colors combined
@@ -48,20 +48,20 @@ const MODEL_COLORS: Record<string, string> = {
   ...AGENT_COLORS,
 };
 
-// Fallback palette for unknown models
+// Fallback palette for unknown models (matches chart design tokens)
 const FALLBACK_PALETTE = [
-  '#7c3aed', // violet-600
-  '#2563eb', // blue-600
-  '#0891b2', // cyan-600
-  '#059669', // emerald-600
-  '#ca8a04', // yellow-600
+  '#6366f1', // indigo
+  '#22c55e', // green
+  '#f59e0b', // amber
+  '#ef4444', // red
+  '#8b5cf6', // violet
+  '#06b6d4', // cyan
+  '#ec4899', // pink
+  '#14b8a6', // teal
+  '#2563eb', // blue
+  '#65a30d', // lime
   '#dc2626', // red-600
-  '#c026d3', // fuchsia-600
-  '#4f46e5', // indigo-600
-  '#0d9488', // teal-600
-  '#ea580c', // orange-600
-  '#db2777', // pink-600
-  '#65a30d', // lime-600
+  '#0891b2', // cyan-600
 ];
 
 /**
