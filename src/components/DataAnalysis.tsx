@@ -1,15 +1,17 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { ModelRequestsBarChart } from './charts/ModelRequestsBarChart';
 import { ModelUsageTrendsOverview } from './ModelUsageTrendsOverview';
 import { UsersOverview } from './UsersOverview';
 import { CodingAgentOverview } from './CodingAgentOverview';
 import { InsightsOverview } from './InsightsOverview';
 import { CostOptimizationInsights } from './CostOptimizationInsights';
+import { CostCentersOverview } from './CostCentersOverview';
 import { PRICING } from '@/constants/pricing';
 import { AnalysisProvider, useAnalysisContext } from '@/context/AnalysisContext';
 import { getModelColor } from '@/utils/modelColors';
+import { classifyProductCategory } from '@/utils/productClassification';
 
 interface DataAnalysisProps {
   ingestionResult: import('@/utils/ingestion').IngestionResult;
@@ -17,7 +19,23 @@ interface DataAnalysisProps {
   onReset: () => void;
 }
 
-const NAV_ITEMS = [
+type NavigationItem = {
+  key: 'overview' | 'users' | 'costCenters' | 'codingAgent' | 'insights' | 'costOptimization' | 'modelTrends';
+  label: string;
+  icon: React.ReactNode;
+};
+
+const COST_CENTERS_NAV_ITEM: NavigationItem = {
+  key: 'costCenters' as const,
+  label: 'Cost Centers',
+  icon: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3H21m-3.75 3H21" />
+    </svg>
+  ),
+};
+
+const NAV_ITEMS: NavigationItem[] = [
   {
     key: 'overview' as const,
     label: 'Overview',
@@ -85,6 +103,7 @@ function DataAnalysisInner() {
     codingAgentAnalysis,
     codeReviewAnalysis,
     processedData,
+    baseProcessed,
     weeklyExhaustion,
     availableMonths,
     hasMultipleMonthsData,
@@ -98,6 +117,25 @@ function DataAnalysisInner() {
     usageArtifacts,
     billingArtifacts
   } = useAnalysisContext();
+
+  const hasCostCenters = useMemo(() => {
+    return baseProcessed.some((row) => row.costCenter);
+  }, [baseProcessed]);
+
+  useEffect(() => {
+    if (!hasCostCenters && view === 'costCenters') {
+      setView('overview');
+    }
+  }, [hasCostCenters, setView, view]);
+
+  const navItems = useMemo(() => {
+    const items = [...NAV_ITEMS];
+    if (hasCostCenters) {
+      // Insert after 'users' (index 1)
+      items.splice(2, 0, COST_CENTERS_NAV_ITEM);
+    }
+    return items;
+  }, [hasCostCenters]);
 
   const processedCosts = useMemo(() => {
     const hasBillingData = processedData.some(
@@ -154,10 +192,10 @@ function DataAnalysisInner() {
       copilot: { label: 'Copilot', requests: 0, gross: 0, discount: 0, net: 0 },
     };
     for (const row of processedData) {
-      const m = row.model.toLowerCase();
-      const bucket = m.includes('coding agent') || m.includes('padawan')
+      const productCategory = classifyProductCategory(row.model);
+      const bucket = productCategory === 'Coding Agent'
         ? buckets.codingAgent
-        : m.includes('code review')
+        : productCategory === 'Code Review'
           ? buckets.codeReview
           : buckets.copilot;
       bucket.requests += row.requestsUsed;
@@ -170,26 +208,21 @@ function DataAnalysisInner() {
 
   return (
     <div className="w-full">
-      {/* Header */}
-      <div className="mb-6 animate-fade-in-up">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <div>
-            <h2 className="display-heading text-3xl lg:text-4xl text-[#1f2328]">Analysis Results</h2>
-            <div className="flex items-center gap-3 mt-2">
-              <span className="text-sm text-[#636c76] font-medium">
-                {analysis.timeFrame.start} — {analysis.timeFrame.end}
-              </span>
-              <span className="w-1 h-1 rounded-full bg-[#d1d9e0]"></span>
-              <span className="font-mono text-xs px-2 py-1 bg-[#f6f8fa] rounded-md text-[#636c76]">{filename}</span>
-            </div>
-          </div>
+      {/* Info Bar — attached to header */}
+      <div className="-mx-6 -mt-8 mb-6 px-6 py-3 bg-[#f6f8fa] border-b border-[#d1d9e0]">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[#636c76]">
+          <span>File: <span className="font-semibold text-[#1f2328]">{filename}</span></span>
+          <span className="hidden sm:inline text-[#d1d9e0]">|</span>
+          <span>Report window: <span className="font-semibold text-[#1f2328]">{analysis.timeFrame.start} to {analysis.timeFrame.end}</span></span>
+          <span className="hidden sm:inline text-[#d1d9e0]">|</span>
+          <span>Total rows: <span className="font-semibold text-[#1f2328]">{processedData.length.toLocaleString()}</span></span>
         </div>
       </div>
 
       {/* Mobile Navigation */}
       <div className="lg:hidden mb-6">
         <div className="flex flex-wrap gap-2">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <button
               key={item.key}
               onClick={() => setView(item.key)}
@@ -213,7 +246,7 @@ function DataAnalysisInner() {
           <div className="bg-white border border-[#d1d9e0] rounded-md sticky top-24 opacity-0 animate-slide-in-right" style={{ animationDelay: '100ms' }}>
             {/* Navigation */}
             <nav className="p-3 space-y-1">
-              {NAV_ITEMS.map((item) => (
+              {navItems.map((item) => (
                 <button
                   key={item.key}
                   onClick={() => setView(item.key)}
@@ -271,6 +304,8 @@ function DataAnalysisInner() {
               quotaArtifacts={quotaArtifacts}
               usageArtifacts={usageArtifacts}
             />
+          ) : view === 'costCenters' ? (
+            <CostCentersOverview />
           ) : view === 'codingAgent' ? (
             <CodingAgentOverview
               codingAgentUsers={codingAgentAnalysis.users}
@@ -290,6 +325,74 @@ function DataAnalysisInner() {
           ) : (
             /* Overview — chart + model table */
             <div className="space-y-6">
+              {/* Current Billing + Licenses row */}
+              {costMetricsAvailable && aggregatedCosts && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 opacity-0 animate-fade-in-up" style={{ animationDelay: '50ms' }}>
+                  {/* Current Billing */}
+                  <div className="bg-white border border-[#d1d9e0] rounded-md p-5">
+                    <p className="text-xs font-bold text-[#636c76] uppercase tracking-wider text-center mb-3">Current Billing</p>
+                    <p className="text-3xl font-bold text-[#1f2328] text-center">
+                      ${aggregatedCosts.net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-sm text-[#636c76] text-center mt-1">
+                      {processedData.reduce((sum, r) => sum + r.requestsUsed, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PRUs
+                    </p>
+                    <p className="text-xs text-[#636c76] text-center mt-0.5">
+                      1 PRU = ${PRICING.OVERAGE_RATE_PER_REQUEST.toFixed(2)}
+                    </p>
+                    <div className="mt-4 pt-4 border-t border-[#d1d9e0] space-y-2 text-sm" aria-label="billing-summary">
+                      <div className="flex justify-between">
+                        <span className="text-[#636c76]">Gross cost</span>
+                        <span className="font-mono font-medium text-[#1f2328]">
+                          ${aggregatedCosts.gross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[#636c76]">Discounts</span>
+                        <span className="font-mono font-medium text-[#1f2328]">
+                          &minus;${aggregatedCosts.discount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between pt-2 mt-2 border-t-2 border-[#d1d9e0]">
+                        <span className="text-[#1f2328] font-bold">Net cost</span>
+                        <span className="font-mono font-bold text-[#1f2328]">
+                          ${aggregatedCosts.net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Licenses */}
+                  <div className="bg-white border border-[#d1d9e0] rounded-md p-5">
+                    <p className="text-xs font-bold text-[#636c76] uppercase tracking-wider text-center mb-3">Licenses</p>
+                    <p className="text-3xl font-bold text-[#1f2328] text-center">
+                      {analysis.totalUniqueUsers}
+                    </p>
+                    <p className="text-sm text-[#636c76] text-center mt-1">total users</p>
+                    <div className="mt-4 pt-4 border-t border-[#d1d9e0] space-y-2 text-sm">
+                      {analysis.quotaBreakdown.enterprise.length > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-[#636c76]">Copilot Enterprise</span>
+                          <span className="font-mono font-medium text-[#1f2328]">{analysis.quotaBreakdown.enterprise.length}</span>
+                        </div>
+                      )}
+                      {analysis.quotaBreakdown.business.length > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-[#636c76]">Copilot Business</span>
+                          <span className="font-mono font-medium text-[#1f2328]">{analysis.quotaBreakdown.business.length}</span>
+                        </div>
+                      )}
+                      {analysis.quotaBreakdown.unlimited.length > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-[#636c76]">Unlimited</span>
+                          <span className="font-mono font-medium text-[#1f2328]">{analysis.quotaBreakdown.unlimited.length}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Cost per Product */}
               {productCosts.length > 0 && costMetricsAvailable && (
                 <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
@@ -395,33 +498,6 @@ function DataAnalysisInner() {
             <div className="space-y-4">
               <h3 className="text-xs font-bold text-[#636c76] uppercase tracking-wider">Summary</h3>
 
-              {/* Quota Breakdown */}
-              {analysis.quotaBreakdown.mixed && (
-                <div className="badge-amber p-3 rounded-md">
-                  <p className="text-xs font-semibold text-amber-800 mb-2">Mixed Licenses</p>
-                  <div className="text-xs text-amber-700 space-y-1">
-                    {analysis.quotaBreakdown.business.length > 0 && (
-                      <p className="flex justify-between">
-                        <span>Business ({PRICING.BUSINESS_QUOTA})</span>
-                        <span className="font-semibold">{analysis.quotaBreakdown.business.length}</span>
-                      </p>
-                    )}
-                    {analysis.quotaBreakdown.enterprise.length > 0 && (
-                      <p className="flex justify-between">
-                        <span>Enterprise ({PRICING.ENTERPRISE_QUOTA})</span>
-                        <span className="font-semibold">{analysis.quotaBreakdown.enterprise.length}</span>
-                      </p>
-                    )}
-                    {analysis.quotaBreakdown.unlimited.length > 0 && (
-                      <p className="flex justify-between">
-                        <span>Unlimited</span>
-                        <span className="font-semibold">{analysis.quotaBreakdown.unlimited.length}</span>
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-
               <div className="flex items-center justify-between p-3 bg-[#f6f8fa] rounded-md border border-[#d1d9e0]">
                 <span className="text-xs font-medium text-[#636c76]">Monthly Quota</span>
                 <span className="text-sm font-bold text-[#1f2328]">
@@ -460,26 +536,7 @@ function DataAnalysisInner() {
                 </div>
               )}
 
-              {/* Cost Metrics */}
-              {costMetricsAvailable && aggregatedCosts && (
-                <div className="p-4 bg-[#f6f8fa] rounded-md border border-[#d1d9e0]">
-                  <p className="text-xs font-bold text-[#1f2328] mb-3">Billing Summary</p>
-                  <div className="space-y-2 text-sm" aria-label="billing-summary">
-                    <div className="flex justify-between">
-                      <span className="text-[#636c76]">Gross</span>
-                      <span className="font-mono font-medium text-[#1f2328]">${aggregatedCosts.gross.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#636c76]">Discounts</span>
-                      <span className="font-mono font-medium text-emerald-600">-${aggregatedCosts.discount.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between pt-2 mt-2 border-t-2 border-[#d1d9e0]">
-                      <span className="text-[#1f2328] font-bold">Net</span>
-                      <span className="font-mono font-bold text-[#1f2328] text-base">${aggregatedCosts.net.toFixed(2)}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
+
             </div>
           </div>
         </aside>
