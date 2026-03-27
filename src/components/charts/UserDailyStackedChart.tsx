@@ -26,19 +26,17 @@ export function UserDailyStackedChart({ data, models, modelColors, quotaValue, t
   return (
     <ResponsiveContainer width="100%" height={height}>
       <ComposedChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
         <XAxis 
           dataKey="date" 
-          stroke="#6b7280"
-          fontSize={12}
+          tick={{ fill: '#636c76', fontSize: 11 }}
           tickFormatter={(value) => {
             const date = new Date(value);
             return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
           }}
         />
         <YAxis 
-          stroke="#6b7280" 
-          fontSize={12}
+          tick={{ fill: '#636c76', fontSize: 11 }}
           domain={[0, (dataMax: number) => {
             const quotaLimit = quotaValue === 'unlimited' ? 0 : quotaValue;
             return Math.max(quotaLimit, dataMax);
@@ -70,9 +68,9 @@ export function UserDailyStackedChart({ data, models, modelColors, quotaValue, t
         <Line
           type="monotone"
           dataKey="totalCumulative"
-          stroke="#1f2937"
+          stroke="#1f2328"
           strokeWidth={3}
-          dot={{ fill: '#1f2937', r: 4 }}
+          dot={{ fill: '#1f2328', r: 4 }}
           activeDot={{ r: 6 }}
           name="Cumulative Total"
         />

@@ -191,7 +191,8 @@ export function UsersConsumptionHeatmap({
             x="500"
             y="20"
             textAnchor="middle"
-            className="text-sm font-medium fill-gray-700"
+            className="text-sm font-medium"
+            fill="#1f2328"
           >
             User Consumption Density Over Time ({users.length} users)
           </text>
@@ -202,7 +203,8 @@ export function UsersConsumptionHeatmap({
             y={topMargin + chartHeight / 2}
             textAnchor="middle"
             transform={`rotate(-90, 20, ${topMargin + chartHeight / 2})`}
-            className="text-xs font-medium fill-gray-600"
+            className="text-xs font-medium"
+            fill="#636c76"
           >
             Premium Requests Used
           </text>
@@ -252,7 +254,8 @@ export function UsersConsumptionHeatmap({
                   <text
                     x={chartWidth + 5}
                     y={line.y + 4}
-                    className="text-xs fill-gray-700"
+                    className="text-xs"
+                    fill="#636c76"
                     style={{ fontSize: '11px' }}
                   >
                     {line.label}
@@ -271,14 +274,15 @@ export function UsersConsumptionHeatmap({
                     y1={y}
                     x2={0}
                     y2={y}
-                    stroke="#6b7280"
+                    stroke="#636c76"
                     strokeWidth={1}
                   />
                   <text
                     x={-10}
                     y={y + 4}
                     textAnchor="end"
-                    className="text-xs fill-gray-600"
+                    className="text-xs"
+                    fill="#636c76"
                   >
                     {Math.round(binIndex * binSize)}
                   </text>
@@ -292,7 +296,7 @@ export function UsersConsumptionHeatmap({
               y1={chartHeight}
               x2={1000 - leftMargin - rightMargin}
               y2={chartHeight}
-              stroke="#6b7280"
+              stroke="#636c76"
               strokeWidth={1}
             />
 
@@ -308,14 +312,15 @@ export function UsersConsumptionHeatmap({
                     y1={chartHeight}
                     x2={x}
                     y2={chartHeight + 5}
-                    stroke="#6b7280"
+                    stroke="#636c76"
                     strokeWidth={1}
                   />
                   <text
                     x={x}
                     y={chartHeight + 20}
                     textAnchor="middle"
-                    className="text-xs fill-gray-600"
+                    className="text-xs"
+                    fill="#636c76"
                     transform={`rotate(-45, ${x}, ${chartHeight + 20})`}
                   >
                     {formatDate(dates[dateIndex])}
@@ -330,14 +335,14 @@ export function UsersConsumptionHeatmap({
               y1={0}
               x2={0}
               y2={chartHeight}
-              stroke="#6b7280"
+              stroke="#636c76"
               strokeWidth={1}
             />
           </g>
 
           {/* Legend */}
           <g transform={`translate(${leftMargin}, ${topMargin + chartHeight + 60})`}>
-            <text x={0} y={0} className="text-xs font-medium fill-gray-700">
+            <text x={0} y={0} className="text-xs font-medium" fill="#1f2328">
               User Density:
             </text>
             {[
@@ -359,7 +364,7 @@ export function UsersConsumptionHeatmap({
                   stroke="#d1d5db"
                   strokeWidth={1}
                 />
-                <text x={25} y={10} className="text-xs fill-gray-600">
+                <text x={25} y={10} className="text-xs" fill="#636c76">
                   {item.label}
                 </text>
               </g>

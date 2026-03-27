@@ -23,17 +23,16 @@ export function ModelDailyStackedChart({ data, models, modelColors, height = '10
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
         <XAxis
           dataKey="date"
-          stroke="#6b7280"
-          fontSize={12}
+          tick={{ fill: '#636c76', fontSize: 11 }}
           tickFormatter={(value) => {
             const date = new Date(value);
             return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
           }}
         />
-        <YAxis stroke="#6b7280" fontSize={12} />
+        <YAxis tick={{ fill: '#636c76', fontSize: 11 }} />
         <Tooltip
           contentStyle={chartTooltipContentStyle}
           labelStyle={chartTooltipLabelStyle}
@@ -41,7 +40,7 @@ export function ModelDailyStackedChart({ data, models, modelColors, height = '10
           formatter={(value, name) => [Number(value).toFixed(2), String(name)]}
           wrapperStyle={{ zIndex: 1000 }}
         />
-        <Legend />
+        <Legend wrapperStyle={{ fontSize: 12, color: '#636c76' }} />
         {models.map((model) => (
           <Bar
             key={model}

@@ -22,17 +22,16 @@ export function CodingAgentUsageChart({ data, height = '100%' }: CodingAgentUsag
   return (
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
         <XAxis 
           dataKey="date" 
-          stroke="#6b7280"
-          fontSize={12}
+          tick={{ fill: '#636c76', fontSize: 11 }}
           tickFormatter={(value) => {
             const date = new Date(value);
             return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
           }}
         />
-        <YAxis stroke="#6b7280" fontSize={12} />
+        <YAxis tick={{ fill: '#636c76', fontSize: 11 }} />
         <Tooltip 
           labelFormatter={(label) => {
             const date = new Date(label);
@@ -49,7 +48,7 @@ export function CodingAgentUsageChart({ data, height = '100%' }: CodingAgentUsag
         <Line
           type="monotone"
           dataKey="cumulativeRequests"
-          stroke="#3B82F6"
+          stroke="#6366f1"
           strokeWidth={2}
           dot={{ r: 3 }}
           activeDot={{ r: 5 }}
@@ -58,7 +57,7 @@ export function CodingAgentUsageChart({ data, height = '100%' }: CodingAgentUsag
         <Line
           type="monotone"
           dataKey="dailyRequests"
-          stroke="#10B981"
+          stroke="#22c55e"
           strokeWidth={2}
           dot={{ r: 3 }}
           activeDot={{ r: 5 }}
