@@ -107,13 +107,13 @@ export const FullScreenModal: React.FC<FullScreenModalProps> = ({
         {customHeader ? (
           customHeader
         ) : (
-          <header className="flex items-start justify-between px-5 py-4 border-b border-zinc-100">
-            <h2 id="modal-title" className="text-lg font-semibold text-zinc-900">
+          <header className="flex items-start justify-between px-5 py-4 border-b border-[#d1d9e0]">
+            <h2 id="modal-title" className="text-lg font-semibold text-[#1f2328]">
               {title}
             </h2>
             <button
               onClick={onClose}
-              className="ml-4 text-zinc-400 hover:text-zinc-600 transition-colors"
+              className="ml-4 text-[#636c76] hover:text-[#1f2328] transition-colors duration-150"
               aria-label="Close modal"
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
