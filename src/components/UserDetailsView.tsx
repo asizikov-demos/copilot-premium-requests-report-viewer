@@ -14,6 +14,7 @@ import {
   UsageArtifacts,
 } from '@/utils/ingestion';
 import { generateModelColors } from '@/utils/modelColors';
+import { calculateEnterpriseUpgradeSavings } from '@/utils/analytics/costOptimization';
 import { classifyProductCategory } from '@/utils/productClassification';
 import {
   calculateBilledOverageFromRows,
@@ -376,7 +377,7 @@ export function UserDetailsView({
 
         {userActualPlan === 'business' &&
           overageRequests >= COST_OPTIMIZATION_THRESHOLDS.STRONG_CANDIDATE_THRESHOLD && (() => {
-            const potentialSavings = Math.max(0, overageCost - PRICING.ENTERPRISE_UPGRADE_DELTA);
+            const savings = calculateEnterpriseUpgradeSavings(overageRequests);
             return (
               <div className="mt-3 flex items-start gap-3 p-3 bg-[#f0fdf4] border border-[#bbf7d0] rounded-md">
                 <svg className="w-4 h-4 text-[#2da44e] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -386,7 +387,8 @@ export function UserDetailsView({
                   <span className="font-semibold text-[#2da44e]">Upgrade opportunity: </span>
                   This user exceeded the Copilot Business quota by {overageRequests.toFixed(0)} PRUs. Upgrading to{' '}
                   <span className="font-medium">Copilot Enterprise</span> (1,000 included PRUs) would have saved{' '}
-                  <span className="font-semibold text-[#2da44e]">${potentialSavings.toFixed(2)}</span> this period after the ${PRICING.ENTERPRISE_UPGRADE_DELTA} seat upgrade cost.
+                  <span className="font-semibold text-[#2da44e]">${savings.potentialSavings.toFixed(2)}</span> this period after covering{' '}
+                  {savings.avoidedOverageRequests.toFixed(0)} of those PRUs with the additional 700 included requests and applying the ${savings.enterpriseUpgradeCost} seat upgrade cost.
                 </p>
               </div>
             );

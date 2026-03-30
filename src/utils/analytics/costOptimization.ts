@@ -22,6 +22,35 @@ export interface CostOptimizationSummary {
   approachingBreakEven: CostOptimizationCandidate[];
 }
 
+export interface EnterpriseUpgradeSavings {
+  enterpriseExtraCapacity: number;
+  avoidedOverageRequests: number;
+  remainingOverageRequests: number;
+  avoidedOverageCost: number;
+  remainingOverageCost: number;
+  enterpriseUpgradeCost: number;
+  potentialSavings: number;
+}
+
+export function calculateEnterpriseUpgradeSavings(overageRequests: number): EnterpriseUpgradeSavings {
+  const enterpriseExtraCapacity = PRICING.ENTERPRISE_QUOTA - PRICING.BUSINESS_QUOTA;
+  const avoidedOverageRequests = Math.min(Math.max(0, overageRequests), enterpriseExtraCapacity);
+  const remainingOverageRequests = Math.max(0, overageRequests - enterpriseExtraCapacity);
+  const avoidedOverageCost = avoidedOverageRequests * PRICING.OVERAGE_RATE_PER_REQUEST;
+  const remainingOverageCost = remainingOverageRequests * PRICING.OVERAGE_RATE_PER_REQUEST;
+  const enterpriseUpgradeCost = PRICING.ENTERPRISE_UPGRADE_DELTA;
+
+  return {
+    enterpriseExtraCapacity,
+    avoidedOverageRequests,
+    remainingOverageRequests,
+    avoidedOverageCost,
+    remainingOverageCost,
+    enterpriseUpgradeCost,
+    potentialSavings: Math.max(0, avoidedOverageCost - enterpriseUpgradeCost),
+  };
+}
+
 /**
  * Identify Copilot Business users (BUSINESS_QUOTA) whose overage is at least STRONG_CANDIDATE_THRESHOLD requests.
  * These users are strong candidates for upgrading to Copilot Enterprise (ENTERPRISE_QUOTA).
@@ -43,9 +72,7 @@ export function computeCostOptimizationFromArtifacts(
 
     const overageCost = overageRequests * PRICING.OVERAGE_RATE_PER_REQUEST;
     const enterpriseQuota = PRICING.ENTERPRISE_QUOTA;
-    const enterpriseExtraCapacity = enterpriseQuota - q;
-    const enterpriseUpgradeCost = PRICING.ENTERPRISE_UPGRADE_DELTA;
-    const potentialSavings = Math.max(0, overageCost - enterpriseUpgradeCost);
+    const savings = calculateEnterpriseUpgradeSavings(overageRequests);
 
     const baseCandidate: CostOptimizationCandidate = {
       user: u.user,
@@ -54,9 +81,9 @@ export function computeCostOptimizationFromArtifacts(
       overageRequests,
       overageCost,
       enterpriseQuota,
-      enterpriseExtraCapacity,
-      potentialSavings,
-      enterpriseUpgradeCost
+      enterpriseExtraCapacity: savings.enterpriseExtraCapacity,
+      potentialSavings: savings.potentialSavings,
+      enterpriseUpgradeCost: savings.enterpriseUpgradeCost
     };
 
     // Strong recommendation: overage clearly above break-even (>= STRONG_CANDIDATE_THRESHOLD PRUs)
@@ -69,8 +96,8 @@ export function computeCostOptimizationFromArtifacts(
   }
 
   const totalOverageCost = candidates.reduce((sum, c) => sum + c.overageCost, 0);
-  const estimatedEnterpriseCost = candidates.length * PRICING.ENTERPRISE_UPGRADE_DELTA;
-  const totalPotentialSavings = Math.max(0, totalOverageCost - estimatedEnterpriseCost);
+  const estimatedEnterpriseCost = candidates.reduce((sum, candidate) => sum + candidate.enterpriseUpgradeCost, 0);
+  const totalPotentialSavings = candidates.reduce((sum, candidate) => sum + candidate.potentialSavings, 0);
 
   return {
     candidates,
