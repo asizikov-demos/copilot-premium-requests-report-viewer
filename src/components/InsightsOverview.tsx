@@ -252,9 +252,9 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
               </p>
             </div>
 
-            {/* Coding Agent */}
+            {/* Cloud Agent */}
             <div className="p-4 bg-white border border-[#d1d9e0] rounded-md border-l-[3px] border-l-purple-500">
-              <p className="text-xs font-medium text-[#636c76] uppercase tracking-[0.05em] mb-2">Coding Agent</p>
+              <p className="text-xs font-medium text-[#636c76] uppercase tracking-[0.05em] mb-2">Cloud Agent</p>
               <p className="text-2xl font-semibold text-[#1f2328]">
                 {Math.round(featureUtilization.codingAgent.totalSessions)}
               </p>

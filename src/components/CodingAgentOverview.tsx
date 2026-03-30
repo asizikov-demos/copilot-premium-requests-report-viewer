@@ -61,7 +61,7 @@ export function CodingAgentOverview({
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-[#1f2328]">Copilot Coding Agent Adoption</h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-[#1f2328]">Copilot Cloud Agent Adoption</h2>
           <p className="text-sm text-[#636c76] mt-1">
             {adoptionRate.toFixed(0)}% adoption ({codingAgentUsers.length} of {totalUniqueUsers} users)
           </p>

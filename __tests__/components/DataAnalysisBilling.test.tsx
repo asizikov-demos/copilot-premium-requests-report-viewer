@@ -96,7 +96,7 @@ describe('DataAnalysis billing summary', () => {
     await waitFor(() => {
       expect(screen.getByText('Cost per Product')).toBeInTheDocument();
       expect(screen.getByText('Copilot')).toBeInTheDocument();
-      expect(screen.getAllByText('Coding Agent').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Cloud Agent').length).toBeGreaterThan(0);
       expect(screen.getAllByText('Code Review').length).toBeGreaterThan(0);
 
       expect(screen.getByText('Claude Sonnet 4')).toBeInTheDocument();
