@@ -69,14 +69,6 @@ export interface UserDailyData {
   totalCumulative: number; // Running total for line chart
 }
 
-// Props for the new modal component
-export interface UserConsumptionModalProps {
-  user: string;
-  processedData: ProcessedData[]; // Raw data filtered for this user
-  userQuotaValue: number | 'unlimited'; // User's actual quota from CSV
-  onClose: () => void;
-}
-
 // Coding Agent Adoption types
 export interface CodingAgentUser {
   user: string;

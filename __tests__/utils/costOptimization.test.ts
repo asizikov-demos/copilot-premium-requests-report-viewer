@@ -1,4 +1,4 @@
-import { computeCostOptimizationFromArtifacts } from '@/utils/analytics/costOptimization';
+import { calculateEnterpriseUpgradeSavings, computeCostOptimizationFromArtifacts } from '@/utils/analytics/costOptimization';
 import type { UsageArtifacts, QuotaArtifacts } from '@/utils/ingestion';
 import { PRICING } from '@/constants/pricing';
 
@@ -20,6 +20,17 @@ function makeQuota(entries: Array<{ user: string; quota: number | 'unlimited' }>
 }
 
 describe('computeCostOptimizationFromArtifacts', () => {
+  it('caps avoided overage at the extra Enterprise capacity', () => {
+    const savings = calculateEnterpriseUpgradeSavings(741.9);
+
+    expect(savings.enterpriseExtraCapacity).toBe(PRICING.ENTERPRISE_QUOTA - PRICING.BUSINESS_QUOTA);
+    expect(savings.avoidedOverageRequests).toBeCloseTo(700, 5);
+    expect(savings.remainingOverageRequests).toBeCloseTo(41.9, 5);
+    expect(savings.avoidedOverageCost).toBeCloseTo(28, 5);
+    expect(savings.remainingOverageCost).toBeCloseTo(1.676, 5);
+    expect(savings.potentialSavings).toBeCloseTo(8, 5);
+  });
+
   it('returns empty summary when no users qualify', () => {
     const usage = makeUsage([
       { user: 'a', totalRequests: 250 },
@@ -82,8 +93,7 @@ describe('computeCostOptimizationFromArtifacts', () => {
 
     const expectedOverage = 500 + 800;
     expect(res.totalOverageCost).toBeCloseTo(expectedOverage * PRICING.OVERAGE_RATE_PER_REQUEST, 5);
-    // Enterprise upgrade is a fixed per seat cost
     expect(res.estimatedEnterpriseCost).toBeCloseTo(2 * PRICING.ENTERPRISE_UPGRADE_DELTA, 5);
-    expect(res.totalPotentialSavings).toBeGreaterThanOrEqual(0);
+    expect(res.totalPotentialSavings).toBeCloseTo((500 * PRICING.OVERAGE_RATE_PER_REQUEST - 20) + (700 * PRICING.OVERAGE_RATE_PER_REQUEST - 20), 5);
   });
 });

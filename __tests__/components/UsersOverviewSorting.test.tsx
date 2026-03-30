@@ -172,4 +172,55 @@ describe('UsersOverview - sorting', () => {
     fireEvent.change(screen.getByLabelText('Cost center'), { target: { value: 'Security' } });
     expect(getRowUserOrder()).toEqual(['Charlie']);
   });
+
+  it('opens inline user details and returns via breadcrumb', () => {
+    const userData: UserSummary[] = [
+      { user: 'Alice', totalRequests: 10, modelBreakdown: { 'gpt-4': 10 }, organization: 'Org A', costCenter: 'Platform' },
+      { user: 'Bob', totalRequests: 20, modelBreakdown: { 'gpt-4': 20 }, organization: 'Org B', costCenter: 'Security' },
+    ];
+
+    const quotaArtifacts = makeQuota([
+      { user: 'Alice', quota: PRICING.BUSINESS_QUOTA },
+      { user: 'Bob', quota: PRICING.ENTERPRISE_QUOTA },
+    ]);
+
+    const timestamp = new Date('2025-01-01T00:00:00Z');
+    const iso = timestamp.toISOString();
+    const processedData: ProcessedData[] = [
+      {
+        timestamp,
+        user: 'Alice',
+        model: 'gpt-4',
+        requestsUsed: 10,
+        exceedsQuota: false,
+        totalQuota: '300',
+        quotaValue: PRICING.BUSINESS_QUOTA,
+        iso,
+        dateKey: iso.slice(0, 10),
+        monthKey: iso.slice(0, 7),
+        epoch: timestamp.getTime(),
+        organization: 'Org A',
+        costCenter: 'Platform',
+      },
+    ];
+
+    render(
+      <UsersOverview
+        userData={userData}
+        processedData={processedData}
+        allModels={['gpt-4']}
+        dailyCumulativeData={[{ date: '2025-01-01T00:00:00Z', Alice: 10, Bob: 20 }]}
+        quotaArtifacts={quotaArtifacts}
+        usageArtifacts={makeUsage(userData)}
+        onBack={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alice' }));
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'users' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'users' }));
+    expect(screen.getByRole('table')).toBeInTheDocument();
+  });
 });
