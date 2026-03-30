@@ -4,13 +4,12 @@ import { useState, useMemo, useCallback } from 'react';
 import { UsersQuotaConsumptionChart } from './charts/UsersQuotaConsumptionChart';
 import { UsersConsumptionHeatmap } from './charts/UsersConsumptionHeatmap';
 import { ProcessedData } from '@/types/csv';
-import { UserConsumptionModal } from './UserConsumptionModal';
+import { UserDetailsView } from './UserDetailsView';
 import { useSortableTable } from '@/hooks/useSortableTable';
-import { useUserConsumptionModal } from '@/hooks/useUserConsumptionModal';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { PRICING } from '@/constants/pricing';
 import type { UserSummary } from '@/utils/analytics';
-import { getUserQuota, QuotaArtifacts, UsageArtifacts, computeOverageSummaryFromArtifacts } from '@/utils/ingestion';
+import { getUserQuota, QuotaArtifacts, UsageArtifacts, computeOverageSummaryFromProcessedData } from '@/utils/ingestion';
 
 type DailyCumulativeData = { date: string; [user: string]: string | number };
 const ALL_FILTERS_VALUE = '__all__';
@@ -53,8 +52,8 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedOrganization, setSelectedOrganization] = useState(ALL_FILTERS_VALUE);
   const [selectedCostCenter, setSelectedCostCenter] = useState(ALL_FILTERS_VALUE);
+  const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const isMobile = useIsMobile();
-  const { selectedUser, open: openUserModal, close: closeUserModal, isOpen } = useUserConsumptionModal();
 
   const ROWS_PER_PAGE = 50;
 
@@ -128,9 +127,14 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
   }, [usageArtifacts, filteredUserData]);
 
   // Calculate total overage directly from artifacts (O(U))
+  const filteredProcessedData = useMemo(() => {
+    const filteredUsers = new Set(filteredUserData.map((user) => user.user));
+    return processedData.filter((row) => filteredUsers.has(row.user));
+  }, [filteredUserData, processedData]);
+
   const { totalOverageRequests, totalOverageCost } = useMemo(() => (
-    computeOverageSummaryFromArtifacts(filteredUsageArtifacts, quotaArtifacts)
-  ), [filteredUsageArtifacts, quotaArtifacts]);
+    computeOverageSummaryFromProcessedData(filteredProcessedData)
+  ), [filteredProcessedData]);
   
   // Memoize quota types calculation for chart display - NOW using O(1) quota map!
   const quotaInfo = useMemo(() => {
@@ -178,6 +182,17 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
   }, [filteredUserData]);
 
   const { users: chartUsers, colors: userColors } = chartData;
+
+  if (selectedUser) {
+    return (
+      <UserDetailsView
+        user={selectedUser}
+        processedData={processedData}
+        userQuotaValue={getUserQuota(quotaArtifacts, selectedUser)}
+        onBack={() => setSelectedUser(null)}
+      />
+    );
+  }
 
   return (
     <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden h-full flex flex-col">
@@ -368,7 +383,7 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                 return (
                 <button
                   key={user.user}
-                  onClick={() => openUserModal(user.user)}
+                  onClick={() => setSelectedUser(user.user)}
                   className="w-full bg-[#f6f8fa] rounded-md p-4 hover:bg-[#eef1f4] transition-colors duration-150 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <div className="flex justify-between items-start mb-1">
@@ -480,7 +495,7 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                 <tr key={user.user} className="hover:bg-[#fcfdff] transition-colors duration-150">
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-medium sticky left-0 z-10 bg-white border-r border-[#d1d9e0]">
                     <button
-                      onClick={() => openUserModal(user.user)}
+                      onClick={() => setSelectedUser(user.user)}
                       className="text-indigo-600 hover:text-indigo-800 hover:underline focus:outline-none"
                       title={`View ${user.user}&apos;s details`}
                     >
@@ -583,16 +598,6 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
         <div className="px-6 py-8 text-center text-[#636c76] flex-shrink-0">
           No users match the current filters
         </div>
-      )}
-      
-      {/* User Consumption Modal */}
-      {isOpen && selectedUser && (
-        <UserConsumptionModal
-          user={selectedUser}
-          processedData={processedData}
-          userQuotaValue={getUserQuota(quotaArtifacts, selectedUser)}
-          onClose={closeUserModal}
-        />
       )}
     </div>
   );
