@@ -58,10 +58,45 @@ export function calculateBilledOverageFromRows(
     return { overageRequests: 0, overageCost: 0, hasBilledOverageData: false };
   }
 
+  const hasBillingAmounts = billedRows.some((record) =>
+    [record.netAmount, record.grossAmount, record.discountAmount].some(
+      (value) => typeof value === 'number' && Number.isFinite(value)
+    )
+  );
+
+  const overageRequests = billedRows.reduce((total, record) => total + record.requestsUsed, 0);
+
+  const overageCost = hasBillingAmounts
+    ? billedRows.reduce((total, record) => {
+        const netAmount =
+          typeof record.netAmount === 'number' && Number.isFinite(record.netAmount)
+            ? record.netAmount
+            : undefined;
+        const grossAmount =
+          typeof record.grossAmount === 'number' && Number.isFinite(record.grossAmount)
+            ? record.grossAmount
+            : undefined;
+        const discountAmount =
+          typeof record.discountAmount === 'number' && Number.isFinite(record.discountAmount)
+            ? record.discountAmount
+            : undefined;
+
+        if (netAmount !== undefined) {
+          return total + netAmount;
+        }
+
+        if (grossAmount !== undefined) {
+          return total + (grossAmount - (discountAmount ?? 0));
+        }
+
+        return total;
+      }, 0)
+    : 0;
+
   return {
-    overageRequests: billedRows.reduce((total, record) => total + record.requestsUsed, 0),
-    overageCost: billedRows.reduce((total, record) => total + (record.netAmount ?? 0), 0),
-    hasBilledOverageData: true,
+    overageRequests,
+    overageCost,
+    hasBilledOverageData: hasBillingAmounts,
   };
 }
 

@@ -240,8 +240,17 @@ export function computeOverageSummaryFromProcessedData(processedData: ProcessedD
 
   for (const row of processedData) {
     totalsByUser.set(row.user, (totalsByUser.get(row.user) ?? 0) + row.requestsUsed);
-    if (!quotaByUser.has(row.user)) {
-      quotaByUser.set(row.user, row.quotaValue);
+    const existingQuota = quotaByUser.get(row.user);
+    const incomingQuota = row.quotaValue;
+
+    if (existingQuota === undefined) {
+      quotaByUser.set(row.user, incomingQuota);
+    } else if (existingQuota === 'unlimited' || incomingQuota === existingQuota) {
+      continue;
+    } else if (incomingQuota === 'unlimited') {
+      quotaByUser.set(row.user, incomingQuota);
+    } else if (typeof existingQuota === 'number' && typeof incomingQuota === 'number' && incomingQuota > existingQuota) {
+      quotaByUser.set(row.user, incomingQuota);
     }
   }
 

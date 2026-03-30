@@ -112,9 +112,17 @@ export function UserDetailsView({
       return [];
     }
 
-    const allSorted = [...processedData].sort((left, right) => left.epoch - right.epoch);
-    const start = allSorted[0].epoch;
-    const end = allSorted[allSorted.length - 1].epoch;
+    let start = Number.POSITIVE_INFINITY;
+    let end = Number.NEGATIVE_INFINITY;
+
+    for (const row of processedData) {
+      if (row.epoch < start) {
+        start = row.epoch;
+      }
+      if (row.epoch > end) {
+        end = row.epoch;
+      }
+    }
     const models = Array.from(new Set(userRows.map((row) => row.model))).sort();
     const byDate = new Map<string, ProcessedData[]>();
 
@@ -323,22 +331,22 @@ export function UserDetailsView({
         <nav aria-label="Breadcrumb">
           <ol className="flex items-center gap-2">
             <li>
-              <button
-                type="button"
-                onClick={onBack}
-                className="text-2xl font-semibold tracking-tight text-[#0969da] hover:underline"
-              >
-                users
-              </button>
+                <button
+                  type="button"
+                  onClick={onBack}
+                  className="text-2xl font-semibold tracking-tight text-[#0969da] hover:underline focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white rounded-sm"
+                >
+                  users
+                </button>
             </li>
             <li aria-hidden="true" className="text-2xl font-semibold tracking-tight text-[#8c959f]">/</li>
             <li>
-              <button
-                type="button"
-                onClick={handleCopyUser}
-                title="Click to copy username"
-                className="text-2xl font-semibold tracking-tight text-[#1f2328] hover:text-indigo-600 transition-colors duration-150 focus:outline-none inline-flex items-center gap-2 group"
-              >
+                <button
+                  type="button"
+                  onClick={handleCopyUser}
+                  title="Click to copy username"
+                  className="text-2xl font-semibold tracking-tight text-[#1f2328] hover:text-indigo-600 transition-colors duration-150 focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white rounded-sm inline-flex items-center gap-2 group"
+                >
                 {user}
                 <svg
                   className="w-5 h-5 text-[#636c76] group-hover:text-indigo-600 transition-colors duration-150"

@@ -97,37 +97,122 @@ describe('computeOverageSummaryFromArtifacts', () => {
 });
 
 describe('computeOverageSummaryFromProcessedData', () => {
-  it('prefers billed overage rows when present', () => {
-    const makeRow = (
-      requestsUsed: number,
-      exceedsQuota: boolean,
-      netAmount: number,
-      dateKey: string
-    ): ProcessedData => ({
-      timestamp: new Date(`${dateKey}T00:00:00Z`),
-      user: 'alice',
-      model: 'GPT-5',
-      requestsUsed,
-      exceedsQuota,
-      totalQuota: '1000',
-      quotaValue: PRICING.ENTERPRISE_QUOTA,
-      iso: `${dateKey}T00:00:00.000Z`,
-      dateKey,
-      monthKey: dateKey.slice(0, 7),
-      epoch: new Date(`${dateKey}T00:00:00Z`).getTime(),
-      grossAmount: requestsUsed * PRICING.OVERAGE_RATE_PER_REQUEST,
-      discountAmount: exceedsQuota ? 0 : requestsUsed * PRICING.OVERAGE_RATE_PER_REQUEST,
-      netAmount,
-    });
+  const makeRow = ({
+    user = 'alice',
+    requestsUsed,
+    exceedsQuota,
+    netAmount,
+    grossAmount,
+    discountAmount,
+    quotaValue = PRICING.ENTERPRISE_QUOTA,
+    dateKey,
+  }: {
+    user?: string;
+    requestsUsed: number;
+    exceedsQuota: boolean;
+    netAmount?: number;
+    grossAmount?: number;
+    discountAmount?: number;
+    quotaValue?: number | 'unlimited';
+    dateKey: string;
+  }): ProcessedData => ({
+    timestamp: new Date(`${dateKey}T00:00:00Z`),
+    user,
+    model: 'GPT-5',
+    requestsUsed,
+    exceedsQuota,
+    totalQuota: quotaValue === 'unlimited' ? 'Unlimited' : quotaValue.toString(),
+    quotaValue,
+    iso: `${dateKey}T00:00:00.000Z`,
+    dateKey,
+    monthKey: dateKey.slice(0, 7),
+    epoch: new Date(`${dateKey}T00:00:00Z`).getTime(),
+    grossAmount,
+    discountAmount,
+    netAmount,
+  });
 
+  it('prefers billed overage rows when present', () => {
     const result = computeOverageSummaryFromProcessedData([
-      makeRow(999, false, 0, '2025-10-17'),
-      makeRow(1, false, 0, '2025-10-18'),
-      makeRow(94, true, 94 * PRICING.OVERAGE_RATE_PER_REQUEST, '2025-10-18'),
-      makeRow(10, true, 10 * PRICING.OVERAGE_RATE_PER_REQUEST, '2025-10-19'),
+      makeRow({
+        requestsUsed: 999,
+        exceedsQuota: false,
+        netAmount: 0,
+        grossAmount: 999 * PRICING.OVERAGE_RATE_PER_REQUEST,
+        discountAmount: 999 * PRICING.OVERAGE_RATE_PER_REQUEST,
+        dateKey: '2025-10-17',
+      }),
+      makeRow({
+        requestsUsed: 1,
+        exceedsQuota: false,
+        netAmount: 0,
+        grossAmount: PRICING.OVERAGE_RATE_PER_REQUEST,
+        discountAmount: PRICING.OVERAGE_RATE_PER_REQUEST,
+        dateKey: '2025-10-18',
+      }),
+      makeRow({
+        requestsUsed: 94,
+        exceedsQuota: true,
+        netAmount: 94 * PRICING.OVERAGE_RATE_PER_REQUEST,
+        grossAmount: 94 * PRICING.OVERAGE_RATE_PER_REQUEST,
+        discountAmount: 0,
+        dateKey: '2025-10-18',
+      }),
+      makeRow({
+        requestsUsed: 10,
+        exceedsQuota: true,
+        netAmount: 10 * PRICING.OVERAGE_RATE_PER_REQUEST,
+        grossAmount: 10 * PRICING.OVERAGE_RATE_PER_REQUEST,
+        discountAmount: 0,
+        dateKey: '2025-10-19',
+      }),
     ]);
 
     expect(result.totalOverageRequests).toBe(104);
     expect(result.totalOverageCost).toBeCloseTo(104 * PRICING.OVERAGE_RATE_PER_REQUEST, 5);
+  });
+
+  it('falls back to estimated overage when billed rows have no billing amounts', () => {
+    const result = computeOverageSummaryFromProcessedData([
+      makeRow({
+        user: 'alice',
+        requestsUsed: 1000,
+        exceedsQuota: false,
+        quotaValue: PRICING.ENTERPRISE_QUOTA,
+        dateKey: '2025-10-17',
+      }),
+      makeRow({
+        user: 'alice',
+        requestsUsed: 25,
+        exceedsQuota: true,
+        quotaValue: PRICING.ENTERPRISE_QUOTA,
+        dateKey: '2025-10-18',
+      }),
+    ]);
+
+    expect(result.totalOverageRequests).toBe(25);
+    expect(result.totalOverageCost).toBeCloseTo(25 * PRICING.OVERAGE_RATE_PER_REQUEST, 5);
+  });
+
+  it('resolves mixed quota rows using the higher effective quota', () => {
+    const result = computeOverageSummaryFromProcessedData([
+      makeRow({
+        user: 'alice',
+        requestsUsed: 800,
+        exceedsQuota: false,
+        quotaValue: PRICING.BUSINESS_QUOTA,
+        dateKey: '2025-10-17',
+      }),
+      makeRow({
+        user: 'alice',
+        requestsUsed: 150,
+        exceedsQuota: false,
+        quotaValue: PRICING.ENTERPRISE_QUOTA,
+        dateKey: '2025-10-18',
+      }),
+    ]);
+
+    expect(result.totalOverageRequests).toBe(0);
+    expect(result.totalOverageCost).toBe(0);
   });
 });

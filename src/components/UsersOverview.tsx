@@ -126,7 +126,8 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
     };
   }, [usageArtifacts, filteredUserData]);
 
-  // Calculate total overage directly from artifacts (O(U))
+  // Calculate total overage for the currently filtered users, preferring billed rows
+  // when present and falling back to quota-derived estimates otherwise.
   const filteredProcessedData = useMemo(() => {
     const filteredUsers = new Set(filteredUserData.map((user) => user.user));
     return processedData.filter((row) => filteredUsers.has(row.user));
