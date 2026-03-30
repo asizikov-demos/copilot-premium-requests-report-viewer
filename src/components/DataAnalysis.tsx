@@ -183,11 +183,11 @@ function DataAnalysisInner() {
     (row) => row.gross > 0 || row.discount > 0 || row.net > 0
   );
 
-  // Per-product cost aggregation (Coding Agent, Code Review, Copilot)
+  // Per-product cost aggregation (Cloud Agent, Code Review, Copilot)
   type ProductCost = { label: string; requests: number; gross: number; discount: number; net: number };
   const productCosts = useMemo((): ProductCost[] => {
     const buckets = {
-      codingAgent: { label: 'Coding Agent', requests: 0, gross: 0, discount: 0, net: 0 },
+      codingAgent: { label: 'Cloud Agent', requests: 0, gross: 0, discount: 0, net: 0 },
       codeReview: { label: 'Code Review', requests: 0, gross: 0, discount: 0, net: 0 },
       copilot: { label: 'Copilot', requests: 0, gross: 0, discount: 0, net: 0 },
     };
