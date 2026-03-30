@@ -384,11 +384,9 @@ export function UserDetailsView({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <p className="text-sm text-[#1f2328]">
-                  <span className="font-semibold text-[#2da44e]">Upgrade opportunity: </span>
-                  This user exceeded the Copilot Business quota by {overageRequests.toFixed(0)} PRUs. Upgrading to{' '}
-                  <span className="font-medium">Copilot Enterprise</span> (1,000 included PRUs) would have saved{' '}
-                  <span className="font-semibold text-[#2da44e]">${savings.potentialSavings.toFixed(2)}</span> this period after covering{' '}
-                  {savings.avoidedOverageRequests.toFixed(0)} of those PRUs with the additional 700 included requests and applying the ${savings.enterpriseUpgradeCost} seat upgrade cost.
+                  <span className="font-semibold text-[#2da44e]">Cost saving opportunity: </span>
+                  Upgrading this user to <span className="font-medium">Copilot Enterprise</span> would have saved{' '}
+                  <span className="font-semibold text-[#2da44e]">${savings.potentialSavings.toFixed(2)}</span> this period.
                 </p>
               </div>
             );
