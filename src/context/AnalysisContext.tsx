@@ -73,8 +73,7 @@ interface AnalysisContextValue {
 }
 
 // Exporting the raw context as well (in addition to hook) enables optional consumption
-// in components that want to gracefully fallback when provider is absent (e.g. tests
-// that mount a component in isolation like UserConsumptionModal).
+// in components that want to gracefully fallback when provider is absent in tests.
 export const AnalysisContext = createContext<AnalysisContextValue | null>(null);
 
 export function AnalysisProvider({ ingestionResult, filename, onReset, children }: AnalysisProviderProps) {

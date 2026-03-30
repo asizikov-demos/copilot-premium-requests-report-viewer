@@ -379,9 +379,9 @@ function enumerateDatesInclusive(start: string, end: string): string[] {
 }
 
 /**
- * Build per-user per-model daily stacked + cumulative dataset consumed by UserConsumptionModal
- * WITHOUT scanning raw rows. Requires DailyBucketsAggregator (with dailyUserModelTotals) + Usage artifacts.
- * Falls back to empty array if prerequisite artifact shape incomplete.
+ * Build per-user per-model daily stacked + cumulative dataset for user detail views
+ * WITHOUT scanning raw rows. Requires DailyBucketsAggregator (with dailyUserModelTotals)
+ * + Usage artifacts. Falls back to empty array if prerequisite artifact shape incomplete.
  */
 export function buildUserDailyModelDataFromArtifacts(
   daily: DailyBucketsArtifacts,
