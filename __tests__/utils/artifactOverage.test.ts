@@ -1,6 +1,7 @@
-import { computeOverageSummaryFromArtifacts } from '@/utils/ingestion/analytics';
+import { computeOverageSummaryFromArtifacts, computeOverageSummaryFromProcessedData } from '@/utils/ingestion/analytics';
 import type { UsageArtifacts, QuotaArtifacts } from '@/utils/ingestion';
 import { PRICING } from '@/constants/pricing';
+import type { ProcessedData } from '@/types/csv';
 
 describe('computeOverageSummaryFromArtifacts', () => {
   function makeUsage(users: Array<{ user: string; totalRequests: number; modelBreakdown?: Record<string, number> }>): UsageArtifacts {
@@ -92,5 +93,41 @@ describe('computeOverageSummaryFromArtifacts', () => {
     const res = computeOverageSummaryFromArtifacts(usage, quota);
     expect(res.totalOverageRequests).toBe(0);
     expect(res.totalOverageCost).toBe(0);
+  });
+});
+
+describe('computeOverageSummaryFromProcessedData', () => {
+  it('prefers billed overage rows when present', () => {
+    const makeRow = (
+      requestsUsed: number,
+      exceedsQuota: boolean,
+      netAmount: number,
+      dateKey: string
+    ): ProcessedData => ({
+      timestamp: new Date(`${dateKey}T00:00:00Z`),
+      user: 'alice',
+      model: 'GPT-5',
+      requestsUsed,
+      exceedsQuota,
+      totalQuota: '1000',
+      quotaValue: PRICING.ENTERPRISE_QUOTA,
+      iso: `${dateKey}T00:00:00.000Z`,
+      dateKey,
+      monthKey: dateKey.slice(0, 7),
+      epoch: new Date(`${dateKey}T00:00:00Z`).getTime(),
+      grossAmount: requestsUsed * PRICING.OVERAGE_RATE_PER_REQUEST,
+      discountAmount: exceedsQuota ? 0 : requestsUsed * PRICING.OVERAGE_RATE_PER_REQUEST,
+      netAmount,
+    });
+
+    const result = computeOverageSummaryFromProcessedData([
+      makeRow(999, false, 0, '2025-10-17'),
+      makeRow(1, false, 0, '2025-10-18'),
+      makeRow(94, true, 94 * PRICING.OVERAGE_RATE_PER_REQUEST, '2025-10-18'),
+      makeRow(10, true, 10 * PRICING.OVERAGE_RATE_PER_REQUEST, '2025-10-19'),
+    ]);
+
+    expect(result.totalOverageRequests).toBe(104);
+    expect(result.totalOverageCost).toBeCloseTo(104 * PRICING.OVERAGE_RATE_PER_REQUEST, 5);
   });
 });

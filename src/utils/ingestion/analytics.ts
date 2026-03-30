@@ -10,12 +10,12 @@
  */
 
 import { PRICING } from '@/constants/pricing';
-import type { AnalysisResults } from '@/types/csv';
+import type { AnalysisResults, ProcessedData } from '@/types/csv';
 import type { CodeReviewAnalysis } from '@/types/csv';
 import type { QuotaArtifacts, UsageArtifacts, DailyBucketsArtifacts, FeatureUsageArtifacts } from './types';
 export type { DailyBucketsArtifacts } from './types';
 import type { FeatureUtilizationStats } from '@/utils/analytics/insights';
-import { calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
+import { calculateBilledOverageFromRows, calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
 import { CodingAgentAnalysis, UserDailyData } from '@/types/csv';
 // Legacy DailyCodingAgentUsageDatum type recreated locally (originally from codingAgent.ts)
 export interface DailyCodingAgentUsageDatum { date: string; dailyRequests: number; cumulativeRequests: number; }
@@ -223,6 +223,33 @@ export function computeOverageSummaryFromArtifacts(usage: UsageArtifacts, quota:
     const q = quota.quotaByUser.get(u.user) ?? 'unlimited';
     totalOverageRequests += calculateOverageRequests(u.totalRequests, q);
   }
+  return { totalOverageRequests, totalOverageCost: calculateOverageCost(totalOverageRequests) };
+}
+
+export function computeOverageSummaryFromProcessedData(processedData: ProcessedData[]): OverageSummary {
+  const billed = calculateBilledOverageFromRows(processedData);
+  if (billed.hasBilledOverageData) {
+    return {
+      totalOverageRequests: billed.overageRequests,
+      totalOverageCost: billed.overageCost,
+    };
+  }
+
+  const totalsByUser = new Map<string, number>();
+  const quotaByUser = new Map<string, number | 'unlimited'>();
+
+  for (const row of processedData) {
+    totalsByUser.set(row.user, (totalsByUser.get(row.user) ?? 0) + row.requestsUsed);
+    if (!quotaByUser.has(row.user)) {
+      quotaByUser.set(row.user, row.quotaValue);
+    }
+  }
+
+  let totalOverageRequests = 0;
+  for (const [user, totalRequests] of totalsByUser) {
+    totalOverageRequests += calculateOverageRequests(totalRequests, quotaByUser.get(user) ?? 'unlimited');
+  }
+
   return { totalOverageRequests, totalOverageCost: calculateOverageCost(totalOverageRequests) };
 }
 

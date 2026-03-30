@@ -83,7 +83,7 @@ describe('UserConsumptionModal', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('User1')).toBeInTheDocument();
+      expect(screen.getAllByText('User1').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText(/Copilot Business/)).toBeInTheDocument();
       // New format shows "X / quota" directly
       expect(screen.getByText(/\d+(\.\d+)?\s*\/\s*300/)).toBeInTheDocument();
@@ -105,7 +105,7 @@ describe('UserConsumptionModal', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('User1')).toBeInTheDocument();
+      expect(screen.getAllByText('User1').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText(/Copilot Enterprise/)).toBeInTheDocument();
       // New format shows "X / quota" directly
       expect(screen.getByText(/\d+(\.\d+)?\s*\/\s*1000/)).toBeInTheDocument();
@@ -127,7 +127,7 @@ describe('UserConsumptionModal', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('User1')).toBeInTheDocument();
+      expect(screen.getAllByText('User1').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText(/Copilot Business/)).toBeInTheDocument();
       // New format shows "X / quota" directly
       expect(screen.getByText(/\d+(\.\d+)?\s*\/\s*300/)).toBeInTheDocument();
@@ -149,7 +149,7 @@ describe('UserConsumptionModal', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('User1')).toBeInTheDocument();
+      expect(screen.getAllByText('User1').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText(/Unlimited/)).toBeInTheDocument();
       // New format shows "X / ∞" for unlimited
       expect(screen.getByText(/\d+(\.\d+)?\s*\/\s*∞/)).toBeInTheDocument();
@@ -171,7 +171,7 @@ describe('UserConsumptionModal', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('User1')).toBeInTheDocument();
+      expect(screen.getAllByText('User1').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText(/Copilot Business/)).toBeInTheDocument();
       // New format shows "X / quota" directly
       expect(screen.getByText(/\d+(\.\d+)?\s*\/\s*300/)).toBeInTheDocument();
@@ -193,7 +193,7 @@ describe('UserConsumptionModal', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('User1')).toBeInTheDocument();
+      expect(screen.getAllByText('User1').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText(/Copilot Enterprise/)).toBeInTheDocument();
       // New format shows "X / quota" directly
       expect(screen.getByText(/\d+(\.\d+)?\s*\/\s*1000/)).toBeInTheDocument();

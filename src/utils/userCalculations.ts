@@ -44,6 +44,28 @@ export function calculateOverageCost(overageRequests: number): number {
 }
 
 /**
+ * Calculate billed overage requests and cost from report rows when billing fields are present.
+ * Falls back to zeros when the report does not contain any explicit overage rows.
+ */
+export function calculateBilledOverageFromRows(
+  processedData: ProcessedData[],
+  userName?: string
+): { overageRequests: number; overageCost: number; hasBilledOverageData: boolean } {
+  const rows = userName ? processedData.filter((record) => record.user === userName) : processedData;
+  const billedRows = rows.filter((record) => record.exceedsQuota);
+
+  if (billedRows.length === 0) {
+    return { overageRequests: 0, overageCost: 0, hasBilledOverageData: false };
+  }
+
+  return {
+    overageRequests: billedRows.reduce((total, record) => total + record.requestsUsed, 0),
+    overageCost: billedRows.reduce((total, record) => total + (record.netAmount ?? 0), 0),
+    hasBilledOverageData: true,
+  };
+}
+
+/**
  * Get filtered user data for a specific user
  */
 export function getUserData(
