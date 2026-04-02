@@ -33,8 +33,8 @@ describe('FeatureUsageAggregator', () => {
       makeRow({ user: 'u2', model: 'code review session', quantity: 2 }),
       makeRow({ user: 'u1', model: 'Coding Agent', quantity: 5 }),
       makeRow({ user: 'u3', model: 'Padawan', quantity: 4 }),
-      makeRow({ user: 'u2', model: 'Spark', quantity: 7 }),
-      makeRow({ user: 'u4', model: 'Spark Playground', quantity: 1 })
+      makeRow({ user: 'u2', model: 'gpt-4.1', product: 'spark', sku: 'spark_premium_request', quantity: 7 }),
+      makeRow({ user: 'u4', model: 'o3-mini', product: 'spark', sku: 'spark_premium_request', quantity: 1 })
     ];
     for (const r of rows) agg.onRow(r, ctx);
     const out = agg.finalize(ctx);
