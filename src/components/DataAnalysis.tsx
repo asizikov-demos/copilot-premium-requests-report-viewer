@@ -8,6 +8,7 @@ import { CodingAgentOverview } from './CodingAgentOverview';
 import { InsightsOverview } from './InsightsOverview';
 import { CostOptimizationInsights } from './CostOptimizationInsights';
 import { CostCentersOverview } from './CostCentersOverview';
+import { OrganizationsOverview } from './OrganizationsOverview';
 import { PRICING } from '@/constants/pricing';
 import { AnalysisProvider, useAnalysisContext } from '@/context/AnalysisContext';
 import { getModelColor } from '@/utils/modelColors';
@@ -20,7 +21,7 @@ interface DataAnalysisProps {
 }
 
 type NavigationItem = {
-  key: 'overview' | 'users' | 'costCenters' | 'codingAgent' | 'insights' | 'costOptimization' | 'modelTrends';
+  key: 'overview' | 'users' | 'costCenters' | 'organizations' | 'codingAgent' | 'insights' | 'costOptimization' | 'modelTrends';
   label: string;
   icon: React.ReactNode;
 };
@@ -31,6 +32,16 @@ const COST_CENTERS_NAV_ITEM: NavigationItem = {
   icon: (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3H21m-3.75 3H21" />
+    </svg>
+  ),
+};
+
+const ORGANIZATIONS_NAV_ITEM: NavigationItem = {
+  key: 'organizations' as const,
+  label: 'Organizations',
+  icon: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
     </svg>
   ),
 };
@@ -122,20 +133,31 @@ function DataAnalysisInner() {
     return baseProcessed.some((row) => row.costCenter);
   }, [baseProcessed]);
 
+  const hasOrganizations = useMemo(() => {
+    return baseProcessed.some((row) => row.organization);
+  }, [baseProcessed]);
+
   useEffect(() => {
     if (!hasCostCenters && view === 'costCenters') {
       setView('overview');
     }
-  }, [hasCostCenters, setView, view]);
+    if (!hasOrganizations && view === 'organizations') {
+      setView('overview');
+    }
+  }, [hasCostCenters, hasOrganizations, setView, view]);
 
   const navItems = useMemo(() => {
     const items = [...NAV_ITEMS];
+    let insertIdx = 2; // After 'users'
     if (hasCostCenters) {
-      // Insert after 'users' (index 1)
-      items.splice(2, 0, COST_CENTERS_NAV_ITEM);
+      items.splice(insertIdx, 0, COST_CENTERS_NAV_ITEM);
+      insertIdx++;
+    }
+    if (hasOrganizations) {
+      items.splice(insertIdx, 0, ORGANIZATIONS_NAV_ITEM);
     }
     return items;
-  }, [hasCostCenters]);
+  }, [hasCostCenters, hasOrganizations]);
 
   const processedCosts = useMemo(() => {
     const hasBillingData = processedData.some(
@@ -278,13 +300,14 @@ function DataAnalysisInner() {
             <UsersOverview
               userData={userData}
               processedData={processedData}
-              allModels={allModels}
               dailyCumulativeData={dailyCumulativeData}
               quotaArtifacts={quotaArtifacts}
               usageArtifacts={usageArtifacts}
             />
           ) : view === 'costCenters' ? (
             <CostCentersOverview />
+          ) : view === 'organizations' ? (
+            <OrganizationsOverview />
           ) : view === 'codingAgent' ? (
             <CodingAgentOverview
               codingAgentUsers={codingAgentAnalysis.users}

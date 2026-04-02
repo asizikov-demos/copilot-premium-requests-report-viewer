@@ -242,7 +242,7 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
         <div className="p-5">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Code Review */}
-            <div className="p-4 bg-white border border-[#d1d9e0] rounded-md border-l-[3px] border-l-blue-500">
+            <div className="p-4 bg-white border border-[#d1d9e0] rounded-md">
               <p className="text-xs font-medium text-[#636c76] uppercase tracking-[0.05em] mb-2">Code Review</p>
               <p className="text-2xl font-semibold text-[#1f2328]">
                 {Math.round(featureUtilization.codeReview.totalSessions)}
@@ -253,7 +253,7 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
             </div>
 
             {/* Cloud Agent */}
-            <div className="p-4 bg-white border border-[#d1d9e0] rounded-md border-l-[3px] border-l-purple-500">
+            <div className="p-4 bg-white border border-[#d1d9e0] rounded-md">
               <p className="text-xs font-medium text-[#636c76] uppercase tracking-[0.05em] mb-2">Cloud Agent</p>
               <p className="text-2xl font-semibold text-[#1f2328]">
                 {Math.round(featureUtilization.codingAgent.totalSessions)}
@@ -264,7 +264,7 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
             </div>
 
             {/* Spark */}
-            <div className="p-4 bg-white border border-[#d1d9e0] rounded-md border-l-[3px] border-l-[#6366f1]">
+            <div className="p-4 bg-white border border-[#d1d9e0] rounded-md">
               <p className="text-xs font-medium text-[#636c76] uppercase tracking-[0.05em] mb-2">Spark</p>
               <p className="text-2xl font-semibold text-[#1f2328]">
                 {Math.round(featureUtilization.spark.totalSessions)}
