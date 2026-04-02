@@ -85,4 +85,46 @@ describe('UserDetailsView', () => {
       expect(screen.getByText(/\d+(\.\d+)?\s*\/\s*∞/)).toBeInTheDocument();
     });
   });
+
+  it('renders Spark as a separate billing product bucket', async () => {
+    const timestamp = new Date('2025-06-10T10:00:00Z');
+    const iso = timestamp.toISOString();
+    const processedData: ProcessedData[] = [
+      {
+        timestamp,
+        user: 'User1',
+        model: 'Claude Sonnet 4.5',
+        requestsUsed: 4,
+        exceedsQuota: false,
+        totalQuota: '1000',
+        quotaValue: 1000,
+        iso,
+        dateKey: iso.slice(0, 10),
+        monthKey: iso.slice(0, 7),
+        epoch: timestamp.getTime(),
+        product: 'spark',
+        sku: 'spark_premium_request',
+        organization: 'Org1',
+        costCenter: 'CC-123',
+        grossAmount: 0.16,
+        discountAmount: 0,
+        netAmount: 0.16,
+      },
+    ];
+
+    render(
+      <UserDetailsView
+        user="User1"
+        processedData={processedData}
+        userQuotaValue={1000}
+        onBack={mockOnBack}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Cost per Product')).toBeInTheDocument();
+      expect(screen.getByText('Spark')).toBeInTheDocument();
+      expect(screen.queryByText('Copilot')).not.toBeInTheDocument();
+    });
+  });
 });

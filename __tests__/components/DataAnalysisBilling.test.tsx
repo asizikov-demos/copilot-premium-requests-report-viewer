@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { DataAnalysis } from '@/components/DataAnalysis';
 import { newFormatRows } from '../fixtures/newFormatCSVData';
 import type { CSVData } from '@/types/csv';
@@ -59,6 +59,7 @@ describe('DataAnalysis billing summary', () => {
         gross_amount: '0.144',
         discount_amount: '0.010',
         net_amount: '0.134',
+        cost_center_name: 'Engineering',
       },
       {
         date: '2025-10-02',
@@ -73,6 +74,7 @@ describe('DataAnalysis billing summary', () => {
         gross_amount: '0.080',
         discount_amount: '0.020',
         net_amount: '0.060',
+        cost_center_name: 'Engineering',
       },
       {
         date: '2025-10-03',
@@ -87,6 +89,22 @@ describe('DataAnalysis billing summary', () => {
         gross_amount: '0.040',
         discount_amount: '0.005',
         net_amount: '0.035',
+        cost_center_name: 'Engineering',
+      },
+      {
+        date: '2025-10-04',
+        username: 'dave',
+        product: 'spark',
+        sku: 'spark_premium_request',
+        model: 'Claude Sonnet 4.5',
+        quantity: '4',
+        exceeds_quota: 'False',
+        total_monthly_quota: '1000',
+        applied_cost_per_quantity: '0.04',
+        gross_amount: '0.160',
+        discount_amount: '0.000',
+        net_amount: '0.160',
+        cost_center_name: 'Engineering',
       },
     ];
 
@@ -96,13 +114,70 @@ describe('DataAnalysis billing summary', () => {
     await waitFor(() => {
       expect(screen.getByText('Cost per Product')).toBeInTheDocument();
       expect(screen.getByText('Copilot')).toBeInTheDocument();
+      expect(screen.getAllByText('Spark').length).toBeGreaterThan(0);
       expect(screen.getAllByText('Cloud Agent').length).toBeGreaterThan(0);
       expect(screen.getAllByText('Code Review').length).toBeGreaterThan(0);
 
       expect(screen.getByText('Claude Sonnet 4')).toBeInTheDocument();
+      expect(screen.getByText('Claude Sonnet 4.5')).toBeInTheDocument();
       expect(screen.getAllByText('$0.14').length).toBeGreaterThan(0);
       expect(screen.getAllByText('-$0.01').length).toBeGreaterThan(0);
       expect(screen.getAllByText('$0.13').length).toBeGreaterThan(0);
+    });
+  });
+
+  it('shows Spark as a separate product inside cost center breakdowns', async () => {
+    const billingRows: CSVData[] = [
+      {
+        date: '2025-10-01',
+        username: 'alice',
+        product: 'copilot',
+        sku: 'copilot_premium_request',
+        model: 'Claude Sonnet 4',
+        quantity: '1',
+        exceeds_quota: 'False',
+        total_monthly_quota: '1000',
+        applied_cost_per_quantity: '0.04',
+        gross_amount: '0.040',
+        discount_amount: '0.000',
+        net_amount: '0.040',
+        cost_center_name: 'Engineering',
+      },
+      {
+        date: '2025-10-02',
+        username: 'bob',
+        product: 'spark',
+        sku: 'spark_premium_request',
+        model: 'Claude Sonnet 4.5',
+        quantity: '4',
+        exceeds_quota: 'False',
+        total_monthly_quota: '1000',
+        applied_cost_per_quantity: '0.04',
+        gross_amount: '0.160',
+        discount_amount: '0.000',
+        net_amount: '0.160',
+        cost_center_name: 'Engineering',
+      },
+    ];
+
+    const ingestionResult = createMockIngestionResult(billingRows);
+    render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: 'Cost Centers' }).length).toBeGreaterThan(0);
+    });
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Cost Centers' })[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Engineering/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Engineering/i }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Spark').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Copilot').length).toBeGreaterThan(0);
     });
   });
 });

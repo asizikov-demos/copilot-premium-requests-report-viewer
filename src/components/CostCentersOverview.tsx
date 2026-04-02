@@ -2,15 +2,12 @@
 
 import React, { useMemo, useState } from 'react';
 import { useAnalysisContext } from '@/context/AnalysisContext';
-import { classifyProductCategory } from '@/utils/productClassification';
-
-interface ProductCost {
-  label: string;
-  requests: number;
-  gross: number;
-  discount: number;
-  net: number;
-}
+import {
+  accumulateProductCost,
+  createEmptyProductCostMap,
+  getPopulatedProductCosts,
+  ProductCost,
+} from '@/utils/productCosts';
 
 interface CostCenterRow {
   name: string;
@@ -26,30 +23,33 @@ export function CostCentersOverview() {
   const [expandedCenter, setExpandedCenter] = useState<string | null>(null);
 
   const costCenterRows = useMemo((): CostCenterRow[] => {
-    const map = new Map<string, { requests: number; gross: number; discount: number; net: number; productMap: Map<string, ProductCost> }>();
+    const map = new Map<string, {
+      requests: number;
+      gross: number;
+      discount: number;
+      net: number;
+      productBuckets: ReturnType<typeof createEmptyProductCostMap>;
+    }>();
 
     for (const row of processedData) {
       const cc = row.costCenter || 'Unassigned';
       let entry = map.get(cc);
       if (!entry) {
-        entry = { requests: 0, gross: 0, discount: 0, net: 0, productMap: new Map() };
+        entry = {
+          requests: 0,
+          gross: 0,
+          discount: 0,
+          net: 0,
+          productBuckets: createEmptyProductCostMap(),
+        };
         map.set(cc, entry);
       }
+
       entry.requests += row.requestsUsed;
       entry.gross += row.grossAmount ?? 0;
       entry.discount += row.discountAmount ?? 0;
       entry.net += row.netAmount ?? 0;
-
-      const productLabel = classifyProductCategory(row.model);
-      let product = entry.productMap.get(productLabel);
-      if (!product) {
-        product = { label: productLabel, requests: 0, gross: 0, discount: 0, net: 0 };
-        entry.productMap.set(productLabel, product);
-      }
-      product.requests += row.requestsUsed;
-      product.gross += row.grossAmount ?? 0;
-      product.discount += row.discountAmount ?? 0;
-      product.net += row.netAmount ?? 0;
+      accumulateProductCost(entry.productBuckets, row);
     }
 
     return Array.from(map.entries())
@@ -59,9 +59,7 @@ export function CostCentersOverview() {
         gross: data.gross,
         discount: data.discount,
         net: data.net,
-        products: Array.from(data.productMap.values())
-          .filter(p => p.requests > 0)
-          .sort((a, b) => b.net - a.net),
+        products: getPopulatedProductCosts(data.productBuckets),
       }))
       .sort((a, b) => b.net - a.net);
   }, [processedData]);

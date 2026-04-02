@@ -31,7 +31,7 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="bg-[#24292f] sticky top-0 z-50">
         <div className="px-6">
@@ -57,9 +57,9 @@ export default function Home() {
       </header>
 
       {/* Content */}
-      <div className="px-6 py-8 pb-12">
+      <div className={`flex-1 ${!isDataLoaded ? 'flex flex-col items-center justify-center' : ''} px-6 py-8 pb-12`}>
         {error && (
-          <div className="max-w-xl mb-6 animate-fade-in-up">
+          <div className="w-full max-w-xl mb-6 animate-fade-in-up">
             <div className="flex items-start gap-3 p-4 bg-[#fef2f2] border border-[#fecdd3] rounded-md">
               <svg className="w-5 h-5 text-[#cf222e] flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
@@ -78,6 +78,23 @@ export default function Home() {
           <DataAnalysis ingestionResult={ingestionResult} filename={filename} onReset={handleReset} />
         ) : null}
       </div>
+
+      {/* Footer disclaimer */}
+      {!isDataLoaded && (
+        <footer className="pb-8 text-center">
+          <p className="text-xs text-[#636c76]">
+            This app processes your CSV locally in your browser and doesn&apos;t upload it. Questions?{' '}
+            <a
+              href="https://github.com/asizikov-demos/copilot-premium-requests-report-viewer/issues"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-indigo-500 hover:text-indigo-600 font-medium transition-colors duration-150"
+            >
+              Create an issue
+            </a>
+          </p>
+        </footer>
+      )}
     </main>
   );
 }

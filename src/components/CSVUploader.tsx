@@ -78,7 +78,6 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSampleLoading, setIsSampleLoading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [showPrivacyDialog, setShowPrivacyDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const totalRows = useRef(0);
 
@@ -197,192 +196,166 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
   };
 
   return (
-    <div className="w-full max-w-xl mx-auto">
-      {/* Hero section */}
-      <div className="text-center mb-12 animate-fade-in-up">
-        <h2 className="display-heading text-4xl sm:text-5xl text-[#1f2328] mb-4">
-          Analyze your usage data
-        </h2>
-        <p className="text-lg text-[#636c76] max-w-md mx-auto leading-relaxed">
-          Upload your GitHub Copilot premium requests report to visualize usage patterns and optimize costs.
-        </p>
-      </div>
+    <div className="w-full max-w-2xl mx-auto">
+      <div className="card-elevated px-8 py-10 animate-fade-in-up">
+        {/* Hero section */}
+        <div className="text-center mb-10">
+          <h2 className="display-heading text-4xl text-[#1f2328] mb-4">
+            Analyze your usage data
+          </h2>
+          <p className="text-lg text-[#636c76] max-w-md mx-auto leading-relaxed">
+            Upload your GitHub Copilot premium requests report to visualize usage patterns and optimize costs.
+          </p>
+        </div>
 
-      {/* Upload area */}
-      <div
-        className={`
-          relative rounded-md border-2 border-dashed transition-all duration-150 cursor-pointer
-          opacity-0 animate-scale-in
-          ${isDragOver 
-            ? 'border-indigo-500 bg-indigo-50' 
-            : 'border-[#d1d9e0] hover:border-[#d1d9e0] hover:shadow-sm bg-white'
-          }
-          ${isBusy ? 'opacity-60 pointer-events-none' : ''}
-        `}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={handleButtonClick}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".csv"
-          onChange={handleFileInputChange}
-          className="hidden"
-          disabled={isBusy}
-        />
-        
-        <div className="px-6 py-14 sm:py-20">
-          <div className="flex flex-col items-center gap-5">
-            {/* Icon */}
-            <div className={`
-              w-16 h-16 rounded-md flex items-center justify-center transition-all duration-150
-              ${isDragOver 
-                ? 'bg-indigo-500 shadow-sm' 
-                : 'bg-[#f6f8fa]'
-              }
-            `}>
-              {isLoading ? (
-                <div className="w-7 h-7 border-2 border-[#d1d9e0] border-t-indigo-500 rounded-full animate-spin" />
-              ) : (
-                <svg
-                  className={`w-7 h-7 transition-colors ${isDragOver ? 'text-white' : 'text-[#636c76]'}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M9 8.25H7.5a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25H15m0-3l-3-3m0 0l-3 3m3-3v11.25"
-                  />
-                </svg>
-              )}
-            </div>
+        {/* Upload area */}
+        <div
+          className={`
+            relative rounded-md border-2 border-dashed transition-all duration-150 cursor-pointer
+            opacity-0 animate-scale-in
+            ${isDragOver
+              ? 'border-indigo-500 bg-indigo-50'
+              : 'border-[#d1d9e0] bg-white hover:border-[#d1d9e0] hover:shadow-sm'
+            }
+            ${isBusy ? 'opacity-60 pointer-events-none' : ''}
+          `}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={handleButtonClick}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            onChange={handleFileInputChange}
+            className="hidden"
+            disabled={isBusy}
+          />
 
-            {/* Text */}
-            <div className="text-center">
-              {isLoading ? (
-                <div className="space-y-4">
-                  <p className="text-base font-semibold text-[#1f2328]">Processing file...</p>
-                  <div className="w-56 mx-auto">
-                    <div className="h-2 bg-[#f6f8fa] rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-indigo-500 rounded-full transition-all duration-150"
-                        style={{ width: `${progress}%` }}
-                      />
+          <div className="px-6 py-14 sm:py-16">
+            <div className="flex flex-col items-center gap-5">
+              {/* Icon */}
+              <div className={`
+                w-16 h-16 rounded-md flex items-center justify-center transition-all duration-150
+                ${isDragOver
+                  ? 'bg-indigo-500 shadow-sm'
+                  : 'bg-[#f6f8fa]'
+                }
+              `}>
+                {isLoading ? (
+                  <div className="w-7 h-7 border-2 border-[#d1d9e0] border-t-indigo-500 rounded-full animate-spin" />
+                ) : (
+                  <svg
+                    className={`w-7 h-7 transition-colors ${isDragOver ? 'text-white' : 'text-[#636c76]'}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M9 8.25H7.5a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25H15m0-3l-3-3m0 0l-3 3m3-3v11.25"
+                    />
+                  </svg>
+                )}
+              </div>
+
+              {/* Text */}
+              <div className="text-center">
+                {isLoading ? (
+                  <div className="space-y-4">
+                    <p className="text-base font-semibold text-[#1f2328]">Processing file...</p>
+                    <div className="w-56 mx-auto">
+                      <div className="h-2 bg-[#f6f8fa] rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-indigo-500 rounded-full transition-all duration-150"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
                     </div>
+                    {totalRows.current > 0 && (
+                      <p className="text-sm text-[#636c76]">
+                        {totalRows.current.toLocaleString()} rows processed
+                      </p>
+                    )}
                   </div>
-                  {totalRows.current > 0 && (
-                    <p className="text-sm text-[#636c76]">
-                      {totalRows.current.toLocaleString()} rows processed
+                ) : isSampleLoading ? (
+                  <p className="text-base font-semibold text-[#1f2328]">Loading sample data...</p>
+                ) : (
+                  <>
+                    <p className="text-base font-semibold text-[#1f2328] mb-1">
+                      Drop your CSV file here
                     </p>
-                  )}
-                </div>
-              ) : isSampleLoading ? (
-                <p className="text-base font-semibold text-[#1f2328]">Loading sample data...</p>
-              ) : (
-                <>
-                  <p className="text-base font-semibold text-[#1f2328] mb-1">
-                    Drop your CSV file here
-                  </p>
-                  <p className="text-sm text-[#636c76]">
-                    or click to browse
-                  </p>
-                </>
-              )}
+                    <p className="text-sm text-[#636c76]">
+                      or click to browse
+                    </p>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Sample data button */}
-      <div className="mt-5 text-center opacity-0 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-        <button
-          onClick={(e) => { e.stopPropagation(); loadSampleData(); }}
-          disabled={isBusy}
-          className="px-5 py-2.5 text-sm font-semibold text-white bg-[#2da44e] hover:bg-[#2c974b] border border-[#2da44e] hover:border-[#2c974b] rounded-md transition-all duration-150 disabled:opacity-50"
-        >
-          Try with sample data
-        </button>
-      </div>
-
-      {/* Help text */}
-      <div className="mt-10 space-y-3 text-center opacity-0 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-        <p className="text-xs text-[#636c76] font-medium tracking-wide">
-          Required: date, username, model, quantity
+        {/* Accepted file hint */}
+        <p className="mt-4 text-xs text-center text-[#636c76] font-medium tracking-wide">
+          Accepted: .csv files from the Premium Request Usage report
         </p>
-        <div className="flex items-center justify-center gap-4 text-xs">
-          <a
-            href="https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/manage-and-track-spending/monitor-premium-requests#downloading-a-copilot-premium-request-usage-report"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#636c76] hover:text-indigo-500 transition-colors duration-150 font-medium"
-          >
-            How to get this report →
-          </a>
-          <span className="text-[#d1d9e0]">•</span>
+
+        {/* Sample data button */}
+        <div className="mt-5 text-center opacity-0 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
           <button
-            onClick={() => setShowPrivacyDialog(true)}
-            className="text-[#636c76] hover:text-indigo-500 transition-colors duration-150 font-medium"
+            onClick={(e) => { e.stopPropagation(); loadSampleData(); }}
+            disabled={isBusy}
+            className="px-5 py-2.5 text-sm font-semibold text-white bg-[#2da44e] hover:bg-[#2c974b] border border-[#2da44e] hover:border-[#2c974b] rounded-md transition-all duration-150 disabled:opacity-50"
           >
-            Privacy info
+            Try with sample data
           </button>
         </div>
-      </div>
-      
-      {/* Privacy Dialog */}
-      {showPrivacyDialog && (
-        <div className="fixed inset-0 bg-[#1f2328]/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-md max-w-md w-full p-7 shadow-sm border border-[#d1d9e0] animate-scale-in">
-            <div className="flex items-start justify-between mb-5">
-              <h3 className="text-xl font-bold text-[#1f2328]">Privacy Information</h3>
-              <button
-                onClick={() => setShowPrivacyDialog(false)}
-                className="text-[#636c76] hover:text-[#1f2328] transition-colors duration-150 p-1 hover:bg-[#f6f8fa] rounded-md"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+
+        {/* Inline privacy info */}
+        <div className="mt-8 opacity-0 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+          <div className="p-4 bg-[#f6f8fa] rounded-md border border-[#d1d9e0]">
+            <div className="flex items-center gap-2 mb-3">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="#2da44e" className="flex-shrink-0" aria-hidden="true">
+                <path d="M4 4a4 4 0 0 1 8 0v2h.25c.966 0 1.75.784 1.75 1.75v5.5A1.75 1.75 0 0 1 12.25 15h-8.5A1.75 1.75 0 0 1 2 13.25v-5.5C2 6.784 2.784 6 3.75 6H4Zm8.25 3.5h-8.5a.25.25 0 0 0-.25.25v5.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-5.5a.25.25 0 0 0-.25-.25ZM10.5 6V4a2.5 2.5 0 1 0-5 0v2Z" />
+              </svg>
+              <span className="text-sm font-semibold text-[#1f2328]">Your data stays private</span>
             </div>
-            
-            <div className="space-y-4 text-sm text-[#636c76] leading-relaxed">
-              <p>
-                <span className="font-semibold text-[#1f2328]">Your data stays local.</span>{' '}
-                This is a front-end only application. No data leaves your browser.
-              </p>
-              
-              <p>
-                All CSV processing happens locally, ensuring your usage data remains private.
-              </p>
-              
-              <div className="p-4 bg-[#f6f8fa] rounded-md border border-[#d1d9e0]">
-                <p className="text-xs text-[#636c76] mb-1 font-medium">Open source</p>
+            <ul className="space-y-1 text-sm text-[#636c76] leading-relaxed pl-5 list-disc">
+              <li>All processing of your uploaded CSV happens in your browser. The file contents are not uploaded to any server.</li>
+              <li>The contents of your uploaded CSV are not stored or cached on any server.</li>
+              <li>When you close or reload this tab, the app does not retain your uploaded CSV file.</li>
+              <li>This page does not send the contents of your uploaded CSV to external endpoints.</li>
+              <li>
+                You can verify this yourself — the source code is available at{' '}
                 <a
                   href="https://github.com/asizikov-demos/copilot-premium-requests-report-viewer"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-indigo-500 hover:text-indigo-600 font-medium break-all"
+                  className="text-indigo-500 hover:text-indigo-600 font-medium transition-colors duration-150 break-all"
                 >
                   github.com/asizikov-demos/copilot-premium-requests-report-viewer
                 </a>
-              </div>
-            </div>
-            
-            <div className="mt-7">
-              <button
-                onClick={() => setShowPrivacyDialog(false)}
-                className="w-full px-4 py-3 bg-[#24292f] text-white text-sm font-semibold rounded-md hover:bg-[#32383f] transition-colors duration-150 shadow-sm"
-              >
-                Got it
-              </button>
-            </div>
+                .
+              </li>
+            </ul>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* How to get this report */}
+      <div className="mt-5 text-center opacity-0 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
+        <a
+          href="https://docs.github.com/en/enterprise-cloud@latest/billing/how-tos/products/view-productlicense-use#downloading-usage-reports"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-[#636c76] hover:text-indigo-500 transition-colors duration-150 font-medium"
+        >
+          How to get this report →
+        </a>
+      </div>
     </div>
   );
 }

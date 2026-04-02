@@ -11,7 +11,7 @@ import { CostCentersOverview } from './CostCentersOverview';
 import { PRICING } from '@/constants/pricing';
 import { AnalysisProvider, useAnalysisContext } from '@/context/AnalysisContext';
 import { getModelColor } from '@/utils/modelColors';
-import { classifyProductCategory } from '@/utils/productClassification';
+import { aggregateProductCosts } from '@/utils/productCosts';
 
 interface DataAnalysisProps {
   ingestionResult: import('@/utils/ingestion').IngestionResult;
@@ -183,28 +183,7 @@ function DataAnalysisInner() {
     (row) => row.gross > 0 || row.discount > 0 || row.net > 0
   );
 
-  // Per-product cost aggregation (Cloud Agent, Code Review, Copilot)
-  type ProductCost = { label: string; requests: number; gross: number; discount: number; net: number };
-  const productCosts = useMemo((): ProductCost[] => {
-    const buckets = {
-      codingAgent: { label: 'Cloud Agent', requests: 0, gross: 0, discount: 0, net: 0 },
-      codeReview: { label: 'Code Review', requests: 0, gross: 0, discount: 0, net: 0 },
-      copilot: { label: 'Copilot', requests: 0, gross: 0, discount: 0, net: 0 },
-    };
-    for (const row of processedData) {
-      const productCategory = classifyProductCategory(row.model);
-      const bucket = productCategory === 'Coding Agent'
-        ? buckets.codingAgent
-        : productCategory === 'Code Review'
-          ? buckets.codeReview
-          : buckets.copilot;
-      bucket.requests += row.requestsUsed;
-      bucket.gross += row.grossAmount ?? 0;
-      bucket.discount += row.discountAmount ?? 0;
-      bucket.net += row.netAmount ?? 0;
-    }
-    return [buckets.copilot, buckets.codingAgent, buckets.codeReview].filter(b => b.requests > 0);
-  }, [processedData]);
+  const productCosts = useMemo(() => aggregateProductCosts(processedData), [processedData]);
 
   return (
     <div className="w-full">
