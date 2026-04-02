@@ -101,7 +101,6 @@ describe('UsersOverview - sorting', () => {
       <UsersOverview
         userData={userData}
         processedData={processedData}
-        allModels={['gpt-4']}
         dailyCumulativeData={dailyCumulativeData}
         quotaArtifacts={quotaArtifacts}
         usageArtifacts={usageArtifacts}
@@ -152,7 +151,6 @@ describe('UsersOverview - sorting', () => {
       <UsersOverview
         userData={userData}
         processedData={[]}
-        allModels={['gpt-4']}
         dailyCumulativeData={[{ date: '2025-01-01T00:00:00Z', Alice: 1, Bob: 1, Charlie: 1 }]}
         quotaArtifacts={quotaArtifacts}
         usageArtifacts={makeUsage(userData)}
@@ -208,7 +206,6 @@ describe('UsersOverview - sorting', () => {
       <UsersOverview
         userData={userData}
         processedData={processedData}
-        allModels={['gpt-4']}
         dailyCumulativeData={[{ date: '2025-01-01T00:00:00Z', Alice: 10, Bob: 20 }]}
         quotaArtifacts={quotaArtifacts}
         usageArtifacts={makeUsage(userData)}

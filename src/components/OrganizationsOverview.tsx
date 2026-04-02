@@ -102,21 +102,25 @@ export function OrganizationsOverview() {
                 <React.Fragment key={org.name}>
                   <tr className="table-row-hover transition-colors duration-150">
                     <td className="px-6 py-3.5 text-sm font-medium text-[#1f2328]">
-                      <button
-                        type="button"
-                        className="flex items-center gap-2 text-left w-full"
-                        aria-expanded={expandedOrg === org.name}
-                        aria-controls={detailsId}
-                        onClick={() => setExpandedOrg(expandedOrg === org.name ? null : org.name)}
-                      >
-                        <svg
-                          className={`w-3.5 h-3.5 text-[#636c76] transition-transform duration-150 ${expandedOrg === org.name ? 'rotate-90' : ''}`}
-                          fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"
+                      {org.products.length > 0 ? (
+                        <button
+                          type="button"
+                          className="flex items-center gap-2 text-left w-full"
+                          aria-expanded={expandedOrg === org.name}
+                          aria-controls={detailsId}
+                          onClick={() => setExpandedOrg(expandedOrg === org.name ? null : org.name)}
                         >
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                        </svg>
-                        {org.name}
-                      </button>
+                          <svg
+                            className={`w-3.5 h-3.5 text-[#636c76] transition-transform duration-150 ${expandedOrg === org.name ? 'rotate-90' : ''}`}
+                            fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                          </svg>
+                          {org.name}
+                        </button>
+                      ) : (
+                        <span>{org.name}</span>
+                      )}
                     </td>
                     <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
                       {org.users.toLocaleString()}

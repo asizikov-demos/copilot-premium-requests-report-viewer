@@ -4,7 +4,7 @@
  * Streams rows and accumulates usage for specialized Copilot features:
  *  - Code Review (model name contains 'code review')
  *  - Coding Agent (model name contains 'coding agent' or 'padawan')
- *  - Spark (model name contains 'spark')
+ *  - Spark (product/sku fields via isSparkProduct)
  *
  * Output artifacts provide O(1) access to:
  *  - featureTotals: total request quantities per feature

@@ -16,14 +16,13 @@ const ALL_FILTERS_VALUE = '__all__';
 interface UsersOverviewProps {
   userData: UserSummary[];
   processedData: ProcessedData[];
-  allModels: string[];
   dailyCumulativeData: DailyCumulativeData[];
   quotaArtifacts: QuotaArtifacts;
-  usageArtifacts: UsageArtifacts; // NEW: used for overage + future enhancements
+  usageArtifacts: UsageArtifacts;
   onBack?: () => void;
 }
 
-export function UsersOverview({ userData, processedData, allModels, dailyCumulativeData, quotaArtifacts, usageArtifacts, onBack }: UsersOverviewProps) {
+export function UsersOverview({ userData, processedData, dailyCumulativeData, quotaArtifacts, usageArtifacts, onBack }: UsersOverviewProps) {
   const [showChart, setShowChart] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedOrganization, setSelectedOrganization] = useState(ALL_FILTERS_VALUE);
@@ -393,7 +392,7 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                       </span>
                     )}
                   </div>
-                  {hasCosts && costs.net > 0 && (
+                  {hasCosts && (costs.gross > 0 || costs.discount > 0 || costs.net > 0) && (
                     <div className="flex items-center gap-3 mt-1.5 text-xs font-mono tabular-nums">
                       <span className="text-[#636c76]">${costs.gross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       <span className="text-emerald-600">-${costs.discount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>

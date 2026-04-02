@@ -300,7 +300,6 @@ function DataAnalysisInner() {
             <UsersOverview
               userData={userData}
               processedData={processedData}
-              allModels={allModels}
               dailyCumulativeData={dailyCumulativeData}
               quotaArtifacts={quotaArtifacts}
               usageArtifacts={usageArtifacts}
