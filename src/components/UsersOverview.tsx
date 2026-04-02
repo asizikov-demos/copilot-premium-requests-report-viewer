@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { UsersQuotaConsumptionChart } from './charts/UsersQuotaConsumptionChart';
 import { UsersConsumptionHeatmap } from './charts/UsersConsumptionHeatmap';
 import { ProcessedData } from '@/types/csv';
 import { UserDetailsView } from './UserDetailsView';
@@ -24,42 +23,37 @@ interface UsersOverviewProps {
   onBack?: () => void;
 }
 
-// Generate colors for user lines
-const generateUserColors = (users: string[]): Record<string, string> => {
-  const colors = [
-    '#3B82F6', // blue-500
-    '#EF4444', // red-500
-    '#10B981', // emerald-500
-    '#F59E0B', // amber-500
-    '#8B5CF6', // violet-500
-    '#06B6D4', // cyan-500
-    '#84CC16', // lime-500
-    '#F97316', // orange-500
-    '#EC4899', // pink-500
-    '#6366F1', // indigo-500
-  ];
-  
-  const result: Record<string, string> = {};
-  users.forEach((user, index) => {
-    result[user] = colors[index % colors.length];
-  });
-  return result;
-};
-
 export function UsersOverview({ userData, processedData, allModels, dailyCumulativeData, quotaArtifacts, usageArtifacts, onBack }: UsersOverviewProps) {
   const [showChart, setShowChart] = useState(true);
-  const [chartType, setChartType] = useState<'heatmap' | 'lines'>('heatmap');
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedOrganization, setSelectedOrganization] = useState(ALL_FILTERS_VALUE);
   const [selectedCostCenter, setSelectedCostCenter] = useState(ALL_FILTERS_VALUE);
+  const [selectedPlan, setSelectedPlan] = useState(ALL_FILTERS_VALUE);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
   const ROWS_PER_PAGE = 50;
 
-  // Columns: quota + totalRequests + dynamic model names
-  type ColumnKey = 'quota' | 'totalRequests' | typeof allModels[number];
-  const columns = useMemo<ColumnKey[]>(() => ['quota', 'totalRequests', ...allModels as ColumnKey[]], [allModels]);
+  type ColumnKey = 'quota' | 'totalRequests' | 'gross' | 'discount' | 'net';
+
+  const userCosts = useMemo(() => {
+    const map = new Map<string, { gross: number; discount: number; net: number }>();
+    for (const row of processedData) {
+      const prev = map.get(row.user) ?? { gross: 0, discount: 0, net: 0 };
+      prev.gross += row.grossAmount ?? 0;
+      prev.discount += row.discountAmount ?? 0;
+      prev.net += row.netAmount ?? 0;
+      map.set(row.user, prev);
+    }
+    return map;
+  }, [processedData]);
+
+  const hasCosts = useMemo(() =>
+    processedData.some(r => (r.grossAmount ?? 0) > 0 || (r.netAmount ?? 0) > 0),
+    [processedData]
+  );
+
+  const columns = useMemo<ColumnKey[]>(() => ['quota', 'totalRequests', ...(hasCosts ? ['gross', 'discount', 'net'] as ColumnKey[] : [])], [hasCosts]);
 
   const getSortableValue = useCallback((row: UserSummary, column: ColumnKey) => {
     if (column === 'quota') {
@@ -68,8 +62,12 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
     }
 
     if (column === 'totalRequests') return row.totalRequests;
-    return row.modelBreakdown[column] || 0;
-  }, [quotaArtifacts]);
+    if (column === 'gross' || column === 'discount' || column === 'net') {
+      const costs = userCosts.get(row.user) ?? { gross: 0, discount: 0, net: 0 };
+      return costs[column];
+    }
+    return 0;
+  }, [quotaArtifacts, userCosts]);
 
   const organizationOptions = useMemo(() => {
     const organizations = userData
@@ -87,6 +85,22 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
     return Array.from(new Set(costCenters)).sort((a, b) => a.localeCompare(b));
   }, [userData]);
 
+  const getUserPlanLabel = useCallback((user: string): string | null => {
+    const q = getUserQuota(quotaArtifacts, user);
+    if (q === PRICING.ENTERPRISE_QUOTA) return 'Copilot Enterprise';
+    if (q === PRICING.BUSINESS_QUOTA) return 'Copilot Business';
+    return null;
+  }, [quotaArtifacts]);
+
+  const planOptions = useMemo(() => {
+    const plans = new Set<string>();
+    for (const user of userData) {
+      const plan = getUserPlanLabel(user.user);
+      if (plan) plans.add(plan);
+    }
+    return Array.from(plans).sort();
+  }, [userData, getUserPlanLabel]);
+
   const effectiveSelectedOrganization = organizationOptions.includes(selectedOrganization)
     ? selectedOrganization
     : ALL_FILTERS_VALUE;
@@ -95,14 +109,19 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
     ? selectedCostCenter
     : ALL_FILTERS_VALUE;
 
+  const effectiveSelectedPlan = planOptions.includes(selectedPlan)
+    ? selectedPlan
+    : ALL_FILTERS_VALUE;
+
   const filteredUserData = useMemo(() => (
     userData.filter((user) => {
       const matchesOrganization = effectiveSelectedOrganization === ALL_FILTERS_VALUE || user.organization === effectiveSelectedOrganization;
       const matchesCostCenter = effectiveSelectedCostCenter === ALL_FILTERS_VALUE || user.costCenter === effectiveSelectedCostCenter;
+      const matchesPlan = effectiveSelectedPlan === ALL_FILTERS_VALUE || getUserPlanLabel(user.user) === effectiveSelectedPlan;
 
-      return matchesOrganization && matchesCostCenter;
+      return matchesOrganization && matchesCostCenter && matchesPlan;
     })
-  ), [userData, effectiveSelectedOrganization, effectiveSelectedCostCenter]);
+  ), [userData, effectiveSelectedOrganization, effectiveSelectedCostCenter, effectiveSelectedPlan, getUserPlanLabel]);
 
   const {
     sortedData: sortedUserData,
@@ -173,16 +192,9 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
     setCurrentPage(0);
   };
   
-  // Memoize chart data to prevent recalculation on pagination/sorting
-  const chartData = useMemo(() => {
-    const users = filteredUserData.map((user) => user.user);
-    return {
-      users,
-      colors: generateUserColors(users)
-    };
+  const chartUsers = useMemo(() => {
+    return filteredUserData.map((user) => user.user);
   }, [filteredUserData]);
-
-  const { users: chartUsers, colors: userColors } = chartData;
 
   if (selectedUser) {
     return (
@@ -247,7 +259,7 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
           </div>
         </div>
 
-        {(organizationOptions.length > 0 || costCenterOptions.length > 0) && (
+        {(organizationOptions.length > 0 || costCenterOptions.length > 0 || planOptions.length > 1) && (
           <div className="flex flex-col lg:flex-row lg:items-end gap-3">
             {organizationOptions.length > 0 && (
               <label className="flex flex-col gap-1.5 text-sm text-[#636c76]">
@@ -292,6 +304,28 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                 </select>
               </label>
             )}
+
+            {planOptions.length > 1 && (
+              <label className="flex flex-col gap-1.5 text-sm text-[#636c76]">
+                <span className="font-medium text-[#1f2328]">Copilot Plan</span>
+                <select
+                  value={effectiveSelectedPlan}
+                  onChange={(event) => {
+                    setSelectedPlan(event.target.value);
+                    setCurrentPage(0);
+                  }}
+                  aria-label="Copilot Plan"
+                  className="min-w-56 rounded-md border border-[#d1d9e0] bg-white px-3 py-2 text-sm text-[#1f2328] shadow-sm outline-none transition duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                >
+                  <option value={ALL_FILTERS_VALUE}>All plans</option>
+                  {planOptions.map((plan) => (
+                    <option key={plan} value={plan}>
+                      {plan}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
           </div>
         )}
       </div>
@@ -302,30 +336,6 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
           <div className="flex justify-between items-center mb-4">
             <h4 className="text-sm font-medium text-[#1f2328]">Quota Consumption</h4>
             <div className="flex items-center gap-3">
-              <div className="flex bg-white border border-[#d1d9e0] rounded-md p-0.5">
-                <button
-                  onClick={() => setChartType('heatmap')}
-                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors duration-150 ${
-                    chartType === 'heatmap'
-                      ? 'bg-indigo-500 text-white'
-                      : 'text-[#636c76] hover:text-[#1f2328]'
-                  }`}
-                >
-                  Heatmap
-                </button>
-                <button
-                  onClick={() => setChartType('lines')}
-                  disabled={chartUsers.length > 1000}
-                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors duration-150 ${
-                    chartType === 'lines'
-                      ? 'bg-indigo-500 text-white'
-                      : 'text-[#636c76] hover:text-[#1f2328]'
-                  } ${chartUsers.length > 1000 ? 'opacity-40 cursor-not-allowed' : ''}`}
-                  title={chartUsers.length > 1000 ? `Cannot display ${chartUsers.length} users` : undefined}
-                >
-                  Lines
-                </button>
-              </div>
               {isMobile && (
                 <button
                   onClick={() => setShowChart(false)}
@@ -338,34 +348,13 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
             </div>
           </div>
           <div className="h-72 sm:h-96 2xl:h-[28rem] relative z-30">
-            {chartType === 'heatmap' ? (
-              <UsersConsumptionHeatmap
-                dailyCumulativeData={dailyCumulativeData}
-                users={chartUsers}
-                currentQuota={currentQuota}
-                quotaTypes={quotaTypes}
-                hasMixedQuotas={hasMixedQuotas}
-              />
-            ) : chartUsers.length > 1000 ? (
-              <div className="flex items-center justify-center h-full bg-[#f6f8fa] rounded-md">
-                <div className="text-center p-6">
-                  <p className="text-sm font-medium text-[#1f2328] mb-1">Too many users</p>
-                  <p className="text-xs text-[#636c76]">
-                    Use heatmap for {chartUsers.length.toLocaleString()} users
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <UsersQuotaConsumptionChart
-                dailyCumulativeData={dailyCumulativeData}
-                users={chartUsers}
-                userColors={userColors}
-                currentQuota={currentQuota}
-                quotaTypes={quotaTypes}
-                hasMixedQuotas={hasMixedQuotas}
-                hasMixedLicenses={hasMixedLicenses}
-              />
-            )}
+            <UsersConsumptionHeatmap
+              dailyCumulativeData={dailyCumulativeData}
+              users={chartUsers}
+              currentQuota={currentQuota}
+              quotaTypes={quotaTypes}
+              hasMixedQuotas={hasMixedQuotas}
+            />
           </div>
         </div>
       )}
@@ -380,6 +369,7 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                 const userQuota = getUserQuota(quotaArtifacts, user.user);
                 const isOverQuota = userQuota !== 'unlimited' && user.totalRequests > userQuota;
                 const quotaDisplay = userQuota === 'unlimited' ? 'Unlimited' : `${userQuota}`;
+                const costs = userCosts.get(user.user) ?? { gross: 0, discount: 0, net: 0 };
                 
                 return (
                 <button
@@ -403,6 +393,13 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                       </span>
                     )}
                   </div>
+                  {hasCosts && costs.net > 0 && (
+                    <div className="flex items-center gap-3 mt-1.5 text-xs font-mono tabular-nums">
+                      <span className="text-[#636c76]">${costs.gross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <span className="text-emerald-600">-${costs.discount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <span className="font-semibold text-[#1f2328]">${costs.net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
                 </button>
               )})}
               
@@ -465,25 +462,49 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                     </span>
                   </div>
                 </th>
-                {allModels.map((model) => (
-                  <th
-                    key={model}
-                    className={`px-4 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-[0.05em] min-w-28 cursor-pointer hover:bg-[#f6f8fa] select-none transition-colors duration-150 ${
-                      sortBy === model ? 'bg-[#f6f8fa]' : 'bg-[#f6f8fa]'
-                    }`}
-                    title={model}
-                    onClick={() => handleSortWithReset(model)}
-                  >
-                    <div className="flex items-center gap-1 justify-end">
-                      <span className="truncate max-w-20">
-                        {model.length > 18 ? `${model.substring(0, 18)}...` : model}
-                      </span>
-                      <span className="text-[#636c76] flex-shrink-0">
-                        {sortBy === model ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
-                      </span>
-                    </div>
-                  </th>
-                ))}
+                {hasCosts && (
+                  <>
+                    <th
+                      className={`px-4 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-[0.05em] min-w-28 cursor-pointer hover:bg-[#f6f8fa] select-none transition-colors duration-150 ${
+                        sortBy === 'gross' ? 'bg-[#eef1f4]' : 'bg-[#f6f8fa]'
+                      }`}
+                      onClick={() => handleSortWithReset('gross')}
+                    >
+                      <div className="flex items-center gap-1 justify-end">
+                        Gross
+                        <span className="text-[#636c76]">
+                          {sortBy === 'gross' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
+                        </span>
+                      </div>
+                    </th>
+                    <th
+                      className={`px-4 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-[0.05em] min-w-28 cursor-pointer hover:bg-[#f6f8fa] select-none transition-colors duration-150 ${
+                        sortBy === 'discount' ? 'bg-[#eef1f4]' : 'bg-[#f6f8fa]'
+                      }`}
+                      onClick={() => handleSortWithReset('discount')}
+                    >
+                      <div className="flex items-center gap-1 justify-end">
+                        Discount
+                        <span className="text-[#636c76]">
+                          {sortBy === 'discount' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
+                        </span>
+                      </div>
+                    </th>
+                    <th
+                      className={`px-4 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-[0.05em] min-w-24 cursor-pointer hover:bg-[#f6f8fa] select-none transition-colors duration-150 ${
+                        sortBy === 'net' ? 'bg-[#eef1f4]' : 'bg-[#f6f8fa]'
+                      }`}
+                      onClick={() => handleSortWithReset('net')}
+                    >
+                      <div className="flex items-center gap-1 justify-end">
+                        Net
+                        <span className="text-[#636c76]">
+                          {sortBy === 'net' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
+                        </span>
+                      </div>
+                    </th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f6f8fa]">
@@ -516,14 +537,22 @@ export function UsersOverview({ userData, processedData, allModels, dailyCumulat
                       </span>
                     )}
                   </td>
-                  {allModels.map((model) => (
-                    <td
-                      key={`${user.user}-${model}`}
-                      className="px-4 py-3 whitespace-nowrap text-sm text-[#636c76] font-mono tabular-nums text-right"
-                    >
-                      {user.modelBreakdown[model]?.toFixed(2) || '—'}
-                    </td>
-                  ))}
+                  {hasCosts && (() => {
+                    const costs = userCosts.get(user.user) ?? { gross: 0, discount: 0, net: 0 };
+                    return (
+                      <>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-[#636c76] font-mono tabular-nums text-right">
+                          ${costs.gross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-emerald-600 font-mono tabular-nums text-right">
+                          -${costs.discount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-[#1f2328] font-mono tabular-nums text-right">
+                          ${costs.net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                      </>
+                    );
+                  })()}
                 </tr>
               )})}
             </tbody>
