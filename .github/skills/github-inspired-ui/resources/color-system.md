@@ -2,7 +2,7 @@
 
 ## CSS Custom Properties (defined in `src/app/globals.css`)
 
-All UI colors are expressed as CSS custom properties. **Use these tokens — never hard-code raw hex values for structural UI elements.**
+All UI colors are expressed as CSS custom properties. **Don't invent new colors — always use the established token values (via CSS vars or token-matching hex), especially for structural UI elements.**
 
 ```
 :root {

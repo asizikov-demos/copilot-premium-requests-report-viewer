@@ -51,8 +51,8 @@ Load multiple resource files. For a brand-new page you'd typically need: `color-
 These rules apply regardless of the task. Do **not** load a resource file for these — they are always in effect:
 
 1. **No dark mode.** Light-only. Never add `dark:` prefixes.
-2. **No shadow elevation hierarchy.** All shadows are identical and flat (`0 1px 3px rgba(31,35,40,0.04)`). No `shadow-lg` or `shadow-xl`.
-3. **No generic Tailwind color utilities** (`bg-gray-100`, `text-gray-600`). Use exact hex tokens via bracket notation (`bg-[#f6f8fa]`). Exceptions: `indigo-500/600` (matches `--accent`), `emerald-600` (discount amounts), `red-600` (overage/alert amounts) — these are established data-semantic colors.
+2. **No shadow elevation hierarchy on structural surfaces.** Card/panel shadows are identical and flat (`0 1px 3px rgba(31,35,40,0.04)`). No `shadow-lg` or `shadow-xl` on cards or containers. Stronger shadows are allowed for overlays and tooltips (e.g., chart tooltip uses `0 4px 12px rgba(31,35,40,0.12)`).
+3. **No generic Tailwind color utilities** (`bg-gray-100`, `text-gray-600`). Use exact hex tokens via bracket notation (`bg-[#f6f8fa]`). Exceptions: `indigo-500/600` (matches `--accent`), `emerald-600` (discount amounts), `red-600` (overage/alert amounts), `blue-500`/`purple-500` (feature accent borders) — these are established data-semantic colors.
 4. **No rounded-lg or rounded-xl.** Use `rounded-md` (6px). Exception: `rounded-full` for badges/pills.
 5. **No heavy borders.** Always 1px `#d1d9e0`. Only exception: `border-l-[3px]` accent indicators.
 6. **No gradient backgrounds** on structural elements. Gradients only in heatmap data visualization.

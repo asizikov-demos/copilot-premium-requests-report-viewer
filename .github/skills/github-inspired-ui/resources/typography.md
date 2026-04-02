@@ -4,7 +4,7 @@
 - **Body:** Inter (loaded via `next/font/google` as `--font-inter`)
 - **Monospace:** Geist Mono (loaded as `--font-geist-mono`)
 - Applied globally: `font-family: var(--font-inter), system-ui, -apple-system, sans-serif`
-- Font smoothing: antialiased on both WebKit and Firefox
+- Font smoothing: `-webkit-font-smoothing: antialiased` (WebKit) and `-moz-osx-font-smoothing: grayscale` (Firefox on macOS)
 
 ## Heading Style
 All headings use:
