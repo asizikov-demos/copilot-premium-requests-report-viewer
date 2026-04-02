@@ -15,7 +15,7 @@ import {
 } from '@/utils/ingestion';
 import { generateModelColors } from '@/utils/modelColors';
 import { calculateEnterpriseUpgradeSavings } from '@/utils/analytics/costOptimization';
-import { classifyProductCategory } from '@/utils/productClassification';
+import { aggregateProductCosts } from '@/utils/productCosts';
 import {
   calculateBilledOverageFromRows,
   calculateOverageCost,
@@ -269,32 +269,12 @@ export function UserDetailsView({
     });
   }, [userData]);
 
-  type ProductCost = { label: string; requests: number; gross: number; discount: number; net: number };
-  const productCosts = useMemo((): ProductCost[] => {
+  const productCosts = useMemo(() => {
     const hasBillingData = userData.some(
       (row) => row.grossAmount !== undefined || row.netAmount !== undefined || row.discountAmount !== undefined
     );
     if (!hasBillingData) return [];
-
-    const buckets = {
-      codingAgent: { label: 'Cloud Agent', requests: 0, gross: 0, discount: 0, net: 0 },
-      codeReview: { label: 'Code Review', requests: 0, gross: 0, discount: 0, net: 0 },
-      copilot: { label: 'Copilot', requests: 0, gross: 0, discount: 0, net: 0 },
-    };
-
-    for (const row of userData) {
-      const category = classifyProductCategory(row.model);
-      const bucket =
-        category === 'Coding Agent' ? buckets.codingAgent
-        : category === 'Code Review' ? buckets.codeReview
-        : buckets.copilot;
-      bucket.requests += row.requestsUsed;
-      bucket.gross += row.grossAmount ?? 0;
-      bucket.discount += row.discountAmount ?? 0;
-      bucket.net += row.netAmount ?? 0;
-    }
-
-    return [buckets.copilot, buckets.codingAgent, buckets.codeReview].filter((b) => b.requests > 0);
+    return aggregateProductCosts(userData);
   }, [userData]);
 
   const planInfo = {

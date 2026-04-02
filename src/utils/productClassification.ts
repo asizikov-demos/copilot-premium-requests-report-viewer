@@ -1,4 +1,8 @@
-export type ProductCategory = 'Copilot' | 'Coding Agent' | 'Code Review';
+export type ProductCategory = 'Copilot' | 'Coding Agent' | 'Code Review' | 'Spark';
+
+function normalizeProductValue(value?: string): string {
+  return value?.trim().toLowerCase() ?? '';
+}
 
 export function isCodingAgentModel(model: string): boolean {
   const normalizedModel = model.toLowerCase();
@@ -9,7 +13,19 @@ export function isCodeReviewModel(model: string): boolean {
   return model.toLowerCase().includes('code review');
 }
 
-export function classifyProductCategory(model: string): ProductCategory {
+export function isSparkProduct(model: string, product?: string, sku?: string): boolean {
+  const normalizedProduct = normalizeProductValue(product);
+  const normalizedSku = normalizeProductValue(sku);
+
+  return normalizedProduct === 'spark'
+    || normalizedSku === 'spark_premium_request';
+}
+
+export function classifyProductCategory(model: string, product?: string, sku?: string): ProductCategory {
+  if (isSparkProduct(model, product, sku)) {
+    return 'Spark';
+  }
+
   if (isCodingAgentModel(model)) {
     return 'Coding Agent';
   }
@@ -19,4 +35,8 @@ export function classifyProductCategory(model: string): ProductCategory {
   }
 
   return 'Copilot';
+}
+
+export function getProductDisplayLabel(category: ProductCategory): string {
+  return category === 'Coding Agent' ? 'Cloud Agent' : category;
 }
