@@ -54,10 +54,10 @@ describe('CSVUploader', () => {
     expect(screen.getByText(/analyze your usage data/i)).toBeInTheDocument();
   });
 
-  it('should show required columns message', () => {
+  it('should show accepted file hint', () => {
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
-    expect(screen.getByText(/Required:/i)).toBeInTheDocument();
-    expect(screen.getByText(/date, username, model, quantity/i)).toBeInTheDocument();
+    expect(screen.getByText(/Accepted:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Premium Request Usage report/i)).toBeInTheDocument();
   });
   it('should handle CSV parsing', async () => {
     const mockFile = createMockFile('new-format.csv content', 'new-format.csv');
@@ -326,26 +326,25 @@ describe('CSVUploader', () => {
     });
   });
 
-  it('should show privacy dialog when privacy button is clicked', async () => {
+  it('should show inline privacy information', () => {
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
-    
-    const privacyButton = screen.getByText(/privacy info/i);
-    await user.click(privacyButton);
-    
-    expect(screen.getByText(/Your data stays local/i)).toBeInTheDocument();
-    expect(screen.getByText(/front-end only application/i)).toBeInTheDocument();
+
+    expect(screen.getByText(/Your data stays private/i)).toBeInTheDocument();
+    expect(screen.getByText(/All processing happens in your browser/i)).toBeInTheDocument();
+    expect(screen.getByText(/zero external network requests/i)).toBeInTheDocument();
   });
 
-  it('should close privacy dialog when close button is clicked', async () => {
+  it('should show source code link inside privacy information', () => {
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
-    
-    const privacyButton = screen.getByText(/privacy info/i);
-    await user.click(privacyButton);
-    
-    const closeButton = screen.getByRole('button', { name: /got it/i });
-    await user.click(closeButton);
-    
-    expect(screen.queryByText(/Your data stays local/i)).not.toBeInTheDocument();
+
+    const sourceCodeLink = screen.getByRole('link', {
+      name: /github\.com\/asizikov-demos\/copilot-premium-requests-report-viewer/i,
+    });
+
+    expect(sourceCodeLink).toHaveAttribute(
+      'href',
+      'https://github.com/asizikov-demos/copilot-premium-requests-report-viewer'
+    );
   });
 
   it('should show documentation link', () => {
