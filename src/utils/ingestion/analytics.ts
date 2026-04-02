@@ -14,6 +14,8 @@ import type { AnalysisResults, ProcessedData } from '@/types/csv';
 import type { CodeReviewAnalysis } from '@/types/csv';
 import {
   NON_COPILOT_CODE_REVIEW_BUCKET,
+  NON_COPILOT_CODE_REVIEW_LABEL,
+  type SpecialUsageBucketKey,
   type DailyBucketsArtifacts,
   type FeatureUsageArtifacts,
   type QuotaArtifacts,
@@ -48,7 +50,7 @@ export function buildUsageArtifactsFromProcessedData(filtered: import('@/types/c
     organization?: string;
     costCenter?: string;
   }>();
-  const specialBucketMap = new Map<'non_copilot_code_review', {
+  const specialBucketMap = new Map<SpecialUsageBucketKey, {
     totalRequests: number;
     modelBreakdown: Record<string, number>;
   }>();
@@ -105,7 +107,7 @@ export function buildUsageArtifactsFromProcessedData(filtered: import('@/types/c
     costCenters: Array.from(costCenters).sort((a, b) => a.localeCompare(b)),
     specialBuckets: Array.from(specialBucketMap.entries()).map(([key, value]) => ({
       key,
-      label: 'Non-Copilot users',
+      label: NON_COPILOT_CODE_REVIEW_LABEL,
       totalRequests: value.totalRequests,
       modelBreakdown: value.modelBreakdown,
       quotaValue: 0

@@ -3,7 +3,14 @@
  */
 
 import { ProcessedData } from '@/types/csv';
-import { NormalizedRow, IngestionResult, QuotaArtifacts, UsageArtifacts, DailyBucketsArtifacts } from './types';
+import {
+  NON_COPILOT_CODE_REVIEW_BUCKET,
+  NormalizedRow,
+  IngestionResult,
+  QuotaArtifacts,
+  UsageArtifacts,
+  DailyBucketsArtifacts,
+} from './types';
 import { buildDateKeys } from '../dateKeys';
 import { isCodeReviewModel } from '@/utils/productClassification';
 
@@ -41,13 +48,16 @@ export function buildProcessedDataFromRows(rows: unknown[] | undefined | null): 
   if (!Array.isArray(rows) || rows.length === 0) {
     return [];
   }
-  return rows.map(raw => {
+  const processedRows: Array<ProcessedData | null> = rows.map(raw => {
     if (isExpandedCSVLike(raw)) {
       const quantityNum = typeof raw.quantity === 'number' ? raw.quantity : parseFloat(raw.quantity);
       const timestamp = new Date(`${raw.date}T00:00:00Z`);
       const keys = buildDateKeys(timestamp);
       const user = raw.username.trim();
       const isNonCopilotUsage = user.length === 0 && isCodeReviewModel(raw.model);
+      if (user.length === 0 && !isNonCopilotUsage) {
+        return null;
+      }
       const quotaRaw = isNonCopilotUsage ? '0' : raw.total_monthly_quota || 'Unlimited';
       const quotaValue = isNonCopilotUsage
         ? 0
@@ -71,7 +81,7 @@ export function buildProcessedDataFromRows(rows: unknown[] | undefined | null): 
         discountAmount: raw.discount_amount ? parseFloat(raw.discount_amount) : undefined,
         netAmount: raw.net_amount ? parseFloat(raw.net_amount) : undefined,
         isNonCopilotUsage,
-        usageBucket: isNonCopilotUsage ? 'non_copilot_code_review' : undefined,
+        usageBucket: isNonCopilotUsage ? NON_COPILOT_CODE_REVIEW_BUCKET : undefined,
         ...keys
       };
     }
@@ -99,6 +109,8 @@ export function buildProcessedDataFromRows(rows: unknown[] | undefined | null): 
       ...keys
     };
   });
+
+  return processedRows.filter((row): row is ProcessedData => row !== null);
 }
 
 /**

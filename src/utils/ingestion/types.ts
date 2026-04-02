@@ -5,7 +5,7 @@
 import { PRICING } from '@/constants/pricing';
 
 export const NON_COPILOT_CODE_REVIEW_BUCKET = 'non_copilot_code_review' as const;
-export const NON_COPILOT_CODE_REVIEW_LABEL = 'Non-Copilot users' as const;
+export const NON_COPILOT_CODE_REVIEW_LABEL = 'Non-Copilot Users' as const;
 
 export type SpecialUsageBucketKey = typeof NON_COPILOT_CODE_REVIEW_BUCKET;
 

@@ -8,6 +8,7 @@ import {
   AggregatorContext,
   NON_COPILOT_CODE_REVIEW_LABEL,
   NormalizedRow,
+  SpecialUsageBucketKey,
   SpecialUsageBucketAggregate,
   UsageArtifacts,
   UserAggregate
@@ -23,7 +24,7 @@ export class UsageAggregator implements Aggregator<UsageArtifacts> {
   private userMetadata = new Map<string, { organization?: string; costCenter?: string }>();
   private organizations = new Set<string>();
   private costCenters = new Set<string>();
-  private specialBuckets = new Map<string, SpecialUsageBucketAggregate>();
+  private specialBuckets = new Map<SpecialUsageBucketKey, SpecialUsageBucketAggregate>();
   
   init(_ctx: AggregatorContext): void {
     void _ctx;
