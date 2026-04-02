@@ -34,4 +34,29 @@ describe('processCSVData (CSV format)', () => {
       expect(typeof r.exceedsQuota).toBe('boolean');
     });
   });
+
+  it('maps blank-username Code Review rows into a non-Copilot usage bucket with zero quota', () => {
+    const processed = processCSVData([
+      ...newFormatRows,
+      {
+        date: '2025-10-03',
+        username: '   ',
+        product: 'copilot',
+        sku: 'copilot_premium_request',
+        model: 'Code Review',
+        quantity: '4',
+        exceeds_quota: 'False',
+        total_monthly_quota: '1000',
+        organization: 'org-gamma',
+        cost_center_name: 'CC-Gamma'
+      }
+    ]);
+
+    const special = processed[2];
+    expect(special.user).toBe('');
+    expect(special.isNonCopilotUsage).toBe(true);
+    expect(special.usageBucket).toBe('non_copilot_code_review');
+    expect(special.quotaValue).toBe(0);
+    expect(special.totalQuota).toBe('0');
+  });
 });

@@ -1,5 +1,6 @@
 import { CSVData, ProcessedData, AnalysisResults } from '@/types/csv';
 import { PRICING } from '@/constants/pricing';
+import { isCodeReviewModel } from '@/utils/productClassification';
 
 export function processCSVData(rawData: CSVData[]): ProcessedData[] {
   return rawData.map(row => {
@@ -8,16 +9,20 @@ export function processCSVData(rawData: CSVData[]): ProcessedData[] {
     const dateKey = iso.substring(0,10);
     const monthKey = iso.substring(0,7);
     const totalQuotaRaw = row.total_monthly_quota || 'Unlimited';
-    const quotaValue: number | 'unlimited' = totalQuotaRaw.toLowerCase && totalQuotaRaw.toLowerCase() === 'unlimited'
-      ? 'unlimited'
-      : (isNaN(Number(totalQuotaRaw)) ? 'unlimited' : Number(totalQuotaRaw));
+    const trimmedUsername = row.username.trim();
+    const isNonCopilotCodeReview = trimmedUsername.length === 0 && isCodeReviewModel(row.model);
+    const quotaValue: number | 'unlimited' = isNonCopilotCodeReview
+      ? 0
+      : totalQuotaRaw.toLowerCase && totalQuotaRaw.toLowerCase() === 'unlimited'
+        ? 'unlimited'
+        : (isNaN(Number(totalQuotaRaw)) ? 'unlimited' : Number(totalQuotaRaw));
     return {
       timestamp,
-      user: row.username,
+      user: trimmedUsername,
       model: row.model,
       requestsUsed: parseFloat(row.quantity),
       exceedsQuota: row.exceeds_quota ? row.exceeds_quota.toLowerCase() === 'true' : false,
-      totalQuota: totalQuotaRaw,
+      totalQuota: isNonCopilotCodeReview ? '0' : totalQuotaRaw,
       quotaValue,
       iso,
       dateKey,
@@ -31,6 +36,8 @@ export function processCSVData(rawData: CSVData[]): ProcessedData[] {
       grossAmount: row.gross_amount ? parseFloat(row.gross_amount) : undefined,
       discountAmount: row.discount_amount ? parseFloat(row.discount_amount) : undefined,
       netAmount: row.net_amount ? parseFloat(row.net_amount) : undefined,
+      isNonCopilotUsage: isNonCopilotCodeReview,
+      usageBucket: isNonCopilotCodeReview ? 'non_copilot_code_review' : undefined,
     };
   });
 }
@@ -47,12 +54,17 @@ export function analyzeData(data: ProcessedData[]): AnalysisResults {
   }
   const sorted = [...data].sort((a,b)=> a.timestamp.getTime()-b.timestamp.getTime());
   const timeFrame = { start: sorted[0].dateKey, end: sorted[sorted.length-1].dateKey };
-  const uniqueUsers = new Set(data.map(d=>d.user));
+  const uniqueUsers = new Set(data.filter(d => !d.isNonCopilotUsage).map(d=>d.user));
   const userTotals = new Map<string, number>();
   const modelTotals = new Map<string, number>();
-  data.forEach(r=>{ userTotals.set(r.user, (userTotals.get(r.user)||0)+r.requestsUsed); modelTotals.set(r.model,(modelTotals.get(r.model)||0)+r.requestsUsed); });
+  data.forEach(r=>{
+    if (!r.isNonCopilotUsage) {
+      userTotals.set(r.user, (userTotals.get(r.user)||0)+r.requestsUsed);
+    }
+    modelTotals.set(r.model,(modelTotals.get(r.model)||0)+r.requestsUsed);
+  });
   const userQuotas = new Map<string, number | 'unlimited'>();
-  data.forEach(r=> { if(!userQuotas.has(r.user)) userQuotas.set(r.user, r.quotaValue); });
+  data.forEach(r=> { if(!r.isNonCopilotUsage && !userQuotas.has(r.user)) userQuotas.set(r.user, r.quotaValue); });
   let usersExceeding = 0;
   for (const [u,total] of userTotals) { const q = userQuotas.get(u); if (q !== undefined && q !== 'unlimited' && total > q) usersExceeding++; }
   const requestsByModel = Array.from(modelTotals.entries()).map(([model,totalRequests])=>({model,totalRequests})).sort((a,b)=> b.totalRequests - a.totalRequests);

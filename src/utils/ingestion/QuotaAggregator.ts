@@ -7,7 +7,8 @@ import {
   Aggregator,
   AggregatorContext,
   NormalizedRow,
-  QuotaArtifacts
+  QuotaArtifacts,
+  SpecialUsageBucketKey
 } from './types';
 
 export class QuotaAggregator implements Aggregator<QuotaArtifacts> {
@@ -16,6 +17,7 @@ export class QuotaAggregator implements Aggregator<QuotaArtifacts> {
   private quotaByUser = new Map<string, number | 'unlimited'>();
   private conflicts = new Map<string, Set<number | 'unlimited'>>();
   private distinctQuotas = new Set<number>();
+  private specialBucketQuotas = new Map<SpecialUsageBucketKey, 0>();
   
   init(_ctx: AggregatorContext): void {
     void _ctx;
@@ -23,10 +25,16 @@ export class QuotaAggregator implements Aggregator<QuotaArtifacts> {
     this.quotaByUser.clear();
     this.conflicts.clear();
     this.distinctQuotas.clear();
+    this.specialBucketQuotas.clear();
   }
   
   onRow(row: NormalizedRow, _ctx: AggregatorContext): void {
     void _ctx;
+    if (row.isNonCopilotUsage && row.usageBucket) {
+      this.specialBucketQuotas.set(row.usageBucket, 0);
+      return;
+    }
+
     if (row.quotaValue === undefined) return;
     
     const existing = this.quotaByUser.get(row.user);
@@ -71,7 +79,8 @@ export class QuotaAggregator implements Aggregator<QuotaArtifacts> {
       conflicts: this.conflicts,
       distinctQuotas: this.distinctQuotas,
       hasMixedQuotas,
-      hasMixedLicenses
+      hasMixedLicenses,
+      specialBucketQuotas: this.specialBucketQuotas
     };
   }
 }

@@ -56,4 +56,22 @@ describe('BillingAggregator', () => {
     expect(out.totals.gross).toBe(0);
     expect(out.users.find(u => u.user === 'a')?.quantity).toBe(2);
   });
+
+  it('stores non-Copilot code review billing in a special bucket instead of a user entry', () => {
+    const agg = new BillingAggregator();
+    agg.init?.(ctx);
+    agg.onRow(buildRow({ user: '', model: 'Code Review', quantity: 2, grossAmount: 1, netAmount: 1, isNonCopilotUsage: true, usageBucket: 'non_copilot_code_review' }), ctx);
+
+    const out = agg.finalize(ctx);
+    expect(out.users).toEqual([]);
+    expect(out.specialBuckets).toEqual([
+      expect.objectContaining({
+        key: 'non_copilot_code_review',
+        quantity: 2,
+        gross: 1,
+        net: 1,
+        quotaValue: 0
+      })
+    ]);
+  });
 });

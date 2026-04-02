@@ -5,6 +5,7 @@
 import { ProcessedData } from '@/types/csv';
 import { NormalizedRow, IngestionResult, QuotaArtifacts, UsageArtifacts, DailyBucketsArtifacts } from './types';
 import { buildDateKeys } from '../dateKeys';
+import { isCodeReviewModel } from '@/utils/productClassification';
 
 /**
  * Reconstructs a ProcessedData array from normalized rows.
@@ -45,11 +46,17 @@ export function buildProcessedDataFromRows(rows: unknown[] | undefined | null): 
       const quantityNum = typeof raw.quantity === 'number' ? raw.quantity : parseFloat(raw.quantity);
       const timestamp = new Date(`${raw.date}T00:00:00Z`);
       const keys = buildDateKeys(timestamp);
-      const quotaRaw = raw.total_monthly_quota || 'Unlimited';
-      const quotaValue = quotaRaw.toLowerCase() === 'unlimited' ? 'unlimited' : parseFloat(quotaRaw);
+      const user = raw.username.trim();
+      const isNonCopilotUsage = user.length === 0 && isCodeReviewModel(raw.model);
+      const quotaRaw = isNonCopilotUsage ? '0' : raw.total_monthly_quota || 'Unlimited';
+      const quotaValue = isNonCopilotUsage
+        ? 0
+        : quotaRaw.toLowerCase() === 'unlimited'
+          ? 'unlimited'
+          : parseFloat(quotaRaw);
       return {
         timestamp,
-        user: raw.username,
+        user,
         model: raw.model,
         requestsUsed: quantityNum,
         exceedsQuota: raw.exceeds_quota ? raw.exceeds_quota.toLowerCase() === 'true' : false,
@@ -63,6 +70,8 @@ export function buildProcessedDataFromRows(rows: unknown[] | undefined | null): 
         grossAmount: raw.gross_amount ? parseFloat(raw.gross_amount) : undefined,
         discountAmount: raw.discount_amount ? parseFloat(raw.discount_amount) : undefined,
         netAmount: raw.net_amount ? parseFloat(raw.net_amount) : undefined,
+        isNonCopilotUsage,
+        usageBucket: isNonCopilotUsage ? 'non_copilot_code_review' : undefined,
         ...keys
       };
     }
@@ -85,6 +94,8 @@ export function buildProcessedDataFromRows(rows: unknown[] | undefined | null): 
       grossAmount: row.grossAmount,
       discountAmount: row.discountAmount,
       netAmount: row.netAmount,
+      isNonCopilotUsage: row.isNonCopilotUsage,
+      usageBucket: row.usageBucket,
       ...keys
     };
   });

@@ -4,7 +4,11 @@
  */
 
 import { parseQuotaValue } from '@/utils/analytics/quota';
-import { NormalizedRow } from './types';
+import {
+  NON_COPILOT_CODE_REVIEW_BUCKET,
+  NormalizedRow,
+} from './types';
+import { isCodeReviewModel } from '@/utils/productClassification';
 
 /**
  * Normalize a raw CSV row object into a typed, validated structure.
@@ -32,6 +36,14 @@ export function normalizeRow(raw: Record<string, unknown>, warnings: string[]): 
   if (typeof date !== 'string' || typeof username !== 'string' || typeof model !== 'string' || quantity == null) {
     return null;
   }
+
+  const trimmedUsername = username.trim();
+  const isNonCopilotCodeReviewUsage = trimmedUsername.length === 0 && isCodeReviewModel(model);
+
+  if (trimmedUsername.length === 0 && !isNonCopilotCodeReviewUsage) {
+    warnings.push(`Blank username is only allowed for Code Review usage date=${date}`);
+    return null;
+  }
   
   // Parse quantity
   const qty = typeof quantity === 'number' ? quantity : parseFloat(String(quantity));
@@ -41,9 +53,11 @@ export function normalizeRow(raw: Record<string, unknown>, warnings: string[]): 
   }
   
   // Parse quota if present
-  const quotaValue = total_monthly_quota && typeof total_monthly_quota === 'string' 
-    ? parseQuotaValue(total_monthly_quota) 
-    : undefined;
+  const quotaValue = isNonCopilotCodeReviewUsage
+    ? 0
+    : total_monthly_quota && typeof total_monthly_quota === 'string'
+      ? parseQuotaValue(total_monthly_quota)
+      : undefined;
   
   // Parse exceeds quota flag
   const exceedsQuota = exceeds_quota === 'true' || exceeds_quota === true;
@@ -58,10 +72,14 @@ export function normalizeRow(raw: Record<string, unknown>, warnings: string[]): 
   return {
     date,
     day: date.substring(0, 10), // Extract YYYY-MM-DD, preserving UTC
-    user: username,
+    user: trimmedUsername,
     model,
     quantity: qty,
-    quotaRaw: typeof total_monthly_quota === 'string' ? total_monthly_quota : undefined,
+    quotaRaw: isNonCopilotCodeReviewUsage
+      ? '0'
+      : typeof total_monthly_quota === 'string'
+        ? total_monthly_quota
+        : undefined,
     quotaValue,
     exceedsQuota,
     product: typeof product === 'string' ? product : undefined,
@@ -71,6 +89,8 @@ export function normalizeRow(raw: Record<string, unknown>, warnings: string[]): 
     appliedCostPerQuantity: parseNum(applied_cost_per_quantity),
     grossAmount: parseNum(gross_amount),
     discountAmount: parseNum(discount_amount),
-    netAmount: parseNum(net_amount)
+    netAmount: parseNum(net_amount),
+    isNonCopilotUsage: isNonCopilotCodeReviewUsage,
+    usageBucket: isNonCopilotCodeReviewUsage ? NON_COPILOT_CODE_REVIEW_BUCKET : undefined,
   };
 }

@@ -7,7 +7,8 @@ import {
   Aggregator,
   AggregatorContext,
   NormalizedRow,
-  DailyBucketsArtifacts
+  DailyBucketsArtifacts,
+  SpecialUsageBucketKey
 } from './types';
 
 export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts> {
@@ -16,6 +17,8 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
   private dailyUserTotals = new Map<string, Map<string, number>>();
   // New: nested map for per-model breakdown (day -> user -> model -> quantity)
   private dailyUserModelTotals = new Map<string, Map<string, Map<string, number>>>();
+  private dailyBucketTotals = new Map<string, Map<SpecialUsageBucketKey, number>>();
+  private dailyBucketModelTotals = new Map<string, Map<SpecialUsageBucketKey, Map<string, number>>>();
   private minDate: string | null = null;
   private maxDate: string | null = null;
   private months = new Set<string>();
@@ -25,6 +28,8 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
     // Reset state
     this.dailyUserTotals.clear();
     this.dailyUserModelTotals.clear();
+    this.dailyBucketTotals.clear();
+    this.dailyBucketModelTotals.clear();
     this.minDate = null;
     this.maxDate = null;
     this.months.clear();
@@ -43,6 +48,28 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
     }
     // Track month key (YYYY-MM)
     this.months.add(day.slice(0, 7));
+
+    if (row.isNonCopilotUsage && row.usageBucket) {
+      let dayBucketTotals = this.dailyBucketTotals.get(day);
+      if (!dayBucketTotals) {
+        dayBucketTotals = new Map();
+        this.dailyBucketTotals.set(day, dayBucketTotals);
+      }
+      dayBucketTotals.set(row.usageBucket, (dayBucketTotals.get(row.usageBucket) || 0) + quantity);
+
+      let dayBucketModelMap = this.dailyBucketModelTotals.get(day);
+      if (!dayBucketModelMap) {
+        dayBucketModelMap = new Map();
+        this.dailyBucketModelTotals.set(day, dayBucketModelMap);
+      }
+      let modelMap = dayBucketModelMap.get(row.usageBucket);
+      if (!modelMap) {
+        modelMap = new Map();
+        dayBucketModelMap.set(row.usageBucket, modelMap);
+      }
+      modelMap.set(model, (modelMap.get(model) || 0) + quantity);
+      return;
+    }
     
     // Accumulate daily totals
     let dayMap = this.dailyUserTotals.get(day);
@@ -71,6 +98,8 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
     return {
       dailyUserTotals: this.dailyUserTotals,
       dailyUserModelTotals: this.dailyUserModelTotals,
+      dailyBucketTotals: this.dailyBucketTotals,
+      dailyBucketModelTotals: this.dailyBucketModelTotals,
       dateRange: this.minDate && this.maxDate 
         ? { min: this.minDate, max: this.maxDate }
         : null,

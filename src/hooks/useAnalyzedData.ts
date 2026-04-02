@@ -28,6 +28,7 @@ interface UseAnalyzedDataArgs {
 
 interface UseAnalyzedDataReturn {
   processedData: ProcessedData[]; // filtered (retained for billing row-level fields)
+  aggregateProcessedData: ProcessedData[]; // filtered rows including non-Copilot aggregate usage
   analysis: AnalysisResults;
   userData: UserSummary[];
   allModels: string[];
@@ -44,6 +45,10 @@ interface UseAnalyzedDataReturn {
  */
 export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts, quotaArtifacts, dailyBucketsArtifacts }: UseAnalyzedDataArgs): UseAnalyzedDataReturn {
   return useMemo(() => {
+    const filteredAllRows = selectedMonths.length === 0
+      ? baseProcessed
+      : baseProcessed.filter(r => selectedMonths.includes(r.monthKey));
+    const filteredUserRows = filteredAllRows.filter(r => !r.isNonCopilotUsage);
     const artifactsAvailable = !!(
       usageArtifacts && quotaArtifacts && dailyBucketsArtifacts &&
       usageArtifacts.users && usageArtifacts.modelTotals &&
@@ -52,19 +57,18 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
 
     if (!artifactsAvailable) {
       // Minimal fallback to support legacy tests relying solely on processedData (billing summary, etc.)
-      const filtered = selectedMonths.length === 0
-        ? baseProcessed
-        : baseProcessed.filter(r => selectedMonths.includes(r.monthKey));
+      const filtered = filteredUserRows;
       const analysis: AnalysisResults = (() => {
-        if (filtered.length === 0) return { timeFrame: { start: '', end: '' }, totalUniqueUsers: 0, usersExceedingQuota: 0, requestsByModel: [], quotaBreakdown: { unlimited: [], business: [], enterprise: [], mixed: false, suggestedPlan: null } };
-        const sorted = [...filtered].sort((a,b)=> a.epoch - b.epoch);
+        const userFiltered = filtered;
+        if (filteredAllRows.length === 0) return { timeFrame: { start: '', end: '' }, totalUniqueUsers: 0, usersExceedingQuota: 0, requestsByModel: [], quotaBreakdown: { unlimited: [], business: [], enterprise: [], mixed: false, suggestedPlan: null } };
+        const sorted = [...filteredAllRows].sort((a,b)=> a.epoch - b.epoch);
         const timeFrame = { start: sorted[0].dateKey, end: sorted[sorted.length-1].dateKey };
-        const uniqueUsers = new Set(filtered.map(r=> r.user));
+        const uniqueUsers = new Set(userFiltered.map(r=> r.user));
         const requestsByModelMap = new Map<string, number>();
         const quotaByUser = new Map<string, number | 'unlimited'>();
-        for (const r of filtered) {
+        for (const r of filteredAllRows) {
           requestsByModelMap.set(r.model, (requestsByModelMap.get(r.model) || 0) + r.requestsUsed);
-          if (!quotaByUser.has(r.user)) quotaByUser.set(r.user, r.quotaValue);
+          if (!r.isNonCopilotUsage && !quotaByUser.has(r.user)) quotaByUser.set(r.user, r.quotaValue);
         }
         const requestsByModel = Array.from(requestsByModelMap.entries()).map(([model,totalRequests])=>({ model, totalRequests })).sort((a,b)=> b.totalRequests - a.totalRequests);
         const unlimited: string[] = []; const business: string[] = []; const enterprise: string[] = [];
@@ -77,6 +81,7 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
       })();
       return {
         processedData: filtered,
+        aggregateProcessedData: filteredAllRows,
         analysis,
         userData: [],
         allModels: Array.from(new Set(filtered.map(r=> r.model))).sort(),
@@ -87,15 +92,12 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
       };
     }
 
-    // Month filtering still based on processed rows (artifact month filter already derived; next step will remove processed dependency for filtering)
-    const filtered = selectedMonths.length === 0
-      ? baseProcessed
-      : baseProcessed.filter(r => selectedMonths.includes(r.monthKey));
+    const filtered = filteredUserRows;
     const analysis = deriveAnalysisFromArtifacts(usageArtifacts!, quotaArtifacts!, dailyBucketsArtifacts!);
     const dailyCumulativeData = buildDailyCumulativeDataFromArtifacts(dailyBucketsArtifacts!);
     // When billing period filter is active, derive agent/review analyses from month-sliced data
     const effectiveUsage = selectedMonths.length > 0
-      ? buildUsageArtifactsFromProcessedData(filtered)
+      ? buildUsageArtifactsFromProcessedData(filteredAllRows)
       : usageArtifacts!;
     const codingAgentAnalysis = analyzeCodingAgentAdoptionFromArtifacts(effectiveUsage, quotaArtifacts!);
     const codeReviewAnalysis = analyzeCodeReviewAdoptionFromArtifacts(effectiveUsage, quotaArtifacts!);
@@ -110,6 +112,7 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
     const allModels = Object.keys(usageArtifacts!.modelTotals).sort();
     return {
       processedData: filtered,
+      aggregateProcessedData: filteredAllRows,
       analysis,
       userData,
       allModels,

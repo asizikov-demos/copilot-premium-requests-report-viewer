@@ -49,4 +49,30 @@ describe('UsageAggregator', () => {
       expect.objectContaining({ user: 'carol', organization: undefined, costCenter: 'Security', totalRequests: 4 }),
     ]));
   });
+
+  test('keeps blank-username code review rows out of user aggregates and emits a special bucket', () => {
+    const agg = new UsageAggregator();
+    const ctx: AggregatorContext = { pricing: PRICING };
+    agg.init?.(ctx);
+
+    agg.onRow({
+      ...makeRow({ user: '', model: 'Code Review', quantity: 6 }),
+      isNonCopilotUsage: true,
+      usageBucket: 'non_copilot_code_review'
+    }, ctx);
+    agg.onRow(makeRow({ user: 'alice', model: 'gpt-4.1', quantity: 2 }), ctx);
+
+    const output = agg.finalize(ctx);
+
+    expect(output.users).toHaveLength(1);
+    expect(output.users[0].user).toBe('alice');
+    expect(output.specialBuckets).toEqual([
+      expect.objectContaining({
+        key: 'non_copilot_code_review',
+        totalRequests: 6,
+        quotaValue: 0,
+        modelBreakdown: { 'Code Review': 6 }
+      })
+    ]);
+  });
 });

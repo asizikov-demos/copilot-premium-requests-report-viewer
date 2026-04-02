@@ -21,6 +21,7 @@ export interface FeatureUtilizationStats {
   codeReview: { totalSessions: number; averagePerUser: number; userCount: number; };
   codingAgent: { totalSessions: number; averagePerUser: number; userCount: number; };
   spark: { totalSessions: number; averagePerUser: number; userCount: number; };
+  nonCopilotCodeReview: { totalSessions: number; };
 }
 
 export const CONSUMPTION_THRESHOLDS = Object.freeze({
@@ -32,11 +33,18 @@ export function calculateFeatureUtilization(processedData: ProcessedData[]): Fea
   const codeReviewUsers = new Map<string, number>();
   const codingAgentUsers = new Map<string, number>();
   const sparkUsers = new Map<string, number>();
-  let totalCodeReviewSessions = 0; let totalCodingAgentSessions = 0; let totalSparkSessions = 0;
+  let totalCodeReviewSessions = 0;
+  let totalCodingAgentSessions = 0;
+  let totalSparkSessions = 0;
+  let totalNonCopilotCodeReviewSessions = 0;
   processedData.forEach(row => {
     if (isCodeReviewModel(row.model)) {
-      totalCodeReviewSessions += row.requestsUsed;
-      codeReviewUsers.set(row.user, (codeReviewUsers.get(row.user) || 0) + row.requestsUsed);
+      if (row.isNonCopilotUsage) {
+        totalNonCopilotCodeReviewSessions += row.requestsUsed;
+      } else {
+        totalCodeReviewSessions += row.requestsUsed;
+        codeReviewUsers.set(row.user, (codeReviewUsers.get(row.user) || 0) + row.requestsUsed);
+      }
     }
     if (isCodingAgentModel(row.model)) {
       totalCodingAgentSessions += row.requestsUsed;
@@ -52,7 +60,8 @@ export function calculateFeatureUtilization(processedData: ProcessedData[]): Fea
   return {
     codeReview: { totalSessions: totalCodeReviewSessions, averagePerUser: avg(totalCodeReviewSessions, codeReviewUsers.size), userCount: codeReviewUsers.size },
     codingAgent: { totalSessions: totalCodingAgentSessions, averagePerUser: avg(totalCodingAgentSessions, codingAgentUsers.size), userCount: codingAgentUsers.size },
-    spark: { totalSessions: totalSparkSessions, averagePerUser: avg(totalSparkSessions, sparkUsers.size), userCount: sparkUsers.size }
+    spark: { totalSessions: totalSparkSessions, averagePerUser: avg(totalSparkSessions, sparkUsers.size), userCount: sparkUsers.size },
+    nonCopilotCodeReview: { totalSessions: totalNonCopilotCodeReviewSessions }
   };
 }
 

@@ -4,6 +4,29 @@
 
 import { PRICING } from '@/constants/pricing';
 
+export const NON_COPILOT_CODE_REVIEW_BUCKET = 'non_copilot_code_review' as const;
+export const NON_COPILOT_CODE_REVIEW_LABEL = 'Non-Copilot users' as const;
+
+export type SpecialUsageBucketKey = typeof NON_COPILOT_CODE_REVIEW_BUCKET;
+
+export interface SpecialUsageBucketAggregate {
+  key: SpecialUsageBucketKey;
+  label: typeof NON_COPILOT_CODE_REVIEW_LABEL;
+  totalRequests: number;
+  modelBreakdown: Record<string, number>;
+  quotaValue: 0;
+}
+
+export interface SpecialBillingBucketTotals {
+  key: SpecialUsageBucketKey;
+  label: typeof NON_COPILOT_CODE_REVIEW_LABEL;
+  quantity: number;
+  gross?: number;
+  discount?: number;
+  net?: number;
+  quotaValue: 0;
+}
+
 /**
  * Normalized row after parsing and basic validation.
  * All aggregators receive this uniform shape.
@@ -27,6 +50,8 @@ export interface NormalizedRow {
   grossAmount?: number;
   discountAmount?: number;
   netAmount?: number;
+  isNonCopilotUsage?: boolean;
+  usageBucket?: SpecialUsageBucketKey;
 }
 
 /**
@@ -99,6 +124,7 @@ export interface QuotaArtifacts {
   distinctQuotas: Set<number>;
   hasMixedQuotas: boolean;
   hasMixedLicenses: boolean;
+  specialBucketQuotas?: Map<SpecialUsageBucketKey, 0>;
 }
 
 /**
@@ -125,6 +151,7 @@ export interface UsageArtifacts {
   modelCount: number;
   organizations?: string[];
   costCenters?: string[];
+  specialBuckets?: SpecialUsageBucketAggregate[];
 }
 
 /**
@@ -139,6 +166,15 @@ export interface DailyBucketsArtifacts {
    * Present when produced by the updated DailyBucketsAggregator.
    */
   dailyUserModelTotals?: Map<string, Map<string, Map<string, number>>>;
+  /**
+   * Optional special bucket totals: day -> bucket -> quantity.
+   * Used for non-user usage such as non-Copilot Code Review rows.
+   */
+  dailyBucketTotals?: Map<string, Map<SpecialUsageBucketKey, number>>;
+  /**
+   * Optional special bucket per-model totals: day -> bucket -> model -> quantity.
+   */
+  dailyBucketModelTotals?: Map<string, Map<SpecialUsageBucketKey, Map<string, number>>>;
   /**
    * Sorted list of distinct months (YYYY-MM) encountered while streaming rows.
    * Enables month filter derivation without scanning processedData.
@@ -164,6 +200,9 @@ export interface FeatureUsageArtifacts {
     codingAgent: Set<string>;
     spark: Set<string>;
   };
+  specialTotals: {
+    nonCopilotCodeReview: number;
+  };
 }
 
 /**
@@ -185,4 +224,5 @@ export interface BillingArtifacts {
   users: BillingUserTotals[]; // unsorted list; consumer may sort
   userMap: Map<string, BillingUserTotals>; // internal convenience map (exposed for advanced consumers)
   hasAnyBillingData: boolean; // true if at least one billing numeric column encountered
+  specialBuckets?: SpecialBillingBucketTotals[];
 }
