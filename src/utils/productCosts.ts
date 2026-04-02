@@ -11,7 +11,13 @@ export interface ProductCost {
   net: number;
 }
 
-export const PRODUCT_CATEGORY_ORDER: ProductCategory[] = ['Copilot', 'Spark', 'Coding Agent', 'Code Review'];
+export const PRODUCT_CATEGORY_ORDER: ProductCategory[] = [
+  'Copilot',
+  'Spark',
+  'Coding Agent',
+  'Code Review',
+  'Code Review for Non-Copilot Users',
+];
 
 function createEmptyProductCost(category: ProductCategory): ProductCost {
   return {
@@ -32,9 +38,12 @@ export function createEmptyProductCostMap(): Map<ProductCategory, ProductCost> {
 
 export function accumulateProductCost(
   buckets: Map<ProductCategory, ProductCost>,
-  row: Pick<ProcessedData, 'model' | 'product' | 'sku' | 'requestsUsed' | 'grossAmount' | 'discountAmount' | 'netAmount'>
+  row: Pick<ProcessedData, 'model' | 'product' | 'sku' | 'requestsUsed' | 'grossAmount' | 'discountAmount' | 'netAmount' | 'isNonCopilotUsage' | 'usageBucket'>
 ): void {
-  const category = classifyProductCategory(row.model, row.product, row.sku);
+  const category = classifyProductCategory(row.model, row.product, row.sku, {
+    isNonCopilotUsage: row.isNonCopilotUsage,
+    usageBucket: row.usageBucket,
+  });
   const bucket = buckets.get(category);
 
   if (!bucket) {

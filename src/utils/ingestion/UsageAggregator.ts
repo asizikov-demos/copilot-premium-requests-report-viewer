@@ -6,7 +6,10 @@
 import {
   Aggregator,
   AggregatorContext,
+  NON_COPILOT_CODE_REVIEW_LABEL,
   NormalizedRow,
+  SpecialUsageBucketKey,
+  SpecialUsageBucketAggregate,
   UsageArtifacts,
   UserAggregate
 } from './types';
@@ -21,6 +24,7 @@ export class UsageAggregator implements Aggregator<UsageArtifacts> {
   private userMetadata = new Map<string, { organization?: string; costCenter?: string }>();
   private organizations = new Set<string>();
   private costCenters = new Set<string>();
+  private specialBuckets = new Map<SpecialUsageBucketKey, SpecialUsageBucketAggregate>();
   
   init(_ctx: AggregatorContext): void {
     void _ctx;
@@ -32,10 +36,29 @@ export class UsageAggregator implements Aggregator<UsageArtifacts> {
     this.userMetadata.clear();
     this.organizations.clear();
     this.costCenters.clear();
+    this.specialBuckets.clear();
   }
   
   onRow(row: NormalizedRow, _ctx: AggregatorContext): void {
     void _ctx;
+    if (row.isNonCopilotUsage && row.usageBucket) {
+      let bucket = this.specialBuckets.get(row.usageBucket);
+      if (!bucket) {
+        bucket = {
+          key: row.usageBucket,
+          label: NON_COPILOT_CODE_REVIEW_LABEL,
+          totalRequests: 0,
+          modelBreakdown: {},
+          quotaValue: 0
+        };
+        this.specialBuckets.set(row.usageBucket, bucket);
+      }
+      bucket.totalRequests += row.quantity;
+      bucket.modelBreakdown[row.model] = (bucket.modelBreakdown[row.model] || 0) + row.quantity;
+      this.modelTotals.set(row.model, (this.modelTotals.get(row.model) || 0) + row.quantity);
+      return;
+    }
+
     const { user, model, quantity, organization, costCenter } = row;
     
     // User totals
@@ -108,7 +131,8 @@ export class UsageAggregator implements Aggregator<UsageArtifacts> {
       userCount: this.userTotals.size,
       modelCount: this.modelTotals.size,
       organizations: Array.from(this.organizations).sort((a, b) => a.localeCompare(b)),
-      costCenters: Array.from(this.costCenters).sort((a, b) => a.localeCompare(b))
+      costCenters: Array.from(this.costCenters).sort((a, b) => a.localeCompare(b)),
+      specialBuckets: Array.from(this.specialBuckets.values())
     };
   }
 }

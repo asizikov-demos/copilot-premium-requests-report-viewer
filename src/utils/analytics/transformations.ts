@@ -2,6 +2,7 @@ import { CSVData, ProcessedData, AnalysisResults } from '@/types/csv';
 import { parseQuotaValue, buildQuotaBreakdown } from './quota';
 import { buildDateKeys } from '../dateKeys';
 import { UserSummary } from './types';
+import { isCodeReviewModel } from '../productClassification';
 
 // Re-export for backwards compatibility
 export type { UserSummary } from './types';
@@ -12,15 +13,17 @@ export function processCSVData(rawData: CSVData[]): ProcessedData[] {
     // Build a UTC timestamp from YYYY-MM-DD (DO NOT localize)
     const timestamp = new Date(`${row.date}T00:00:00Z`);
     const keys = buildDateKeys(timestamp);
-    const totalQuotaRaw = row.total_monthly_quota || 'Unlimited';
+    const trimmedUsername = row.username.trim();
+    const isNonCopilotCodeReview = trimmedUsername.length === 0 && isCodeReviewModel(row.model);
+    const totalQuotaRaw = isNonCopilotCodeReview ? '0' : row.total_monthly_quota || 'Unlimited';
     return {
       timestamp,
-      user: row.username,
+      user: trimmedUsername,
       model: row.model,
       requestsUsed: parseFloat(row.quantity),
       exceedsQuota: row.exceeds_quota ? row.exceeds_quota.toLowerCase() === 'true' : false,
-      totalQuota: totalQuotaRaw,
-      quotaValue: parseQuotaValue(totalQuotaRaw),
+      totalQuota: isNonCopilotCodeReview ? '0' : totalQuotaRaw,
+      quotaValue: isNonCopilotCodeReview ? 0 : parseQuotaValue(totalQuotaRaw),
       product: row.product,
       sku: row.sku,
       organization: row.organization,
@@ -29,6 +32,8 @@ export function processCSVData(rawData: CSVData[]): ProcessedData[] {
       grossAmount: row.gross_amount ? parseFloat(row.gross_amount) : undefined,
       discountAmount: row.discount_amount ? parseFloat(row.discount_amount) : undefined,
       netAmount: row.net_amount ? parseFloat(row.net_amount) : undefined,
+      isNonCopilotUsage: isNonCopilotCodeReview,
+      usageBucket: isNonCopilotCodeReview ? 'non_copilot_code_review' : undefined,
       ...keys
     };
   });
@@ -57,19 +62,22 @@ export function analyzeData(data: ProcessedData[]): AnalysisResults {
     end: sortedData[sortedData.length - 1].dateKey
   };
 
-  const uniqueUsers = new Set(data.map(row => row.user));
+  const uniqueUsers = new Set(data.filter(row => !row.isNonCopilotUsage).map(row => row.user));
   const totalUniqueUsers = uniqueUsers.size;
 
   // Quota breakdown
-  const quotaBreakdown = buildQuotaBreakdown(data);
+  const quotaBreakdown = buildQuotaBreakdown(data.filter(row => !row.isNonCopilotUsage));
 
   // Users exceeding quota (using actual numeric quota values)
   const userQuotas = new Map<string, number | 'unlimited'>();
-  data.forEach(row => { if (!userQuotas.has(row.user)) userQuotas.set(row.user, row.quotaValue); });
+  data.forEach(row => { if (!row.isNonCopilotUsage && !userQuotas.has(row.user)) userQuotas.set(row.user, row.quotaValue); });
 
   const usersExceedingQuota = new Set<string>();
   const userTotalRequests = new Map<string, number>();
   data.forEach(row => {
+    if (row.isNonCopilotUsage) {
+      return;
+    }
     const current = userTotalRequests.get(row.user) || 0;
     userTotalRequests.set(row.user, current + row.requestsUsed);
   });
@@ -101,6 +109,9 @@ export function analyzeData(data: ProcessedData[]): AnalysisResults {
 export function analyzeUserData(data: ProcessedData[]): UserSummary[] {
   const userMap = new Map<string, UserSummary>();
   data.forEach(row => {
+    if (row.isNonCopilotUsage) {
+      return;
+    }
     if (!userMap.has(row.user)) {
       userMap.set(row.user, {
         user: row.user,

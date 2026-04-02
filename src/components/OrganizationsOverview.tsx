@@ -20,7 +20,7 @@ interface OrganizationRow {
 }
 
 export function OrganizationsOverview() {
-  const { processedData } = useAnalysisContext();
+  const { aggregateProcessedData } = useAnalysisContext();
   const [expandedOrg, setExpandedOrg] = useState<string | null>(null);
 
   const orgRows = useMemo((): OrganizationRow[] => {
@@ -33,7 +33,7 @@ export function OrganizationsOverview() {
       productBuckets: ReturnType<typeof createEmptyProductCostMap>;
     }>();
 
-    for (const row of processedData) {
+    for (const row of aggregateProcessedData) {
       const org = row.organization || 'Unassigned';
       let entry = map.get(org);
       if (!entry) {
@@ -48,7 +48,9 @@ export function OrganizationsOverview() {
         map.set(org, entry);
       }
 
-      entry.userSet.add(row.user);
+      if (!row.isNonCopilotUsage) {
+        entry.userSet.add(row.user);
+      }
       entry.requests += row.requestsUsed;
       entry.gross += row.grossAmount ?? 0;
       entry.discount += row.discountAmount ?? 0;
@@ -67,7 +69,7 @@ export function OrganizationsOverview() {
         products: getPopulatedProductCosts(data.productBuckets),
       }))
       .sort((a, b) => b.net - a.net);
-  }, [processedData]);
+  }, [aggregateProcessedData]);
 
   const hasCosts = orgRows.some(r => r.gross > 0 || r.net > 0);
 

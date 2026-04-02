@@ -22,6 +22,7 @@ export class FeatureUsageAggregator implements Aggregator<FeatureUsageArtifacts>
   private codeReviewTotal = 0;
   private codingAgentTotal = 0;
   private sparkTotal = 0;
+  private nonCopilotCodeReviewTotal = 0;
 
   private codeReviewUsers = new Set<string>();
   private codingAgentUsers = new Set<string>();
@@ -32,6 +33,7 @@ export class FeatureUsageAggregator implements Aggregator<FeatureUsageArtifacts>
     this.codeReviewTotal = 0;
     this.codingAgentTotal = 0;
     this.sparkTotal = 0;
+    this.nonCopilotCodeReviewTotal = 0;
     this.codeReviewUsers.clear();
     this.codingAgentUsers.clear();
     this.sparkUsers.clear();
@@ -43,17 +45,25 @@ export class FeatureUsageAggregator implements Aggregator<FeatureUsageArtifacts>
 
     if (isCodeReviewModel(row.model)) {
       this.codeReviewTotal += qty;
-      this.codeReviewUsers.add(row.user);
+      if (row.isNonCopilotUsage) {
+        this.nonCopilotCodeReviewTotal += qty;
+      } else {
+        this.codeReviewUsers.add(row.user);
+      }
     }
 
     if (isCodingAgentModel(row.model)) {
       this.codingAgentTotal += qty;
-      this.codingAgentUsers.add(row.user);
+      if (!row.isNonCopilotUsage) {
+        this.codingAgentUsers.add(row.user);
+      }
     }
 
     if (isSparkProduct(row.product, row.sku)) {
       this.sparkTotal += qty;
-      this.sparkUsers.add(row.user);
+      if (!row.isNonCopilotUsage) {
+        this.sparkUsers.add(row.user);
+      }
     }
   }
 
@@ -69,6 +79,9 @@ export class FeatureUsageAggregator implements Aggregator<FeatureUsageArtifacts>
         codeReview: this.codeReviewUsers,
         codingAgent: this.codingAgentUsers,
         spark: this.sparkUsers
+      },
+      specialTotals: {
+        nonCopilotCodeReview: this.nonCopilotCodeReviewTotal
       }
     };
   }

@@ -40,6 +40,8 @@ export interface ProcessedData {
   grossAmount?: number;
   discountAmount?: number;
   netAmount?: number;
+  isNonCopilotUsage?: boolean;
+  usageBucket?: 'non_copilot_code_review';
 }
 
 export interface AnalysisResults {
@@ -95,6 +97,7 @@ export interface CodeReviewUser {
   codeReviewPercentage: number;
   quota: number | 'unlimited';
   models: string[];
+  isSyntheticNonCopilotRow?: boolean;
 }
 
 export interface CodeReviewAnalysis {

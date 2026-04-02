@@ -47,4 +47,23 @@ describe('FeatureUsageAggregator', () => {
     expect(out.featureUsers.codeReview.has('u1')).toBeTruthy();
     expect(out.featureUsers.codeReview.has('u2')).toBeTruthy();
   });
+
+  test('counts non-Copilot code review usage in totals but not in user counts', () => {
+    const agg = new FeatureUsageAggregator();
+    const ctx: AggregatorContext = { pricing: PRICING };
+    agg.init?.(ctx);
+
+    agg.onRow({
+      ...makeRow({ user: '', model: 'Code Review', quantity: 4 }),
+      isNonCopilotUsage: true,
+      usageBucket: 'non_copilot_code_review'
+    }, ctx);
+    agg.onRow(makeRow({ user: 'u1', model: 'Code Review', quantity: 1 }), ctx);
+
+    const out = agg.finalize(ctx);
+    expect(out.featureTotals.codeReview).toBe(5);
+    expect(out.featureUsers.codeReview.size).toBe(1);
+    expect(out.featureUsers.codeReview.has('u1')).toBe(true);
+    expect(out.specialTotals.nonCopilotCodeReview).toBe(4);
+  });
 });

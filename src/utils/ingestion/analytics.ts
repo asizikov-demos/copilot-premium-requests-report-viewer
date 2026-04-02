@@ -12,7 +12,15 @@
 import { PRICING } from '@/constants/pricing';
 import type { AnalysisResults, ProcessedData } from '@/types/csv';
 import type { CodeReviewAnalysis } from '@/types/csv';
-import type { QuotaArtifacts, UsageArtifacts, DailyBucketsArtifacts, FeatureUsageArtifacts } from './types';
+import {
+  NON_COPILOT_CODE_REVIEW_BUCKET,
+  NON_COPILOT_CODE_REVIEW_LABEL,
+  type SpecialUsageBucketKey,
+  type DailyBucketsArtifacts,
+  type FeatureUsageArtifacts,
+  type QuotaArtifacts,
+  type UsageArtifacts,
+} from './types';
 export type { DailyBucketsArtifacts } from './types';
 import type { FeatureUtilizationStats } from '@/utils/analytics/insights';
 import { calculateBilledOverageFromRows, calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
@@ -21,6 +29,8 @@ import { CodingAgentAnalysis, UserDailyData } from '@/types/csv';
 export interface DailyCodingAgentUsageDatum { date: string; dailyRequests: number; cumulativeRequests: number; }
 import { CONSUMPTION_THRESHOLDS, UserConsumptionCategory, InsightsOverviewData } from '@/utils/analytics/insights';
 import { Advisory as LegacyAdvisory } from '@/utils/analytics/advisory';
+
+const NON_COPILOT_CODE_REVIEW_ADOPTION_LABEL = 'Non-Copilot Users';
 
 /** Build time frame (start/end) from daily bucket date range. */
 export function buildTimeFrame(daily: DailyBucketsArtifacts): { start: string; end: string } {
@@ -40,10 +50,22 @@ export function buildUsageArtifactsFromProcessedData(filtered: import('@/types/c
     organization?: string;
     costCenter?: string;
   }>();
+  const specialBucketMap = new Map<SpecialUsageBucketKey, {
+    totalRequests: number;
+    modelBreakdown: Record<string, number>;
+  }>();
   const modelTotals: Record<string, number> = {};
   const organizations = new Set<string>();
   const costCenters = new Set<string>();
   for (const r of filtered) {
+    if (r.isNonCopilotUsage && r.usageBucket) {
+      const bucket = specialBucketMap.get(r.usageBucket) ?? { totalRequests: 0, modelBreakdown: {} };
+      bucket.totalRequests += r.requestsUsed;
+      bucket.modelBreakdown[r.model] = (bucket.modelBreakdown[r.model] || 0) + r.requestsUsed;
+      specialBucketMap.set(r.usageBucket, bucket);
+      modelTotals[r.model] = (modelTotals[r.model] || 0) + r.requestsUsed;
+      continue;
+    }
     if (!userMap.has(r.user)) {
       userMap.set(r.user, {
         totalRequests: 0,
@@ -82,7 +104,14 @@ export function buildUsageArtifactsFromProcessedData(filtered: import('@/types/c
     userCount: users.length,
     modelCount: Object.keys(modelTotals).length,
     organizations: Array.from(organizations).sort((a, b) => a.localeCompare(b)),
-    costCenters: Array.from(costCenters).sort((a, b) => a.localeCompare(b))
+    costCenters: Array.from(costCenters).sort((a, b) => a.localeCompare(b)),
+    specialBuckets: Array.from(specialBucketMap.entries()).map(([key, value]) => ({
+      key,
+      label: NON_COPILOT_CODE_REVIEW_LABEL,
+      totalRequests: value.totalRequests,
+      modelBreakdown: value.modelBreakdown,
+      quotaValue: 0
+    }))
   };
 }
 
@@ -475,15 +504,17 @@ export function buildDailyModelUsageFromArtifacts(
  * directly from FeatureUsageAggregator artifacts.
  */
 export function buildFeatureUtilizationFromArtifacts(featureUsage: FeatureUsageArtifacts): FeatureUtilizationStats {
-  const { featureTotals, featureUsers } = featureUsage;
+  const { featureTotals, featureUsers, specialTotals } = featureUsage;
   const avg = (total: number, count: number) => (count > 0 ? total / count : 0);
   const codeReviewUsers = featureUsers.codeReview.size;
   const codingAgentUsers = featureUsers.codingAgent.size;
   const sparkUsers = featureUsers.spark.size;
+  const nonCopilotCodeReviewRequests = specialTotals.nonCopilotCodeReview;
+  const codeReviewRequests = Math.max(0, featureTotals.codeReview - nonCopilotCodeReviewRequests);
   return {
     codeReview: {
-      totalSessions: featureTotals.codeReview,
-      averagePerUser: avg(featureTotals.codeReview, codeReviewUsers),
+      totalSessions: codeReviewRequests,
+      averagePerUser: avg(codeReviewRequests, codeReviewUsers),
       userCount: codeReviewUsers
     },
     codingAgent: {
@@ -495,6 +526,9 @@ export function buildFeatureUtilizationFromArtifacts(featureUsage: FeatureUsageA
       totalSessions: featureTotals.spark,
       averagePerUser: avg(featureTotals.spark, sparkUsers),
       userCount: sparkUsers
+    },
+    nonCopilotCodeReview: {
+      totalSessions: nonCopilotCodeReviewRequests
     }
   };
 }
@@ -659,15 +693,24 @@ export function buildDailyCodingAgentUsageFromArtifacts(
 // Code Review Adoption From Artifacts
 // -----------------------------
 export function analyzeCodeReviewAdoptionFromArtifacts(usage: UsageArtifacts, quota: QuotaArtifacts): CodeReviewAnalysis {
-  if (usage.users.length === 0) return { totalUsers: 0, totalUniqueUsers: 0, totalCodeReviewRequests: 0, adoptionRate: 0, users: [] };
+  const nonCopilotBucket = usage.specialBuckets?.find(bucket => bucket.key === NON_COPILOT_CODE_REVIEW_BUCKET);
+  const nonCopilotModels = Object.keys(nonCopilotBucket?.modelBreakdown ?? {}).filter(model => model.toLowerCase().includes('code review'));
+  const hasNonCopilotReviewUsage = nonCopilotModels.length > 0;
+
+  if (usage.users.length === 0 && !hasNonCopilotReviewUsage) {
+    return { totalUsers: 0, totalUniqueUsers: 0, totalCodeReviewRequests: 0, adoptionRate: 0, users: [] };
+  }
+
   const totalUniqueUsers = usage.userCount;
   const codeReviewUsers: CodeReviewAnalysis['users'] = [];
   let totalCodeReviewRequests = 0;
+  let totalReviewUsers = 0;
   for (const u of usage.users) {
     const models = Object.keys(u.modelBreakdown).filter(m => m.toLowerCase().includes('code review'));
     if (models.length === 0) continue;
     const crRequests = models.reduce((sum, m) => sum + u.modelBreakdown[m], 0);
     totalCodeReviewRequests += crRequests;
+    totalReviewUsers += 1;
     const quotaVal = quota.quotaByUser.get(u.user) ?? 'unlimited';
     codeReviewUsers.push({
       user: u.user,
@@ -678,9 +721,24 @@ export function analyzeCodeReviewAdoptionFromArtifacts(usage: UsageArtifacts, qu
       models
     });
   }
+
+  if (nonCopilotBucket && hasNonCopilotReviewUsage) {
+    const codeReviewRequests = nonCopilotModels.reduce((sum, model) => sum + nonCopilotBucket.modelBreakdown[model], 0);
+    totalCodeReviewRequests += codeReviewRequests;
+    codeReviewUsers.push({
+      user: NON_COPILOT_CODE_REVIEW_ADOPTION_LABEL,
+      totalRequests: nonCopilotBucket.totalRequests,
+      codeReviewRequests,
+      codeReviewPercentage: nonCopilotBucket.totalRequests > 0 ? (codeReviewRequests / nonCopilotBucket.totalRequests) * 100 : 0,
+      quota: quota.specialBucketQuotas?.get(NON_COPILOT_CODE_REVIEW_BUCKET) ?? 0,
+      models: nonCopilotModels,
+      isSyntheticNonCopilotRow: true
+    });
+  }
+
   codeReviewUsers.sort((a, b) => b.codeReviewRequests - a.codeReviewRequests);
-  const adoptionRate = totalUniqueUsers > 0 ? (codeReviewUsers.length / totalUniqueUsers) * 100 : 0;
-  return { totalUsers: codeReviewUsers.length, totalUniqueUsers, totalCodeReviewRequests, adoptionRate, users: codeReviewUsers };
+  const adoptionRate = totalUniqueUsers > 0 ? (totalReviewUsers / totalUniqueUsers) * 100 : 0;
+  return { totalUsers: totalReviewUsers, totalUniqueUsers, totalCodeReviewRequests, adoptionRate, users: codeReviewUsers };
 }
 
 // -----------------------------

@@ -17,6 +17,7 @@
 "2025-10-01","user002_emu","copilot","copilot_premium_request","Claude Sonnet 4","15","requests","0.04","0.6","0.6","0","False","1000","org002_emu","cost_center_001"
 "2025-10-01","user003_emu","copilot","copilot_premium_request","Claude Sonnet 4","13","requests","0.04","0.52","0.52","0","False","300","org003_emu","cost_center_001"
 "2025-10-01","user043_emu","copilot","copilot_premium_request","Coding Agent model","52","requests","0.04","2.08","2.08","0","False","300","org001_emu","cost_center_001"
+"2025-10-01","","copilot","copilot_premium_request","Code Review model","121","requests","0.04","4.84","4.84","0","False","0","org001_emu","cost_center_001"
 "2025-10-01","user044_emu","copilot","copilot_premium_request","Claude Opus 4.1","46","requests","0.04","1.84","1.84","0","False","300","org005_emu","cost_center_004"
 "2025-10-01","user045_emu","copilot","copilot_premium_request","Claude Opus 4.1","105","requests","0.04","4.2","4.2","0","False","1000","org005_emu",""
 "2025-10-01","user045_emu","copilot","copilot_premium_request","Coding Agent model","210","requests","0.04","8.4","8.4","0","False","1000","org005_emu",""

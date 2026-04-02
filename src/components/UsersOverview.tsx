@@ -28,6 +28,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
   const [selectedOrganization, setSelectedOrganization] = useState(ALL_FILTERS_VALUE);
   const [selectedCostCenter, setSelectedCostCenter] = useState(ALL_FILTERS_VALUE);
   const [selectedPlan, setSelectedPlan] = useState(ALL_FILTERS_VALUE);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
@@ -114,13 +115,14 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
 
   const filteredUserData = useMemo(() => (
     userData.filter((user) => {
+      const matchesSearch = searchQuery === '' || user.user.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesOrganization = effectiveSelectedOrganization === ALL_FILTERS_VALUE || user.organization === effectiveSelectedOrganization;
       const matchesCostCenter = effectiveSelectedCostCenter === ALL_FILTERS_VALUE || user.costCenter === effectiveSelectedCostCenter;
       const matchesPlan = effectiveSelectedPlan === ALL_FILTERS_VALUE || getUserPlanLabel(user.user) === effectiveSelectedPlan;
 
-      return matchesOrganization && matchesCostCenter && matchesPlan;
+      return matchesSearch && matchesOrganization && matchesCostCenter && matchesPlan;
     })
-  ), [userData, effectiveSelectedOrganization, effectiveSelectedCostCenter, effectiveSelectedPlan, getUserPlanLabel]);
+  ), [userData, searchQuery, effectiveSelectedOrganization, effectiveSelectedCostCenter, effectiveSelectedPlan, getUserPlanLabel]);
 
   const {
     sortedData: sortedUserData,
@@ -207,134 +209,150 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
   }
 
   return (
-    <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden h-full flex flex-col">
-      {/* Enhanced Header */}
-      <div className="px-5 py-4 border-b border-[#d1d9e0] flex flex-col gap-4 flex-shrink-0">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-[#1f2328]">Users Overview</h3>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mt-1">
-              <p className="text-sm text-[#636c76]">
-                {hasMixedLicenses ? (
-                  <>Business ({PRICING.BUSINESS_QUOTA}) & Enterprise ({PRICING.ENTERPRISE_QUOTA})</>
-                ) : quotaTypes.has(PRICING.ENTERPRISE_QUOTA) ? (
-                  <>Copilot Enterprise — {PRICING.ENTERPRISE_QUOTA} requests/mo</>
-                ) : quotaTypes.has(PRICING.BUSINESS_QUOTA) ? (
-                  <>Copilot Business — {PRICING.BUSINESS_QUOTA} requests/mo</>
-                ) : (
-                  <>Unlimited quota</>
-                )}
-              </p>
-              {totalOverageRequests > 0 && (
-                <p className="text-sm font-medium text-red-600">
-                  Overage: ${totalOverageCost.toFixed(2)}
-                </p>
+    <div className="w-full space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight text-[#1f2328]">Users Overview</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mt-1">
+            <p className="text-sm text-[#636c76]">
+              {hasMixedLicenses ? (
+                <>Business ({PRICING.BUSINESS_QUOTA}) &amp; Enterprise ({PRICING.ENTERPRISE_QUOTA})</>
+              ) : quotaTypes.has(PRICING.ENTERPRISE_QUOTA) ? (
+                <>Copilot Enterprise — {PRICING.ENTERPRISE_QUOTA} requests/mo</>
+              ) : quotaTypes.has(PRICING.BUSINESS_QUOTA) ? (
+                <>Copilot Business — {PRICING.BUSINESS_QUOTA} requests/mo</>
+              ) : (
+                <>Unlimited quota</>
               )}
-              <p className="text-sm text-[#636c76]">
-                Showing {filteredUserData.length} of {userData.length} users
+            </p>
+            {totalOverageRequests > 0 && (
+              <p className="text-sm font-medium text-red-600">
+                Overage: ${totalOverageCost.toFixed(2)}
               </p>
-            </div>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row gap-2">
-            {isMobile && (
-              <button
-                onClick={() => setShowChart(!showChart)}
-                className="px-3 py-1.5 text-sm font-medium text-[#636c76] bg-[#f6f8fa] hover:bg-[#d1d9e0] rounded-md transition-colors duration-150"
-              >
-                {showChart ? 'Show Table' : 'Show Chart'}
-              </button>
             )}
-            
-            {onBack && (
-              <button
-                onClick={onBack}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#636c76] bg-white border border-[#d1d9e0] rounded-md hover:bg-[#fcfdff] hover:border-[#636c76] transition-colors duration-150"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
-                Back
-              </button>
-            )}
+            <p className="text-sm text-[#636c76]">
+              Showing {filteredUserData.length} of {userData.length} users
+            </p>
           </div>
         </div>
 
-        {(organizationOptions.length > 0 || costCenterOptions.length > 0 || planOptions.length > 1) && (
-          <div className="flex flex-col lg:flex-row lg:items-end gap-3">
-            {organizationOptions.length > 0 && (
-              <label className="flex flex-col gap-1.5 text-sm text-[#636c76]">
-                <span className="font-medium text-[#1f2328]">Organization</span>
-                <select
-                  value={effectiveSelectedOrganization}
-                  onChange={(event) => {
-                    setSelectedOrganization(event.target.value);
-                    setCurrentPage(0);
-                  }}
-                  aria-label="Organization"
-                  className="min-w-56 rounded-md border border-[#d1d9e0] bg-white px-3 py-2 text-sm text-[#1f2328] shadow-sm outline-none transition duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                >
-                  <option value={ALL_FILTERS_VALUE}>All organizations</option>
-                  {organizationOptions.map((organization) => (
-                    <option key={organization} value={organization}>
-                      {organization}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
+        <div className="flex flex-col sm:flex-row gap-2">
+          {isMobile && (
+            <button
+              onClick={() => setShowChart(!showChart)}
+              className="px-3 py-1.5 text-sm font-medium text-[#636c76] bg-[#f6f8fa] hover:bg-[#d1d9e0] rounded-md transition-colors duration-150"
+            >
+              {showChart ? 'Show Table' : 'Show Chart'}
+            </button>
+          )}
 
-            {costCenterOptions.length > 0 && (
-              <label className="flex flex-col gap-1.5 text-sm text-[#636c76]">
-                <span className="font-medium text-[#1f2328]">Cost center</span>
-                <select
-                  value={effectiveSelectedCostCenter}
-                  onChange={(event) => {
-                    setSelectedCostCenter(event.target.value);
-                    setCurrentPage(0);
-                  }}
-                  aria-label="Cost center"
-                  className="min-w-56 rounded-md border border-[#d1d9e0] bg-white px-3 py-2 text-sm text-[#1f2328] shadow-sm outline-none transition duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                >
-                  <option value={ALL_FILTERS_VALUE}>All cost centers</option>
-                  {costCenterOptions.map((costCenter) => (
-                    <option key={costCenter} value={costCenter}>
-                      {costCenter}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#636c76] bg-white border border-[#d1d9e0] rounded-md hover:bg-[#f6f8fa] hover:border-[#d1d9e0] transition-colors duration-150"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
+              Back
+            </button>
+          )}
+        </div>
+      </div>
 
-            {planOptions.length > 1 && (
-              <label className="flex flex-col gap-1.5 text-sm text-[#636c76]">
-                <span className="font-medium text-[#1f2328]">Copilot Plan</span>
-                <select
-                  value={effectiveSelectedPlan}
-                  onChange={(event) => {
-                    setSelectedPlan(event.target.value);
-                    setCurrentPage(0);
-                  }}
-                  aria-label="Copilot Plan"
-                  className="min-w-56 rounded-md border border-[#d1d9e0] bg-white px-3 py-2 text-sm text-[#1f2328] shadow-sm outline-none transition duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                >
-                  <option value={ALL_FILTERS_VALUE}>All plans</option>
-                  {planOptions.map((plan) => (
-                    <option key={plan} value={plan}>
-                      {plan}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
+      {/* Filters */}
+      <div className="flex flex-col lg:flex-row lg:items-end gap-3">
+        <label className="flex flex-col gap-1.5 text-sm text-[#636c76]">
+          <span className="font-medium text-[#1f2328]">Search users</span>
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#636c76]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(0); }}
+              placeholder="Filter by username..."
+              className="w-full min-w-56 rounded-md border border-[#d1d9e0] bg-white pl-9 pr-3 py-2 text-sm text-[#1f2328] shadow-sm outline-none transition duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 placeholder:text-[#636c76]"
+            />
           </div>
+        </label>
+
+        {organizationOptions.length > 0 && (
+          <label className="flex flex-col gap-1.5 text-sm text-[#636c76]">
+            <span className="font-medium text-[#1f2328]">Organization</span>
+            <select
+              value={effectiveSelectedOrganization}
+              onChange={(event) => {
+                setSelectedOrganization(event.target.value);
+                setCurrentPage(0);
+              }}
+              aria-label="Organization"
+              className="min-w-56 rounded-md border border-[#d1d9e0] bg-white px-3 py-2 text-sm text-[#1f2328] shadow-sm outline-none transition duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            >
+              <option value={ALL_FILTERS_VALUE}>All organizations</option>
+              {organizationOptions.map((organization) => (
+                <option key={organization} value={organization}>
+                  {organization}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        {costCenterOptions.length > 0 && (
+          <label className="flex flex-col gap-1.5 text-sm text-[#636c76]">
+            <span className="font-medium text-[#1f2328]">Cost center</span>
+            <select
+              value={effectiveSelectedCostCenter}
+              onChange={(event) => {
+                setSelectedCostCenter(event.target.value);
+                setCurrentPage(0);
+              }}
+              aria-label="Cost center"
+              className="min-w-56 rounded-md border border-[#d1d9e0] bg-white px-3 py-2 text-sm text-[#1f2328] shadow-sm outline-none transition duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            >
+              <option value={ALL_FILTERS_VALUE}>All cost centers</option>
+              {costCenterOptions.map((costCenter) => (
+                <option key={costCenter} value={costCenter}>
+                  {costCenter}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        {planOptions.length > 1 && (
+          <label className="flex flex-col gap-1.5 text-sm text-[#636c76]">
+            <span className="font-medium text-[#1f2328]">Copilot Plan</span>
+            <select
+              value={effectiveSelectedPlan}
+              onChange={(event) => {
+                setSelectedPlan(event.target.value);
+                setCurrentPage(0);
+              }}
+              aria-label="Copilot Plan"
+              className="min-w-56 rounded-md border border-[#d1d9e0] bg-white px-3 py-2 text-sm text-[#1f2328] shadow-sm outline-none transition duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            >
+              <option value={ALL_FILTERS_VALUE}>All plans</option>
+              {planOptions.map((plan) => (
+                <option key={plan} value={plan}>
+                  {plan}
+                </option>
+              ))}
+            </select>
+          </label>
         )}
       </div>
-      
-      {/* Conditional Chart - Collapsible on Mobile */}
+
+      {/* Quota Consumption Card */}
       {(!isMobile || showChart) && (
-        <div className="px-5 py-4 bg-[#f6f8fa] border-b border-[#d1d9e0] flex-shrink-0 relative z-30">
-          <div className="flex justify-between items-center mb-4">
-            <h4 className="text-sm font-medium text-[#1f2328]">Quota Consumption</h4>
-            <div className="flex items-center gap-3">
+        <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
+          <div className="px-5 py-4 border-b border-[#d1d9e0]">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-sm font-medium text-[#1f2328]">Quota Consumption</h3>
+                <p className="text-xs text-[#636c76] mt-0.5">Daily cumulative premium request usage</p>
+              </div>
               {isMobile && (
                 <button
                   onClick={() => setShowChart(false)}
@@ -346,21 +364,30 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
               )}
             </div>
           </div>
-          <div className="h-72 sm:h-96 2xl:h-[28rem] relative z-30">
-            <UsersConsumptionHeatmap
-              dailyCumulativeData={dailyCumulativeData}
-              users={chartUsers}
-              currentQuota={currentQuota}
-              quotaTypes={quotaTypes}
-              hasMixedQuotas={hasMixedQuotas}
-            />
+          <div className="p-5">
+            <div className="h-72 sm:h-96 2xl:h-[28rem] relative z-30">
+              <UsersConsumptionHeatmap
+                dailyCumulativeData={dailyCumulativeData}
+                users={chartUsers}
+                currentQuota={currentQuota}
+                quotaTypes={quotaTypes}
+                hasMixedQuotas={hasMixedQuotas}
+              />
+            </div>
           </div>
         </div>
       )}
-      
-      {/* Enhanced Table with Mobile Optimizations */}
+
+      {/* Users Table Card */}
       {(!isMobile || !showChart) && (
-        <div className="flex-1 overflow-auto">
+        <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
+          <div className="px-5 py-4 border-b border-[#d1d9e0]">
+            <h3 className="text-sm font-medium text-[#1f2328]">Users</h3>
+            <p className="text-xs text-[#636c76] mt-0.5">
+              Showing {filteredUserData.length} of {userData.length} users
+            </p>
+          </div>
+
           {/* Mobile Summary Cards */}
           {isMobile && (
             <div className="p-4 space-y-2 sm:hidden">
@@ -369,7 +396,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                 const isOverQuota = userQuota !== 'unlimited' && user.totalRequests > userQuota;
                 const quotaDisplay = userQuota === 'unlimited' ? 'Unlimited' : `${userQuota}`;
                 const costs = userCosts.get(user.user) ?? { gross: 0, discount: 0, net: 0 };
-                
+
                 return (
                 <button
                   key={user.user}
@@ -401,7 +428,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                   )}
                 </button>
               )})}
-              
+
               {/* Mobile Pagination */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-between pt-3 border-t border-[#d1d9e0]">
@@ -428,7 +455,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
           )}
 
           {/* Desktop Table */}
-          <div className="hidden sm:block">
+          <div className="hidden sm:block overflow-auto">
             <table className="min-w-full">
             <thead className="bg-[#f6f8fa] sticky top-0 z-20">
               <tr>
@@ -448,7 +475,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                     </span>
                   </div>
                 </th>
-                <th 
+                <th
                   className={`px-4 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-[0.05em] min-w-32 cursor-pointer hover:bg-[#f6f8fa] select-none transition-colors duration-150 ${
                     sortBy === 'totalRequests' ? 'bg-[#f6f8fa]' : 'bg-[#f6f8fa]'
                   }`}
@@ -511,7 +538,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                 const userQuota = getUserQuota(quotaArtifacts, user.user);
                 const isOverQuota = userQuota !== 'unlimited' && user.totalRequests > userQuota;
                 const quotaDisplay = userQuota === 'unlimited' ? 'Unlimited' : userQuota.toString();
-                
+
                 return (
                 <tr key={user.user} className="hover:bg-[#fcfdff] transition-colors duration-150">
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-medium sticky left-0 z-10 bg-white border-r border-[#d1d9e0]">
@@ -556,7 +583,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
               )})}
             </tbody>
           </table>
-          
+
           {/* Desktop Pagination */}
           {totalPages > 1 && (
             <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-[#d1d9e0]">
@@ -573,7 +600,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
-                
+
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   let pageNum;
                   if (totalPages <= 5) {
@@ -585,7 +612,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                   } else {
                     pageNum = activePage - 2 + i;
                   }
-                  
+
                   return (
                     <button
                       key={pageNum}
@@ -600,7 +627,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                     </button>
                   );
                 })}
-                
+
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
                   disabled={activePage === totalPages - 1}
@@ -616,15 +643,15 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
           </div>
         </div>
       )}
-      
+
       {userData.length === 0 && (
-        <div className="px-6 py-8 text-center text-[#636c76] flex-shrink-0">
+        <div className="bg-white border border-[#d1d9e0] rounded-md px-6 py-8 text-center text-[#636c76]">
           No user data available
         </div>
       )}
 
       {userData.length > 0 && filteredUserData.length === 0 && (
-        <div className="px-6 py-8 text-center text-[#636c76] flex-shrink-0">
+        <div className="bg-white border border-[#d1d9e0] rounded-md px-6 py-8 text-center text-[#636c76]">
           No users match the current filters
         </div>
       )}

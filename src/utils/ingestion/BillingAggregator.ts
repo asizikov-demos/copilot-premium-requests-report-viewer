@@ -14,7 +14,16 @@
  *    semantics of the exported CSV.
  *  - Undefined values are skipped; aggregation only occurs for numeric values.
  */
-import { Aggregator, AggregatorContext, NormalizedRow, BillingArtifacts, BillingUserTotals } from './types';
+import {
+  Aggregator,
+  AggregatorContext,
+  BillingArtifacts,
+  BillingUserTotals,
+  NON_COPILOT_CODE_REVIEW_LABEL,
+  NormalizedRow,
+  SpecialBillingBucketTotals,
+  SpecialUsageBucketKey
+} from './types';
 
 export class BillingAggregator implements Aggregator<BillingArtifacts> {
   readonly id = 'billing';
@@ -23,6 +32,7 @@ export class BillingAggregator implements Aggregator<BillingArtifacts> {
   private discountTotal = 0;
   private netTotal = 0;
   private userMap = new Map<string, BillingUserTotals>();
+  private specialBucketMap = new Map<SpecialUsageBucketKey, SpecialBillingBucketTotals>();
   private hasAnyBillingData = false;
 
   init(_ctx: AggregatorContext): void {
@@ -31,16 +41,30 @@ export class BillingAggregator implements Aggregator<BillingArtifacts> {
     this.discountTotal = 0;
     this.netTotal = 0;
     this.userMap.clear();
+    this.specialBucketMap.clear();
     this.hasAnyBillingData = false;
   }
 
   onRow(row: NormalizedRow, _ctx: AggregatorContext): void {
     void _ctx;
-    // Fast path: if no billing columns present in this row and none seen yet, still need to track quantity per user if billing appears later.
-    let entry = this.userMap.get(row.user);
-    if (!entry) {
-      entry = { user: row.user, quantity: 0 };
-      this.userMap.set(row.user, entry);
+    let entry: BillingUserTotals | SpecialBillingBucketTotals | undefined;
+    if (row.isNonCopilotUsage && row.usageBucket) {
+      entry = this.specialBucketMap.get(row.usageBucket);
+      if (!entry) {
+        entry = {
+          key: row.usageBucket,
+          label: NON_COPILOT_CODE_REVIEW_LABEL,
+          quantity: 0,
+          quotaValue: 0
+        };
+        this.specialBucketMap.set(row.usageBucket, entry);
+      }
+    } else {
+      entry = this.userMap.get(row.user);
+      if (!entry) {
+        entry = { user: row.user, quantity: 0 };
+        this.userMap.set(row.user, entry);
+      }
     }
     entry.quantity += row.quantity;
 
@@ -69,7 +93,8 @@ export class BillingAggregator implements Aggregator<BillingArtifacts> {
       totals: { gross: this.grossTotal, discount: this.discountTotal, net: this.netTotal },
       users: Array.from(this.userMap.values()),
       userMap: this.userMap,
-      hasAnyBillingData: this.hasAnyBillingData
+      hasAnyBillingData: this.hasAnyBillingData,
+      specialBuckets: Array.from(this.specialBucketMap.values())
     };
   }
 }

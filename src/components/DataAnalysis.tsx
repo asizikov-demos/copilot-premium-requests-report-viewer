@@ -114,6 +114,7 @@ function DataAnalysisInner() {
     codingAgentAnalysis,
     codeReviewAnalysis,
     processedData,
+    aggregateProcessedData,
     baseProcessed,
     weeklyExhaustion,
     availableMonths,
@@ -160,7 +161,7 @@ function DataAnalysisInner() {
   }, [hasCostCenters, hasOrganizations]);
 
   const processedCosts = useMemo(() => {
-    const hasBillingData = processedData.some(
+    const hasBillingData = aggregateProcessedData.some(
       (row) =>
         row.netAmount !== undefined ||
         row.grossAmount !== undefined ||
@@ -171,20 +172,20 @@ function DataAnalysisInner() {
       return null;
     }
 
-    return processedData.reduce((acc, row) => {
+    return aggregateProcessedData.reduce((acc, row) => {
       acc.net += row.netAmount ?? 0;
       acc.gross += row.grossAmount ?? 0;
       acc.discount += row.discountAmount ?? 0;
       return acc;
     }, { net: 0, gross: 0, discount: 0 });
-  }, [processedData]);
+  }, [aggregateProcessedData]);
 
   const costMetricsAvailable = processedCosts !== null || billingArtifacts?.hasAnyBillingData === true;
   const aggregatedCosts = processedCosts ?? (billingArtifacts?.hasAnyBillingData ? billingArtifacts.totals : null);
 
   const modelRows = useMemo(() => {
     const map = new Map<string, { model: string; requests: number; gross: number; discount: number; net: number }>();
-    for (const row of processedData) {
+    for (const row of aggregateProcessedData) {
       const prev = map.get(row.model) ?? {
         model: row.model,
         requests: 0,
@@ -199,13 +200,13 @@ function DataAnalysisInner() {
       map.set(row.model, prev);
     }
     return Array.from(map.values()).sort((left, right) => right.requests - left.requests);
-  }, [processedData]);
+  }, [aggregateProcessedData]);
 
   const hasModelCosts = modelRows.some(
     (row) => row.gross > 0 || row.discount > 0 || row.net > 0
   );
 
-  const productCosts = useMemo(() => aggregateProductCosts(processedData), [processedData]);
+  const productCosts = useMemo(() => aggregateProductCosts(aggregateProcessedData), [aggregateProcessedData]);
 
   return (
     <div className="w-full">
@@ -216,7 +217,7 @@ function DataAnalysisInner() {
           <span className="hidden sm:inline text-[#d1d9e0]">|</span>
           <span>Report window: <span className="font-semibold text-[#1f2328]">{analysis.timeFrame.start} to {analysis.timeFrame.end}</span></span>
           <span className="hidden sm:inline text-[#d1d9e0]">|</span>
-          <span>Total rows: <span className="font-semibold text-[#1f2328]">{processedData.length.toLocaleString()}</span></span>
+          <span>Total rows: <span className="font-semibold text-[#1f2328]">{aggregateProcessedData.length.toLocaleString()}</span></span>
         </div>
       </div>
 
@@ -337,7 +338,7 @@ function DataAnalysisInner() {
                       ${aggregatedCosts.net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                     <p className="text-sm text-[#636c76] text-center mt-1">
-                      {processedData.reduce((sum, r) => sum + r.requestsUsed, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PRUs
+                      {aggregateProcessedData.reduce((sum, r) => sum + r.requestsUsed, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PRUs
                     </p>
                     <p className="text-xs text-[#636c76] text-center mt-0.5">
                       1 PRU = ${PRICING.OVERAGE_RATE_PER_REQUEST.toFixed(2)}

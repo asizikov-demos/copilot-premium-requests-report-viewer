@@ -3,8 +3,16 @@
  */
 
 import { ProcessedData } from '@/types/csv';
-import { NormalizedRow, IngestionResult, QuotaArtifacts, UsageArtifacts, DailyBucketsArtifacts } from './types';
+import {
+  NON_COPILOT_CODE_REVIEW_BUCKET,
+  NormalizedRow,
+  IngestionResult,
+  QuotaArtifacts,
+  UsageArtifacts,
+  DailyBucketsArtifacts,
+} from './types';
 import { buildDateKeys } from '../dateKeys';
+import { isCodeReviewModel } from '@/utils/productClassification';
 
 /**
  * Reconstructs a ProcessedData array from normalized rows.
@@ -40,16 +48,25 @@ export function buildProcessedDataFromRows(rows: unknown[] | undefined | null): 
   if (!Array.isArray(rows) || rows.length === 0) {
     return [];
   }
-  return rows.map(raw => {
+  const processedRows: Array<ProcessedData | null> = rows.map(raw => {
     if (isExpandedCSVLike(raw)) {
       const quantityNum = typeof raw.quantity === 'number' ? raw.quantity : parseFloat(raw.quantity);
       const timestamp = new Date(`${raw.date}T00:00:00Z`);
       const keys = buildDateKeys(timestamp);
-      const quotaRaw = raw.total_monthly_quota || 'Unlimited';
-      const quotaValue = quotaRaw.toLowerCase() === 'unlimited' ? 'unlimited' : parseFloat(quotaRaw);
+      const user = raw.username.trim();
+      const isNonCopilotUsage = user.length === 0 && isCodeReviewModel(raw.model);
+      if (user.length === 0 && !isNonCopilotUsage) {
+        return null;
+      }
+      const quotaRaw = isNonCopilotUsage ? '0' : raw.total_monthly_quota || 'Unlimited';
+      const quotaValue = isNonCopilotUsage
+        ? 0
+        : quotaRaw.toLowerCase() === 'unlimited'
+          ? 'unlimited'
+          : parseFloat(quotaRaw);
       return {
         timestamp,
-        user: raw.username,
+        user,
         model: raw.model,
         requestsUsed: quantityNum,
         exceedsQuota: raw.exceeds_quota ? raw.exceeds_quota.toLowerCase() === 'true' : false,
@@ -63,6 +80,8 @@ export function buildProcessedDataFromRows(rows: unknown[] | undefined | null): 
         grossAmount: raw.gross_amount ? parseFloat(raw.gross_amount) : undefined,
         discountAmount: raw.discount_amount ? parseFloat(raw.discount_amount) : undefined,
         netAmount: raw.net_amount ? parseFloat(raw.net_amount) : undefined,
+        isNonCopilotUsage,
+        usageBucket: isNonCopilotUsage ? NON_COPILOT_CODE_REVIEW_BUCKET : undefined,
         ...keys
       };
     }
@@ -85,9 +104,13 @@ export function buildProcessedDataFromRows(rows: unknown[] | undefined | null): 
       grossAmount: row.grossAmount,
       discountAmount: row.discountAmount,
       netAmount: row.netAmount,
+      isNonCopilotUsage: row.isNonCopilotUsage,
+      usageBucket: row.usageBucket,
       ...keys
     };
   });
+
+  return processedRows.filter((row): row is ProcessedData => row !== null);
 }
 
 /**
