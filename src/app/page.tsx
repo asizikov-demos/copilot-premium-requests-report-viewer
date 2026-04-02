@@ -83,7 +83,7 @@ export default function Home() {
       {!isDataLoaded && (
         <footer className="pb-8 text-center">
           <p className="text-xs text-[#636c76]">
-            Your data never leaves your browser. Questions?{' '}
+            This app processes your CSV locally in your browser and doesn&apos;t upload it. Questions?{' '}
             <a
               href="https://github.com/asizikov-demos/copilot-premium-requests-report-viewer/issues"
               target="_blank"

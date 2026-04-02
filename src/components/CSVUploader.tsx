@@ -324,10 +324,10 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
               <span className="text-sm font-semibold text-[#1f2328]">Your data stays private</span>
             </div>
             <ul className="space-y-1 text-sm text-[#636c76] leading-relaxed pl-5 list-disc">
-              <li>All processing happens in your browser. Your CSV is never uploaded to any server.</li>
-              <li>No data is stored, cached, or sent over the network.</li>
-              <li>When you close this tab, your data is gone.</li>
-              <li>This page makes zero external network requests with your data.</li>
+              <li>All processing of your uploaded CSV happens in your browser. The file contents are not uploaded to any server.</li>
+              <li>The contents of your uploaded CSV are not stored or cached on any server.</li>
+              <li>When you close or reload this tab, the app does not retain your uploaded CSV file.</li>
+              <li>This page does not send the contents of your uploaded CSV to external endpoints.</li>
               <li>
                 You can verify this yourself — the source code is available at{' '}
                 <a

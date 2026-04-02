@@ -330,8 +330,8 @@ describe('CSVUploader', () => {
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
 
     expect(screen.getByText(/Your data stays private/i)).toBeInTheDocument();
-    expect(screen.getByText(/All processing happens in your browser/i)).toBeInTheDocument();
-    expect(screen.getByText(/zero external network requests/i)).toBeInTheDocument();
+    expect(screen.getByText(/All processing of your uploaded CSV happens in your browser/i)).toBeInTheDocument();
+    expect(screen.getByText(/does not send the contents of your uploaded CSV to external endpoints/i)).toBeInTheDocument();
   });
 
   it('should show source code link inside privacy information', () => {

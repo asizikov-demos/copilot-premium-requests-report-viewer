@@ -2,7 +2,12 @@
 
 import React, { useMemo, useState } from 'react';
 import { useAnalysisContext } from '@/context/AnalysisContext';
-import { aggregateProductCosts, ProductCost } from '@/utils/productCosts';
+import {
+  accumulateProductCost,
+  createEmptyProductCostMap,
+  getPopulatedProductCosts,
+  ProductCost,
+} from '@/utils/productCosts';
 
 interface CostCenterRow {
   name: string;
@@ -18,21 +23,33 @@ export function CostCentersOverview() {
   const [expandedCenter, setExpandedCenter] = useState<string | null>(null);
 
   const costCenterRows = useMemo((): CostCenterRow[] => {
-    const map = new Map<string, { requests: number; gross: number; discount: number; net: number; rows: typeof processedData }>();
+    const map = new Map<string, {
+      requests: number;
+      gross: number;
+      discount: number;
+      net: number;
+      productBuckets: ReturnType<typeof createEmptyProductCostMap>;
+    }>();
 
     for (const row of processedData) {
       const cc = row.costCenter || 'Unassigned';
       let entry = map.get(cc);
       if (!entry) {
-        entry = { requests: 0, gross: 0, discount: 0, net: 0, rows: [] };
+        entry = {
+          requests: 0,
+          gross: 0,
+          discount: 0,
+          net: 0,
+          productBuckets: createEmptyProductCostMap(),
+        };
         map.set(cc, entry);
       }
 
-      entry.rows.push(row);
       entry.requests += row.requestsUsed;
       entry.gross += row.grossAmount ?? 0;
       entry.discount += row.discountAmount ?? 0;
       entry.net += row.netAmount ?? 0;
+      accumulateProductCost(entry.productBuckets, row);
     }
 
     return Array.from(map.entries())
@@ -42,7 +59,7 @@ export function CostCentersOverview() {
         gross: data.gross,
         discount: data.discount,
         net: data.net,
-        products: aggregateProductCosts(data.rows),
+        products: getPopulatedProductCosts(data.productBuckets),
       }))
       .sort((a, b) => b.net - a.net);
   }, [processedData]);

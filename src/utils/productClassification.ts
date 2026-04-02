@@ -13,7 +13,7 @@ export function isCodeReviewModel(model: string): boolean {
   return model.toLowerCase().includes('code review');
 }
 
-export function isSparkProduct(model: string, product?: string, sku?: string): boolean {
+export function isSparkProduct(product?: string, sku?: string): boolean {
   const normalizedProduct = normalizeProductValue(product);
   const normalizedSku = normalizeProductValue(sku);
 
@@ -22,7 +22,7 @@ export function isSparkProduct(model: string, product?: string, sku?: string): b
 }
 
 export function classifyProductCategory(model: string, product?: string, sku?: string): ProductCategory {
-  if (isSparkProduct(model, product, sku)) {
+  if (isSparkProduct(product, sku)) {
     return 'Spark';
   }
 

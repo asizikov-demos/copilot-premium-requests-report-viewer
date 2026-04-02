@@ -20,9 +20,9 @@ describe('product classification', () => {
   });
 
   test('detects spark from explicit product and sku metadata', () => {
-    expect(isSparkProduct('Claude Sonnet 4.5', 'spark', 'spark_premium_request')).toBe(true);
-    expect(isSparkProduct('Claude Sonnet 4.5', 'copilot', 'copilot_premium_request')).toBe(false);
-    expect(isSparkProduct('Spark Helper')).toBe(false);
+    expect(isSparkProduct('spark', 'spark_premium_request')).toBe(true);
+    expect(isSparkProduct('copilot', 'copilot_premium_request')).toBe(false);
+    expect(isSparkProduct()).toBe(false);
   });
 
   test('classifies models into product buckets', () => {
