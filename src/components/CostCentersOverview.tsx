@@ -19,7 +19,7 @@ interface CostCenterRow {
 }
 
 export function CostCentersOverview() {
-  const { processedData } = useAnalysisContext();
+  const { aggregateProcessedData } = useAnalysisContext();
   const [expandedCenter, setExpandedCenter] = useState<string | null>(null);
 
   const costCenterRows = useMemo((): CostCenterRow[] => {
@@ -31,7 +31,7 @@ export function CostCentersOverview() {
       productBuckets: ReturnType<typeof createEmptyProductCostMap>;
     }>();
 
-    for (const row of processedData) {
+    for (const row of aggregateProcessedData) {
       const cc = row.costCenter || 'Unassigned';
       let entry = map.get(cc);
       if (!entry) {
@@ -62,7 +62,7 @@ export function CostCentersOverview() {
         products: getPopulatedProductCosts(data.productBuckets),
       }))
       .sort((a, b) => b.net - a.net);
-  }, [processedData]);
+  }, [aggregateProcessedData]);
 
   const hasCosts = costCenterRows.some(r => r.gross > 0 || r.net > 0);
 

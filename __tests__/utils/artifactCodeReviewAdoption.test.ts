@@ -103,4 +103,72 @@ describe('analyzeCodeReviewAdoptionFromArtifacts', () => {
     expect(result.users[0].codeReviewRequests).toBe(6);
     expect(result.users[0].models).toEqual(expect.arrayContaining(['CODE REVIEW Ultra', 'code review lite']));
   });
+
+  test('includes non-Copilot review bucket as synthetic table row without affecting adoption denominator', () => {
+    const usage = makeUsage([
+      { user: 'alice', totalRequests: 20, modelBreakdown: { 'code review v1': 5, 'gpt-4o': 15 } },
+      { user: 'bob', totalRequests: 10, modelBreakdown: { 'Code Review beta': 8, 'o3-mini': 2 } },
+      { user: 'carol', totalRequests: 5, modelBreakdown: { 'gpt-4o': 5 } },
+    ]);
+    usage.specialBuckets = [
+      {
+        key: 'non_copilot_code_review',
+        label: 'Non-Copilot users',
+        totalRequests: 4,
+        modelBreakdown: { 'Code Review beta': 4 },
+        quotaValue: 0,
+      },
+    ];
+    const quota = makeQuota([['alice', 'unlimited'], ['bob', 300], ['carol', 1000]]);
+    quota.specialBucketQuotas = new Map([['non_copilot_code_review', 0]]);
+
+    const result = analyzeCodeReviewAdoptionFromArtifacts(usage, quota);
+
+    expect(result.totalUsers).toBe(2);
+    expect(result.totalUniqueUsers).toBe(3);
+    expect(result.adoptionRate).toBeCloseTo(66.67, 1);
+    expect(result.totalCodeReviewRequests).toBe(17);
+    expect(result.users.map((user) => user.user)).toEqual(['bob', 'alice', 'Non-Copilot Users']);
+    expect(result.users[2]).toMatchObject({
+      user: 'Non-Copilot Users',
+      codeReviewRequests: 4,
+      totalRequests: 4,
+      quota: 0,
+      codeReviewPercentage: 100,
+      isSyntheticNonCopilotRow: true,
+    });
+  });
+
+  test('returns synthetic non-Copilot row when it is the only code review usage', () => {
+    const usage = makeUsage([]);
+    usage.specialBuckets = [
+      {
+        key: 'non_copilot_code_review',
+        label: 'Non-Copilot users',
+        totalRequests: 6,
+        modelBreakdown: { 'CODE REVIEW Ultra': 6 },
+        quotaValue: 0,
+      },
+    ];
+    const quota = makeQuota([]);
+    quota.specialBucketQuotas = new Map([['non_copilot_code_review', 0]]);
+
+    const result = analyzeCodeReviewAdoptionFromArtifacts(usage, quota);
+
+    expect(result.totalUsers).toBe(0);
+    expect(result.totalUniqueUsers).toBe(0);
+    expect(result.adoptionRate).toBe(0);
+    expect(result.totalCodeReviewRequests).toBe(6);
+    expect(result.users).toEqual([
+      {
+        user: 'Non-Copilot Users',
+        totalRequests: 6,
+        codeReviewRequests: 6,
+        codeReviewPercentage: 100,
+        quota: 0,
+        models: ['CODE REVIEW Ultra'],
+        isSyntheticNonCopilotRow: true,
+      },
+    ]);
+  });
 });

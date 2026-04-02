@@ -34,6 +34,7 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
   const usageArtifactsFromCtx = analysisCtx?.usageArtifacts as UsageArtifacts | undefined;
   const weeklyExhaustionArtifactsFromCtx = analysisCtx?.weeklyExhaustion as { weeks?: Array<{ weekNumber: number; usersExhaustedInWeek: number; startDate: string; endDate: string }>; totalUsersExhausted?: number } | undefined;
   const featureUsageArtifactsFromCtx = analysisCtx?.featureUsageArtifacts as FeatureUsageArtifacts | undefined;
+  const aggregateProcessedDataFromCtx = analysisCtx?.aggregateProcessedData;
 
   // Prefer explicitly passed artifacts (future-proof for isolated component tests) then context.
   const quotaArtifactsEff = quotaArtifacts || quotaArtifactsFromCtx;
@@ -52,26 +53,8 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
     if (featureUsageArtifactsEff) {
       return buildFeatureUtilizationFromArtifacts(featureUsageArtifactsEff);
     }
-    if (usageArtifactsEff) {
-      let totalCR=0,totalCA=0,totalSpark=0;
-      const crUsers=new Set<string>(), caUsers=new Set<string>(), sparkUsers=new Set<string>();
-      for (const u of usageArtifactsEff.users) {
-        for (const [model, qty] of Object.entries(u.modelBreakdown)) {
-          const lower = model.toLowerCase();
-          if (lower.includes('code review')) { totalCR += qty; crUsers.add(u.user); }
-          if (lower.includes('coding agent') || lower.includes('padawan')) { totalCA += qty; caUsers.add(u.user); }
-          if (lower.includes('spark')) { totalSpark += qty; sparkUsers.add(u.user); }
-        }
-      }
-      const avg = (t:number,c:number)=> c>0 ? t/c : 0;
-      return {
-        codeReview: { totalSessions: totalCR, averagePerUser: avg(totalCR, crUsers.size), userCount: crUsers.size },
-        codingAgent: { totalSessions: totalCA, averagePerUser: avg(totalCA, caUsers.size), userCount: caUsers.size },
-        spark: { totalSessions: totalSpark, averagePerUser: avg(totalSpark, sparkUsers.size), userCount: sparkUsers.size }
-      };
-    }
-    return calculateFeatureUtilization(processedData);
-  }, [processedData, usageArtifactsEff, featureUsageArtifactsEff]);
+    return calculateFeatureUtilization(aggregateProcessedDataFromCtx ?? processedData);
+  }, [aggregateProcessedDataFromCtx, processedData, featureUsageArtifactsEff]);
 
   const weeklyExhaustion = useMemo<WeeklyExhaustionData>(() => {
     if (weeklyExhaustionArtifactsEff && Array.isArray(weeklyExhaustionArtifactsEff.weeks)) {
@@ -240,7 +223,7 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
           </p>
         </div>
         <div className="p-5">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             {/* Code Review */}
             <div className="p-4 bg-white border border-[#d1d9e0] rounded-md">
               <p className="text-xs font-medium text-[#636c76] uppercase tracking-[0.05em] mb-2">Code Review</p>
@@ -271,6 +254,16 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
               </p>
               <p className="text-xs text-[#636c76] mt-1">
                 {featureUtilization.spark.averagePerUser.toFixed(1)} avg per user • {featureUtilization.spark.userCount} users
+              </p>
+            </div>
+
+            <div className="p-4 bg-white border border-[#d1d9e0] rounded-md">
+              <p className="text-xs font-medium text-[#636c76] uppercase tracking-[0.05em] mb-2">Code Review for Non-Copilot Users</p>
+              <p className="text-2xl font-semibold text-[#1f2328]">
+                {Math.round(featureUtilization.nonCopilotCodeReview.totalSessions)}
+              </p>
+              <p className="text-xs text-[#636c76] mt-1">
+                Aggregate requests outside licensed Copilot users
               </p>
             </div>
           </div>

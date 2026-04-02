@@ -17,7 +17,9 @@ function makeProcessed(row: Partial<ProcessedData>): ProcessedData {
     iso,
     dateKey: iso.slice(0, 10),
     monthKey: iso.slice(0, 7),
-    epoch: (timestamp as Date).getTime()
+    epoch: (timestamp as Date).getTime(),
+    isNonCopilotUsage: row.isNonCopilotUsage,
+    usageBucket: row.usageBucket,
   } as ProcessedData;
 }
 
@@ -58,6 +60,7 @@ describe('insights analytics', () => {
     const data: ProcessedData[] = [
       makeProcessed({ user: 'u1', model: 'Code Review', requestsUsed: 3 }),
       makeProcessed({ user: 'u2', model: 'code review', requestsUsed: 2 }),
+      makeProcessed({ user: '', model: 'Code Review', requestsUsed: 4, quotaValue: 0, totalQuota: '0', isNonCopilotUsage: true, usageBucket: 'non_copilot_code_review' }),
       makeProcessed({ user: 'u1', model: 'Coding Agent', requestsUsed: 5 }),
       makeProcessed({ user: 'u3', model: 'Padawan', requestsUsed: 4 }),
       makeProcessed({ user: 'u2', model: 'Spark', requestsUsed: 7 }),
@@ -66,6 +69,7 @@ describe('insights analytics', () => {
     const stats = calculateFeatureUtilization(data);
     expect(stats.codeReview.totalSessions).toBe(5);
     expect(stats.codeReview.userCount).toBe(2);
+    expect(stats.nonCopilotCodeReview.totalSessions).toBe(4);
     expect(stats.codingAgent.totalSessions).toBe(9);
     expect(stats.codingAgent.userCount).toBe(2);
     expect(stats.spark.totalSessions).toBe(8);

@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { DataAnalysis } from '@/components/DataAnalysis';
 import { newFormatRows } from '../fixtures/newFormatCSVData';
 import type { CSVData } from '@/types/csv';
@@ -178,6 +178,86 @@ describe('DataAnalysis billing summary', () => {
     await waitFor(() => {
       expect(screen.getAllByText('Spark').length).toBeGreaterThan(0);
       expect(screen.getAllByText('Copilot').length).toBeGreaterThan(0);
+    });
+  });
+
+  it('shows non-Copilot code review as a separate aggregate product and insight block', async () => {
+    const billingRows: CSVData[] = [
+      {
+        date: '2025-10-01',
+        username: '',
+        product: 'copilot',
+        sku: 'copilot_premium_request',
+        model: 'Code Review',
+        quantity: '3',
+        exceeds_quota: 'False',
+        total_monthly_quota: '1000',
+        applied_cost_per_quantity: '0.04',
+        gross_amount: '0.120',
+        discount_amount: '0.000',
+        net_amount: '0.120',
+        organization: 'Org One',
+        cost_center_name: 'Engineering',
+      },
+      {
+        date: '2025-10-02',
+        username: 'alice',
+        product: 'copilot',
+        sku: 'copilot_premium_request',
+        model: 'Code Review',
+        quantity: '2',
+        exceeds_quota: 'False',
+        total_monthly_quota: '1000',
+        applied_cost_per_quantity: '0.04',
+        gross_amount: '0.080',
+        discount_amount: '0.000',
+        net_amount: '0.080',
+        organization: 'Org One',
+        cost_center_name: 'Engineering',
+      },
+    ];
+
+    const ingestionResult = createMockIngestionResult(billingRows);
+    render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Code Review for Non-Copilot Users').length).toBeGreaterThan(0);
+    });
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Cost Centers' })[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Engineering/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Engineering/i }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Code Review for Non-Copilot Users').length).toBeGreaterThan(0);
+    });
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Organizations' })[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Org One/i })).toBeInTheDocument();
+    });
+
+    const organizationRow = screen.getByRole('button', { name: /Org One/i }).closest('tr');
+    expect(organizationRow).not.toBeNull();
+    expect(within(organizationRow as HTMLTableRowElement).getByText('1')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Org One/i }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Code Review for Non-Copilot Users').length).toBeGreaterThan(0);
+    });
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Insights' })[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText('Feature Utilization')).toBeInTheDocument();
+      expect(screen.getAllByText('Code Review for Non-Copilot Users').length).toBeGreaterThan(0);
+      expect(screen.getByText('Aggregate requests outside licensed Copilot users')).toBeInTheDocument();
     });
   });
 });

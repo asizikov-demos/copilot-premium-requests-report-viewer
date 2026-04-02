@@ -3,6 +3,7 @@ import {
   getProductDisplayLabel,
   isCodeReviewModel,
   isCodingAgentModel,
+  NON_COPILOT_CODE_REVIEW_PRODUCT_CATEGORY,
   isSparkProduct,
 } from '@/utils/productClassification';
 
@@ -29,6 +30,7 @@ describe('product classification', () => {
     expect(classifyProductCategory('Coding Agent')).toBe('Coding Agent');
     expect(classifyProductCategory('Padawan')).toBe('Coding Agent');
     expect(classifyProductCategory('Code Review')).toBe('Code Review');
+    expect(classifyProductCategory('Code Review', undefined, undefined, { isNonCopilotUsage: true, usageBucket: 'non_copilot_code_review' })).toBe(NON_COPILOT_CODE_REVIEW_PRODUCT_CATEGORY);
     expect(classifyProductCategory('gpt-4.1')).toBe('Copilot');
     expect(classifyProductCategory('Spark Helper')).toBe('Copilot');
     expect(classifyProductCategory('Claude Sonnet 4.5', 'spark', 'spark_premium_request')).toBe('Spark');
@@ -37,5 +39,6 @@ describe('product classification', () => {
   test('maps product categories to display labels', () => {
     expect(getProductDisplayLabel('Coding Agent')).toBe('Cloud Agent');
     expect(getProductDisplayLabel('Spark')).toBe('Spark');
+    expect(getProductDisplayLabel(NON_COPILOT_CODE_REVIEW_PRODUCT_CATEGORY)).toBe('Code Review for Non-Copilot Users');
   });
 });

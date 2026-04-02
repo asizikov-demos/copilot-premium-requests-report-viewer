@@ -1,4 +1,13 @@
-export type ProductCategory = 'Copilot' | 'Coding Agent' | 'Code Review' | 'Spark';
+import { NON_COPILOT_CODE_REVIEW_BUCKET, type SpecialUsageBucketKey } from '@/utils/ingestion/types';
+
+export const NON_COPILOT_CODE_REVIEW_PRODUCT_CATEGORY = 'Code Review for Non-Copilot Users' as const;
+
+export type ProductCategory =
+  | 'Copilot'
+  | 'Coding Agent'
+  | 'Code Review'
+  | 'Spark'
+  | typeof NON_COPILOT_CODE_REVIEW_PRODUCT_CATEGORY;
 
 function normalizeProductValue(value?: string): string {
   return value?.trim().toLowerCase() ?? '';
@@ -21,7 +30,19 @@ export function isSparkProduct(product?: string, sku?: string): boolean {
     || normalizedSku === 'spark_premium_request';
 }
 
-export function classifyProductCategory(model: string, product?: string, sku?: string): ProductCategory {
+export function classifyProductCategory(
+  model: string,
+  product?: string,
+  sku?: string,
+  options?: {
+    isNonCopilotUsage?: boolean;
+    usageBucket?: SpecialUsageBucketKey;
+  }
+): ProductCategory {
+  if (options?.isNonCopilotUsage && options.usageBucket === NON_COPILOT_CODE_REVIEW_BUCKET) {
+    return NON_COPILOT_CODE_REVIEW_PRODUCT_CATEGORY;
+  }
+
   if (isSparkProduct(product, sku)) {
     return 'Spark';
   }

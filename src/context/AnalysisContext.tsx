@@ -43,6 +43,7 @@ interface AnalysisContextValue {
   // Raw & processed (adapter bridge - to be phased out)
   baseProcessed: ProcessedData[];
   processedData: ReturnType<typeof useAnalyzedData>['processedData'];
+  aggregateProcessedData: ReturnType<typeof useAnalyzedData>['aggregateProcessedData'];
   analysis: ReturnType<typeof useAnalyzedData>['analysis'];
   userData: ReturnType<typeof useAnalyzedData>['userData'];
   allModels: string[];
@@ -112,6 +113,7 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
     codingAgentAnalysis,
     codeReviewAnalysis,
     processedData,
+    aggregateProcessedData,
     weeklyExhaustion
   } = useAnalyzedData({
     baseProcessed,
@@ -155,6 +157,7 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
     // Legacy adapter bridge
     baseProcessed,
     processedData,
+    aggregateProcessedData,
     analysis,
     userData,
     allModels,

@@ -54,7 +54,20 @@ export function CodingAgentOverview({
   const visibleUsers = showAllUsers ? codingAgentUsers : codingAgentUsers.slice(0, TABLE_PREVIEW_COUNT);
   const hasMore = codingAgentUsers.length > TABLE_PREVIEW_COUNT;
 
-  const visibleReviewUsers = showAllReviewUsers ? codeReviewAnalysis.users : codeReviewAnalysis.users.slice(0, TABLE_PREVIEW_COUNT);
+  const visibleReviewUsers = useMemo(() => {
+    if (showAllReviewUsers) {
+      return codeReviewAnalysis.users;
+    }
+
+    const preview = codeReviewAnalysis.users.slice(0, TABLE_PREVIEW_COUNT);
+    const syntheticRow = codeReviewAnalysis.users.find((user) => user.isSyntheticNonCopilotRow);
+
+    if (!syntheticRow || preview.some((user) => user.isSyntheticNonCopilotRow)) {
+      return preview;
+    }
+
+    return [...preview.slice(0, Math.max(0, TABLE_PREVIEW_COUNT - 1)), syntheticRow];
+  }, [codeReviewAnalysis.users, showAllReviewUsers]);
   const hasMoreReviewUsers = codeReviewAnalysis.users.length > TABLE_PREVIEW_COUNT;
 
   return (
