@@ -14,7 +14,7 @@ import { isCodeReviewModel } from '@/utils/productClassification';
  * Normalize a raw CSV row object into a typed, validated structure.
  * Returns null if row is invalid or missing required fields.
  */
-export function normalizeRow(raw: Record<string, unknown>, warnings: string[]): NormalizedRow | null {
+export function normalizeRow(raw: object, warnings: string[]): NormalizedRow | null {
   const {
     date,
     username,
@@ -60,7 +60,9 @@ export function normalizeRow(raw: Record<string, unknown>, warnings: string[]): 
       : undefined;
   
   // Parse exceeds quota flag
-  const exceedsQuota = exceeds_quota === 'true' || exceeds_quota === true;
+  const exceedsQuota = typeof exceeds_quota === 'string'
+    ? exceeds_quota.toLowerCase() === 'true'
+    : exceeds_quota === true;
   
   // Parse billing numeric fields (ignore if unparsable)
   const parseNum = (v: unknown): number | undefined => {

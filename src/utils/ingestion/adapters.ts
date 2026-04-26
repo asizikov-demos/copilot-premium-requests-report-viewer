@@ -3,90 +3,27 @@
  */
 
 import { ProcessedData } from '@/types/csv';
+
+import { buildDateKeys } from '../dateKeys';
+import { normalizeRow } from './normalizeRow';
 import {
-  NON_COPILOT_CODE_REVIEW_BUCKET,
   NormalizedRow,
   IngestionResult,
   QuotaArtifacts,
   UsageArtifacts,
   DailyBucketsArtifacts,
 } from './types';
-import { buildDateKeys } from '../dateKeys';
-import { isCodeReviewModel } from '@/utils/productClassification';
 
 /**
  * Reconstructs a ProcessedData array from normalized rows.
  * Used by hooks that haven't been migrated to aggregator outputs yet.
  */
-interface ExpandedCSVLike {
-  date: string;
-  username: string;
-  model: string;
-  quantity: string | number;
-  exceeds_quota?: string;
-  total_monthly_quota?: string;
-  applied_cost_per_quantity?: string;
-  gross_amount?: string;
-  discount_amount?: string;
-  net_amount?: string;
-  product?: string;
-  sku?: string;
-  organization?: string;
-  cost_center_name?: string;
-}
-
-function isExpandedCSVLike(r: unknown): r is ExpandedCSVLike {
-  return !!r && typeof r === 'object' && 'username' in r && 'quantity' in r && 'date' in r;
-}
-
-/**
- * Build ProcessedData from either NormalizedRow objects (preferred path) or
- * raw expanded CSV row objects used by older tests. This maintains backward
- * compatibility during migration without resorting to 'any'.
- */
-export function buildProcessedDataFromRows(rows: unknown[] | undefined | null): ProcessedData[] {
+export function buildProcessedDataFromRows(rows: NormalizedRow[] | undefined | null): ProcessedData[] {
   if (!Array.isArray(rows) || rows.length === 0) {
     return [];
   }
-  const processedRows: Array<ProcessedData | null> = rows.map(raw => {
-    if (isExpandedCSVLike(raw)) {
-      const quantityNum = typeof raw.quantity === 'number' ? raw.quantity : parseFloat(raw.quantity);
-      const timestamp = new Date(`${raw.date}T00:00:00Z`);
-      const keys = buildDateKeys(timestamp);
-      const user = raw.username.trim();
-      const isNonCopilotUsage = user.length === 0 && isCodeReviewModel(raw.model);
-      if (user.length === 0 && !isNonCopilotUsage) {
-        return null;
-      }
-      const quotaRaw = isNonCopilotUsage ? '0' : raw.total_monthly_quota || 'Unlimited';
-      const quotaValue = isNonCopilotUsage
-        ? 0
-        : quotaRaw.toLowerCase() === 'unlimited'
-          ? 'unlimited'
-          : parseFloat(quotaRaw);
-      return {
-        timestamp,
-        user,
-        model: raw.model,
-        requestsUsed: quantityNum,
-        exceedsQuota: raw.exceeds_quota ? raw.exceeds_quota.toLowerCase() === 'true' : false,
-        totalQuota: quotaRaw,
-        quotaValue,
-        product: raw.product,
-        sku: raw.sku,
-        organization: raw.organization,
-        costCenter: raw.cost_center_name,
-        appliedCostPerQuantity: raw.applied_cost_per_quantity ? parseFloat(raw.applied_cost_per_quantity) : undefined,
-        grossAmount: raw.gross_amount ? parseFloat(raw.gross_amount) : undefined,
-        discountAmount: raw.discount_amount ? parseFloat(raw.discount_amount) : undefined,
-        netAmount: raw.net_amount ? parseFloat(raw.net_amount) : undefined,
-        isNonCopilotUsage,
-        usageBucket: isNonCopilotUsage ? NON_COPILOT_CODE_REVIEW_BUCKET : undefined,
-        ...keys
-      };
-    }
-    const row = raw as NormalizedRow; // Fallback to assumed NormalizedRow shape
-    const timestamp = new Date(`${row.date}T00:00:00Z`);
+  return rows.map(row => {
+    const timestamp = new Date(`${row.day}T00:00:00Z`);
     const keys = buildDateKeys(timestamp);
     return {
       timestamp,
@@ -109,8 +46,18 @@ export function buildProcessedDataFromRows(rows: unknown[] | undefined | null): 
       ...keys
     };
   });
+}
 
-  return processedRows.filter((row): row is ProcessedData => row !== null);
+export function buildProcessedDataFromRawRows(rows: readonly object[] | undefined | null): ProcessedData[] {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return [];
+  }
+  const warnings: string[] = [];
+  const normalizedRows = rows
+    .map(row => normalizeRow(row, warnings))
+    .filter((row): row is NormalizedRow => row !== null);
+
+  return buildProcessedDataFromRows(normalizedRows);
 }
 
 /**

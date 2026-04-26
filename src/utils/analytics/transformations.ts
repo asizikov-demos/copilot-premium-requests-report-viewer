@@ -1,9 +1,8 @@
 import { CSVData, ProcessedData, AnalysisResults } from '@/types/csv';
 
-import { buildDateKeys } from '../dateKeys';
-import { isCodeReviewModel } from '../productClassification';
+import { buildProcessedDataFromRawRows } from '../ingestion/adapters';
 
-import { buildQuotaBreakdown, buildUserQuotaMapFromRows, parseQuotaValue } from './quota';
+import { buildQuotaBreakdown, buildUserQuotaMapFromRows } from './quota';
 import type { UserSummary } from './types';
 
 // Re-export for backwards compatibility
@@ -11,34 +10,7 @@ export type { UserSummary } from './types';
 
 // Convert raw CSV rows into strongly typed processed data (UTC-sensitive: timestamps used as-is)
 export function processCSVData(rawData: CSVData[]): ProcessedData[] {
-  return rawData.map(row => {
-    // Build a UTC timestamp from YYYY-MM-DD (DO NOT localize)
-    const timestamp = new Date(`${row.date}T00:00:00Z`);
-    const keys = buildDateKeys(timestamp);
-    const trimmedUsername = row.username.trim();
-    const isNonCopilotCodeReview = trimmedUsername.length === 0 && isCodeReviewModel(row.model);
-    const totalQuotaRaw = isNonCopilotCodeReview ? '0' : row.total_monthly_quota || 'Unlimited';
-    return {
-      timestamp,
-      user: trimmedUsername,
-      model: row.model,
-      requestsUsed: parseFloat(row.quantity),
-      exceedsQuota: row.exceeds_quota ? row.exceeds_quota.toLowerCase() === 'true' : false,
-      totalQuota: isNonCopilotCodeReview ? '0' : totalQuotaRaw,
-      quotaValue: isNonCopilotCodeReview ? 0 : parseQuotaValue(totalQuotaRaw),
-      product: row.product,
-      sku: row.sku,
-      organization: row.organization,
-      costCenter: row.cost_center_name,
-      appliedCostPerQuantity: row.applied_cost_per_quantity ? parseFloat(row.applied_cost_per_quantity) : undefined,
-      grossAmount: row.gross_amount ? parseFloat(row.gross_amount) : undefined,
-      discountAmount: row.discount_amount ? parseFloat(row.discount_amount) : undefined,
-      netAmount: row.net_amount ? parseFloat(row.net_amount) : undefined,
-      isNonCopilotUsage: isNonCopilotCodeReview,
-      usageBucket: isNonCopilotCodeReview ? 'non_copilot_code_review' : undefined,
-      ...keys
-    };
-  });
+  return buildProcessedDataFromRawRows(rawData);
 }
 
 export function analyzeData(data: ProcessedData[]): AnalysisResults {

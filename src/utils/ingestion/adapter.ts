@@ -5,8 +5,8 @@
  */
 
 import { CSVData, ProcessedData } from '@/types/csv';
-import { buildDateKeys } from '../dateKeys';
-import { parseQuotaValue } from '../analytics/quota';
+
+import { buildProcessedDataFromRawRows } from './adapters';
 import { QuotaArtifacts, UsageArtifacts } from './types';
 
 /**
@@ -14,30 +14,7 @@ import { QuotaArtifacts, UsageArtifacts } from './types';
  * that haven't been migrated to use aggregator outputs directly.
  */
 export function buildProcessedDataLegacy(rawData: CSVData[]): ProcessedData[] {
-  return rawData.map(row => {
-    const timestamp = new Date(`${row.date}T00:00:00Z`);
-    const keys = buildDateKeys(timestamp);
-    const totalQuotaRaw = row.total_monthly_quota || 'Unlimited';
-    
-    return {
-      timestamp,
-      user: row.username,
-      model: row.model,
-      requestsUsed: parseFloat(row.quantity),
-      exceedsQuota: row.exceeds_quota ? row.exceeds_quota.toLowerCase() === 'true' : false,
-      totalQuota: totalQuotaRaw,
-      quotaValue: parseQuotaValue(totalQuotaRaw),
-      product: row.product,
-      sku: row.sku,
-      organization: row.organization,
-      costCenter: row.cost_center_name,
-      appliedCostPerQuantity: row.applied_cost_per_quantity ? parseFloat(row.applied_cost_per_quantity) : undefined,
-      grossAmount: row.gross_amount ? parseFloat(row.gross_amount) : undefined,
-      discountAmount: row.discount_amount ? parseFloat(row.discount_amount) : undefined,
-      netAmount: row.net_amount ? parseFloat(row.net_amount) : undefined,
-      ...keys
-    };
-  });
+  return buildProcessedDataFromRawRows(rawData);
 }
 
 /**

@@ -1,3 +1,8 @@
+import { buildProcessedDataLegacy } from '@/utils/ingestion/adapter';
+import { buildProcessedDataFromRows } from '@/utils/ingestion/adapters';
+import { normalizeRow } from '@/utils/ingestion/normalizeRow';
+import type { CSVData } from '@/types/csv';
+
 import { processCSVData } from '../helpers/processCSVData';
 import { newFormatRows } from '../fixtures/newFormatCSVData';
 
@@ -58,5 +63,45 @@ describe('processCSVData (CSV format)', () => {
     expect(special.usageBucket).toBe('non_copilot_code_review');
     expect(special.quotaValue).toBe(0);
     expect(special.totalQuota).toBe('0');
+  });
+
+  it('keeps legacy CSV wrappers aligned with the normalized conversion path', () => {
+    const rows: CSVData[] = [{
+      date: '2025-10-04',
+      username: ' test-user-one ',
+      product: 'copilot',
+      sku: 'copilot_premium_request',
+      model: 'Claude Sonnet 4',
+      quantity: '2.5',
+      exceeds_quota: 'TRUE',
+      total_monthly_quota: '300',
+      applied_cost_per_quantity: '0.04',
+      gross_amount: '0.10',
+      discount_amount: '0.01',
+      net_amount: '0.09',
+      organization: 'test-org-one',
+      cost_center_name: 'test-cost-center-one'
+    }];
+    const warnings: string[] = [];
+    const normalizedRows = rows
+      .map(row => normalizeRow(row, warnings))
+      .filter((row): row is NonNullable<ReturnType<typeof normalizeRow>> => row !== null);
+    const canonical = buildProcessedDataFromRows(normalizedRows);
+
+    expect(warnings).toEqual([]);
+    expect(processCSVData(rows)).toEqual(canonical);
+    expect(buildProcessedDataLegacy(rows)).toEqual(canonical);
+    expect(canonical[0]).toMatchObject({
+      user: 'test-user-one',
+      requestsUsed: 2.5,
+      exceedsQuota: true,
+      quotaValue: 300,
+      totalQuota: '300',
+      grossAmount: 0.10,
+      netAmount: 0.09,
+      organization: 'test-org-one',
+      costCenter: 'test-cost-center-one'
+    });
+    expect(canonical[0].timestamp.toISOString()).toBe('2025-10-04T00:00:00.000Z');
   });
 });
