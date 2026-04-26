@@ -24,9 +24,12 @@ import {
   NON_COPILOT_CODE_REVIEW_BUCKET,
   type DailyBucketsArtifacts,
   type FeatureUsageArtifacts,
+  type NormalizedRow,
   type QuotaArtifacts,
   type UsageArtifacts,
 } from './types';
+import { DailyBucketsAggregator } from './DailyBucketsAggregator';
+import { QuotaAggregator } from './QuotaAggregator';
 import { UsageAccumulator } from './UsageAccumulator';
 
 export type { DailyBucketsArtifacts } from './types';
@@ -61,6 +64,49 @@ export function buildUsageArtifactsFromProcessedData(filtered: ProcessedData[]):
     });
   }
   return accumulator.finalize();
+}
+
+function buildNormalizedRowFromProcessedData(row: ProcessedData): NormalizedRow {
+  return {
+    date: row.iso,
+    day: row.dateKey,
+    user: row.user,
+    model: row.model,
+    quantity: row.requestsUsed,
+    quotaRaw: row.totalQuota,
+    quotaValue: row.quotaValue,
+    exceedsQuota: row.exceedsQuota,
+    product: row.product,
+    sku: row.sku,
+    organization: row.organization,
+    costCenter: row.costCenter,
+    appliedCostPerQuantity: row.appliedCostPerQuantity,
+    grossAmount: row.grossAmount,
+    discountAmount: row.discountAmount,
+    netAmount: row.netAmount,
+    isNonCopilotUsage: row.isNonCopilotUsage,
+    usageBucket: row.usageBucket,
+  };
+}
+
+export function buildQuotaArtifactsFromProcessedData(processed: ProcessedData[]): QuotaArtifacts {
+  const aggregator = new QuotaAggregator();
+  const ctx = { pricing: PRICING };
+  aggregator.init?.(ctx);
+  for (const row of processed) {
+    aggregator.onRow(buildNormalizedRowFromProcessedData(row), ctx);
+  }
+  return aggregator.finalize(ctx);
+}
+
+export function buildDailyBucketsArtifactsFromProcessedData(processed: ProcessedData[]): DailyBucketsArtifacts {
+  const aggregator = new DailyBucketsAggregator();
+  const ctx = { pricing: PRICING };
+  aggregator.init?.(ctx);
+  for (const row of processed) {
+    aggregator.onRow(buildNormalizedRowFromProcessedData(row), ctx);
+  }
+  return aggregator.finalize(ctx);
 }
 
 /**
