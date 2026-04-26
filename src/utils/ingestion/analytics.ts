@@ -17,7 +17,7 @@ import { Advisory as LegacyAdvisory } from '@/utils/analytics/advisory';
 import { CONSUMPTION_THRESHOLDS, UserConsumptionCategory, InsightsOverviewData } from '@/utils/analytics/insights';
 import type { FeatureUtilizationStats } from '@/utils/analytics/insights';
 import { buildUserQuotaMapFromRows } from '@/utils/analytics/quota';
-import { dayOfMonthToWeekBucket } from '@/utils/dateKeys';
+import { dayOfMonthToWeekBucket, enumerateDatesInclusive } from '@/utils/dateKeys';
 import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
 import { calculateBilledOverageFromRows, calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
 import {
@@ -143,17 +143,6 @@ export interface ArtifactCoreAnalysis {
 // -----------------------------
 export interface DailyCumulativeData { date: string; [user: string]: string | number; }
 
-/** Build ordered list of dates (inclusive) between min and max (UTC). */
-function enumerateDates(start: string, end: string): string[] {
-  const out: string[] = [];
-  const startDate = new Date(`${start}T00:00:00Z`);
-  const endDate = new Date(`${end}T00:00:00Z`);
-  for (let d = new Date(startDate); d.getTime() <= endDate.getTime(); d.setUTCDate(d.getUTCDate() + 1)) {
-    out.push(d.toISOString().slice(0, 10));
-  }
-  return out;
-}
-
 /**
  * Construct daily cumulative per-user usage series from bucket artifacts.
  * This mirrors legacy generateDailyCumulativeData but avoids raw row scans.
@@ -161,7 +150,7 @@ function enumerateDates(start: string, end: string): string[] {
 export function buildDailyCumulativeDataFromArtifacts(daily: DailyBucketsArtifacts): DailyCumulativeData[] {
   if (!daily.dateRange) return [];
   const { min, max } = daily.dateRange;
-  const dates = enumerateDates(min, max);
+  const dates = enumerateDatesInclusive(min, max);
 
   // Collect all users encountered in any day map
   const users = new Set<string>();
@@ -321,16 +310,6 @@ export function analyzeCodingAgentAdoptionFromArtifacts(usage: UsageArtifacts, q
 // -----------------------------
 // User Daily Model Data (Modal) From Artifacts
 // -----------------------------
-/** Enumerate inclusive date list (YYYY-MM-DD) using already exported helper logic. */
-function enumerateDatesInclusive(start: string, end: string): string[] {
-  const out: string[] = [];
-  const s = new Date(`${start}T00:00:00Z`);
-  const e = new Date(`${end}T00:00:00Z`);
-  for (let d = new Date(s); d.getTime() <= e.getTime(); d.setUTCDate(d.getUTCDate() + 1)) {
-    out.push(d.toISOString().slice(0, 10));
-  }
-  return out;
-}
 
 /**
  * Build per-user per-model daily stacked + cumulative dataset for user detail views
