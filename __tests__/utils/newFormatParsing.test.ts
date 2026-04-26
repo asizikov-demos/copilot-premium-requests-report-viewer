@@ -90,6 +90,7 @@ describe('processCSVData (CSV format)', () => {
     const canonical = buildProcessedDataFromRows(normalizedRows);
 
     expect(warnings).toEqual([]);
+    expect(rows[0].username).toBe(' test-user-one ');
     expect(processCSVData(rows)).toEqual(canonical);
     expect(buildProcessedDataLegacy(rows)).toEqual(canonical);
     expect(canonical[0]).toMatchObject({
