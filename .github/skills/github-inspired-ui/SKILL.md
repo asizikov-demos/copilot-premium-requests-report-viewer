@@ -57,5 +57,4 @@ These rules apply regardless of the task. Do **not** load a resource file for th
 5. **No heavy borders.** Always 1px `#d1d9e0`. Only exception: `border-l-[3px]` accent indicators.
 6. **No gradient backgrounds** on structural elements. Gradients only in heatmap data visualization.
 7. **No custom fonts.** Inter for body, Geist Mono for code — no additions.
-8. **Never hard-code pricing values.** Import from `@/constants/pricing`.
-9. **No inline `style` objects for colors.** Use Tailwind bracket notation. Exception: `animationDelay` and Recharts props.
+8. **No inline `style` objects for colors.** Use Tailwind bracket notation. Exception: `animationDelay` and Recharts props.
