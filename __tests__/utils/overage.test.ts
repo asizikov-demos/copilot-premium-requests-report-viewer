@@ -37,7 +37,7 @@ function makeProcessed(row: Partial<ProcessedData>): ProcessedData {
     dateKey: iso.slice(0, 10),
     monthKey: iso.slice(0, 7),
     epoch: timestamp.getTime(),
-    isNonCopilotUsage: row.isNonCopilotUsage,
+    isNonCopilotUsage: row.isNonCopilotUsage ?? false,
     usageBucket: row.usageBucket,
   } as ProcessedData;
 }
