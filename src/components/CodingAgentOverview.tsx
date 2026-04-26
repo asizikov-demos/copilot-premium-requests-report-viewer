@@ -12,15 +12,13 @@ interface CodingAgentOverviewProps {
   totalUniqueUsers: number;
   adoptionRate: number;
   codeReviewAnalysis: CodeReviewAnalysis;
-  onBack?: () => void;
 }
 
 export function CodingAgentOverview({ 
   codingAgentUsers, 
   totalUniqueUsers,
   adoptionRate,
-  codeReviewAnalysis,
-  onBack 
+  codeReviewAnalysis
 }: CodingAgentOverviewProps) {
   const isMobile = useIsMobile();
   const [showChart, setShowChart] = useState(true);
@@ -86,15 +84,6 @@ export function CodingAgentOverview({
               className="px-3 py-1.5 text-sm font-medium text-[#636c76] bg-[#f6f8fa] hover:bg-[#d1d9e0] rounded-md transition-colors"
             >
               {showChart ? 'Table' : 'Chart'}
-            </button>
-          )}
-          {onBack && (
-            <button
-              onClick={onBack}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#636c76] bg-white border border-[#d1d9e0] rounded-md hover:bg-[#f6f8fa] hover:border-[#636c76] transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
-              Back
             </button>
           )}
         </div>

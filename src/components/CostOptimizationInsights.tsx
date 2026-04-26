@@ -5,11 +5,7 @@ import { useAnalysisContext } from '@/context/AnalysisContext';
 import { computeCostOptimizationFromArtifacts } from '@/utils/analytics/costOptimization';
 import { PRICING, COST_OPTIMIZATION_THRESHOLDS } from '@/constants/pricing';
 
-interface CostOptimizationInsightsProps {
-  onBack?: () => void;
-}
-
-export function CostOptimizationInsights({ onBack }: CostOptimizationInsightsProps) {
+export function CostOptimizationInsights() {
   const { usageArtifacts, quotaArtifacts } = useAnalysisContext();
 
   const summary = useMemo(() => {
@@ -27,15 +23,6 @@ export function CostOptimizationInsights({ onBack }: CostOptimizationInsightsPro
             <h2 className="text-2xl font-semibold tracking-tight text-[#1f2328]">Cost Optimization</h2>
             <p className="text-sm text-[#636c76] mt-1">SKU upgrade analysis for reducing overage spend</p>
           </div>
-          {onBack && (
-            <button
-              onClick={onBack}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#636c76] bg-white border border-[#d1d9e0] rounded-md hover:bg-[#f6f8fa] hover:border-[#d1d9e0] transition-colors duration-150"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
-              Back
-            </button>
-          )}
         </div>
         <div className="p-6 bg-[#f6f8fa] border border-[#d1d9e0] rounded-md">
           <p className="text-sm text-[#636c76]">
@@ -58,15 +45,6 @@ export function CostOptimizationInsights({ onBack }: CostOptimizationInsightsPro
           <h2 className="text-2xl font-semibold tracking-tight text-[#1f2328]">Cost Optimization</h2>
           <p className="text-sm text-[#636c76] mt-1">SKU upgrade analysis for reducing overage spend</p>
         </div>
-        {onBack && (
-          <button
-            onClick={onBack}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#636c76] bg-white border border-[#d1d9e0] rounded-md hover:bg-[#f6f8fa] hover:border-[#d1d9e0] transition-colors duration-150"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
-            Back
-          </button>
-        )}
       </div>
 
       {/* Metrics Grid */}

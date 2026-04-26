@@ -104,9 +104,10 @@ describe('UsersOverview - sorting', () => {
         dailyCumulativeData={dailyCumulativeData}
         quotaArtifacts={quotaArtifacts}
         usageArtifacts={usageArtifacts}
-        onBack={() => {}}
       />
     );
+
+    expect(screen.queryByRole('button', { name: 'Back' })).not.toBeInTheDocument();
 
     const table = screen.getByRole('table');
 
@@ -154,7 +155,6 @@ describe('UsersOverview - sorting', () => {
         dailyCumulativeData={[{ date: '2025-01-01T00:00:00Z', Alice: 1, Bob: 1, Charlie: 1 }]}
         quotaArtifacts={quotaArtifacts}
         usageArtifacts={makeUsage(userData)}
-        onBack={() => {}}
       />
     );
 
@@ -209,7 +209,6 @@ describe('UsersOverview - sorting', () => {
         dailyCumulativeData={[{ date: '2025-01-01T00:00:00Z', Alice: 10, Bob: 20 }]}
         quotaArtifacts={quotaArtifacts}
         usageArtifacts={makeUsage(userData)}
-        onBack={() => {}}
       />
     );
 
