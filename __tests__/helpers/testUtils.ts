@@ -1,6 +1,8 @@
 import { render, RenderOptions } from '@testing-library/react';
 import { ReactElement } from 'react';
-import { CSVData } from '@/types/csv';
+
+import type { DailyBucketsArtifacts } from '@/utils/ingestion';
+import type { CSVData, ProcessedData } from '@/types/csv';
 
 // Custom render function with providers if needed
 export const customRender = (
@@ -34,4 +36,19 @@ export const createMockCSVDataArray = (count: number, overrides: Partial<CSVData
       quantity: (Math.random() * 5).toFixed(2)
     });
   });
+};
+
+export const buildMinimalDailyBucketsArtifact = (processed: ProcessedData[]): DailyBucketsArtifacts => {
+  const monthsSet = new Set<string>();
+  for (const row of processed) {
+    monthsSet.add(row.monthKey || row.timestamp.toISOString().slice(0, 7));
+  }
+
+  return { dailyUserTotals: new Map(), dateRange: null, months: Array.from(monthsSet).sort() };
+};
+
+export const filterBySelectedMonths = (data: ProcessedData[], selected: string[]): ProcessedData[] => {
+  if (selected.length === 0) return data;
+  const set = new Set(selected);
+  return data.filter(d => set.has(d.monthKey));
 };

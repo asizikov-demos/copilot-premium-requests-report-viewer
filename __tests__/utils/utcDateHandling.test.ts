@@ -1,5 +1,6 @@
-import { buildMonthListFromArtifacts, DailyBucketsArtifacts } from '@/utils/ingestion/analytics';
+import { buildMonthListFromArtifacts } from '@/utils/ingestion/analytics';
 import { processCSVData } from '../helpers/processCSVData';
+import { buildMinimalDailyBucketsArtifact, filterBySelectedMonths } from '../helpers/testUtils';
 import { CSVData } from '../../src/types/csv';
 
 describe('UTC Date Handling and Billing Periods', () => {
@@ -57,21 +58,9 @@ describe('UTC Date Handling and Billing Periods', () => {
     expect(processedData[4].timestamp.toISOString()).toBe('2025-12-31T00:00:00.000Z');
   });
 
-  function artifactFromProcessed(processed: ReturnType<typeof processCSVData>): DailyBucketsArtifacts {
-    const monthsSet = new Set<string>();
-    for (const row of processed) monthsSet.add(row.monthKey || row.timestamp.toISOString().slice(0,7));
-    return { dailyUserTotals: new Map(), dateRange: null, months: Array.from(monthsSet).sort() };
-  }
-
-  function filterBySelectedMonthsLocal(data: ReturnType<typeof processCSVData>, selected: string[]) {
-    if (selected.length === 0) return data;
-    const set = new Set(selected);
-    return data.filter(d => set.has(d.monthKey));
-  }
-
   it('should correctly identify billing periods (1st to last day of month)', () => {
     const processedData = processCSVData(edgeCaseData);
-    const artifacts = artifactFromProcessed(processedData);
+    const artifacts = buildMinimalDailyBucketsArtifact(processedData);
     const availableMonths = buildMonthListFromArtifacts(artifacts);
     
     // Should identify June, July, August, and December as separate billing periods
@@ -87,7 +76,7 @@ describe('UTC Date Handling and Billing Periods', () => {
 
   it('should filter July billing period correctly (exclude June 30th and August 1st)', () => {
     const processedData = processCSVData(edgeCaseData);
-    const julyData = filterBySelectedMonthsLocal(processedData, ['2025-07']);
+    const julyData = filterBySelectedMonths(processedData, ['2025-07']);
     
     // Should only include July 1st and July 31st records
     expect(julyData).toHaveLength(2);
@@ -114,7 +103,7 @@ describe('UTC Date Handling and Billing Periods', () => {
 
   it('should handle year-end billing period boundaries correctly', () => {
     const processedData = processCSVData(edgeCaseData);
-    const decemberData = filterBySelectedMonthsLocal(processedData, ['2025-12']);
+    const decemberData = filterBySelectedMonths(processedData, ['2025-12']);
     
     // Should only include December 31st record (midnight UTC)
     expect(decemberData).toHaveLength(1);
@@ -124,7 +113,7 @@ describe('UTC Date Handling and Billing Periods', () => {
 
   it('should handle multiple billing periods selection', () => {
     const processedData = processCSVData(edgeCaseData);
-    const multiMonthData = filterBySelectedMonthsLocal(processedData, ['2025-07', '2025-08']);
+    const multiMonthData = filterBySelectedMonths(processedData, ['2025-07', '2025-08']);
     
     // Should include July and August data (3 records)
     expect(multiMonthData).toHaveLength(3);
@@ -139,7 +128,7 @@ describe('UTC Date Handling and Billing Periods', () => {
 
   it('should return all data when no billing periods are selected', () => {
     const processedData = processCSVData(edgeCaseData);
-    const allData = filterBySelectedMonthsLocal(processedData, []);
+    const allData = filterBySelectedMonths(processedData, []);
     
     // Should return all 5 records when no filter is applied
     expect(allData).toHaveLength(5);
@@ -168,19 +157,19 @@ describe('UTC Date Handling and Billing Periods', () => {
     ];
 
     const processedData = processCSVData(timezoneEdgeData);
-    const artifacts = artifactFromProcessed(processedData);
+    const artifacts = buildMinimalDailyBucketsArtifact(processedData);
     const availableMonths = buildMonthListFromArtifacts(artifacts);
     
     // Should correctly identify March and April as separate months
     expect(availableMonths.map(m => m.value)).toEqual(['2025-03', '2025-04']);
     
     // March data should only include March record (normalized to midnight)
-    const marchData = filterBySelectedMonthsLocal(processedData, ['2025-03']);
+    const marchData = filterBySelectedMonths(processedData, ['2025-03']);
     expect(marchData).toHaveLength(1);
     expect(marchData[0].timestamp.toISOString()).toBe('2025-03-31T00:00:00.000Z');
     
     // April data should only include April record (normalized to midnight)
-    const aprilData = filterBySelectedMonthsLocal(processedData, ['2025-04']);
+    const aprilData = filterBySelectedMonths(processedData, ['2025-04']);
     expect(aprilData).toHaveLength(1);
     expect(aprilData[0].timestamp.toISOString()).toBe('2025-04-01T00:00:00.000Z');
   });
