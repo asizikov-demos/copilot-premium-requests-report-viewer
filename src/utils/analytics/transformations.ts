@@ -67,7 +67,7 @@ export function analyzeData(data: ProcessedData[]): AnalysisResults {
   const totalUniqueUsers = uniqueUsers.size;
 
   // Quota breakdown
-  const quotaBreakdown = buildQuotaBreakdown(data);
+  const quotaBreakdown = buildQuotaBreakdown(data.filter(row => !row.isNonCopilotUsage));
 
   // Users exceeding quota (using actual numeric quota values)
   const userQuotas = buildUserQuotaMapFromRows(data);

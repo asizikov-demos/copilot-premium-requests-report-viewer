@@ -19,6 +19,10 @@ export function parseQuotaValue(quotaString: string): number | 'unlimited' {
   return isNaN(parsed) ? 'unlimited' : parsed;
 }
 
+/**
+ * Build per-user quotas from processed rows using the canonical policy:
+ * 'unlimited' wins over numeric quotas, otherwise the highest numeric quota wins.
+ */
 export function buildUserQuotaMapFromRows(data: ProcessedData[]): Map<string, number | 'unlimited'> {
   const userQuotas = new Map<string, number | 'unlimited'>();
 

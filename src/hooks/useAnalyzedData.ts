@@ -69,7 +69,7 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
           requestsByModelMap.set(r.model, (requestsByModelMap.get(r.model) || 0) + r.requestsUsed);
         }
         const requestsByModel = Array.from(requestsByModelMap.entries()).map(([model,totalRequests])=>({ model, totalRequests })).sort((a,b)=> b.totalRequests - a.totalRequests);
-        return { timeFrame, totalUniqueUsers: uniqueUsers.size, usersExceedingQuota: 0, requestsByModel, quotaBreakdown: buildQuotaBreakdown(filteredAllRows) };
+        return { timeFrame, totalUniqueUsers: uniqueUsers.size, usersExceedingQuota: 0, requestsByModel, quotaBreakdown: buildQuotaBreakdown(userFiltered) };
       })();
       return {
         processedData: filtered,
