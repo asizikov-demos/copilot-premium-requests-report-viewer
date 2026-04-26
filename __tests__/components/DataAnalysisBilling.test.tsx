@@ -3,7 +3,9 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { DataAnalysis } from '@/components/DataAnalysis';
 import { newFormatRows } from '../fixtures/newFormatCSVData';
 import type { CSVData } from '@/types/csv';
+import { normalizeRow } from '@/utils/ingestion/normalizeRow';
 import type { IngestionResult } from '@/utils/ingestion';
+import type { NormalizedRow } from '@/utils/ingestion/types';
 
 // Mock ResizeObserver for Recharts ResponsiveContainer in JSDOM
 beforeAll(() => {
@@ -14,24 +16,29 @@ beforeAll(() => {
   };
 });
 
-// Helper to create mock IngestionResult
-function createMockIngestionResult(rows: unknown[]): IngestionResult {
+// Helper to create IngestionResult from raw CSV rows
+function createIngestionResultFromRawRows(rows: CSVData[]): IngestionResult {
+  const warnings: string[] = [];
+  const normalizedRows = rows
+    .map(row => normalizeRow(row, warnings))
+    .filter((row): row is NormalizedRow => row !== null);
+
   return {
     outputs: {
       'quota': { quotaByUser: new Map(), conflicts: new Map(), distinctQuotas: new Set(), hasMixedQuotas: false, hasMixedLicenses: false },
       'usage': { users: [], userTotals: new Map(), modelBreakdown: new Map(), globalModelTotals: new Map(), topModelPerUser: new Map(), modelTotals: {}, userCount: 0, modelCount: 0 },
       'dailyBuckets': { dailyUserTotals: new Map(), startDate: new Date(), endDate: new Date() },
-      'rawData': rows
+      'rawData': normalizedRows
     },
-    rowsProcessed: rows.length,
+    rowsProcessed: normalizedRows.length,
     durationMs: 100,
-    warnings: []
+    warnings
   };
 }
 
 describe('DataAnalysis billing summary', () => {
   it('renders billing summary when cost fields are present', async () => {
-    const ingestionResult = createMockIngestionResult(newFormatRows);
+    const ingestionResult = createIngestionResultFromRawRows(newFormatRows);
     render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
 
     // Wait for provider effects & rendering. Billing summary may appear once processedData is built.
@@ -108,7 +115,7 @@ describe('DataAnalysis billing summary', () => {
       },
     ];
 
-    const ingestionResult = createMockIngestionResult(billingRows);
+    const ingestionResult = createIngestionResultFromRawRows(billingRows);
     render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
 
     await waitFor(() => {
@@ -146,7 +153,7 @@ describe('DataAnalysis billing summary', () => {
       },
     ];
 
-    const ingestionResult = createMockIngestionResult(billingRows);
+    const ingestionResult = createIngestionResultFromRawRows(billingRows);
     render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
 
     await waitFor(() => {
@@ -193,7 +200,7 @@ describe('DataAnalysis billing summary', () => {
       },
     ];
 
-    const ingestionResult = createMockIngestionResult(billingRows);
+    const ingestionResult = createIngestionResultFromRawRows(billingRows);
     render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
 
     await waitFor(() => {
@@ -250,7 +257,7 @@ describe('DataAnalysis billing summary', () => {
       },
     ];
 
-    const ingestionResult = createMockIngestionResult(billingRows);
+    const ingestionResult = createIngestionResultFromRawRows(billingRows);
     render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
 
     await waitFor(() => {

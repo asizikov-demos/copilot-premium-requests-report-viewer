@@ -4,6 +4,8 @@
  */
 
 import { parseQuotaValue } from '@/utils/analytics/quota';
+import type { CSVData } from '@/types/csv';
+
 import {
   NON_COPILOT_CODE_REVIEW_BUCKET,
   NormalizedRow,
@@ -13,8 +15,16 @@ import { isCodeReviewModel } from '@/utils/productClassification';
 /**
  * Normalize a raw CSV row object into a typed, validated structure.
  * Returns null if row is invalid or missing required fields.
+ *
+ * When `options.allowInvalidQuantity` is true, rows with a non-numeric quantity
+ * are not rejected; instead the returned row will have `quantity` as `NaN`.
+ * Callers using this option must handle NaN quantity values themselves.
  */
-export function normalizeRow(raw: Record<string, unknown>, warnings: string[]): NormalizedRow | null {
+export function normalizeRow(
+  raw: CSVData | Record<string, unknown>,
+  warnings: string[],
+  options: { allowInvalidQuantity?: boolean } = {}
+): NormalizedRow | null {
   const {
     date,
     username,
@@ -47,7 +57,7 @@ export function normalizeRow(raw: Record<string, unknown>, warnings: string[]): 
   
   // Parse quantity
   const qty = typeof quantity === 'number' ? quantity : parseFloat(String(quantity));
-  if (Number.isNaN(qty)) {
+  if (Number.isNaN(qty) && !options.allowInvalidQuantity) {
     warnings.push(`Invalid quantity for user=${username} date=${date}`);
     return null;
   }
@@ -60,7 +70,9 @@ export function normalizeRow(raw: Record<string, unknown>, warnings: string[]): 
       : undefined;
   
   // Parse exceeds quota flag
-  const exceedsQuota = exceeds_quota === 'true' || exceeds_quota === true;
+  const exceedsQuota = typeof exceeds_quota === 'string'
+    ? exceeds_quota.toLowerCase() === 'true'
+    : exceeds_quota === true;
   
   // Parse billing numeric fields (ignore if unparsable)
   const parseNum = (v: unknown): number | undefined => {
