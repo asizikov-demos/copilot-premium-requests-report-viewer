@@ -1,4 +1,5 @@
 import { ProcessedData } from '@/types/csv';
+import { dayOfMonthToWeekBucket } from '@/utils/dateKeys';
 
 export interface WeeklyQuotaExhaustionBreakdown {
   totalUsersExhausted: number;
@@ -28,13 +29,7 @@ export function computeWeeklyQuotaExhaustion(data: ProcessedData[]): WeeklyQuota
   interface WeekKey { monthKey: string; weekNumber: number; startDate: string; endDate: string; }
   const weekMap = new Map<string, { key: WeekKey; users: Set<string> }>();
   for (const rec of records) {
-    const d = rec.exhaustionDate; const day = d.getUTCDate();
-    let weekNumber: number; if (day <= 7) weekNumber = 1; else if (day <= 14) weekNumber = 2; else if (day <= 21) weekNumber = 3; else if (day <= 28) weekNumber = 4; else weekNumber = 5;
-    const year = d.getUTCFullYear(); const month = d.getUTCMonth();
-    const weekStartDay = weekNumber === 1 ? 1 : (weekNumber - 1) * 7 + 1;
-    const weekEndDay = weekNumber < 5 ? weekStartDay + 6 : new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-    const startDate = `${year}-${String(month + 1).padStart(2,'0')}-${String(weekStartDay).padStart(2,'0')}`;
-    const endDate = `${year}-${String(month + 1).padStart(2,'0')}-${String(weekEndDay).padStart(2,'0')}`;
+    const { weekNumber, startDate, endDate } = dayOfMonthToWeekBucket(rec.exhaustionDate.getUTCDate(), rec.monthKey);
     const mapKey = `${rec.monthKey}-W${weekNumber}`;
     if (!weekMap.has(mapKey)) weekMap.set(mapKey, { key: { monthKey: rec.monthKey, weekNumber, startDate, endDate }, users: new Set() });
     weekMap.get(mapKey)!.users.add(rec.user);

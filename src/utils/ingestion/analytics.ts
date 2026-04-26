@@ -17,6 +17,7 @@ import { Advisory as LegacyAdvisory } from '@/utils/analytics/advisory';
 import { CONSUMPTION_THRESHOLDS, UserConsumptionCategory, InsightsOverviewData } from '@/utils/analytics/insights';
 import type { FeatureUtilizationStats } from '@/utils/analytics/insights';
 import { buildUserQuotaMapFromRows } from '@/utils/analytics/quota';
+import { dayOfMonthToWeekBucket } from '@/utils/dateKeys';
 import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
 import { calculateBilledOverageFromRows, calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
 import {
@@ -277,15 +278,7 @@ export function computeWeeklyQuotaExhaustionFromArtifacts(
   for (const rec of records) {
     const d = rec.exhaustionDate; // YYYY-MM-DD
     const day = parseInt(d.slice(8, 10), 10);
-    let weekNumber: number;
-    if (day <= 7) weekNumber = 1; else if (day <= 14) weekNumber = 2; else if (day <= 21) weekNumber = 3; else if (day <= 28) weekNumber = 4; else weekNumber = 5;
-    const [yearStr, monthStr] = rec.monthKey.split('-');
-    const year = parseInt(yearStr, 10); const month = parseInt(monthStr, 10); // month 1-12
-    const weekStartDay = weekNumber === 1 ? 1 : (weekNumber - 1) * 7 + 1;
-    const lastDayOfMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
-    const weekEndDay = weekNumber < 5 ? weekStartDay + 6 : lastDayOfMonth;
-    const startDate = `${rec.monthKey}-${String(weekStartDay).padStart(2, '0')}`;
-    const endDate = `${rec.monthKey}-${String(weekEndDay).padStart(2, '0')}`;
+    const { weekNumber, startDate, endDate } = dayOfMonthToWeekBucket(day, rec.monthKey);
     const mapKey = `${rec.monthKey}-W${weekNumber}`;
     if (!weekMap.has(mapKey)) weekMap.set(mapKey, { key: { monthKey: rec.monthKey, weekNumber, startDate, endDate }, users: new Set() });
     weekMap.get(mapKey)!.users.add(rec.user);
