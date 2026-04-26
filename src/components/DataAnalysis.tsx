@@ -1,18 +1,21 @@
 'use client';
 
 import React, { useEffect, useMemo } from 'react';
-import { ModelRequestsBarChart } from './charts/ModelRequestsBarChart';
-import { ModelUsageTrendsOverview } from './ModelUsageTrendsOverview';
-import { UsersOverview } from './UsersOverview';
-import { CodingAgentOverview } from './CodingAgentOverview';
-import { InsightsOverview } from './InsightsOverview';
-import { CostOptimizationInsights } from './CostOptimizationInsights';
-import { CostCentersOverview } from './CostCentersOverview';
-import { OrganizationsOverview } from './OrganizationsOverview';
+
 import { PRICING } from '@/constants/pricing';
 import { AnalysisProvider, useAnalysisContext } from '@/context/AnalysisContext';
+import { aggregateAutoModeSavings } from '@/utils/autoModeSavings';
 import { getModelColor } from '@/utils/modelColors';
 import { aggregateProductCosts } from '@/utils/productCosts';
+
+import { CodingAgentOverview } from './CodingAgentOverview';
+import { CostCentersOverview } from './CostCentersOverview';
+import { CostOptimizationInsights } from './CostOptimizationInsights';
+import { InsightsOverview } from './InsightsOverview';
+import { ModelRequestsBarChart } from './charts/ModelRequestsBarChart';
+import { ModelUsageTrendsOverview } from './ModelUsageTrendsOverview';
+import { OrganizationsOverview } from './OrganizationsOverview';
+import { UsersOverview } from './UsersOverview';
 
 interface DataAnalysisProps {
   ingestionResult: import('@/utils/ingestion').IngestionResult;
@@ -25,6 +28,10 @@ type NavigationItem = {
   label: string;
   icon: React.ReactNode;
 };
+
+function formatAutoModeCurrency(value: number): string {
+  return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
 
 const COST_CENTERS_NAV_ITEM: NavigationItem = {
   key: 'costCenters' as const,
@@ -207,6 +214,20 @@ function DataAnalysisInner() {
   );
 
   const productCosts = useMemo(() => aggregateProductCosts(aggregateProcessedData), [aggregateProcessedData]);
+  const autoModeSavingsRows = useMemo(
+    () => aggregateAutoModeSavings(aggregateProcessedData),
+    [aggregateProcessedData]
+  );
+  const autoModeSavingsTotal = useMemo(() => {
+    return autoModeSavingsRows.reduce(
+      (total, row) => ({
+        requests: total.requests + row.requests,
+        grossCost: total.grossCost + row.grossCost,
+        savings: total.savings + row.savings,
+      }),
+      { requests: 0, grossCost: 0, savings: 0 }
+    );
+  }, [autoModeSavingsRows]);
 
   return (
     <div className="w-full">
@@ -424,6 +445,52 @@ function DataAnalysisInner() {
                           </tr>
                         ))}
                       </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {autoModeSavingsRows.length > 0 && (
+                <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '150ms' }}>
+                  <div className="px-6 py-4 border-b border-[#d1d9e0] bg-[#f6f8fa]">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold text-[#1f2328]">Auto Mode Savings</h3>
+                        <p className="text-sm text-[#636c76] mt-0.5">Models selected automatically by Auto Mode.</p>
+                      </div>
+                      <span className="text-sm font-semibold text-[#2da44e]">
+                        {formatAutoModeCurrency(autoModeSavingsTotal.savings)} saved
+                      </span>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full">
+                      <thead>
+                        <tr className="border-b border-[#d1d9e0]">
+                          <th className="px-6 py-3 text-left text-xs font-bold text-[#636c76] uppercase tracking-wider">Model</th>
+                          <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Requests</th>
+                          <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Gross Cost</th>
+                          <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Savings</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#d1d9e0]">
+                        {autoModeSavingsRows.map((item) => (
+                          <tr key={item.model} className="table-row-hover transition-colors duration-150">
+                            <td className="px-6 py-3.5 text-sm font-medium text-[#1f2328]">{item.model}</td>
+                            <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">{item.requests.toFixed(2)}</td>
+                            <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">{formatAutoModeCurrency(item.grossCost)}</td>
+                            <td className="px-6 py-3.5 text-sm font-semibold text-[#2da44e] text-right font-mono">{formatAutoModeCurrency(item.savings)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t-2 border-[#d1d9e0] bg-[#f6f8fa]">
+                          <td className="px-6 py-3.5 text-sm font-bold text-[#1f2328]">Total</td>
+                          <td className="px-6 py-3.5 text-sm font-bold text-[#1f2328] text-right font-mono">{autoModeSavingsTotal.requests.toFixed(2)}</td>
+                          <td className="px-6 py-3.5 text-sm font-bold text-[#1f2328] text-right font-mono">{formatAutoModeCurrency(autoModeSavingsTotal.grossCost)}</td>
+                          <td className="px-6 py-3.5 text-sm font-bold text-[#2da44e] text-right font-mono">{formatAutoModeCurrency(autoModeSavingsTotal.savings)}</td>
+                        </tr>
+                      </tfoot>
                     </table>
                   </div>
                 </div>

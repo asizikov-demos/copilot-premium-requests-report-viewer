@@ -126,6 +126,39 @@ describe('DataAnalysis billing summary', () => {
     });
   });
 
+  it('renders Auto Mode savings by base model with total savings', async () => {
+    const billingRows: CSVData[] = [
+      {
+        date: '2026-04-01',
+        username: 'auto-mode-user',
+        product: 'copilot',
+        sku: 'copilot_premium_request',
+        model: 'Auto: GPT-5.3-Codex',
+        quantity: '0.9',
+        exceeds_quota: 'False',
+        total_monthly_quota: '300',
+        applied_cost_per_quantity: '0.04',
+        gross_amount: '0.036',
+        discount_amount: '0',
+        net_amount: '0.036',
+        organization: 'example-org',
+        cost_center_name: 'example-cost-center',
+      },
+    ];
+
+    const ingestionResult = createMockIngestionResult(billingRows);
+    render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Auto Mode Savings')).toBeInTheDocument();
+      expect(screen.getByText('GPT-5.3-Codex')).toBeInTheDocument();
+      expect(screen.getAllByText('1.00').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('$0.04').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('$0.00').length).toBeGreaterThan(0);
+      expect(screen.getByText('$0.00 saved')).toBeInTheDocument();
+    });
+  });
+
   it('shows Spark as a separate product inside cost center breakdowns', async () => {
     const billingRows: CSVData[] = [
       {
