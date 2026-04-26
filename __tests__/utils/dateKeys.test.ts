@@ -1,4 +1,4 @@
-import { buildDateKeys } from '@/utils/dateKeys';
+import { buildDateKeys, dayOfMonthToWeekBucket } from '@/utils/dateKeys';
 
 describe('buildDateKeys', () => {
   function assertKeys(d: Date) {
@@ -37,5 +37,48 @@ describe('buildDateKeys', () => {
     // First snapshot should remain consistent with its original ISO
     expect(first.dateKey).toBe('2025-07-04');
     expect(second.dateKey).toBe('2025-07-10');
+  });
+});
+
+describe('dayOfMonthToWeekBucket', () => {
+  it('maps fixed seven-day ranges to week buckets', () => {
+    expect(dayOfMonthToWeekBucket(1, '2025-06')).toEqual({
+      weekNumber: 1,
+      startDate: '2025-06-01',
+      endDate: '2025-06-07'
+    });
+    expect(dayOfMonthToWeekBucket(14, '2025-06')).toEqual({
+      weekNumber: 2,
+      startDate: '2025-06-08',
+      endDate: '2025-06-14'
+    });
+    expect(dayOfMonthToWeekBucket(21, '2025-06')).toEqual({
+      weekNumber: 3,
+      startDate: '2025-06-15',
+      endDate: '2025-06-21'
+    });
+    expect(dayOfMonthToWeekBucket(28, '2025-06')).toEqual({
+      weekNumber: 4,
+      startDate: '2025-06-22',
+      endDate: '2025-06-28'
+    });
+  });
+
+  it('uses the UTC month end for week 5 boundaries', () => {
+    expect(dayOfMonthToWeekBucket(29, '2024-02')).toEqual({
+      weekNumber: 5,
+      startDate: '2024-02-29',
+      endDate: '2024-02-29'
+    });
+    expect(dayOfMonthToWeekBucket(30, '2025-04')).toEqual({
+      weekNumber: 5,
+      startDate: '2025-04-29',
+      endDate: '2025-04-30'
+    });
+    expect(dayOfMonthToWeekBucket(31, '2025-07')).toEqual({
+      weekNumber: 5,
+      startDate: '2025-07-29',
+      endDate: '2025-07-31'
+    });
   });
 });
