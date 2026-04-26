@@ -1,8 +1,9 @@
 import { CSVData, ProcessedData, AnalysisResults } from '@/types/csv';
-import { parseQuotaValue, buildQuotaBreakdown } from './quota';
+
 import { buildDateKeys } from '../dateKeys';
-import { UserSummary } from './types';
 import { isCodeReviewModel } from '../productClassification';
+import { buildQuotaBreakdown, buildUserQuotaMapFromRows, parseQuotaValue } from './quota';
+import { UserSummary } from './types';
 
 // Re-export for backwards compatibility
 export type { UserSummary } from './types';
@@ -66,11 +67,10 @@ export function analyzeData(data: ProcessedData[]): AnalysisResults {
   const totalUniqueUsers = uniqueUsers.size;
 
   // Quota breakdown
-  const quotaBreakdown = buildQuotaBreakdown(data.filter(row => !row.isNonCopilotUsage));
+  const quotaBreakdown = buildQuotaBreakdown(data);
 
   // Users exceeding quota (using actual numeric quota values)
-  const userQuotas = new Map<string, number | 'unlimited'>();
-  data.forEach(row => { if (!row.isNonCopilotUsage && !userQuotas.has(row.user)) userQuotas.set(row.user, row.quotaValue); });
+  const userQuotas = buildUserQuotaMapFromRows(data);
 
   const usersExceedingQuota = new Set<string>();
   const userTotalRequests = new Map<string, number>();

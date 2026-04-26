@@ -19,13 +19,31 @@ export function parseQuotaValue(quotaString: string): number | 'unlimited' {
   return isNaN(parsed) ? 'unlimited' : parsed;
 }
 
-export function buildQuotaBreakdown(data: ProcessedData[]): QuotaBreakdownResult {
+export function buildUserQuotaMapFromRows(data: ProcessedData[]): Map<string, number | 'unlimited'> {
   const userQuotas = new Map<string, number | 'unlimited'>();
-  data.forEach(row => {
-    if (!userQuotas.has(row.user)) {
-      userQuotas.set(row.user, row.quotaValue);
+
+  for (const row of data) {
+    if (row.isNonCopilotUsage) {
+      continue;
     }
-  });
+
+    const existing = userQuotas.get(row.user);
+    const current = row.quotaValue;
+
+    if (
+      existing === undefined
+      || current === 'unlimited'
+      || (typeof current === 'number' && typeof existing === 'number' && current > existing)
+    ) {
+      userQuotas.set(row.user, current);
+    }
+  }
+
+  return userQuotas;
+}
+
+export function buildQuotaBreakdown(data: ProcessedData[]): QuotaBreakdownResult {
+  const userQuotas = buildUserQuotaMapFromRows(data);
 
   const unlimited: string[] = [];
   const business: string[] = [];

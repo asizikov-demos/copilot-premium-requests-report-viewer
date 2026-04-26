@@ -28,6 +28,7 @@ import { CodingAgentAnalysis, UserDailyData } from '@/types/csv';
 // Legacy DailyCodingAgentUsageDatum type recreated locally (originally from codingAgent.ts)
 export interface DailyCodingAgentUsageDatum { date: string; dailyRequests: number; cumulativeRequests: number; }
 import { CONSUMPTION_THRESHOLDS, UserConsumptionCategory, InsightsOverviewData } from '@/utils/analytics/insights';
+import { buildUserQuotaMapFromRows } from '@/utils/analytics/quota';
 import { Advisory as LegacyAdvisory } from '@/utils/analytics/advisory';
 import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
 
@@ -266,22 +267,10 @@ export function computeOverageSummaryFromProcessedData(processedData: ProcessedD
   }
 
   const totalsByUser = new Map<string, number>();
-  const quotaByUser = new Map<string, number | 'unlimited'>();
+  const quotaByUser = buildUserQuotaMapFromRows(processedData);
 
   for (const row of processedData) {
     totalsByUser.set(row.user, (totalsByUser.get(row.user) ?? 0) + row.requestsUsed);
-    const existingQuota = quotaByUser.get(row.user);
-    const incomingQuota = row.quotaValue;
-
-    if (existingQuota === undefined) {
-      quotaByUser.set(row.user, incomingQuota);
-    } else if (existingQuota === 'unlimited' || incomingQuota === existingQuota) {
-      continue;
-    } else if (incomingQuota === 'unlimited') {
-      quotaByUser.set(row.user, incomingQuota);
-    } else if (typeof existingQuota === 'number' && typeof incomingQuota === 'number' && incomingQuota > existingQuota) {
-      quotaByUser.set(row.user, incomingQuota);
-    }
   }
 
   let totalOverageRequests = 0;
