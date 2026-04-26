@@ -50,5 +50,8 @@ export const buildMinimalDailyBucketsArtifact = (processed: ProcessedData[]): Da
 export const filterBySelectedMonths = (data: ProcessedData[], selected: string[]): ProcessedData[] => {
   if (selected.length === 0) return data;
   const set = new Set(selected);
-  return data.filter(d => set.has(d.monthKey));
+  return data.filter(d => {
+    const monthKey = d.monthKey || d.timestamp.toISOString().slice(0, 7);
+    return set.has(monthKey);
+  });
 };
