@@ -10,7 +10,7 @@ export type { UserSummary } from './types';
 
 // Convert raw CSV rows into strongly typed processed data (UTC-sensitive: timestamps used as-is)
 export function processCSVData(rawData: CSVData[]): ProcessedData[] {
-  return buildProcessedDataFromRawRows(rawData as unknown as Record<string, unknown>[]);
+  return buildProcessedDataFromRawRows(rawData);
 }
 
 export function analyzeData(data: ProcessedData[]): AnalysisResults {

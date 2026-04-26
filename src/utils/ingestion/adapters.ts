@@ -2,7 +2,7 @@
  * Adapter utilities to bridge the ingestion pipeline with existing analysis code.
  */
 
-import { ProcessedData } from '@/types/csv';
+import type { CSVData, ProcessedData } from '@/types/csv';
 
 import { buildDateKeys } from '../dateKeys';
 import { normalizeRow } from './normalizeRow';
@@ -48,13 +48,15 @@ export function buildProcessedDataFromRows(rows: NormalizedRow[] | undefined | n
   });
 }
 
-export function buildProcessedDataFromRawRows(rows: readonly Record<string, unknown>[] | undefined | null): ProcessedData[] {
+export function buildProcessedDataFromRawRows(
+  rows: readonly (CSVData | Record<string, unknown>)[] | undefined | null
+): ProcessedData[] {
   if (!Array.isArray(rows) || rows.length === 0) {
     return [];
   }
   const warnings: string[] = [];
   const normalizedRows = rows
-    .map(row => normalizeRow(row, warnings, { allowInvalidQuantity: true }))
+    .map(row => normalizeRow({ ...row }, warnings, { allowInvalidQuantity: true }))
     .filter((row): row is NormalizedRow => row !== null);
 
   return buildProcessedDataFromRows(normalizedRows);

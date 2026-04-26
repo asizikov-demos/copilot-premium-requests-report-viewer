@@ -14,7 +14,7 @@ import { QuotaArtifacts, UsageArtifacts } from './types';
  * that haven't been migrated to use aggregator outputs directly.
  */
 export function buildProcessedDataLegacy(rawData: CSVData[]): ProcessedData[] {
-  return buildProcessedDataFromRawRows(rawData as unknown as Record<string, unknown>[]);
+  return buildProcessedDataFromRawRows(rawData);
 }
 
 /**

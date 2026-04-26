@@ -20,7 +20,7 @@ beforeAll(() => {
 function createMockIngestionResult(rows: CSVData[]): IngestionResult {
   const warnings: string[] = [];
   const normalizedRows = rows
-    .map(row => normalizeRow(row as unknown as Record<string, unknown>, warnings))
+    .map(row => normalizeRow({ ...row }, warnings))
     .filter((row): row is NormalizedRow => row !== null);
 
   return {

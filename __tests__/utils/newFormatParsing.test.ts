@@ -2,6 +2,7 @@ import { buildProcessedDataLegacy } from '@/utils/ingestion/adapter';
 import { buildProcessedDataFromRows } from '@/utils/ingestion/adapters';
 import { normalizeRow } from '@/utils/ingestion/normalizeRow';
 import type { CSVData } from '@/types/csv';
+import type { NormalizedRow } from '@/utils/ingestion/types';
 
 import { processCSVData } from '../helpers/processCSVData';
 import { newFormatRows } from '../fixtures/newFormatCSVData';
@@ -84,8 +85,8 @@ describe('processCSVData (CSV format)', () => {
     }];
     const warnings: string[] = [];
     const normalizedRows = rows
-      .map(row => normalizeRow(row as unknown as Record<string, unknown>, warnings))
-      .filter((row): row is NonNullable<ReturnType<typeof normalizeRow>> => row !== null);
+      .map(row => normalizeRow({ ...row }, warnings))
+      .filter((row): row is NormalizedRow => row !== null);
     const canonical = buildProcessedDataFromRows(normalizedRows);
 
     expect(warnings).toEqual([]);
