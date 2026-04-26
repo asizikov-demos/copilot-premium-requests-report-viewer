@@ -14,7 +14,11 @@ import { isCodeReviewModel } from '@/utils/productClassification';
  * Normalize a raw CSV row object into a typed, validated structure.
  * Returns null if row is invalid or missing required fields.
  */
-export function normalizeRow(raw: object, warnings: string[]): NormalizedRow | null {
+export function normalizeRow(
+  raw: object,
+  warnings: string[],
+  options: { allowInvalidQuantity?: boolean } = {}
+): NormalizedRow | null {
   const {
     date,
     username,
@@ -47,7 +51,7 @@ export function normalizeRow(raw: object, warnings: string[]): NormalizedRow | n
   
   // Parse quantity
   const qty = typeof quantity === 'number' ? quantity : parseFloat(String(quantity));
-  if (Number.isNaN(qty)) {
+  if (Number.isNaN(qty) && !options.allowInvalidQuantity) {
     warnings.push(`Invalid quantity for user=${username} date=${date}`);
     return null;
   }

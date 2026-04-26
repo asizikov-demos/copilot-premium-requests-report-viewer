@@ -54,7 +54,7 @@ export function buildProcessedDataFromRawRows(rows: readonly object[] | undefine
   }
   const warnings: string[] = [];
   const normalizedRows = rows
-    .map(row => normalizeRow(row, warnings))
+    .map(row => normalizeRow(row, warnings, { allowInvalidQuantity: true }))
     .filter((row): row is NormalizedRow => row !== null);
 
   return buildProcessedDataFromRows(normalizedRows);
