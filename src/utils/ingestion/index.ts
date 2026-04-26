@@ -8,6 +8,7 @@ export * from './normalizeRow';
 export * from './orchestrator';
 export * from './QuotaAggregator';
 export * from './UsageAggregator';
+export * from './UsageAccumulator';
 export * from './DailyBucketsAggregator';
 export * from './BillingAggregator';
 export * from './FeatureUsageAggregator';

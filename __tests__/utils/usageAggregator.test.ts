@@ -1,5 +1,6 @@
 import { PRICING } from '@/constants/pricing';
-import { AggregatorContext, NormalizedRow, UsageAggregator } from '@/utils/ingestion';
+import { AggregatorContext, NormalizedRow, UsageAggregator, buildUsageArtifactsFromProcessedData } from '@/utils/ingestion';
+import type { ProcessedData } from '@/types/csv';
 
 function makeRow(partial: Partial<NormalizedRow>): NormalizedRow {
   return {
@@ -29,10 +30,10 @@ describe('UsageAggregator', () => {
     agg.init?.(ctx);
 
     const rows: NormalizedRow[] = [
-      makeRow({ user: 'alice', organization: 'Org B', costCenter: 'Platform', quantity: 2 }),
-      makeRow({ user: 'alice', model: 'gpt-4.1', quantity: 3 }),
-      makeRow({ user: 'bob', organization: 'Org A', costCenter: 'Security', quantity: 1 }),
-      makeRow({ user: 'carol', costCenter: 'Security', quantity: 4 }),
+      makeRow({ user: 'test-user-one', organization: 'test-org-two', costCenter: 'test-cost-center-one', quantity: 2 }),
+      makeRow({ user: 'test-user-one', model: 'gpt-4.1', quantity: 3 }),
+      makeRow({ user: 'test-user-two', organization: 'test-org-one', costCenter: 'test-cost-center-two', quantity: 1 }),
+      makeRow({ user: 'test-user-three', costCenter: 'test-cost-center-two', quantity: 4 }),
     ];
 
     for (const row of rows) {
@@ -41,12 +42,12 @@ describe('UsageAggregator', () => {
 
     const output = agg.finalize(ctx);
 
-    expect(output.organizations).toEqual(['Org A', 'Org B']);
-    expect(output.costCenters).toEqual(['Platform', 'Security']);
+    expect(output.organizations).toEqual(['test-org-one', 'test-org-two']);
+    expect(output.costCenters).toEqual(['test-cost-center-one', 'test-cost-center-two']);
     expect(output.users).toEqual(expect.arrayContaining([
-      expect.objectContaining({ user: 'alice', organization: 'Org B', costCenter: 'Platform', totalRequests: 5 }),
-      expect.objectContaining({ user: 'bob', organization: 'Org A', costCenter: 'Security', totalRequests: 1 }),
-      expect.objectContaining({ user: 'carol', organization: undefined, costCenter: 'Security', totalRequests: 4 }),
+      expect.objectContaining({ user: 'test-user-one', organization: 'test-org-two', costCenter: 'test-cost-center-one', totalRequests: 5 }),
+      expect.objectContaining({ user: 'test-user-two', organization: 'test-org-one', costCenter: 'test-cost-center-two', totalRequests: 1 }),
+      expect.objectContaining({ user: 'test-user-three', organization: undefined, costCenter: 'test-cost-center-two', totalRequests: 4 }),
     ]));
   });
 
@@ -60,12 +61,12 @@ describe('UsageAggregator', () => {
       isNonCopilotUsage: true,
       usageBucket: 'non_copilot_code_review'
     }, ctx);
-    agg.onRow(makeRow({ user: 'alice', model: 'gpt-4.1', quantity: 2 }), ctx);
+    agg.onRow(makeRow({ user: 'test-user-one', model: 'gpt-4.1', quantity: 2 }), ctx);
 
     const output = agg.finalize(ctx);
 
     expect(output.users).toHaveLength(1);
-    expect(output.users[0].user).toBe('alice');
+    expect(output.users[0].user).toBe('test-user-one');
     expect(output.specialBuckets).toEqual([
       expect.objectContaining({
         key: 'non_copilot_code_review',
@@ -73,6 +74,78 @@ describe('UsageAggregator', () => {
         quotaValue: 0,
         modelBreakdown: { 'Code Review': 6 }
       })
+    ]);
+  });
+
+  test('processed data builder matches UsageAggregator output and includes top model metadata', () => {
+    const ctx: AggregatorContext = { pricing: PRICING };
+    const rows: NormalizedRow[] = [
+      makeRow({
+        user: 'test-user-one',
+        model: 'model-one',
+        quantity: 2,
+        organization: 'test-org-one',
+        costCenter: 'test-cost-center-one',
+      }),
+      makeRow({
+        user: 'test-user-one',
+        model: 'model-two',
+        quantity: 5,
+      }),
+      makeRow({
+        user: 'test-user-two',
+        model: 'model-one',
+        quantity: 3,
+        organization: 'test-org-two',
+        costCenter: 'test-cost-center-two',
+      }),
+      {
+        ...makeRow({ user: '', model: 'Code Review', quantity: 4 }),
+        isNonCopilotUsage: true,
+        usageBucket: 'non_copilot_code_review',
+      },
+    ];
+    const agg = new UsageAggregator();
+    agg.init?.(ctx);
+    for (const row of rows) {
+      agg.onRow(row, ctx);
+    }
+
+    const processedRows: ProcessedData[] = rows.map((row) => ({
+      timestamp: new Date(`${row.day}T00:00:00Z`),
+      user: row.user,
+      model: row.model,
+      requestsUsed: row.quantity,
+      exceedsQuota: row.exceedsQuota ?? false,
+      totalQuota: row.quotaRaw ?? 'Unlimited',
+      quotaValue: row.quotaValue ?? 'unlimited',
+      iso: `${row.day}T00:00:00.000Z`,
+      dateKey: row.day,
+      monthKey: row.day.slice(0, 7),
+      epoch: new Date(`${row.day}T00:00:00Z`).getTime(),
+      organization: row.organization,
+      costCenter: row.costCenter,
+      isNonCopilotUsage: row.isNonCopilotUsage,
+      usageBucket: row.usageBucket,
+    }));
+
+    const streamingOutput = agg.finalize(ctx);
+    const processedOutput = buildUsageArtifactsFromProcessedData(processedRows);
+
+    expect(processedOutput).toEqual(streamingOutput);
+    expect(processedOutput.users).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        user: 'test-user-one',
+        topModel: 'model-two',
+        topModelValue: 5,
+      }),
+    ]));
+    expect(processedOutput.specialBuckets).toEqual([
+      expect.objectContaining({
+        key: 'non_copilot_code_review',
+        totalRequests: 4,
+        modelBreakdown: { 'Code Review': 4 },
+      }),
     ]);
   });
 });

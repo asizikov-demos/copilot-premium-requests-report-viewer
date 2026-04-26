@@ -78,8 +78,8 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSampleLoading, setIsSampleLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [totalRowsProcessed, setTotalRowsProcessed] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const totalRows = useRef(0);
 
   const isBusy = isLoading || isSampleLoading;
 
@@ -92,7 +92,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
     // Reset state
     setIsLoading(true);
     setProgress(0);
-    totalRows.current = 0;
+    setTotalRowsProcessed(0);
 
     // Create all aggregators including raw data collector for adapter
     const quotaAggregator = new QuotaAggregator();
@@ -110,7 +110,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
         chunkSize: 1024 * 1024, // 1MB chunks for smooth UI
         progressResolution: 1000,
         onProgress: (progressInfo) => {
-          totalRows.current = progressInfo.rowsProcessed;
+          setTotalRowsProcessed(progressInfo.rowsProcessed);
           // Estimate progress percentage
           setProgress(prev => Math.min(prev + 5, 90));
         },
@@ -122,6 +122,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
             onError('CSV file is empty');
             setIsLoading(false);
             setProgress(0);
+            setTotalRowsProcessed(0);
             return;
           }
           
@@ -130,12 +131,14 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
             onDataLoad(result, file.name);
             setIsLoading(false);
             setProgress(0);
+            setTotalRowsProcessed(0);
           }, 200);
         },
         onError: (errorMsg) => {
           onError(errorMsg);
           setIsLoading(false);
           setProgress(0);
+          setTotalRowsProcessed(0);
         }
       }
     );
@@ -159,6 +162,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
       const message = error instanceof Error ? error.message : 'Failed to load sample data';
       onError(message);
       setProgress(0);
+      setTotalRowsProcessed(0);
     } finally {
       setIsSampleLoading(false);
     }
@@ -275,9 +279,9 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
                         />
                       </div>
                     </div>
-                    {totalRows.current > 0 && (
+                    {totalRowsProcessed > 0 && (
                       <p className="text-sm text-[#636c76]">
-                        {totalRows.current.toLocaleString()} rows processed
+                        {totalRowsProcessed.toLocaleString()} rows processed
                       </p>
                     )}
                   </div>

@@ -12,25 +12,26 @@
 import { PRICING } from '@/constants/pricing';
 import type { AnalysisResults, ProcessedData } from '@/types/csv';
 import type { CodeReviewAnalysis } from '@/types/csv';
+import { CodingAgentAnalysis, UserDailyData } from '@/types/csv';
+import { Advisory as LegacyAdvisory } from '@/utils/analytics/advisory';
+import { CONSUMPTION_THRESHOLDS, UserConsumptionCategory, InsightsOverviewData } from '@/utils/analytics/insights';
+import type { FeatureUtilizationStats } from '@/utils/analytics/insights';
+import { buildUserQuotaMapFromRows } from '@/utils/analytics/quota';
+import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
+import { calculateBilledOverageFromRows, calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
 import {
   NON_COPILOT_CODE_REVIEW_BUCKET,
-  NON_COPILOT_CODE_REVIEW_LABEL,
-  type SpecialUsageBucketKey,
   type DailyBucketsArtifacts,
   type FeatureUsageArtifacts,
   type QuotaArtifacts,
   type UsageArtifacts,
 } from './types';
+import { UsageAccumulator } from './UsageAccumulator';
+
 export type { DailyBucketsArtifacts } from './types';
-import type { FeatureUtilizationStats } from '@/utils/analytics/insights';
-import { calculateBilledOverageFromRows, calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
-import { CodingAgentAnalysis, UserDailyData } from '@/types/csv';
+
 // Legacy DailyCodingAgentUsageDatum type recreated locally (originally from codingAgent.ts)
 export interface DailyCodingAgentUsageDatum { date: string; dailyRequests: number; cumulativeRequests: number; }
-import { CONSUMPTION_THRESHOLDS, UserConsumptionCategory, InsightsOverviewData } from '@/utils/analytics/insights';
-import { buildUserQuotaMapFromRows } from '@/utils/analytics/quota';
-import { Advisory as LegacyAdvisory } from '@/utils/analytics/advisory';
-import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
 
 const NON_COPILOT_CODE_REVIEW_ADOPTION_LABEL = 'Non-Copilot Users';
 
@@ -45,76 +46,20 @@ export function buildTimeFrame(daily: DailyBucketsArtifacts): { start: string; e
  * Used when billing period (selectedMonths) is active to produce month-sliced
  * artifacts for downstream analysis functions.
  */
-export function buildUsageArtifactsFromProcessedData(filtered: import('@/types/csv').ProcessedData[]): UsageArtifacts {
-  const userMap = new Map<string, {
-    totalRequests: number;
-    modelBreakdown: Record<string, number>;
-    organization?: string;
-    costCenter?: string;
-  }>();
-  const specialBucketMap = new Map<SpecialUsageBucketKey, {
-    totalRequests: number;
-    modelBreakdown: Record<string, number>;
-  }>();
-  const modelTotals: Record<string, number> = {};
-  const organizations = new Set<string>();
-  const costCenters = new Set<string>();
+export function buildUsageArtifactsFromProcessedData(filtered: ProcessedData[]): UsageArtifacts {
+  const accumulator = new UsageAccumulator();
   for (const r of filtered) {
-    if (r.isNonCopilotUsage && r.usageBucket) {
-      const bucket = specialBucketMap.get(r.usageBucket) ?? { totalRequests: 0, modelBreakdown: {} };
-      bucket.totalRequests += r.requestsUsed;
-      bucket.modelBreakdown[r.model] = (bucket.modelBreakdown[r.model] || 0) + r.requestsUsed;
-      specialBucketMap.set(r.usageBucket, bucket);
-      modelTotals[r.model] = (modelTotals[r.model] || 0) + r.requestsUsed;
-      continue;
-    }
-    if (!userMap.has(r.user)) {
-      userMap.set(r.user, {
-        totalRequests: 0,
-        modelBreakdown: {},
-        organization: r.organization,
-        costCenter: r.costCenter
-      });
-    }
-    const u = userMap.get(r.user)!;
-    u.totalRequests += r.requestsUsed;
-    u.modelBreakdown[r.model] = (u.modelBreakdown[r.model] || 0) + r.requestsUsed;
-    if (!u.organization && r.organization) {
-      u.organization = r.organization;
-    }
-    if (!u.costCenter && r.costCenter) {
-      u.costCenter = r.costCenter;
-    }
-    modelTotals[r.model] = (modelTotals[r.model] || 0) + r.requestsUsed;
-    if (r.organization) {
-      organizations.add(r.organization);
-    }
-    if (r.costCenter) {
-      costCenters.add(r.costCenter);
-    }
+    accumulator.addRow({
+      user: r.user,
+      model: r.model,
+      quantity: r.requestsUsed,
+      organization: r.organization,
+      costCenter: r.costCenter,
+      isNonCopilotUsage: r.isNonCopilotUsage,
+      usageBucket: r.usageBucket,
+    });
   }
-  const users = Array.from(userMap.entries()).map(([user, data]) => ({
-    user,
-    totalRequests: data.totalRequests,
-    modelBreakdown: data.modelBreakdown,
-    organization: data.organization,
-    costCenter: data.costCenter,
-  }));
-  return {
-    users,
-    modelTotals,
-    userCount: users.length,
-    modelCount: Object.keys(modelTotals).length,
-    organizations: Array.from(organizations).sort((a, b) => a.localeCompare(b)),
-    costCenters: Array.from(costCenters).sort((a, b) => a.localeCompare(b)),
-    specialBuckets: Array.from(specialBucketMap.entries()).map(([key, value]) => ({
-      key,
-      label: NON_COPILOT_CODE_REVIEW_LABEL,
-      totalRequests: value.totalRequests,
-      modelBreakdown: value.modelBreakdown,
-      quotaValue: 0
-    }))
-  };
+  return accumulator.finalize();
 }
 
 /**
