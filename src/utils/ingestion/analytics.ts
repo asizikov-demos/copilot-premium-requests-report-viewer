@@ -12,6 +12,13 @@
 import { PRICING } from '@/constants/pricing';
 import type { AnalysisResults, ProcessedData } from '@/types/csv';
 import type { CodeReviewAnalysis } from '@/types/csv';
+import { CodingAgentAnalysis, UserDailyData } from '@/types/csv';
+import { Advisory as LegacyAdvisory } from '@/utils/analytics/advisory';
+import { CONSUMPTION_THRESHOLDS, UserConsumptionCategory, InsightsOverviewData } from '@/utils/analytics/insights';
+import type { FeatureUtilizationStats } from '@/utils/analytics/insights';
+import { buildUserQuotaMapFromRows } from '@/utils/analytics/quota';
+import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
+import { calculateBilledOverageFromRows, calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
 import {
   NON_COPILOT_CODE_REVIEW_BUCKET,
   type DailyBucketsArtifacts,
@@ -19,17 +26,12 @@ import {
   type QuotaArtifacts,
   type UsageArtifacts,
 } from './types';
-export type { DailyBucketsArtifacts } from './types';
 import { UsageAccumulator } from './UsageAccumulator';
-import type { FeatureUtilizationStats } from '@/utils/analytics/insights';
-import { calculateBilledOverageFromRows, calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
-import { CodingAgentAnalysis, UserDailyData } from '@/types/csv';
+
+export type { DailyBucketsArtifacts } from './types';
+
 // Legacy DailyCodingAgentUsageDatum type recreated locally (originally from codingAgent.ts)
 export interface DailyCodingAgentUsageDatum { date: string; dailyRequests: number; cumulativeRequests: number; }
-import { CONSUMPTION_THRESHOLDS, UserConsumptionCategory, InsightsOverviewData } from '@/utils/analytics/insights';
-import { buildUserQuotaMapFromRows } from '@/utils/analytics/quota';
-import { Advisory as LegacyAdvisory } from '@/utils/analytics/advisory';
-import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
 
 const NON_COPILOT_CODE_REVIEW_ADOPTION_LABEL = 'Non-Copilot Users';
 
