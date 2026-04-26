@@ -88,6 +88,18 @@ describe('CSV Data Processing', () => {
       expect(result[0].requestsUsed).toBe(0);
     });
 
+    it('should use production quota parsing for blank quotas', () => {
+      const testData: CSVData[] = [
+        createMockCSVData({
+          username: 'test-user-one',
+          total_monthly_quota: '   '
+        })
+      ];
+
+      const result = processCSVData(testData);
+      expect(result[0].quotaValue).toBe('unlimited');
+    });
+
     it('should handle empty array', () => {
       const result = processCSVData([]);
       expect(result).toEqual([]);
