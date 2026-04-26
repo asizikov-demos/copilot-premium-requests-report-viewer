@@ -41,6 +41,21 @@ export function buildDateKeys(d: Date): DateKeys {
   };
 }
 
+/**
+ * Enumerate dates (inclusive) between start and end (UTC).
+ * Both start and end should be in YYYY-MM-DD format.
+ * Returns an array of date strings in YYYY-MM-DD format.
+ */
+export function enumerateDatesInclusive(start: string, end: string): string[] {
+  const out: string[] = [];
+  const startDate = new Date(`${start}T00:00:00Z`);
+  const endDate = new Date(`${end}T00:00:00Z`);
+  for (let d = new Date(startDate); d.getTime() <= endDate.getTime(); d.setUTCDate(d.getUTCDate() + 1)) {
+    out.push(d.toISOString().slice(0, 10));
+  }
+  return out;
+}
+
 export function dayOfMonthToWeekBucket(day: number, monthKey: string): WeekBucket {
   let weekNumber: number;
   if (day <= 7) weekNumber = 1;
