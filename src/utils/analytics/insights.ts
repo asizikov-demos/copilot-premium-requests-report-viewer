@@ -1,9 +1,9 @@
-import { ProcessedData } from '@/types/csv';
 import { PRICING } from '@/constants/pricing';
+import type { ProcessedData } from '@/types/csv';
 import { buildUserQuotaMapFromRows } from '@/utils/analytics/quota';
 import { isCodeReviewModel, isCodingAgentModel, isSparkProduct } from '@/utils/productClassification';
 
-import { UserSummary } from './types';
+import type { UserSummary } from './types';
 
 export interface UserConsumptionCategory {
   user: string;

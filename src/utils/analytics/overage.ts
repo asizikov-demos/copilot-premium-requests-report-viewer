@@ -2,7 +2,7 @@ import type { ProcessedData } from '@/types/csv';
 import { calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
 
 import { buildUserQuotaMapFromRows } from './quota';
-import { UserSummary } from './types';
+import type { UserSummary } from './types';
 
 export interface OverageSummary {
   totalOverageRequests: number;

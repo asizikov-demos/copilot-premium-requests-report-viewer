@@ -2,8 +2,9 @@ import { CSVData, ProcessedData, AnalysisResults } from '@/types/csv';
 
 import { buildDateKeys } from '../dateKeys';
 import { isCodeReviewModel } from '../productClassification';
+
 import { buildQuotaBreakdown, buildUserQuotaMapFromRows, parseQuotaValue } from './quota';
-import { UserSummary } from './types';
+import type { UserSummary } from './types';
 
 // Re-export for backwards compatibility
 export type { UserSummary } from './types';
