@@ -1,5 +1,5 @@
 ---
-applyTo: '**/components/*.tsx'
+applyTo: 'src/components/**/*.tsx'
 ---
 
 # Naming Conventions

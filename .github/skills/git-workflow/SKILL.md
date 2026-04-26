@@ -35,7 +35,7 @@ Prefixes: `fix:`, `feat:`, `refactor:`, `chore:`, `ci:`, `docs:`, `test:`
 Use `feat!:` or `fix!:` for breaking changes.
 
 Rules:
-- If this is the first commit in a batch, run `npm run build && npm run lint && npm run test` before creating commits. If any step fails, abort immediately and return the failure to the caller. Do not attempt to fix unrelated issues from inside this skill.
+- If this is the first commit in a batch and any non-Markdown code/config file changed, run `npm run build && npm run lint && npm run test` before creating commits. If all changed files are Markdown (`*.md`), skip build/lint/test and state that validation was skipped because the change is docs-only. If any validation step fails, abort immediately and return the failure to the caller. Do not attempt to fix unrelated issues from inside this skill.
 - One logical change per commit — do not bundle unrelated changes
 - Keep the subject line under 72 characters
 - No period at the end of the subject line
