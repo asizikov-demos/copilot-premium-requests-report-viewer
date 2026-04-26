@@ -78,4 +78,17 @@ describe('insights analytics', () => {
     expect(stats.spark.totalSessions).toBe(8);
     expect(stats.spark.userCount).toBe(2);
   });
+
+  test('feature utilization identifies spark from product or sku metadata', () => {
+    const data: ProcessedData[] = [
+      makeProcessed({ user: 'u1', model: 'gpt-4.1', product: 'spark', requestsUsed: 3 }),
+      makeProcessed({ user: 'u2', model: 'o3-mini', sku: 'spark_premium_request', requestsUsed: 2 }),
+      makeProcessed({ user: 'u3', model: 'Spark Helper', product: 'copilot', sku: 'copilot_premium_request', requestsUsed: 5 }),
+    ];
+
+    const stats = calculateFeatureUtilization(data);
+
+    expect(stats.spark.totalSessions).toBe(5);
+    expect(stats.spark.userCount).toBe(2);
+  });
 });
