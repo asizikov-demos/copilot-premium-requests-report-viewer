@@ -48,7 +48,7 @@ export function buildProcessedDataFromRows(rows: NormalizedRow[] | undefined | n
   });
 }
 
-export function buildProcessedDataFromRawRows(rows: readonly object[] | undefined | null): ProcessedData[] {
+export function buildProcessedDataFromRawRows(rows: readonly Record<string, unknown>[] | undefined | null): ProcessedData[] {
   if (!Array.isArray(rows) || rows.length === 0) {
     return [];
   }

@@ -15,7 +15,7 @@ import { isCodeReviewModel } from '@/utils/productClassification';
  * Returns null if row is invalid or missing required fields.
  */
 export function normalizeRow(
-  raw: object,
+  raw: Record<string, unknown>,
   warnings: string[],
   options: { allowInvalidQuantity?: boolean } = {}
 ): NormalizedRow | null {
