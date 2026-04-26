@@ -142,6 +142,6 @@ For each issue, use this structure:
 ## Output behavior
 
 - Create up to 8 issues per run.
-- Assign created issues to Copilot through the configured `create-issue` safe output.
+- Assign created issues to Copilot through the configured safe output, using the callable tool name `create_issue`.
 - Prefer fewer high-quality issues over many low-value issues.
 - If no actionable duplication is found, do not create any issue; finish with a no-op summary.
