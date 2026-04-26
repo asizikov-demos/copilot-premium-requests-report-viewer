@@ -20,6 +20,8 @@ function makeProcessed(row: Partial<ProcessedData>): ProcessedData {
     epoch: (timestamp as Date).getTime(),
     isNonCopilotUsage: row.isNonCopilotUsage,
     usageBucket: row.usageBucket,
+    product: row.product,
+    sku: row.sku,
   } as ProcessedData;
 }
 
@@ -63,8 +65,9 @@ describe('insights analytics', () => {
       makeProcessed({ user: '', model: 'Code Review', requestsUsed: 4, quotaValue: 0, totalQuota: '0', isNonCopilotUsage: true, usageBucket: 'non_copilot_code_review' }),
       makeProcessed({ user: 'u1', model: 'Coding Agent', requestsUsed: 5 }),
       makeProcessed({ user: 'u3', model: 'Padawan', requestsUsed: 4 }),
-      makeProcessed({ user: 'u2', model: 'Spark', requestsUsed: 7 }),
-      makeProcessed({ user: 'u4', model: 'Spark', requestsUsed: 1 }),
+      makeProcessed({ user: 'u2', model: 'gpt-4.1', product: 'spark', sku: 'spark_premium_request', requestsUsed: 7 }),
+      makeProcessed({ user: 'u4', model: 'o3-mini', product: 'spark', sku: 'spark_premium_request', requestsUsed: 1 }),
+      makeProcessed({ user: 'u5', model: 'Spark Helper', requestsUsed: 9 }),
     ];
     const stats = calculateFeatureUtilization(data);
     expect(stats.codeReview.totalSessions).toBe(5);
@@ -73,6 +76,19 @@ describe('insights analytics', () => {
     expect(stats.codingAgent.totalSessions).toBe(9);
     expect(stats.codingAgent.userCount).toBe(2);
     expect(stats.spark.totalSessions).toBe(8);
+    expect(stats.spark.userCount).toBe(2);
+  });
+
+  test('feature utilization identifies spark from product or sku metadata', () => {
+    const data: ProcessedData[] = [
+      makeProcessed({ user: 'u1', model: 'gpt-4.1', product: 'spark', requestsUsed: 3 }),
+      makeProcessed({ user: 'u2', model: 'o3-mini', sku: 'spark_premium_request', requestsUsed: 2 }),
+      makeProcessed({ user: 'u3', model: 'Spark Helper', product: 'copilot', sku: 'copilot_premium_request', requestsUsed: 5 }),
+    ];
+
+    const stats = calculateFeatureUtilization(data);
+
+    expect(stats.spark.totalSessions).toBe(5);
     expect(stats.spark.userCount).toBe(2);
   });
 });
