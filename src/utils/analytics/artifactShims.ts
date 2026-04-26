@@ -60,8 +60,8 @@ function buildUsageArtifacts(processed: ProcessedData[]): UsageArtifacts {
 }
 
 function buildQuotaArtifacts(processed: ProcessedData[]): QuotaArtifacts {
+  const quotaByUser = buildUserQuotaMapFromRows(processed);
   const copilotRows = processed.filter(row => !row.isNonCopilotUsage);
-  const quotaByUser = buildUserQuotaMapFromRows(copilotRows);
   const valuesByUser = new Map<string, Set<number | 'unlimited'>>();
   const conflicts = new Map<string, Set<number | 'unlimited'>>();
   const distinctQuotas = new Set<number>();
