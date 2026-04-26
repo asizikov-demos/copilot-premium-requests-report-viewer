@@ -23,7 +23,7 @@ export function buildProcessedDataFromRows(rows: NormalizedRow[] | undefined | n
     return [];
   }
   return rows.map(row => {
-    const timestamp = new Date(`${row.day}T00:00:00Z`);
+    const timestamp = new Date(`${row.date.substring(0, 10)}T00:00:00Z`);
     const keys = buildDateKeys(timestamp);
     return {
       timestamp,
@@ -56,7 +56,7 @@ export function buildProcessedDataFromRawRows(
   }
   const warnings: string[] = [];
   const normalizedRows = rows
-    .map(row => normalizeRow({ ...row }, warnings, { allowInvalidQuantity: true }))
+    .map(row => normalizeRow(row, warnings, { allowInvalidQuantity: true }))
     .filter((row): row is NormalizedRow => row !== null);
 
   return buildProcessedDataFromRows(normalizedRows);

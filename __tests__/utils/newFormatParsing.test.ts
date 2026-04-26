@@ -85,7 +85,7 @@ describe('processCSVData (CSV format)', () => {
     }];
     const warnings: string[] = [];
     const normalizedRows = rows
-      .map(row => normalizeRow({ ...row }, warnings))
+      .map(row => normalizeRow(row, warnings))
       .filter((row): row is NormalizedRow => row !== null);
     const canonical = buildProcessedDataFromRows(normalizedRows);
 

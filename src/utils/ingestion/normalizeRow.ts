@@ -4,6 +4,8 @@
  */
 
 import { parseQuotaValue } from '@/utils/analytics/quota';
+import type { CSVData } from '@/types/csv';
+
 import {
   NON_COPILOT_CODE_REVIEW_BUCKET,
   NormalizedRow,
@@ -15,7 +17,7 @@ import { isCodeReviewModel } from '@/utils/productClassification';
  * Returns null if row is invalid or missing required fields.
  */
 export function normalizeRow(
-  raw: Record<string, unknown>,
+  raw: CSVData | Record<string, unknown>,
   warnings: string[],
   options: { allowInvalidQuantity?: boolean } = {}
 ): NormalizedRow | null {
