@@ -1,4 +1,6 @@
 import { ProcessedData } from '@/types/csv';
+import { isCodingAgentModel } from '@/utils/productClassification';
+
 export interface DailyCodingAgentUsageDatum { date: string; dailyRequests: number; cumulativeRequests: number; }
 
 export function analyzeCodingAgentAdoption(data: ProcessedData[]): import('@/types/csv').CodingAgentAnalysis {
@@ -9,7 +11,7 @@ export function analyzeCodingAgentAdoption(data: ProcessedData[]): import('@/typ
   const totalUniqueUsers = allUsers.size;
   const userStats = new Map<string, { totalRequests: number; codingAgentRequests: number; models: Set<string>; quota: number | 'unlimited'; }>();
   data.forEach(row => {
-    const isCodingAgent = row.model.toLowerCase().includes('coding agent') || row.model.toLowerCase().includes('padawan');
+    const isCodingAgent = isCodingAgentModel(row.model);
     if (!userStats.has(row.user)) {
       userStats.set(row.user, { totalRequests: 0, codingAgentRequests: 0, models: new Set(), quota: row.quotaValue });
     }

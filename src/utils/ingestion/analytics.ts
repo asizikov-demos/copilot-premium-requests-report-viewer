@@ -29,6 +29,7 @@ import { CodingAgentAnalysis, UserDailyData } from '@/types/csv';
 export interface DailyCodingAgentUsageDatum { date: string; dailyRequests: number; cumulativeRequests: number; }
 import { CONSUMPTION_THRESHOLDS, UserConsumptionCategory, InsightsOverviewData } from '@/utils/analytics/insights';
 import { Advisory as LegacyAdvisory } from '@/utils/analytics/advisory';
+import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
 
 const NON_COPILOT_CODE_REVIEW_ADOPTION_LABEL = 'Non-Copilot Users';
 
@@ -371,10 +372,7 @@ export function analyzeCodingAgentAdoptionFromArtifacts(usage: UsageArtifacts, q
   let totalCodingAgentRequests = 0;
   for (const u of usage.users) {
     // Identify coding agent models (keywords)
-    const models = Object.keys(u.modelBreakdown).filter(m => {
-      const lower = m.toLowerCase();
-      return lower.includes('coding agent') || lower.includes('padawan');
-    });
+    const models = Object.keys(u.modelBreakdown).filter(m => isCodingAgentModel(m));
     if (models.length === 0) continue;
     const caRequests = models.reduce((sum, m) => sum + u.modelBreakdown[m], 0);
     totalCodingAgentRequests += caRequests;
@@ -672,8 +670,7 @@ export function buildDailyCodingAgentUsageFromArtifacts(
     let daySum = 0;
     for (const modelMap of userMap.values()) {
       for (const [model, qty] of modelMap.entries()) {
-        const lower = model.toLowerCase();
-        if (lower.includes('coding agent') || lower.includes('padawan')) {
+        if (isCodingAgentModel(model)) {
           daySum += qty;
         }
       }
@@ -694,7 +691,7 @@ export function buildDailyCodingAgentUsageFromArtifacts(
 // -----------------------------
 export function analyzeCodeReviewAdoptionFromArtifacts(usage: UsageArtifacts, quota: QuotaArtifacts): CodeReviewAnalysis {
   const nonCopilotBucket = usage.specialBuckets?.find(bucket => bucket.key === NON_COPILOT_CODE_REVIEW_BUCKET);
-  const nonCopilotModels = Object.keys(nonCopilotBucket?.modelBreakdown ?? {}).filter(model => model.toLowerCase().includes('code review'));
+  const nonCopilotModels = Object.keys(nonCopilotBucket?.modelBreakdown ?? {}).filter(model => isCodeReviewModel(model));
   const hasNonCopilotReviewUsage = nonCopilotModels.length > 0;
 
   if (usage.users.length === 0 && !hasNonCopilotReviewUsage) {
@@ -706,7 +703,7 @@ export function analyzeCodeReviewAdoptionFromArtifacts(usage: UsageArtifacts, qu
   let totalCodeReviewRequests = 0;
   let totalReviewUsers = 0;
   for (const u of usage.users) {
-    const models = Object.keys(u.modelBreakdown).filter(m => m.toLowerCase().includes('code review'));
+    const models = Object.keys(u.modelBreakdown).filter(m => isCodeReviewModel(m));
     if (models.length === 0) continue;
     const crRequests = models.reduce((sum, m) => sum + u.modelBreakdown[m], 0);
     totalCodeReviewRequests += crRequests;
@@ -753,7 +750,7 @@ export function buildDailyCodeReviewUsageFromArtifacts(
     let daySum = 0;
     for (const modelMap of userMap.values()) {
       for (const [model, qty] of modelMap.entries()) {
-        if (model.toLowerCase().includes('code review')) {
+        if (isCodeReviewModel(model)) {
           daySum += qty;
         }
       }

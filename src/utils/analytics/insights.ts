@@ -1,7 +1,7 @@
 import { ProcessedData } from '@/types/csv';
 import { UserSummary } from './types';
 import { PRICING } from '@/constants/pricing';
-import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
+import { isCodeReviewModel, isCodingAgentModel, isSparkProduct } from '@/utils/productClassification';
 
 export interface UserConsumptionCategory {
   user: string;
@@ -50,8 +50,7 @@ export function calculateFeatureUtilization(processedData: ProcessedData[]): Fea
       totalCodingAgentSessions += row.requestsUsed;
       codingAgentUsers.set(row.user, (codingAgentUsers.get(row.user) || 0) + row.requestsUsed);
     }
-    const modelLower = row.model.toLowerCase();
-    if (modelLower.includes('spark')) {
+    if (isSparkProduct(row.product, row.sku)) {
       totalSparkSessions += row.requestsUsed;
       sparkUsers.set(row.user, (sparkUsers.get(row.user) || 0) + row.requestsUsed);
     }
