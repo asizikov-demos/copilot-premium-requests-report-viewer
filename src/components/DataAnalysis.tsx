@@ -222,10 +222,10 @@ function DataAnalysisInner() {
     return autoModeSavingsRows.reduce(
       (total, row) => ({
         requests: total.requests + row.requests,
-        grossCost: total.grossCost + row.grossCost,
+        costBeforeAuto: total.costBeforeAuto + row.costBeforeAuto,
         savings: total.savings + row.savings,
       }),
-      { requests: 0, grossCost: 0, savings: 0 }
+      { requests: 0, costBeforeAuto: 0, savings: 0 }
     );
   }, [autoModeSavingsRows]);
 
@@ -450,13 +450,13 @@ function DataAnalysisInner() {
                 </div>
               )}
 
-              {autoModeSavingsRows.length > 0 && (
+              {autoModeSavingsRows.length > 0 && costMetricsAvailable && (
                 <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '150ms' }}>
                   <div className="px-6 py-4 border-b border-[#d1d9e0] bg-[#f6f8fa]">
                     <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <h3 className="text-lg font-semibold text-[#1f2328]">Auto Mode Savings</h3>
-                        <p className="text-sm text-[#636c76] mt-0.5">Models selected automatically by Auto Mode.</p>
+                        <p className="text-sm text-[#636c76] mt-0.5">Savings compare billed cost with the cost before Auto Mode&apos;s 10% PRU discount.</p>
                       </div>
                       <span className="text-sm font-semibold text-[#2da44e]">
                         {formatAutoModeCurrency(autoModeSavingsTotal.savings)} saved
@@ -469,7 +469,7 @@ function DataAnalysisInner() {
                         <tr className="border-b border-[#d1d9e0]">
                           <th className="px-6 py-3 text-left text-xs font-bold text-[#636c76] uppercase tracking-wider">Model</th>
                           <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Requests</th>
-                          <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Gross Cost</th>
+                          <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Cost Before Auto</th>
                           <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Savings</th>
                         </tr>
                       </thead>
@@ -478,7 +478,7 @@ function DataAnalysisInner() {
                           <tr key={item.model} className="table-row-hover transition-colors duration-150">
                             <td className="px-6 py-3.5 text-sm font-medium text-[#1f2328]">{item.model}</td>
                             <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">{item.requests.toFixed(2)}</td>
-                            <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">{formatAutoModeCurrency(item.grossCost)}</td>
+                            <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">{formatAutoModeCurrency(item.costBeforeAuto)}</td>
                             <td className="px-6 py-3.5 text-sm font-semibold text-[#2da44e] text-right font-mono">{formatAutoModeCurrency(item.savings)}</td>
                           </tr>
                         ))}
@@ -487,7 +487,7 @@ function DataAnalysisInner() {
                         <tr className="border-t-2 border-[#d1d9e0] bg-[#f6f8fa]">
                           <td className="px-6 py-3.5 text-sm font-bold text-[#1f2328]">Total</td>
                           <td className="px-6 py-3.5 text-sm font-bold text-[#1f2328] text-right font-mono">{autoModeSavingsTotal.requests.toFixed(2)}</td>
-                          <td className="px-6 py-3.5 text-sm font-bold text-[#1f2328] text-right font-mono">{formatAutoModeCurrency(autoModeSavingsTotal.grossCost)}</td>
+                          <td className="px-6 py-3.5 text-sm font-bold text-[#1f2328] text-right font-mono">{formatAutoModeCurrency(autoModeSavingsTotal.costBeforeAuto)}</td>
                           <td className="px-6 py-3.5 text-sm font-bold text-[#2da44e] text-right font-mono">{formatAutoModeCurrency(autoModeSavingsTotal.savings)}</td>
                         </tr>
                       </tfoot>

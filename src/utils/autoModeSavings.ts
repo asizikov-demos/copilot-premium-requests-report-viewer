@@ -7,7 +7,7 @@ const AUTO_MODE_PRU_MULTIPLIER = 1 - PRICING.AUTO_MODE_DISCOUNT_RATE;
 export interface AutoModeSavingsRow {
   model: string;
   requests: number;
-  grossCost: number;
+  costBeforeAuto: number;
   savings: number;
 }
 
@@ -32,17 +32,18 @@ export function aggregateAutoModeSavings(rows: ProcessedData[]): AutoModeSavings
 
     const appliedCostPerRequest = row.appliedCostPerQuantity ?? PRICING.OVERAGE_RATE_PER_REQUEST;
     const requests = row.requestsUsed / AUTO_MODE_PRU_MULTIPLIER;
-    const grossCost = requests * appliedCostPerRequest;
-    const savings = grossCost * PRICING.AUTO_MODE_DISCOUNT_RATE;
+    const billedGrossAmount = row.grossAmount ?? row.requestsUsed * appliedCostPerRequest;
+    const costBeforeAuto = billedGrossAmount / AUTO_MODE_PRU_MULTIPLIER;
+    const savings = costBeforeAuto - billedGrossAmount;
     const bucket = buckets.get(model) ?? {
       model,
       requests: 0,
-      grossCost: 0,
+      costBeforeAuto: 0,
       savings: 0,
     };
 
     bucket.requests += requests;
-    bucket.grossCost += grossCost;
+    bucket.costBeforeAuto += costBeforeAuto;
     bucket.savings += savings;
     buckets.set(model, bucket);
   }

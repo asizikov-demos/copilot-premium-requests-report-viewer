@@ -42,7 +42,7 @@ describe('Auto Mode savings', () => {
 
     expect(result.model).toBe('GPT-5.3-Codex');
     expect(result.requests).toBeCloseTo(3);
-    expect(result.grossCost).toBeCloseTo(0.12);
+    expect(result.costBeforeAuto).toBeCloseTo(0.12);
     expect(result.savings).toBeCloseTo(0.012);
   });
 
@@ -60,7 +60,7 @@ describe('Auto Mode savings', () => {
 
     expect(result.model).toBe('GPT-5.3-Codex');
     expect(result.requests).toBeCloseTo(1);
-    expect(result.grossCost).toBeCloseTo(0.04);
+    expect(result.costBeforeAuto).toBeCloseTo(0.04);
     expect(result.savings).toBeCloseTo(0.004);
   });
 
@@ -76,7 +76,7 @@ describe('Auto Mode savings', () => {
     const [result] = aggregateAutoModeSavings(rows);
 
     expect(result.requests).toBeCloseTo(615);
-    expect(result.grossCost).toBeCloseTo(24.6);
+    expect(result.costBeforeAuto).toBeCloseTo(24.6);
     expect(result.savings).toBeCloseTo(2.46);
   });
 });
