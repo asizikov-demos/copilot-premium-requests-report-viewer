@@ -15,6 +15,10 @@ import { isCodeReviewModel } from '@/utils/productClassification';
 /**
  * Normalize a raw CSV row object into a typed, validated structure.
  * Returns null if row is invalid or missing required fields.
+ *
+ * When `options.allowInvalidQuantity` is true, rows with a non-numeric quantity
+ * are not rejected; instead the returned row will have `quantity` as `NaN`.
+ * Callers using this option must handle NaN quantity values themselves.
  */
 export function normalizeRow(
   raw: CSVData | Record<string, unknown>,
