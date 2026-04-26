@@ -22,10 +22,9 @@ interface InsightsOverviewProps {
   featureUsageArtifacts?: FeatureUsageArtifacts;
   // Weekly exhaustion artifact (computeWeeklyQuotaExhaustionFromArtifacts output). Typed loosely here since we only read weekNumber & usersExhaustedInWeek.
   weeklyExhaustionArtifacts?: { weeks: Array<{ weekNumber: number; usersExhaustedInWeek: number; startDate: string; endDate: string }>; totalUsersExhausted: number };
-  onBack?: () => void;
 }
 
-export function InsightsOverview({ userData, processedData, quotaArtifacts, usageArtifacts, featureUsageArtifacts, weeklyExhaustionArtifacts, onBack }: InsightsOverviewProps) {
+export function InsightsOverview({ userData, processedData, quotaArtifacts, usageArtifacts, featureUsageArtifacts, weeklyExhaustionArtifacts }: InsightsOverviewProps) {
   const [isPowerUsersExpanded, setIsPowerUsersExpanded] = useState(false);
   const [isAverageUsersExpanded, setIsAverageUsersExpanded] = useState(false);
   const [isLowAdoptionExpanded, setIsLowAdoptionExpanded] = useState(false);
@@ -96,15 +95,6 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
             Usage patterns, adoption levels, and recommendations
           </p>
         </div>
-        {onBack && (
-          <button
-            onClick={onBack}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#636c76] bg-white border border-[#d1d9e0] rounded-md hover:bg-[#f6f8fa] hover:border-[#d1d9e0] transition-colors duration-150"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
-            Back
-          </button>
-        )}
       </div>
 
       {/* User Categories Summary */}

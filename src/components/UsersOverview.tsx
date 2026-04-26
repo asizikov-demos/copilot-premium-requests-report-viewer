@@ -19,10 +19,9 @@ interface UsersOverviewProps {
   dailyCumulativeData: DailyCumulativeData[];
   quotaArtifacts: QuotaArtifacts;
   usageArtifacts: UsageArtifacts;
-  onBack?: () => void;
 }
 
-export function UsersOverview({ userData, processedData, dailyCumulativeData, quotaArtifacts, usageArtifacts, onBack }: UsersOverviewProps) {
+export function UsersOverview({ userData, processedData, dailyCumulativeData, quotaArtifacts, usageArtifacts }: UsersOverviewProps) {
   const [showChart, setShowChart] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedOrganization, setSelectedOrganization] = useState(ALL_FILTERS_VALUE);
@@ -247,15 +246,6 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
             </button>
           )}
 
-          {onBack && (
-            <button
-              onClick={onBack}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#636c76] bg-white border border-[#d1d9e0] rounded-md hover:bg-[#f6f8fa] hover:border-[#d1d9e0] transition-colors duration-150"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
-              Back
-            </button>
-          )}
         </div>
       </div>
 
