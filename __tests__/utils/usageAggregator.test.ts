@@ -1,5 +1,14 @@
 import { PRICING } from '@/constants/pricing';
-import { AggregatorContext, NormalizedRow, UsageAggregator, buildUsageArtifactsFromProcessedData } from '@/utils/ingestion';
+import {
+  AggregatorContext,
+  DailyBucketsAggregator,
+  NormalizedRow,
+  QuotaAggregator,
+  UsageAggregator,
+  buildDailyBucketsArtifactsFromProcessedData,
+  buildQuotaArtifactsFromProcessedData,
+  buildUsageArtifactsFromProcessedData,
+} from '@/utils/ingestion';
 import type { ProcessedData } from '@/types/csv';
 
 function makeRow(partial: Partial<NormalizedRow>): NormalizedRow {
@@ -147,5 +156,84 @@ describe('UsageAggregator', () => {
         modelBreakdown: { 'Code Review': 4 },
       }),
     ]);
+  });
+});
+
+describe('processed data artifact builders', () => {
+  function toProcessedData(rows: NormalizedRow[]): ProcessedData[] {
+    return rows.map((row) => ({
+      timestamp: new Date(`${row.day}T00:00:00Z`),
+      user: row.user,
+      model: row.model,
+      requestsUsed: row.quantity,
+      exceedsQuota: row.exceedsQuota ?? false,
+      totalQuota: row.quotaRaw ?? (row.quotaValue === 'unlimited' ? 'Unlimited' : String(row.quotaValue ?? 'Unlimited')),
+      quotaValue: row.quotaValue ?? 'unlimited',
+      iso: `${row.day}T00:00:00.000Z`,
+      dateKey: row.day,
+      monthKey: row.day.slice(0, 7),
+      epoch: new Date(`${row.day}T00:00:00Z`).getTime(),
+      product: row.product,
+      sku: row.sku,
+      organization: row.organization,
+      costCenter: row.costCenter,
+      appliedCostPerQuantity: row.appliedCostPerQuantity,
+      grossAmount: row.grossAmount,
+      discountAmount: row.discountAmount,
+      netAmount: row.netAmount,
+      isNonCopilotUsage: row.isNonCopilotUsage,
+      usageBucket: row.usageBucket,
+    }));
+  }
+
+  test('quota processed-data builder matches QuotaAggregator license semantics', () => {
+    const ctx: AggregatorContext = { pricing: PRICING };
+    const rows: NormalizedRow[] = [
+      makeRow({ user: 'test-user-one', quotaValue: PRICING.BUSINESS_QUOTA, quotaRaw: String(PRICING.BUSINESS_QUOTA) }),
+      makeRow({ user: 'test-user-two', quotaValue: 'unlimited', quotaRaw: 'Unlimited' }),
+      {
+        ...makeRow({ user: '', model: 'Code Review', quantity: 4, quotaValue: PRICING.BUSINESS_QUOTA }),
+        isNonCopilotUsage: true,
+        usageBucket: 'non_copilot_code_review',
+      },
+    ];
+    const aggregator = new QuotaAggregator();
+    aggregator.init?.(ctx);
+    for (const row of rows) {
+      aggregator.onRow(row, ctx);
+    }
+
+    const output = buildQuotaArtifactsFromProcessedData(toProcessedData(rows));
+
+    expect(output).toEqual(aggregator.finalize(ctx));
+    expect(output.hasMixedQuotas).toBe(true);
+    expect(output.hasMixedLicenses).toBe(false);
+    expect(output.specialBucketQuotas?.get('non_copilot_code_review')).toBe(0);
+  });
+
+  test('daily processed-data builder includes per-model and special bucket breakdowns', () => {
+    const ctx: AggregatorContext = { pricing: PRICING };
+    const rows: NormalizedRow[] = [
+      makeRow({ user: 'test-user-one', model: 'model-one', quantity: 2 }),
+      makeRow({ user: 'test-user-one', model: 'model-two', quantity: 3 }),
+      makeRow({ user: 'test-user-two', model: 'model-one', quantity: 5, day: '2025-06-02', date: '2025-06-02T00:00:00Z' }),
+      {
+        ...makeRow({ user: '', model: 'Code Review', quantity: 7, day: '2025-06-02', date: '2025-06-02T00:00:00Z' }),
+        isNonCopilotUsage: true,
+        usageBucket: 'non_copilot_code_review',
+      },
+    ];
+    const aggregator = new DailyBucketsAggregator();
+    aggregator.init?.(ctx);
+    for (const row of rows) {
+      aggregator.onRow(row, ctx);
+    }
+
+    const output = buildDailyBucketsArtifactsFromProcessedData(toProcessedData(rows));
+
+    expect(output).toEqual(aggregator.finalize(ctx));
+    expect(output.dailyUserModelTotals?.get('2025-06-01')?.get('test-user-one')?.get('model-two')).toBe(3);
+    expect(output.dailyBucketTotals?.get('2025-06-02')?.get('non_copilot_code_review')).toBe(7);
+    expect(output.dailyBucketModelTotals?.get('2025-06-02')?.get('non_copilot_code_review')?.get('Code Review')).toBe(7);
   });
 });

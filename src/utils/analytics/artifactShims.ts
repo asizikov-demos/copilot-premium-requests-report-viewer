@@ -1,6 +1,12 @@
 import { ProcessedData } from '@/types/csv';
-import { UsageArtifacts, QuotaArtifacts, DailyBucketsArtifacts } from '@/utils/ingestion/types';
-import { computeWeeklyQuotaExhaustionFromArtifacts, computeOverageSummaryFromArtifacts, WeeklyQuotaExhaustionBreakdown } from '@/utils/ingestion/analytics';
+import {
+  buildDailyBucketsArtifactsFromProcessedData,
+  buildQuotaArtifactsFromProcessedData,
+  buildUsageArtifactsFromProcessedData,
+  computeOverageSummaryFromArtifacts,
+  computeWeeklyQuotaExhaustionFromArtifacts,
+  WeeklyQuotaExhaustionBreakdown
+} from '@/utils/ingestion/analytics';
 import { calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
 import { UserSummary } from './types';
 import { buildUserQuotaMapFromRows } from './quota';
@@ -38,75 +44,13 @@ export function calculateSpecialFeaturesScore(models: string[]): number {
 }
 
 // -----------------------------
-// Artifact Builders From ProcessedData (minimal subset needed by shims)
-// -----------------------------
-function buildUsageArtifacts(processed: ProcessedData[]): UsageArtifacts {
-  const userMap = new Map<string, { totalRequests: number; modelBreakdown: Record<string, number>; }>();
-  const modelTotals: Record<string, number> = {};
-  for (const row of processed) {
-    let entry = userMap.get(row.user);
-    if (!entry) { entry = { totalRequests: 0, modelBreakdown: {} }; userMap.set(row.user, entry); }
-    entry.totalRequests += row.requestsUsed;
-    entry.modelBreakdown[row.model] = (entry.modelBreakdown[row.model] || 0) + row.requestsUsed;
-    modelTotals[row.model] = (modelTotals[row.model] || 0) + row.requestsUsed;
-  }
-  const users = Array.from(userMap.entries()).map(([user, v]) => {
-    // derive topModel
-    let topModel: string | undefined; let topModelValue = 0;
-    for (const [m, qty] of Object.entries(v.modelBreakdown)) { if (qty > topModelValue) { topModelValue = qty; topModel = m; } }
-    return { user, totalRequests: v.totalRequests, modelBreakdown: v.modelBreakdown, topModel, topModelValue };
-  });
-  return { users, modelTotals, userCount: users.length, modelCount: Object.keys(modelTotals).length };
-}
-
-function buildQuotaArtifacts(processed: ProcessedData[]): QuotaArtifacts {
-  const quotaByUser = buildUserQuotaMapFromRows(processed);
-  const copilotRows = processed.filter(row => !row.isNonCopilotUsage);
-  const valuesByUser = new Map<string, Set<number | 'unlimited'>>();
-  const conflicts = new Map<string, Set<number | 'unlimited'>>();
-  const distinctQuotas = new Set<number>();
-  for (const row of copilotRows) {
-    const val = row.quotaValue;
-    let values = valuesByUser.get(row.user);
-    if (!values) { values = new Set(); valuesByUser.set(row.user, values); }
-    values.add(val);
-    if (typeof val === 'number') distinctQuotas.add(val);
-  }
-  for (const [user, values] of valuesByUser) {
-    if (values.size > 1) conflicts.set(user, values);
-  }
-  const hasMixedQuotas = distinctQuotas.size > 1;
-  // Mixed licenses accounts for presence of unlimited + numeric vs pure numeric uniform
-  let hasMixedLicenses = false;
-  let sawUnlimited = false; let sawNumeric = false;
-  for (const v of quotaByUser.values()) { if (v === 'unlimited') sawUnlimited = true; else sawNumeric = true; }
-  hasMixedLicenses = sawUnlimited && sawNumeric;
-  return { quotaByUser, conflicts, distinctQuotas, hasMixedQuotas, hasMixedLicenses };
-}
-
-function buildDailyBucketsArtifacts(processed: ProcessedData[]): DailyBucketsArtifacts {
-  const dailyUserTotals = new Map<string, Map<string, number>>();
-  let min: string | null = null; let max: string | null = null;
-  const monthsSet = new Set<string>();
-  for (const row of processed) {
-    const dateKey = row.dateKey; const monthKey = row.monthKey;
-    monthsSet.add(monthKey);
-    if (!min || dateKey < min) min = dateKey; if (!max || dateKey > max) max = dateKey;
-    let userMap = dailyUserTotals.get(dateKey);
-    if (!userMap) { userMap = new Map(); dailyUserTotals.set(dateKey, userMap); }
-    userMap.set(row.user, (userMap.get(row.user) || 0) + row.requestsUsed);
-  }
-  return { dailyUserTotals, dateRange: min && max ? { min, max } : null, months: Array.from(monthsSet).sort() };
-}
-
-// -----------------------------
 // Shim Functions (legacy signatures delegating to artifact implementations)
 // -----------------------------
 
 export function computeWeeklyQuotaExhaustion(processedData: ProcessedData[]): WeeklyQuotaExhaustionBreakdown {
   if (processedData.length === 0) return { totalUsersExhausted: 0, weeks: [] };
-  const quota = buildQuotaArtifacts(processedData);
-  const daily = buildDailyBucketsArtifacts(processedData);
+  const quota = buildQuotaArtifactsFromProcessedData(processedData);
+  const daily = buildDailyBucketsArtifactsFromProcessedData(processedData);
   return computeWeeklyQuotaExhaustionFromArtifacts(daily, quota);
 }
 
@@ -123,7 +67,7 @@ export function computeOverageSummary(userData: UserSummary[], processedData: Pr
 
 // Convenience wrapper for tests migrating to artifact version directly
 export function computeOverageSummaryArtifacts(processedData: ProcessedData[]): OverageSummary {
-  const usage = buildUsageArtifacts(processedData);
-  const quota = buildQuotaArtifacts(processedData);
+  const usage = buildUsageArtifactsFromProcessedData(processedData);
+  const quota = buildQuotaArtifactsFromProcessedData(processedData);
   return computeOverageSummaryFromArtifacts(usage, quota);
 }
