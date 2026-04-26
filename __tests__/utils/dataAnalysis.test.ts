@@ -4,6 +4,7 @@ import {
 import type { UsageArtifacts, QuotaArtifacts } from '@/utils/ingestion';
 import { buildMonthListFromArtifacts } from '@/utils/ingestion/analytics';
 import type { DailyBucketsArtifacts } from '@/utils/ingestion';
+import { PRICING } from '@/constants/pricing';
 import { processCSVData, analyzeData } from '../helpers/processCSVData';
 import { CSVData, ProcessedData } from '@/types/csv';
 import { validCSVData, powerUserCSVData } from '../fixtures/validCSVData';
@@ -204,6 +205,38 @@ describe('CSV Data Processing', () => {
       
       expect(result.timeFrame.start).toBe('2025-06-03');
       expect(result.timeFrame.end).toBe('2025-06-05');
+    });
+
+    it('should resolve conflicting user quotas before counting quota overages', () => {
+      const processedData = processCSVData([
+        createMockCSVData({
+          username: 'test-user-one',
+          quantity: '400',
+          total_monthly_quota: String(PRICING.BUSINESS_QUOTA),
+        }),
+        createMockCSVData({
+          username: 'test-user-one',
+          quantity: '0',
+          total_monthly_quota: String(PRICING.ENTERPRISE_QUOTA),
+        }),
+        createMockCSVData({
+          username: 'test-user-two',
+          quantity: '1200',
+          total_monthly_quota: String(PRICING.BUSINESS_QUOTA),
+        }),
+        createMockCSVData({
+          username: 'test-user-two',
+          quantity: '0',
+          total_monthly_quota: 'Unlimited',
+        }),
+      ]);
+
+      const result = analyzeData(processedData);
+
+      expect(result.usersExceedingQuota).toBe(0);
+      expect(result.quotaBreakdown.enterprise).toEqual(['test-user-one']);
+      expect(result.quotaBreakdown.unlimited).toEqual(['test-user-two']);
+      expect(result.quotaBreakdown.business).toEqual([]);
     });
   });
 

@@ -3,6 +3,7 @@ import { UsageArtifacts, QuotaArtifacts, DailyBucketsArtifacts } from '@/utils/i
 import { computeWeeklyQuotaExhaustionFromArtifacts, computeOverageSummaryFromArtifacts, WeeklyQuotaExhaustionBreakdown } from '@/utils/ingestion/analytics';
 import { calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
 import { UserSummary } from './types';
+import { buildUserQuotaMapFromRows } from './quota';
 
 // -----------------------------
 // Legacy Constants & Scoring (preserved for tests)
@@ -59,17 +60,20 @@ function buildUsageArtifacts(processed: ProcessedData[]): UsageArtifacts {
 }
 
 function buildQuotaArtifacts(processed: ProcessedData[]): QuotaArtifacts {
-  const quotaByUser = new Map<string, number | 'unlimited'>();
+  const quotaByUser = buildUserQuotaMapFromRows(processed);
+  const copilotRows = processed.filter(row => !row.isNonCopilotUsage);
+  const valuesByUser = new Map<string, Set<number | 'unlimited'>>();
   const conflicts = new Map<string, Set<number | 'unlimited'>>();
   const distinctQuotas = new Set<number>();
-  for (const row of processed) {
+  for (const row of copilotRows) {
     const val = row.quotaValue;
-    if (!quotaByUser.has(row.user)) quotaByUser.set(row.user, val);
-    else if (quotaByUser.get(row.user) !== val) {
-      let set = conflicts.get(row.user); if (!set) { set = new Set(); conflicts.set(row.user, set); }
-      set.add(quotaByUser.get(row.user)!); set.add(val);
-    }
+    let values = valuesByUser.get(row.user);
+    if (!values) { values = new Set(); valuesByUser.set(row.user, values); }
+    values.add(val);
     if (typeof val === 'number') distinctQuotas.add(val);
+  }
+  for (const [user, values] of valuesByUser) {
+    if (values.size > 1) conflicts.set(user, values);
   }
   const hasMixedQuotas = distinctQuotas.size > 1;
   // Mixed licenses accounts for presence of unlimited + numeric vs pure numeric uniform
@@ -108,9 +112,7 @@ export function computeWeeklyQuotaExhaustion(processedData: ProcessedData[]): We
 
 export interface OverageSummary { totalOverageRequests: number; totalOverageCost: number; }
 export function computeOverageSummary(userData: UserSummary[], processedData: ProcessedData[]): OverageSummary {
-  // Legacy logic preserved for exact test parity (avoids minor floating point timing differences in artifact path)
-  const quotaMap = new Map<string, number | 'unlimited'>();
-  for (const row of processedData) { if (!quotaMap.has(row.user)) quotaMap.set(row.user, row.quotaValue); }
+  const quotaMap = buildUserQuotaMapFromRows(processedData);
   let totalOverageRequests = 0;
   for (const u of userData) {
     const quotaVal = quotaMap.get(u.user) ?? 'unlimited';

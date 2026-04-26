@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { ProcessedData, AnalysisResults, CodingAgentAnalysis, CodeReviewAnalysis } from '@/types/csv';
-import { PRICING } from '@/constants/pricing';
 import type { UserSummary } from '@/utils/analytics';
+import { buildQuotaBreakdown } from '@/utils/analytics/quota';
 import {
   deriveAnalysisFromArtifacts,
   buildDailyCumulativeDataFromArtifacts,
@@ -65,19 +65,11 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
         const timeFrame = { start: sorted[0].dateKey, end: sorted[sorted.length-1].dateKey };
         const uniqueUsers = new Set(userFiltered.map(r=> r.user));
         const requestsByModelMap = new Map<string, number>();
-        const quotaByUser = new Map<string, number | 'unlimited'>();
         for (const r of filteredAllRows) {
           requestsByModelMap.set(r.model, (requestsByModelMap.get(r.model) || 0) + r.requestsUsed);
-          if (!r.isNonCopilotUsage && !quotaByUser.has(r.user)) quotaByUser.set(r.user, r.quotaValue);
         }
         const requestsByModel = Array.from(requestsByModelMap.entries()).map(([model,totalRequests])=>({ model, totalRequests })).sort((a,b)=> b.totalRequests - a.totalRequests);
-        const unlimited: string[] = []; const business: string[] = []; const enterprise: string[] = [];
-        for (const [u,q] of quotaByUser) { if (q === 'unlimited') unlimited.push(u); else if (q === PRICING.BUSINESS_QUOTA) business.push(u); else if (q === PRICING.ENTERPRISE_QUOTA) enterprise.push(u); }
-        const types = [unlimited.length?'u':null,business.length?'b':null,enterprise.length?'e':null].filter(Boolean);
-        const mixed = types.length > 1;
-        let suggestedPlan: 'business' | 'enterprise' | null = null;
-        if (!mixed && unlimited.length===0) { if (business.length && !enterprise.length) suggestedPlan='business'; else if (enterprise.length && !business.length) suggestedPlan='enterprise'; }
-        return { timeFrame, totalUniqueUsers: uniqueUsers.size, usersExceedingQuota: 0, requestsByModel, quotaBreakdown: { unlimited, business, enterprise, mixed, suggestedPlan } };
+        return { timeFrame, totalUniqueUsers: uniqueUsers.size, usersExceedingQuota: 0, requestsByModel, quotaBreakdown: buildQuotaBreakdown(userFiltered) };
       })();
       return {
         processedData: filtered,

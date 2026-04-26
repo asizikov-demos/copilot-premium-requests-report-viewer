@@ -1,6 +1,8 @@
-import { UserSummary } from './types';
-import { ProcessedData } from '@/types/csv';
+import type { ProcessedData } from '@/types/csv';
 import { calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
+
+import { buildUserQuotaMapFromRows } from './quota';
+import type { UserSummary } from './types';
 
 export interface OverageSummary {
   totalOverageRequests: number;
@@ -13,11 +15,7 @@ export interface OverageSummary {
  * Pure + deterministic for unit testing.
  */
 export function computeOverageSummary(userData: UserSummary[], processedData: ProcessedData[]): OverageSummary {
-  // Build a quota map (first occurrence defines user's plan) in O(R)
-  const quotaMap = new Map<string, number | 'unlimited'>();
-  for (const row of processedData) {
-    if (!quotaMap.has(row.user)) quotaMap.set(row.user, row.quotaValue);
-  }
+  const quotaMap = buildUserQuotaMapFromRows(processedData);
   const totalOverageRequests = userData.reduce((total, user) => {
     const userQuota = quotaMap.get(user.user) ?? 'unlimited';
     const overage = calculateOverageRequests(user.totalRequests, userQuota);

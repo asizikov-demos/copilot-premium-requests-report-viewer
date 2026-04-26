@@ -1,7 +1,9 @@
-import { ProcessedData } from '@/types/csv';
-import { UserSummary } from './types';
 import { PRICING } from '@/constants/pricing';
+import type { ProcessedData } from '@/types/csv';
+import { buildUserQuotaMapFromRows } from '@/utils/analytics/quota';
 import { isCodeReviewModel, isCodingAgentModel, isSparkProduct } from '@/utils/productClassification';
+
+import type { UserSummary } from './types';
 
 export interface UserConsumptionCategory {
   user: string;
@@ -65,8 +67,7 @@ export function calculateFeatureUtilization(processedData: ProcessedData[]): Fea
 }
 
 export function categorizeUserConsumption(userData: UserSummary[], processedData: ProcessedData[]): InsightsOverviewData {
-  const userQuotaMap = new Map<string, number | 'unlimited'>();
-  processedData.forEach(row => { if (!userQuotaMap.has(row.user)) userQuotaMap.set(row.user, row.quotaValue); });
+  const userQuotaMap = buildUserQuotaMapFromRows(processedData);
   const categorized = userData.map(u => {
     const quota = userQuotaMap.get(u.user) ?? 'unlimited';
     const pct = (typeof quota === 'number' && quota > 0) ? (u.totalRequests / quota) * 100 : 0;

@@ -1,6 +1,9 @@
-import { computeOverageSummaryFromArtifacts } from '@/utils/ingestion/analytics';
+import { computeOverageSummary } from '@/utils/analytics/overage';
+import { computeOverageSummaryFromArtifacts, computeOverageSummaryFromProcessedData } from '@/utils/ingestion/analytics';
 import type { UsageArtifacts, QuotaArtifacts } from '@/utils/ingestion';
 import { PRICING } from '@/constants/pricing';
+import type { ProcessedData } from '@/types/csv';
+import type { UserSummary } from '@/utils/analytics';
 
 function makeUsage(users: Array<{ user: string; totalRequests: number }>): UsageArtifacts {
   const modelTotals: Record<string, number> = {};
@@ -17,6 +20,26 @@ function makeQuota(entries: Array<{ user: string; quota: number | 'unlimited' }>
   const quotaByUser = new Map<string, number | 'unlimited'>();
   for (const e of entries) quotaByUser.set(e.user, e.quota);
   return { quotaByUser, conflicts: new Map(), distinctQuotas: new Set(), hasMixedQuotas: false, hasMixedLicenses: false } as QuotaArtifacts;
+}
+
+function makeProcessed(row: Partial<ProcessedData>): ProcessedData {
+  const timestamp = row.timestamp || new Date('2025-06-01T00:00:00Z');
+  const iso = timestamp.toISOString();
+  return {
+    timestamp,
+    user: row.user || 'test-user-one',
+    model: row.model || 'test-model',
+    requestsUsed: row.requestsUsed ?? 0,
+    exceedsQuota: row.exceedsQuota ?? false,
+    totalQuota: row.totalQuota || String(row.quotaValue ?? PRICING.BUSINESS_QUOTA),
+    quotaValue: row.quotaValue ?? PRICING.BUSINESS_QUOTA,
+    iso,
+    dateKey: iso.slice(0, 10),
+    monthKey: iso.slice(0, 7),
+    epoch: timestamp.getTime(),
+    isNonCopilotUsage: row.isNonCopilotUsage ?? false,
+    usageBucket: row.usageBucket,
+  } as ProcessedData;
 }
 
 describe('computeOverageSummary', () => {
@@ -87,5 +110,21 @@ describe('computeOverageSummary', () => {
     const res = computeOverageSummaryFromArtifacts(usage, quota);
     expect(res.totalOverageRequests).toBe(0);
     expect(res.totalOverageCost).toBe(0);
+  });
+
+  it('resolves conflicting processed row quotas consistently', () => {
+    const users: UserSummary[] = [
+      { user: 'test-user-one', totalRequests: 400, modelBreakdown: { 'test-model': 400 } },
+      { user: 'test-user-two', totalRequests: 1200, modelBreakdown: { 'test-model': 1200 } },
+    ];
+    const processed = [
+      makeProcessed({ user: 'test-user-one', requestsUsed: 400, quotaValue: PRICING.BUSINESS_QUOTA }),
+      makeProcessed({ user: 'test-user-one', requestsUsed: 0, quotaValue: PRICING.ENTERPRISE_QUOTA }),
+      makeProcessed({ user: 'test-user-two', requestsUsed: 1200, quotaValue: PRICING.BUSINESS_QUOTA }),
+      makeProcessed({ user: 'test-user-two', requestsUsed: 0, quotaValue: 'unlimited', totalQuota: 'Unlimited' }),
+    ];
+
+    expect(computeOverageSummary(users, processed).totalOverageRequests).toBe(0);
+    expect(computeOverageSummaryFromProcessedData(processed).totalOverageRequests).toBe(0);
   });
 });
