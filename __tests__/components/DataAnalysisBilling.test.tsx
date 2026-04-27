@@ -203,6 +203,40 @@ describe('DataAnalysis billing summary', () => {
     });
   });
 
+  it('omits PRU cost columns from Cost per Product when only AIC gross is present', async () => {
+    const aicOnlyRows: CSVData[] = [{
+      date: '2026-03-01',
+      username: 'aic-only-user',
+      product: 'copilot',
+      sku: 'copilot_premium_request',
+      model: 'Claude Opus 4.6',
+      quantity: '2',
+      total_monthly_quota: '1000',
+      organization: 'aic-only-org',
+      cost_center_name: 'aic-only-cost-center',
+      aic_quantity: '12.5',
+      aic_gross_amount: '0.125',
+    }];
+
+    const ingestionResult = createIngestionResultFromRawRows(aicOnlyRows);
+    render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Cost per Product')).toBeInTheDocument();
+    });
+
+    const productHeader = screen.getByRole('columnheader', { name: 'Product' });
+    const productTable = productHeader.closest('table');
+    expect(productTable).not.toBeNull();
+    const table = within(productTable!);
+
+    expect(table.getByRole('columnheader', { name: 'AI Credits Gross' })).toBeInTheDocument();
+    expect(table.queryByRole('columnheader', { name: 'Gross' })).not.toBeInTheDocument();
+    expect(table.queryByRole('columnheader', { name: 'Discount' })).not.toBeInTheDocument();
+    expect(table.queryByRole('columnheader', { name: 'Net' })).not.toBeInTheDocument();
+    expect(table.getByText('$0.13')).toBeInTheDocument();
+  });
+
   it('renders cost per product and per-model billing details on the overview page', async () => {
     const billingRows: CSVData[] = [
       {

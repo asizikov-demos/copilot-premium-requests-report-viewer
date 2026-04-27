@@ -93,6 +93,21 @@ describe('BillingAggregator', () => {
     expect(out.totals.aicAdditionalUsageGrossAmount).toBeCloseTo(10);
   });
 
+  it('does not estimate included AI Credits without AI Credits gross data', () => {
+    const agg = new BillingAggregator();
+    agg.init?.(ctx);
+    agg.onRow(buildRow({ user: 'business-user', quantity: 1, quotaValue: PRICING.BUSINESS_QUOTA }), ctx);
+    agg.onRow(buildRow({ user: 'enterprise-user', quantity: 1, quotaValue: PRICING.ENTERPRISE_QUOTA, aicQuantity: 5000 }), ctx);
+
+    const out = agg.finalize(ctx);
+
+    expect(out.hasAnyAicData).toBe(false);
+    expect(out.totals.aicQuantity).toBe(5000);
+    expect(out.totals.aicGrossAmount).toBe(0);
+    expect(out.totals.aicIncludedCredits).toBe(0);
+    expect(out.totals.aicAdditionalUsageGrossAmount).toBe(0);
+  });
+
   it('stores non-Copilot code review billing in a special bucket instead of a user entry', () => {
     const agg = new BillingAggregator();
     agg.init?.(ctx);

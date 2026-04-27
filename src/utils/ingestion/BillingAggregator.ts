@@ -98,24 +98,25 @@ export class BillingAggregator implements Aggregator<BillingArtifacts> {
     }
     if (sawBilling) this.hasAnyBillingData = true;
 
-    let sawAic = false;
     if (typeof row.aicQuantity === 'number') {
       this.aicQuantityTotal += row.aicQuantity;
       entry.aicQuantity = (entry.aicQuantity || 0) + row.aicQuantity;
-      sawAic = true;
     }
     if (typeof row.aicGrossAmount === 'number') {
       this.aicGrossAmountTotal += row.aicGrossAmount;
       entry.aicGrossAmount = (entry.aicGrossAmount || 0) + row.aicGrossAmount;
-      sawAic = true;
+      this.hasAnyAicData = true;
     }
-    if (sawAic) this.hasAnyAicData = true;
   }
 
   finalize(_ctx: AggregatorContext): BillingArtifacts {
     void _ctx;
-    const includedCredits = calculateIncludedAicCreditsForUsers(this.userMap.values());
-    const poolEstimate = calculateAicPoolEstimate(includedCredits, this.aicGrossAmountTotal);
+    const poolEstimate = this.hasAnyAicData
+      ? calculateAicPoolEstimate(
+        calculateIncludedAicCreditsForUsers(this.userMap.values()),
+        this.aicGrossAmountTotal
+      )
+      : { includedCredits: 0, additionalUsageGrossAmount: 0 };
 
     return {
       totals: {

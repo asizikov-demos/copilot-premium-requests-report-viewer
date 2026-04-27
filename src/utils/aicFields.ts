@@ -5,7 +5,7 @@ interface AicFields {
 
 export function hasAicFields(rows: Iterable<AicFields>): boolean {
   for (const row of rows) {
-    if (row.aicQuantity !== undefined || row.aicGrossAmount !== undefined) {
+    if (row.aicGrossAmount !== undefined) {
       return true;
     }
   }

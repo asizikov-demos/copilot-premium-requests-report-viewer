@@ -253,6 +253,8 @@ function DataAnalysisInner() {
   const hasModelAic = aicMetricsAvailable;
 
   const productCosts = useMemo(() => aggregateProductCosts(aggregateProcessedData), [aggregateProcessedData]);
+  const showProductAicGross = aicMetricsAvailable;
+  const showProductCosts = costMetricsAvailable;
   const autoModeSavingsRows = useMemo(
     () => aggregateAutoModeSavings(aggregateProcessedData),
     [aggregateProcessedData]
@@ -528,7 +530,7 @@ function DataAnalysisInner() {
               )}
 
               {/* Cost per Product */}
-              {productCosts.length > 0 && (costMetricsAvailable || aicMetricsAvailable) && (
+              {productCosts.length > 0 && (showProductCosts || showProductAicGross) && (
                 <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
                   <div className="px-6 py-4 border-b border-[#d1d9e0] bg-[#f6f8fa]">
                     <h3 className="text-lg font-semibold text-[#1f2328]">Cost per Product</h3>
@@ -539,12 +541,16 @@ function DataAnalysisInner() {
                         <tr className="border-b border-[#d1d9e0]">
                           <th className="px-6 py-3 text-left text-xs font-bold text-[#636c76] uppercase tracking-wider">Product</th>
                           <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Requests</th>
-                          {aicMetricsAvailable && (
+                          {showProductAicGross && (
                             <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">AI Credits Gross</th>
                           )}
-                          <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Gross</th>
-                          <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Discount</th>
-                          <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Net</th>
+                          {showProductCosts && (
+                            <>
+                              <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Gross</th>
+                              <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Discount</th>
+                              <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Net</th>
+                            </>
+                          )}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#d1d9e0]">
@@ -552,12 +558,16 @@ function DataAnalysisInner() {
                           <tr key={product.label} className="table-row-hover transition-colors duration-150">
                             <td className="px-6 py-3.5 text-sm font-medium text-[#1f2328]">{product.label}</td>
                             <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">{product.requests.toFixed(2)}</td>
-                            {aicMetricsAvailable && (
+                            {showProductAicGross && (
                               <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">${product.aicGrossAmount.toFixed(2)}</td>
                             )}
-                            <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">${product.gross.toFixed(2)}</td>
-                            <td className="px-6 py-3.5 text-sm text-emerald-600 text-right font-mono">-${product.discount.toFixed(2)}</td>
-                            <td className="px-6 py-3.5 text-sm font-semibold text-[#1f2328] text-right font-mono">${product.net.toFixed(2)}</td>
+                            {showProductCosts && (
+                              <>
+                                <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">${product.gross.toFixed(2)}</td>
+                                <td className="px-6 py-3.5 text-sm text-emerald-600 text-right font-mono">-${product.discount.toFixed(2)}</td>
+                                <td className="px-6 py-3.5 text-sm font-semibold text-[#1f2328] text-right font-mono">${product.net.toFixed(2)}</td>
+                              </>
+                            )}
                           </tr>
                         ))}
                       </tbody>
