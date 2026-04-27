@@ -16,7 +16,7 @@ export const createMockFile = (content: string, name: string, type: string = 'te
 
 export const createMockCSVData = (overrides: Partial<CSVData> = {}): CSVData => ({
   date: '2025-06-03',
-  username: 'TestUser',
+  username: 'test-user',
   model: 'test-model',
   quantity: '1.00',
   exceeds_quota: 'false',
@@ -31,7 +31,7 @@ export const createMockCSVDataArray = (count: number, overrides: Partial<CSVData
     const dateStr = date.toISOString().slice(0, 10); // YYYY-MM-DD
     return createMockCSVData({
       ...overrides,
-      username: `TestUser${index + 1}`,
+      username: `test-user-${index + 1}`,
       date: dateStr,
       quantity: (Math.random() * 5).toFixed(2)
     });
