@@ -9,6 +9,8 @@ export interface ProductCost {
   gross: number;
   discount: number;
   net: number;
+  aicQuantity: number;
+  aicGrossAmount: number;
 }
 
 export const PRODUCT_CATEGORY_ORDER: ProductCategory[] = [
@@ -27,6 +29,8 @@ function createEmptyProductCost(category: ProductCategory): ProductCost {
     gross: 0,
     discount: 0,
     net: 0,
+    aicQuantity: 0,
+    aicGrossAmount: 0,
   };
 }
 
@@ -38,7 +42,7 @@ export function createEmptyProductCostMap(): Map<ProductCategory, ProductCost> {
 
 export function accumulateProductCost(
   buckets: Map<ProductCategory, ProductCost>,
-  row: Pick<ProcessedData, 'model' | 'product' | 'sku' | 'requestsUsed' | 'grossAmount' | 'discountAmount' | 'netAmount' | 'isNonCopilotUsage' | 'usageBucket'>
+  row: Pick<ProcessedData, 'model' | 'product' | 'sku' | 'requestsUsed' | 'grossAmount' | 'discountAmount' | 'netAmount' | 'aicQuantity' | 'aicGrossAmount' | 'isNonCopilotUsage' | 'usageBucket'>
 ): void {
   const category = classifyProductCategory(row.model, row.product, row.sku, {
     isNonCopilotUsage: row.isNonCopilotUsage,
@@ -54,6 +58,8 @@ export function accumulateProductCost(
   bucket.gross += row.grossAmount ?? 0;
   bucket.discount += row.discountAmount ?? 0;
   bucket.net += row.netAmount ?? 0;
+  bucket.aicQuantity += row.aicQuantity ?? 0;
+  bucket.aicGrossAmount += row.aicGrossAmount ?? 0;
 }
 
 export function getPopulatedProductCosts(buckets: Map<ProductCategory, ProductCost>): ProductCost[] {

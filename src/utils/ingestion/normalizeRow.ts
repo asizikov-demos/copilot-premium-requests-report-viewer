@@ -39,7 +39,9 @@ export function normalizeRow(
     applied_cost_per_quantity,
     gross_amount,
     discount_amount,
-    net_amount
+    net_amount,
+    aic_quantity,
+    aic_gross_amount
   } = raw as Record<string, unknown>;
   
   // Type guard and validate required fields
@@ -102,6 +104,8 @@ export function normalizeRow(
     grossAmount: parseNum(gross_amount),
     discountAmount: parseNum(discount_amount),
     netAmount: parseNum(net_amount),
+    aicQuantity: parseNum(aic_quantity),
+    aicGrossAmount: parseNum(aic_gross_amount),
     isNonCopilotUsage: isNonCopilotCodeReviewUsage,
     usageBucket: isNonCopilotCodeReviewUsage ? NON_COPILOT_CODE_REVIEW_BUCKET : undefined,
   };

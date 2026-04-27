@@ -24,6 +24,8 @@ export interface SpecialBillingBucketTotals {
   gross?: number;
   discount?: number;
   net?: number;
+  aicQuantity?: number;
+  aicGrossAmount?: number;
   quotaValue: 0;
 }
 
@@ -50,6 +52,8 @@ export interface NormalizedRow {
   grossAmount?: number;
   discountAmount?: number;
   netAmount?: number;
+  aicQuantity?: number;
+  aicGrossAmount?: number;
   isNonCopilotUsage?: boolean;
   usageBucket?: SpecialUsageBucketKey;
 }
@@ -214,15 +218,19 @@ export interface FeatureUsageArtifacts {
 export interface BillingUserTotals {
   user: string;
   quantity: number; // total request quantity (duplicate of usageArtifacts but convenient for billing view)
+  quotaValue?: number | 'unlimited';
   gross?: number;
   discount?: number;
   net?: number;
+  aicQuantity?: number;
+  aicGrossAmount?: number;
 }
 
 export interface BillingArtifacts {
-  totals: { gross: number; discount: number; net: number };
+  totals: { gross: number; discount: number; net: number; aicQuantity: number; aicGrossAmount: number; aicIncludedCredits: number; aicAdditionalUsageGrossAmount: number };
   users: BillingUserTotals[]; // unsorted list; consumer may sort
   userMap: Map<string, BillingUserTotals>; // internal convenience map (exposed for advanced consumers)
   hasAnyBillingData: boolean; // true if at least one billing numeric column encountered
+  hasAnyAicData: boolean; // true if at least one AI Credits numeric column encountered
   specialBuckets?: SpecialBillingBucketTotals[];
 }

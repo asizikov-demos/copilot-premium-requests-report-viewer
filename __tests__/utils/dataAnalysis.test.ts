@@ -28,7 +28,7 @@ describe('CSV Data Processing', () => {
       expect(result).toHaveLength(4);
       expect(result[0]).toMatchObject({
         timestamp: new Date('2025-06-03T00:00:00Z'),
-        user: 'USerA',
+        user: 'test-user-a',
         model: 'gpt-4.1-2025-04-14',
         requestsUsed: 1.00,
         exceedsQuota: false,
@@ -116,7 +116,7 @@ describe('CSV Data Processing', () => {
       
       expect(result[1]).toMatchObject({
         timestamp: new Date('2025-06-03T00:00:00Z'),
-        user: 'JohnDoe',
+        user: 'test-user-b',
         model: 'claude-3.7-sonnet-thought',
         requestsUsed: 2.50,
         exceedsQuota: true,
@@ -159,8 +159,8 @@ describe('CSV Data Processing', () => {
       const processedData = processCSVData(validCSVData);
       const result = analyzeData(processedData);
       
-      expect(result.totalUniqueUsers).toBe(3); // USerA, JohnDoe, AliceSmith
-      expect(result.usersExceedingQuota).toBe(0); // Nobody actually exceeds their quota (JohnDoe: 2.5/100, others unlimited)
+      expect(result.totalUniqueUsers).toBe(3); // test-user-a, test-user-b, test-user-c
+      expect(result.usersExceedingQuota).toBe(0); // Nobody actually exceeds their quota (test-user-b: 2.5/100, others unlimited)
       expect(result.requestsByModel).toHaveLength(4); // 4 different models
     });
 
@@ -270,7 +270,7 @@ describe('CSV Data Processing', () => {
       const iso = timestamp.toISOString();
       return {
         timestamp,
-        user: 'TestUser',
+        user: 'test-user',
         model: 'test-model',
         requestsUsed: 1.0,
         exceedsQuota: false,

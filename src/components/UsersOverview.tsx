@@ -7,6 +7,7 @@ import { UserDetailsView } from './UserDetailsView';
 import { useSortableTable } from '@/hooks/useSortableTable';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { PRICING } from '@/constants/pricing';
+import { hasAicFields } from '@/utils/aicFields';
 import type { UserSummary } from '@/utils/analytics';
 import { getUserQuota, QuotaArtifacts, UsageArtifacts, computeOverageSummaryFromProcessedData } from '@/utils/ingestion';
 
@@ -33,15 +34,16 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
 
   const ROWS_PER_PAGE = 50;
 
-  type ColumnKey = 'quota' | 'totalRequests' | 'gross' | 'discount' | 'net';
+  type ColumnKey = 'quota' | 'totalRequests' | 'aicGrossAmount' | 'gross' | 'discount' | 'net';
 
   const userCosts = useMemo(() => {
-    const map = new Map<string, { gross: number; discount: number; net: number }>();
+    const map = new Map<string, { gross: number; discount: number; net: number; aicGrossAmount: number }>();
     for (const row of processedData) {
-      const prev = map.get(row.user) ?? { gross: 0, discount: 0, net: 0 };
+      const prev = map.get(row.user) ?? { gross: 0, discount: 0, net: 0, aicGrossAmount: 0 };
       prev.gross += row.grossAmount ?? 0;
       prev.discount += row.discountAmount ?? 0;
       prev.net += row.netAmount ?? 0;
+      prev.aicGrossAmount += row.aicGrossAmount ?? 0;
       map.set(row.user, prev);
     }
     return map;
@@ -52,7 +54,17 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
     [processedData]
   );
 
-  const columns = useMemo<ColumnKey[]>(() => ['quota', 'totalRequests', ...(hasCosts ? ['gross', 'discount', 'net'] as ColumnKey[] : [])], [hasCosts]);
+  const hasAicGross = useMemo(() =>
+    hasAicFields(processedData),
+    [processedData]
+  );
+
+  const columns = useMemo<ColumnKey[]>(() => [
+    'quota',
+    'totalRequests',
+    ...(hasAicGross ? ['aicGrossAmount'] as ColumnKey[] : []),
+    ...(hasCosts ? ['gross', 'discount', 'net'] as ColumnKey[] : [])
+  ], [hasAicGross, hasCosts]);
 
   const getSortableValue = useCallback((row: UserSummary, column: ColumnKey) => {
     if (column === 'quota') {
@@ -61,8 +73,8 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
     }
 
     if (column === 'totalRequests') return row.totalRequests;
-    if (column === 'gross' || column === 'discount' || column === 'net') {
-      const costs = userCosts.get(row.user) ?? { gross: 0, discount: 0, net: 0 };
+    if (column === 'gross' || column === 'discount' || column === 'net' || column === 'aicGrossAmount') {
+      const costs = userCosts.get(row.user) ?? { gross: 0, discount: 0, net: 0, aicGrossAmount: 0 };
       return costs[column];
     }
     return 0;
@@ -385,7 +397,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                 const userQuota = getUserQuota(quotaArtifacts, user.user);
                 const isOverQuota = userQuota !== 'unlimited' && user.totalRequests > userQuota;
                 const quotaDisplay = userQuota === 'unlimited' ? 'Unlimited' : `${userQuota}`;
-                const costs = userCosts.get(user.user) ?? { gross: 0, discount: 0, net: 0 };
+                const costs = userCosts.get(user.user) ?? { gross: 0, discount: 0, net: 0, aicGrossAmount: 0 };
 
                 return (
                 <button
@@ -414,6 +426,11 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                       <span className="text-[#636c76]">${costs.gross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       <span className="text-emerald-600">-${costs.discount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       <span className="font-semibold text-[#1f2328]">${costs.net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                  {hasAicGross && (
+                    <div className="mt-1.5 text-xs font-mono tabular-nums text-[#636c76]">
+                      AI Credits Gross: ${costs.aicGrossAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                   )}
                 </button>
@@ -478,6 +495,21 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                     </span>
                   </div>
                 </th>
+                {hasAicGross && (
+                  <th
+                    className={`px-4 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-[0.05em] min-w-36 cursor-pointer hover:bg-[#f6f8fa] select-none transition-colors duration-150 ${
+                      sortBy === 'aicGrossAmount' ? 'bg-[#eef1f4]' : 'bg-[#f6f8fa]'
+                    }`}
+                    onClick={() => handleSortWithReset('aicGrossAmount')}
+                  >
+                    <div className="flex items-center gap-1 justify-end">
+                      AI Credits Gross
+                      <span className="text-[#636c76]">
+                        {sortBy === 'aicGrossAmount' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
+                      </span>
+                    </div>
+                  </th>
+                )}
                 {hasCosts && (
                   <>
                     <th
@@ -553,19 +585,28 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                       </span>
                     )}
                   </td>
-                  {hasCosts && (() => {
-                    const costs = userCosts.get(user.user) ?? { gross: 0, discount: 0, net: 0 };
+                  {(() => {
+                    const costs = userCosts.get(user.user) ?? { gross: 0, discount: 0, net: 0, aicGrossAmount: 0 };
                     return (
                       <>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-[#636c76] font-mono tabular-nums text-right">
-                          ${costs.gross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-emerald-600 font-mono tabular-nums text-right">
-                          -${costs.discount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-[#1f2328] font-mono tabular-nums text-right">
-                          ${costs.net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </td>
+                        {hasAicGross && (
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-[#636c76] font-mono tabular-nums text-right">
+                            ${costs.aicGrossAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                        )}
+                        {hasCosts && (
+                          <>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-[#636c76] font-mono tabular-nums text-right">
+                              ${costs.gross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-emerald-600 font-mono tabular-nums text-right">
+                              -${costs.discount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-[#1f2328] font-mono tabular-nums text-right">
+                              ${costs.net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                          </>
+                        )}
                       </>
                     );
                   })()}

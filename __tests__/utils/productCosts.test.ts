@@ -26,7 +26,7 @@ function createRow(overrides: Partial<ProcessedData>): ProcessedData {
 describe('aggregateProductCosts', () => {
   test('aggregates rows in stable product order with display labels', () => {
     const rows: ProcessedData[] = [
-      createRow({ product: 'copilot', sku: 'copilot_premium_request', model: 'Claude Sonnet 4', requestsUsed: 2, grossAmount: 0.08, netAmount: 0.08 }),
+      createRow({ product: 'copilot', sku: 'copilot_premium_request', model: 'Claude Sonnet 4', requestsUsed: 2, grossAmount: 0.08, netAmount: 0.08, aicQuantity: 12.5, aicGrossAmount: 0.125 }),
       createRow({ product: 'spark', sku: 'spark_premium_request', model: 'Claude Sonnet 4.5', requestsUsed: 3, grossAmount: 0.12, netAmount: 0.12 }),
       createRow({ model: 'Coding Agent model', requestsUsed: 4, grossAmount: 0.16, netAmount: 0.16 }),
       createRow({ model: 'Code Review model', requestsUsed: 5, grossAmount: 0.2, netAmount: 0.2 }),
@@ -34,7 +34,7 @@ describe('aggregateProductCosts', () => {
     ];
 
     expect(aggregateProductCosts(rows)).toEqual([
-      expect.objectContaining({ category: 'Copilot', label: 'Copilot', requests: 2 }),
+      expect.objectContaining({ category: 'Copilot', label: 'Copilot', requests: 2, aicQuantity: 12.5, aicGrossAmount: 0.125 }),
       expect.objectContaining({ category: 'Spark', label: 'Spark', requests: 3 }),
       expect.objectContaining({ category: 'Coding Agent', label: 'Cloud Agent', requests: 4 }),
       expect.objectContaining({ category: 'Code Review', label: 'Code Review', requests: 5 }),

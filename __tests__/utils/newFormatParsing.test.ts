@@ -6,6 +6,7 @@ import type { NormalizedRow } from '@/utils/ingestion/types';
 
 import { processCSVData } from '../helpers/processCSVData';
 import { newFormatRows } from '../fixtures/newFormatCSVData';
+import type { CSVData } from '@/types/csv';
 
 describe('processCSVData (CSV format)', () => {
   it('maps CSV rows into ProcessedData correctly', () => {
@@ -39,6 +40,32 @@ describe('processCSVData (CSV format)', () => {
       expect(typeof r.requestsUsed).toBe('number');
       expect(typeof r.exceedsQuota).toBe('boolean');
     });
+  });
+
+  it('maps AI Credits fields from the billing report', () => {
+    const rows: CSVData[] = [
+      {
+        date: '2026-03-01',
+        username: 'test-user-a',
+        product: 'copilot',
+        sku: 'coding_agent_premium_request',
+        model: 'Coding Agent model',
+        quantity: '2',
+        total_monthly_quota: '1000',
+        applied_cost_per_quantity: '0.04',
+        gross_amount: '0.08',
+        discount_amount: '0.08',
+        net_amount: '0',
+        organization: 'example-org-a',
+        cost_center_name: '',
+        aic_quantity: '8.68986',
+        aic_gross_amount: '0.08689859999999999',
+      },
+    ];
+
+    const processed = processCSVData(rows);
+    expect(processed[0].aicQuantity).toBeCloseTo(8.68986);
+    expect(processed[0].aicGrossAmount).toBeCloseTo(0.0868986);
   });
 
   it('maps blank-username Code Review rows into a non-Copilot usage bucket with zero quota', () => {

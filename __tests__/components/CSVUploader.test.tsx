@@ -381,7 +381,7 @@ describe('CSVUploader', () => {
     const { ingestStream } = jest.requireMock('@/utils/ingestion');
     const testData = [{
       date: '2025-06-03',
-      username: 'USerA',
+      username: 'test-user-a',
       model: 'gpt-4.1-2025-04-14',
       quantity: '1.00',
       exceeds_quota: 'false',
