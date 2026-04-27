@@ -13,6 +13,7 @@ import {
   QuotaArtifacts,
   UsageArtifacts,
 } from '@/utils/ingestion';
+import { hasAicFields } from '@/utils/aicFields';
 import { generateModelColors } from '@/utils/modelColors';
 import { calculateEnterpriseUpgradeSavings } from '@/utils/analytics/costOptimization';
 import { aggregateProductCosts } from '@/utils/productCosts';
@@ -219,19 +220,26 @@ export function UserDetailsView({
     gross: number;
     discount: number;
     net: number;
+    aicGrossAmount: number;
     isFirstInDate: boolean;
     rowSpan: number;
   };
 
+  const hasAicGross = useMemo(() => hasAicFields(userData), [userData]);
+
   const dailyBreakdownRows = useMemo((): DailyModelRow[] => {
     const hasBillingData = userData.some(
-      (row) => row.grossAmount !== undefined || row.netAmount !== undefined || row.discountAmount !== undefined
+      (row) =>
+        row.grossAmount !== undefined ||
+        row.netAmount !== undefined ||
+        row.discountAmount !== undefined ||
+        row.aicGrossAmount !== undefined
     );
     if (!hasBillingData) return [];
 
     // Aggregate by date + model
     type Key = string;
-    const agg = new Map<Key, { date: string; model: string; requests: number; gross: number; discount: number; net: number }>();
+    const agg = new Map<Key, { date: string; model: string; requests: number; gross: number; discount: number; net: number; aicGrossAmount: number }>();
     for (const row of userData) {
       const key = `${row.dateKey}||${row.model}`;
       const existing = agg.get(key);
@@ -240,6 +248,7 @@ export function UserDetailsView({
         existing.gross += row.grossAmount ?? 0;
         existing.discount += row.discountAmount ?? 0;
         existing.net += row.netAmount ?? 0;
+        existing.aicGrossAmount += row.aicGrossAmount ?? 0;
       } else {
         agg.set(key, {
           date: row.dateKey,
@@ -248,6 +257,7 @@ export function UserDetailsView({
           gross: row.grossAmount ?? 0,
           discount: row.discountAmount ?? 0,
           net: row.netAmount ?? 0,
+          aicGrossAmount: row.aicGrossAmount ?? 0,
         });
       }
     }
@@ -271,7 +281,11 @@ export function UserDetailsView({
 
   const productCosts = useMemo(() => {
     const hasBillingData = userData.some(
-      (row) => row.grossAmount !== undefined || row.netAmount !== undefined || row.discountAmount !== undefined
+      (row) =>
+        row.grossAmount !== undefined ||
+        row.netAmount !== undefined ||
+        row.discountAmount !== undefined ||
+        row.aicGrossAmount !== undefined
     );
     if (!hasBillingData) return [];
     return aggregateProductCosts(userData);
@@ -393,6 +407,9 @@ export function UserDetailsView({
                 <tr className="border-b border-[#d1d9e0]">
                   <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Product</th>
                   <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Requests</th>
+                  {hasAicGross && (
+                    <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">AI Credits Gross</th>
+                  )}
                   <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Gross</th>
                   <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Discount</th>
                   <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Net</th>
@@ -403,6 +420,9 @@ export function UserDetailsView({
                   <tr key={product.label} className="hover:bg-[#fcfdff] transition-colors">
                     <td className="px-5 py-3 text-sm font-medium text-[#1f2328]">{product.label}</td>
                     <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono">{product.requests.toFixed(2)}</td>
+                    {hasAicGross && (
+                      <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono">${product.aicGrossAmount.toFixed(2)}</td>
+                    )}
                     <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono">${product.gross.toFixed(2)}</td>
                     <td className="px-5 py-3 text-sm text-emerald-600 text-right font-mono">-${product.discount.toFixed(2)}</td>
                     <td className="px-5 py-3 text-sm font-semibold text-[#1f2328] text-right font-mono">${product.net.toFixed(2)}</td>
@@ -475,6 +495,9 @@ export function UserDetailsView({
                   <th className="px-5 py-3 w-28 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">Date</th>
                   <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Model</th>
                   <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">Requests</th>
+                  {hasAicGross && (
+                    <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">AI Credits Gross</th>
+                  )}
                   <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">Gross Cost</th>
                   <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">Discounts</th>
                   <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">Net Cost</th>
@@ -493,6 +516,9 @@ export function UserDetailsView({
                     ) : null}
                     <td className="px-5 py-3 text-sm text-[#636c76]">- {row.model}</td>
                     <td className="px-5 py-3 text-sm font-mono text-[#1f2328] text-right">{row.requests.toFixed(2)}</td>
+                    {hasAicGross && (
+                      <td className="px-5 py-3 text-sm font-mono text-[#636c76] text-right">${row.aicGrossAmount.toFixed(2)}</td>
+                    )}
                     <td className="px-5 py-3 text-sm font-mono text-[#636c76] text-right">${row.gross.toFixed(2)}</td>
                     <td className="px-5 py-3 text-sm font-mono text-emerald-600 text-right">-${row.discount.toFixed(2)}</td>
                     <td className="px-5 py-3 text-sm font-mono font-semibold text-[#1f2328] text-right">${row.net.toFixed(2)}</td>

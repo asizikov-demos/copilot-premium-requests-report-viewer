@@ -72,6 +72,101 @@ function makeUsage(users: UserSummary[]): UsageArtifacts {
 }
 
 describe('UsersOverview - sorting', () => {
+  it('shows and sorts AI Credits Gross when AIC data is present', () => {
+    const userData: UserSummary[] = [
+      { user: 'Alice', totalRequests: 10, modelBreakdown: { 'gpt-4': 10 } },
+      { user: 'Bob', totalRequests: 20, modelBreakdown: { 'gpt-4': 20 } },
+      { user: 'Charlie', totalRequests: 30, modelBreakdown: { 'gpt-4': 30 } },
+    ];
+
+    const quotaArtifacts = makeQuota([
+      { user: 'Alice', quota: PRICING.BUSINESS_QUOTA },
+      { user: 'Bob', quota: PRICING.BUSINESS_QUOTA },
+      { user: 'Charlie', quota: PRICING.ENTERPRISE_QUOTA },
+    ]);
+
+    const timestamp = new Date('2026-03-01T00:00:00Z');
+    const makeProcessedRow = (user: string, requestsUsed: number, aicGrossAmount: number): ProcessedData => ({
+      timestamp,
+      user,
+      model: 'Coding Agent model',
+      requestsUsed,
+      exceedsQuota: false,
+      totalQuota: '1000',
+      quotaValue: PRICING.ENTERPRISE_QUOTA,
+      iso: timestamp.toISOString(),
+      dateKey: '2026-03-01',
+      monthKey: '2026-03',
+      epoch: timestamp.getTime(),
+      aicGrossAmount,
+    });
+
+    render(
+      <UsersOverview
+        userData={userData}
+        processedData={[
+          makeProcessedRow('Alice', 10, 0.09),
+          makeProcessedRow('Bob', 20, 0.18),
+          makeProcessedRow('Charlie', 30, 0.12),
+        ]}
+        dailyCumulativeData={[{ date: '2026-03-01T00:00:00Z', Alice: 10, Bob: 20, Charlie: 30 }]}
+        quotaArtifacts={quotaArtifacts}
+        usageArtifacts={makeUsage(userData)}
+        onBack={() => {}}
+      />
+    );
+
+    const table = screen.getByRole('table');
+    expect(within(table).getByRole('columnheader', { name: /AI Credits Gross/ })).toBeInTheDocument();
+    expect(within(table).getByText('$0.18')).toBeInTheDocument();
+
+    const getRowUserOrder = (): string[] => {
+      const rows = within(table).getAllByRole('row').slice(1);
+      return rows.map(row => within(row).getByRole('button').textContent ?? '');
+    };
+
+    const aicGrossHeader = within(table).getByRole('columnheader', { name: /AI Credits Gross/ });
+    fireEvent.click(aicGrossHeader);
+    expect(getRowUserOrder()).toEqual(['Bob', 'Charlie', 'Alice']);
+  });
+
+  it('shows AI Credits Gross when the new report fields are present with zero spend', () => {
+    const userData: UserSummary[] = [
+      { user: 'Alice', totalRequests: 10, modelBreakdown: { 'gpt-4': 10 } },
+    ];
+    const quotaArtifacts = makeQuota([{ user: 'Alice', quota: PRICING.BUSINESS_QUOTA }]);
+    const timestamp = new Date('2026-03-01T00:00:00Z');
+    const processedData: ProcessedData[] = [{
+      timestamp,
+      user: 'Alice',
+      model: 'gpt-4',
+      requestsUsed: 10,
+      exceedsQuota: false,
+      totalQuota: '300',
+      quotaValue: PRICING.BUSINESS_QUOTA,
+      iso: timestamp.toISOString(),
+      dateKey: '2026-03-01',
+      monthKey: '2026-03',
+      epoch: timestamp.getTime(),
+      aicGrossAmount: 0,
+    }];
+
+    render(
+      <UsersOverview
+        userData={userData}
+        processedData={processedData}
+        dailyCumulativeData={[{ date: '2026-03-01T00:00:00Z', Alice: 10 }]}
+        quotaArtifacts={quotaArtifacts}
+        usageArtifacts={makeUsage(userData)}
+        onBack={() => {}}
+      />
+    );
+
+    const table = screen.getByRole('table');
+    expect(within(table).getByRole('columnheader', { name: /AI Credits Gross/ })).toBeInTheDocument();
+    expect(within(table).getByText('$0.00')).toBeInTheDocument();
+  });
+
   it('sorts by quota (including Unlimited) when clicking Quota header', () => {
     const userData: UserSummary[] = [
       { user: 'Alice', totalRequests: 10, modelBreakdown: { 'gpt-4': 10 } },

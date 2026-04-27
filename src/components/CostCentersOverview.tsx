@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useAnalysisContext } from '@/context/AnalysisContext';
+import { hasAicFields } from '@/utils/aicFields';
 import {
   accumulateProductCost,
   createEmptyProductCostMap,
@@ -15,6 +16,7 @@ interface CostCenterRow {
   gross: number;
   discount: number;
   net: number;
+  aicGrossAmount: number;
   products: ProductCost[];
 }
 
@@ -28,6 +30,7 @@ export function CostCentersOverview() {
       gross: number;
       discount: number;
       net: number;
+      aicGrossAmount: number;
       productBuckets: ReturnType<typeof createEmptyProductCostMap>;
     }>();
 
@@ -40,6 +43,7 @@ export function CostCentersOverview() {
           gross: 0,
           discount: 0,
           net: 0,
+          aicGrossAmount: 0,
           productBuckets: createEmptyProductCostMap(),
         };
         map.set(cc, entry);
@@ -49,6 +53,7 @@ export function CostCentersOverview() {
       entry.gross += row.grossAmount ?? 0;
       entry.discount += row.discountAmount ?? 0;
       entry.net += row.netAmount ?? 0;
+      entry.aicGrossAmount += row.aicGrossAmount ?? 0;
       accumulateProductCost(entry.productBuckets, row);
     }
 
@@ -59,12 +64,15 @@ export function CostCentersOverview() {
         gross: data.gross,
         discount: data.discount,
         net: data.net,
+        aicGrossAmount: data.aicGrossAmount,
         products: getPopulatedProductCosts(data.productBuckets),
       }))
       .sort((a, b) => b.net - a.net);
   }, [aggregateProcessedData]);
 
   const hasCosts = costCenterRows.some(r => r.gross > 0 || r.net > 0);
+  const hasAicGross = hasAicFields(aggregateProcessedData);
+  const detailColSpan = 2 + (hasAicGross ? 1 : 0) + (hasCosts ? 3 : 0);
 
   return (
     <div className="space-y-6">
@@ -79,6 +87,9 @@ export function CostCentersOverview() {
               <tr className="border-b border-[#d1d9e0]">
                 <th className="px-6 py-3 text-left text-xs font-bold text-[#636c76] uppercase tracking-wider">Cost Center</th>
                 <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Requests</th>
+                {hasAicGross && (
+                  <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">AI Credits Gross</th>
+                )}
                 {hasCosts && (
                   <>
                     <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Gross</th>
@@ -115,6 +126,11 @@ export function CostCentersOverview() {
                     <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
                       {cc.requests.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
+                    {hasAicGross && (
+                      <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
+                        ${cc.aicGrossAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    )}
                     {hasCosts && (
                       <>
                         <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
@@ -131,13 +147,16 @@ export function CostCentersOverview() {
                   </tr>
                   {expandedCenter === cc.name && cc.products.length > 0 && (
                     <tr>
-                      <td id={detailsId} colSpan={hasCosts ? 5 : 2} className="px-0 py-0">
+                      <td id={detailsId} colSpan={detailColSpan} className="px-0 py-0">
                         <div className="bg-[#f6f8fa] border-t border-[#d1d9e0]">
                           <table className="min-w-full">
                             <thead>
                               <tr className="border-b border-[#d1d9e0]">
                                 <th className="px-10 py-2 text-left text-xs font-bold text-[#636c76] uppercase tracking-wider">Product</th>
                                 <th className="px-6 py-2 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Requests</th>
+                                {hasAicGross && (
+                                  <th className="px-6 py-2 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">AI Credits Gross</th>
+                                )}
                                 {hasCosts && (
                                   <>
                                     <th className="px-6 py-2 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Gross</th>
@@ -154,6 +173,11 @@ export function CostCentersOverview() {
                                   <td className="px-6 py-2.5 text-sm text-[#636c76] text-right font-mono">
                                     {p.requests.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </td>
+                                  {hasAicGross && (
+                                    <td className="px-6 py-2.5 text-sm text-[#636c76] text-right font-mono">
+                                      ${p.aicGrossAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </td>
+                                  )}
                                   {hasCosts && (
                                     <>
                                       <td className="px-6 py-2.5 text-sm text-[#636c76] text-right font-mono">
