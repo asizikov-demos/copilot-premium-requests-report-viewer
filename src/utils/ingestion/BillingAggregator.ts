@@ -5,6 +5,8 @@
  *  - grossAmount
  *  - discountAmount
  *  - netAmount
+ *  - aicQuantity
+ *  - aicGrossAmount
  * Also tracks per-user billing totals (including total request quantity for convenience)
  * so the UI can render billing summaries without scanning raw rows or ProcessedData.
  *
@@ -24,6 +26,7 @@ import {
   SpecialBillingBucketTotals,
   SpecialUsageBucketKey
 } from './types';
+import { calculateAicPoolEstimate, calculateIncludedAicCreditsForUsers } from '@/utils/aicPool';
 
 export class BillingAggregator implements Aggregator<BillingArtifacts> {
   readonly id = 'billing';
@@ -31,18 +34,24 @@ export class BillingAggregator implements Aggregator<BillingArtifacts> {
   private grossTotal = 0;
   private discountTotal = 0;
   private netTotal = 0;
+  private aicQuantityTotal = 0;
+  private aicGrossAmountTotal = 0;
   private userMap = new Map<string, BillingUserTotals>();
   private specialBucketMap = new Map<SpecialUsageBucketKey, SpecialBillingBucketTotals>();
   private hasAnyBillingData = false;
+  private hasAnyAicData = false;
 
   init(_ctx: AggregatorContext): void {
     void _ctx;
     this.grossTotal = 0;
     this.discountTotal = 0;
     this.netTotal = 0;
+    this.aicQuantityTotal = 0;
+    this.aicGrossAmountTotal = 0;
     this.userMap.clear();
     this.specialBucketMap.clear();
     this.hasAnyBillingData = false;
+    this.hasAnyAicData = false;
   }
 
   onRow(row: NormalizedRow, _ctx: AggregatorContext): void {
@@ -65,6 +74,9 @@ export class BillingAggregator implements Aggregator<BillingArtifacts> {
         entry = { user: row.user, quantity: 0 };
         this.userMap.set(row.user, entry);
       }
+      if (entry.quotaValue === undefined && row.quotaValue !== undefined) {
+        entry.quotaValue = row.quotaValue;
+      }
     }
     entry.quantity += row.quantity;
 
@@ -85,15 +97,40 @@ export class BillingAggregator implements Aggregator<BillingArtifacts> {
       sawBilling = true;
     }
     if (sawBilling) this.hasAnyBillingData = true;
+
+    let sawAic = false;
+    if (typeof row.aicQuantity === 'number') {
+      this.aicQuantityTotal += row.aicQuantity;
+      entry.aicQuantity = (entry.aicQuantity || 0) + row.aicQuantity;
+      sawAic = true;
+    }
+    if (typeof row.aicGrossAmount === 'number') {
+      this.aicGrossAmountTotal += row.aicGrossAmount;
+      entry.aicGrossAmount = (entry.aicGrossAmount || 0) + row.aicGrossAmount;
+      sawAic = true;
+    }
+    if (sawAic) this.hasAnyAicData = true;
   }
 
   finalize(_ctx: AggregatorContext): BillingArtifacts {
     void _ctx;
+    const includedCredits = calculateIncludedAicCreditsForUsers(this.userMap.values());
+    const poolEstimate = calculateAicPoolEstimate(includedCredits, this.aicGrossAmountTotal);
+
     return {
-      totals: { gross: this.grossTotal, discount: this.discountTotal, net: this.netTotal },
+      totals: {
+        gross: this.grossTotal,
+        discount: this.discountTotal,
+        net: this.netTotal,
+        aicQuantity: this.aicQuantityTotal,
+        aicGrossAmount: this.aicGrossAmountTotal,
+        aicIncludedCredits: poolEstimate.includedCredits,
+        aicAdditionalUsageGrossAmount: poolEstimate.additionalUsageGrossAmount
+      },
       users: Array.from(this.userMap.values()),
       userMap: this.userMap,
       hasAnyBillingData: this.hasAnyBillingData,
+      hasAnyAicData: this.hasAnyAicData,
       specialBuckets: Array.from(this.specialBucketMap.values())
     };
   }

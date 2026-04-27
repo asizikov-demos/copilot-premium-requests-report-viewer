@@ -41,6 +41,8 @@ export function buildProcessedDataFromRows(rows: NormalizedRow[] | undefined | n
       grossAmount: row.grossAmount,
       discountAmount: row.discountAmount,
       netAmount: row.netAmount,
+      aicQuantity: row.aicQuantity,
+      aicGrossAmount: row.aicGrossAmount,
       isNonCopilotUsage: row.isNonCopilotUsage,
       usageBucket: row.usageBucket,
       ...keys

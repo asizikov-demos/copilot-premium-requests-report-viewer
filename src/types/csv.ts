@@ -15,6 +15,8 @@ export interface CSVData {
   net_amount?: string; // numeric string
   organization?: string;
   cost_center_name?: string;
+  aic_quantity?: string; // numeric string
+  aic_gross_amount?: string; // numeric string
 }
 
 // Processed record produced from CSV row.
@@ -40,6 +42,8 @@ export interface ProcessedData {
   grossAmount?: number;
   discountAmount?: number;
   netAmount?: number;
+  aicQuantity?: number;
+  aicGrossAmount?: number;
   isNonCopilotUsage?: boolean;
   usageBucket?: 'non_copilot_code_review';
 }
