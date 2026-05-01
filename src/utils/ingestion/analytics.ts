@@ -13,7 +13,7 @@ import { PRICING } from '@/constants/pricing';
 import type { AnalysisResults, ProcessedData } from '@/types/csv';
 import type { CodeReviewAnalysis } from '@/types/csv';
 import { CodingAgentAnalysis, UserDailyData } from '@/types/csv';
-import { Advisory as LegacyAdvisory, countEarlyExhaustedUsers } from '@/utils/analytics/advisory';
+import { Advisory as LegacyAdvisory, buildPerRequestBillingAdvisory, countEarlyExhaustedUsers } from '@/utils/analytics/advisory';
 import { CONSUMPTION_THRESHOLDS, UserConsumptionCategory, InsightsOverviewData } from '@/utils/analytics/insights';
 import type { FeatureUtilizationStats } from '@/utils/analytics/insights';
 import { buildUserQuotaMapFromRows } from '@/utils/analytics/quota';
@@ -534,25 +534,8 @@ export function buildAdvisoriesFromArtifacts(
   if (totalUsers === 0) return advisories;
 
   const earlyExhausterCount = countEarlyExhaustedUsers(weekly);
-  const earlyExhausterPercentage = earlyExhausterCount / Math.max(1, totalUsers);
-  if (earlyExhausterCount > 0) {
-    const severity: LegacyAdvisory['severity'] = earlyExhausterPercentage >= 0.30 ? 'high' : 'medium';
-    advisories.push({
-      type: 'perRequestBilling',
-      severity,
-      title: 'Consider Per-Request Billing for Power Users',
-      description: `${earlyExhausterCount} user${earlyExhausterCount === 1 ? '' : 's'} (${(earlyExhausterPercentage * 100).toFixed(0)}%) exhaust their quota before day 28 of the month. These power users could benefit from per-request billing to avoid disruption.`,
-      actionItems: [
-        'Review power user consumption patterns in detail',
-        'Set up per-request billing budgets for high-consumption users',
-        'Configure spending limits to control costs',
-        'Consider upgrading to a higher plan for consistent power users'
-      ],
-      affectedUsers: earlyExhausterCount,
-      estimatedImpact: `Indicative additional cost: ~$${(earlyExhausterCount * 50 * PRICING.OVERAGE_RATE_PER_REQUEST).toFixed(0)}/month (assuming 50 extra requests per early power user)`,
-      documentationLink: 'https://docs.github.com/en/enterprise-cloud@latest/billing/tutorials/set-up-budgets#managing-budgets-for-your-organization-or-enterprise'
-    });
-  }
+  const perRequestBillingAdvisory = buildPerRequestBillingAdvisory(earlyExhausterCount, totalUsers);
+  if (perRequestBillingAdvisory) advisories.push(perRequestBillingAdvisory as LegacyAdvisory);
 
   const lowAdoptionUsers = categories.lowAdoptionUsers;
   const lowUtilizationPercentage = lowAdoptionUsers.length / Math.max(1, totalUsers);
