@@ -1,3 +1,4 @@
+import { computeOverageSummary as computeOverageSummaryShim } from '@/utils/analytics/artifactShims';
 import { computeOverageSummary } from '@/utils/analytics/overage';
 import { computeOverageSummaryFromArtifacts, computeOverageSummaryFromProcessedData } from '@/utils/ingestion/analytics';
 import type { UsageArtifacts, QuotaArtifacts } from '@/utils/ingestion';
@@ -126,5 +127,18 @@ describe('computeOverageSummary', () => {
 
     expect(computeOverageSummary(users, processed).totalOverageRequests).toBe(0);
     expect(computeOverageSummaryFromProcessedData(processed).totalOverageRequests).toBe(0);
+  });
+
+  it('keeps the artifact shims overage export aligned with the canonical implementation', () => {
+    const users: UserSummary[] = [
+      { user: 'test-user-one', totalRequests: 340, modelBreakdown: { 'test-model': 340 } },
+      { user: 'test-user-two', totalRequests: 1010, modelBreakdown: { 'test-model': 1010 } },
+    ];
+    const processed = [
+      makeProcessed({ user: 'test-user-one', quotaValue: PRICING.BUSINESS_QUOTA }),
+      makeProcessed({ user: 'test-user-two', quotaValue: PRICING.ENTERPRISE_QUOTA }),
+    ];
+
+    expect(computeOverageSummaryShim(users, processed)).toEqual(computeOverageSummary(users, processed));
   });
 });
