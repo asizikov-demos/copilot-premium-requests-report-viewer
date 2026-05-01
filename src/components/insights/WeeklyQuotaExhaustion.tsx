@@ -28,12 +28,14 @@ function getFallbackRange(weekNumber: number): string {
   return 'Days 29+';
 }
 
+function getDayOfMonth(dateKey: string): number {
+  return parseInt(dateKey.split('-')[2], 10);
+}
+
 function formatWeekRange(startDate?: string, endDate?: string): string {
   if (!startDate || !endDate) return '';
   // Week dates come from UTC date keys in YYYY-MM-DD format.
-  const startDay = startDate.split('-')[2];
-  const endDay = endDate.split('-')[2];
-  return `Days ${parseInt(startDay, 10)}-${parseInt(endDay, 10)}`;
+  return `Days ${getDayOfMonth(startDate)}-${getDayOfMonth(endDate)}`;
 }
 
 export function WeeklyQuotaExhaustion({ weeklyExhaustion, totalUsers, height = 280 }: WeeklyQuotaExhaustionProps) {

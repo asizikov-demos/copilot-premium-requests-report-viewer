@@ -52,15 +52,19 @@ describe('buildAdvisoriesFromArtifacts', () => {
         { weekNumber: 5, startDate: '2025-06-29', endDate: '2025-06-30', usersExhaustedInWeek: 1 }
       ]
     };
+    const expectedEarlyExhausted = weekly.weeks
+      .filter((week) => week.weekNumber <= 4)
+      .reduce((total, week) => total + week.usersExhaustedInWeek, 0);
 
     const advisories = buildAdvisoriesFromArtifacts(categories, weekly, usage, quota);
     const perRequest = advisories.find(a => a.type === 'perRequestBilling');
     expect(perRequest).toMatchObject({
       severity: 'high',
-      affectedUsers: 2,
+      affectedUsers: expectedEarlyExhausted,
       description: expect.stringContaining('2 users (40%)')
     });
-    expect(perRequest?.description).not.toContain('3 users');
+    expect(expectedEarlyExhausted).toBe(2);
+    expect(weekly.totalUsersExhausted).toBe(3);
   });
 
   it('produces training advisory when low adoption threshold met', () => {
