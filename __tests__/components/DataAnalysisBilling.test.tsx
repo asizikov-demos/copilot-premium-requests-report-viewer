@@ -1,6 +1,8 @@
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { DataAnalysis } from '@/components/DataAnalysis';
+import { PRICING } from '@/constants/pricing';
+import { FeatureUsageAggregator } from '@/utils/ingestion/FeatureUsageAggregator';
 import { newFormatRows } from '../fixtures/newFormatCSVData';
 import type { CSVData } from '@/types/csv';
 import { normalizeRow } from '@/utils/ingestion/normalizeRow';
@@ -22,12 +24,20 @@ function createIngestionResultFromRawRows(rows: CSVData[]): IngestionResult {
   const normalizedRows = rows
     .map(row => normalizeRow(row, warnings))
     .filter((row): row is NormalizedRow => row !== null);
+  const featureUsageAggregator = new FeatureUsageAggregator();
+  const aggregatorContext = { pricing: PRICING };
+
+  featureUsageAggregator.init?.(aggregatorContext);
+  for (const row of normalizedRows) {
+    featureUsageAggregator.onRow(row, aggregatorContext);
+  }
 
   return {
     outputs: {
       'quota': { quotaByUser: new Map(), conflicts: new Map(), distinctQuotas: new Set(), hasMixedQuotas: false, hasMixedLicenses: false },
       'usage': { users: [], userTotals: new Map(), modelBreakdown: new Map(), globalModelTotals: new Map(), topModelPerUser: new Map(), modelTotals: {}, userCount: 0, modelCount: 0 },
       'dailyBuckets': { dailyUserTotals: new Map(), startDate: new Date(), endDate: new Date() },
+      'featureUsage': featureUsageAggregator.finalize(aggregatorContext),
       'rawData': normalizedRows
     },
     rowsProcessed: normalizedRows.length,
