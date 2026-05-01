@@ -29,6 +29,38 @@ function makeQuota(entries: Array<{ user: string; quota: number | 'unlimited' }>
 }
 
 describe('buildAdvisoriesFromArtifacts', () => {
+  it('uses weekly exhaustion counts directly for per-request billing advisories', () => {
+    const usage = makeUsage([
+      { user: 'test-user-one', total: 10 },
+      { user: 'test-user-two', total: 10 },
+      { user: 'test-user-three', total: 10 },
+      { user: 'test-user-four', total: 10 },
+      { user: 'test-user-five', total: 10 }
+    ]);
+    const quota = makeQuota([
+      { user: 'test-user-one', quota: 100 },
+      { user: 'test-user-two', quota: 100 },
+      { user: 'test-user-three', quota: 100 },
+      { user: 'test-user-four', quota: 100 },
+      { user: 'test-user-five', quota: 100 }
+    ]);
+    const categories = buildConsumptionCategoriesFromArtifacts(usage, quota);
+    const weekly: WeeklyQuotaExhaustionBreakdown = {
+      totalUsersExhausted: 3,
+      weeks: [
+        { weekNumber: 2, startDate: '2025-06-08', endDate: '2025-06-14', usersExhaustedInWeek: 2 },
+        { weekNumber: 5, startDate: '2025-06-29', endDate: '2025-06-30', usersExhaustedInWeek: 1 }
+      ]
+    };
+
+    const advisories = buildAdvisoriesFromArtifacts(categories, weekly, usage, quota);
+    expect(advisories.find(a => a.type === 'perRequestBilling')).toMatchObject({
+      severity: 'high',
+      affectedUsers: 2,
+      description: expect.stringContaining('2 users (40%)')
+    });
+  });
+
   it('produces training advisory when low adoption threshold met', () => {
     const usage = makeUsage([
       { user: 'u1', total: 5 },

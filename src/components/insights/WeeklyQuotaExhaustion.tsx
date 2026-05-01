@@ -2,15 +2,14 @@
 
 import React, { useMemo } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
-
-import { WeeklyExhaustionData } from '@/utils/analytics/weeklyQuota';
+import type { WeeklyQuotaExhaustionBreakdown } from '@/utils/ingestion/analytics';
 
 import { chartTooltipContentStyle, chartTooltipLabelStyle } from '../charts/chartTooltipStyles';
 
 type ResponsiveHeight = number | `${number}%`;
 
 interface WeeklyQuotaExhaustionProps {
-  weeklyExhaustion: WeeklyExhaustionData;
+  weeklyExhaustion: WeeklyQuotaExhaustionBreakdown;
   totalUsers: number;
   height?: ResponsiveHeight;
 }
@@ -18,30 +17,44 @@ interface WeeklyQuotaExhaustionProps {
 interface WeeklyQuotaDatum {
   week: string;
   users: number;
-  range: string; // days range for tooltip
+  range: string;
+}
+
+function getFallbackRange(weekNumber: number): string {
+  if (weekNumber === 1) return 'Days 1-7';
+  if (weekNumber === 2) return 'Days 8-14';
+  if (weekNumber === 3) return 'Days 15-21';
+  if (weekNumber === 4) return 'Days 22-28';
+  return 'Days 29+';
+}
+
+function formatWeekRange(startDate?: string, endDate?: string): string {
+  if (!startDate || !endDate) return '';
+  return `Days ${parseInt(startDate.slice(8, 10), 10)}-${parseInt(endDate.slice(8, 10), 10)}`;
 }
 
 export function WeeklyQuotaExhaustion({ weeklyExhaustion, totalUsers, height = 280 }: WeeklyQuotaExhaustionProps) {
-  // Backward compatibility: older WeeklyExhaustionData instances may not include week4Exhausted.
-  const {
-    week1Exhausted,
-    week2Exhausted,
-    week3Exhausted,
-    week4Exhausted = []
-  } = weeklyExhaustion;
+  const totalEarly = useMemo(() => (
+    weeklyExhaustion.weeks.reduce((total, week) => (
+      week.weekNumber <= 4 ? total + week.usersExhaustedInWeek : total
+    ), 0)
+  ), [weeklyExhaustion]);
 
-  const totalEarly =
-    week1Exhausted.length +
-    week2Exhausted.length +
-    week3Exhausted.length +
-    week4Exhausted.length;
+  const data: WeeklyQuotaDatum[] = useMemo(() => {
+    const weekMap = new Map(weeklyExhaustion.weeks.map((week) => [week.weekNumber, week]));
+    const maxWeekNumber = Math.max(4, ...weeklyExhaustion.weeks.map((week) => week.weekNumber));
 
-  const data: WeeklyQuotaDatum[] = useMemo(() => [
-    { week: 'Week 1', users: week1Exhausted.length, range: 'Days 1-7' },
-    { week: 'Week 2', users: week2Exhausted.length, range: 'Days 8-14' },
-    { week: 'Week 3', users: week3Exhausted.length, range: 'Days 15-21' },
-    { week: 'Week 4', users: week4Exhausted.length, range: 'Days 22-28' },
-  ], [week1Exhausted, week2Exhausted, week3Exhausted, week4Exhausted]);
+    return Array.from({ length: maxWeekNumber }, (_, index) => {
+      const weekNumber = index + 1;
+      const week = weekMap.get(weekNumber);
+
+      return {
+        week: `Week ${weekNumber}`,
+        users: week?.usersExhaustedInWeek ?? 0,
+        range: formatWeekRange(week?.startDate, week?.endDate) || getFallbackRange(weekNumber)
+      };
+    });
+  }, [weeklyExhaustion]);
 
   return (
     <div className="space-y-4" aria-label="Weekly quota exhaustion summary">
@@ -82,7 +95,7 @@ export function WeeklyQuotaExhaustion({ weeklyExhaustion, totalUsers, height = 2
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <p className="text-xs text-[#636c76]">Users who exhausted quota in each week window.</p>
+      <p className="text-xs text-[#636c76]">Users who exhausted quota in each available week window.</p>
     </div>
   );
 }

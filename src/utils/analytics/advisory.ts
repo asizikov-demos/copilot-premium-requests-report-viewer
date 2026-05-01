@@ -1,8 +1,9 @@
-import { UserSummary } from './types';
-import { categorizeUserConsumption, calculateUnusedValue as calculateUnusedValueFromInsights } from './insights';
-import { ProcessedData } from '@/types/csv';
-import { WeeklyExhaustionData, getEarlyExhausterUsers } from './weeklyQuota';
 import { PRICING } from '@/constants/pricing';
+import type { ProcessedData } from '@/types/csv';
+import type { WeeklyQuotaExhaustionBreakdown } from '@/utils/ingestion/analytics';
+
+import { categorizeUserConsumption, calculateUnusedValue as calculateUnusedValueFromInsights } from './insights';
+import { UserSummary } from './types';
 
 export interface Advisory {
   type: 'perRequestBilling' | 'training' | 'optimization';
@@ -15,10 +16,16 @@ export interface Advisory {
   documentationLink?: string;
 }
 
+export function countEarlyExhaustedUsers(weeklyExhaustion: WeeklyQuotaExhaustionBreakdown): number {
+  return weeklyExhaustion.weeks.reduce((total, week) => (
+    week.weekNumber <= 4 ? total + week.usersExhaustedInWeek : total
+  ), 0);
+}
+
 export function generateAdvisories(
   userData: UserSummary[],
   processedData: ProcessedData[],
-  weeklyExhaustion: WeeklyExhaustionData
+  weeklyExhaustion: WeeklyQuotaExhaustionBreakdown
 ): Advisory[] {
   const advisories: Advisory[] = [];
   const totalUsers = userData.length;
@@ -27,23 +34,23 @@ export function generateAdvisories(
   
   // Always provide per-request billing recommendation if ANY early exhausters exist
   // Severity escalates to 'high' when they represent >=30% of users, otherwise 'medium'
-  const earlyExhausterUsers = getEarlyExhausterUsers(weeklyExhaustion);
-  const earlyExhausterPercentage = earlyExhausterUsers.length / totalUsers;
-  if (earlyExhausterUsers.length > 0) {
+  const earlyExhausterCount = countEarlyExhaustedUsers(weeklyExhaustion);
+  const earlyExhausterPercentage = earlyExhausterCount / totalUsers;
+  if (earlyExhausterCount > 0) {
     const severity: Advisory['severity'] = earlyExhausterPercentage >= 0.30 ? 'high' : 'medium';
     advisories.push({
       type: 'perRequestBilling',
       severity,
       title: 'Consider Per-Request Billing for Power Users',
-      description: `${earlyExhausterUsers.length} user${earlyExhausterUsers.length === 1 ? '' : 's'} (${(earlyExhausterPercentage * 100).toFixed(0)}%) exhaust their quota before day 28 of the month. These power users could benefit from per-request billing to avoid disruption.`,
+      description: `${earlyExhausterCount} user${earlyExhausterCount === 1 ? '' : 's'} (${(earlyExhausterPercentage * 100).toFixed(0)}%) exhaust their quota before day 28 of the month. These power users could benefit from per-request billing to avoid disruption.`,
       actionItems: [
         'Review power user consumption patterns in detail',
         'Set up per-request billing budgets for high-consumption users',
         'Configure spending limits to control costs',
         'Consider upgrading to a higher plan for consistent power users'
       ],
-      affectedUsers: earlyExhausterUsers.length,
-      estimatedImpact: `Indicative additional cost: ~$${(earlyExhausterUsers.length * 50 * PRICING.OVERAGE_RATE_PER_REQUEST).toFixed(0)}/month (assuming 50 extra requests per early power user)`,
+      affectedUsers: earlyExhausterCount,
+      estimatedImpact: `Indicative additional cost: ~$${(earlyExhausterCount * 50 * PRICING.OVERAGE_RATE_PER_REQUEST).toFixed(0)}/month (assuming 50 extra requests per early power user)`,
       documentationLink: 'https://docs.github.com/en/enterprise-cloud@latest/billing/tutorials/set-up-budgets#managing-budgets-for-your-organization-or-enterprise'
     });
   }

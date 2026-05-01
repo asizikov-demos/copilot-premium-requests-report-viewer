@@ -1,19 +1,18 @@
 "use client";
 
 import { useContext, useMemo } from 'react';
-import { WeeklyQuotaExhaustionBreakdown } from '@/utils/ingestion/analytics';
+import type { ProcessedData } from '@/types/csv';
 import { Advisory, generateAdvisories } from '@/utils/analytics/advisory';
-import { buildAdvisoriesFromArtifacts, buildConsumptionCategoriesFromArtifacts } from '@/utils/ingestion/analytics';
 import { AnalysisContext } from '@/context/AnalysisContext';
-import { QuotaArtifacts, UsageArtifacts } from '@/utils/ingestion/types';
 import { UserSummary } from '@/utils/analytics/types';
-import { ProcessedData } from '@/types/csv';
-import { WeeklyExhaustionData } from '@/utils/analytics/weeklyQuota';
+import { buildAdvisoriesFromArtifacts, buildConsumptionCategoriesFromArtifacts } from '@/utils/ingestion/analytics';
+import type { WeeklyQuotaExhaustionBreakdown } from '@/utils/ingestion/analytics';
+import { QuotaArtifacts, UsageArtifacts } from '@/utils/ingestion/types';
 
 interface AdvisorySectionProps {
   userData: UserSummary[];
   processedData: ProcessedData[];
-  weeklyExhaustion: WeeklyExhaustionData;
+  weeklyExhaustion: WeeklyQuotaExhaustionBreakdown;
 }
 
 // Highlight key phrases inside advisory descriptions without needing HTML in data layer
@@ -126,17 +125,15 @@ export function AdvisorySection({
   const analysisCtx = useContext(AnalysisContext);
   const quotaArtifacts = analysisCtx?.quotaArtifacts as QuotaArtifacts | undefined;
   const usageArtifacts = analysisCtx?.usageArtifacts as UsageArtifacts | undefined;
-  const weeklyArtifacts = analysisCtx?.weeklyExhaustion as WeeklyQuotaExhaustionBreakdown | undefined; // artifact form (if present)
+  const weeklyExhaustionEff = (analysisCtx?.weeklyExhaustion as WeeklyQuotaExhaustionBreakdown | undefined) ?? weeklyExhaustion;
 
   const advisories = useMemo(() => {
-    if (usageArtifacts && quotaArtifacts && weeklyArtifacts && weeklyArtifacts.weeks) {
-      // Use artifact path: build categories then advisories
+    if (usageArtifacts && quotaArtifacts) {
       const categories = buildConsumptionCategoriesFromArtifacts(usageArtifacts, quotaArtifacts);
-      return buildAdvisoriesFromArtifacts(categories, weeklyArtifacts, usageArtifacts, quotaArtifacts);
+      return buildAdvisoriesFromArtifacts(categories, weeklyExhaustionEff, usageArtifacts, quotaArtifacts);
     }
-    // Fallback to legacy generator
-    return generateAdvisories(userData, processedData, weeklyExhaustion);
-  }, [usageArtifacts, quotaArtifacts, weeklyArtifacts, userData, processedData, weeklyExhaustion]);
+    return generateAdvisories(userData, processedData, weeklyExhaustionEff);
+  }, [usageArtifacts, quotaArtifacts, userData, processedData, weeklyExhaustionEff]);
   
   if (advisories.length === 0) {
     return <NoActionRequired />;
