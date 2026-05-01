@@ -79,9 +79,8 @@ export default function Home() {
         ) : null}
       </div>
 
-      {/* Footer disclaimer */}
-      {!isDataLoaded && (
-        <footer className="pb-8 text-center">
+      <footer className="space-y-3 pb-8 text-center">
+        {!isDataLoaded && (
           <p className="text-xs text-[#636c76]">
             This app processes your CSV locally in your browser and doesn&apos;t upload it. Questions?{' '}
             <a
@@ -93,8 +92,20 @@ export default function Home() {
               Create an issue
             </a>
           </p>
-        </footer>
-      )}
+        )}
+        <p className="text-xs text-[#636c76]">
+          &copy;{' '}
+          <a
+            href="https://github.com/asizikov"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-[#636c76] underline underline-offset-2 transition-colors duration-150 hover:text-[#1f2328]"
+          >
+            Anton Sizikov
+          </a>
+          {' '}&mdash; Solutions Engineer @ GitHub
+        </p>
+      </footer>
     </main>
   );
 }
