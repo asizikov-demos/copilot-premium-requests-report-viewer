@@ -5,7 +5,7 @@ export function makeNormalizedRow(partial: Partial<NormalizedRow> = {}): Normali
     date: partial.date ?? '2025-06-01T00:00:00Z',
     day: partial.day ?? '2025-06-01',
     user: partial.user ?? 'test-user-one',
-    model: partial.model ?? 'test-model',
+    model: partial.model ?? 'mock-model',
     quantity: partial.quantity ?? 1,
     quotaRaw: partial.quotaRaw,
     quotaValue: partial.quotaValue,
