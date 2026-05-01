@@ -7,9 +7,11 @@ import {
   computeWeeklyQuotaExhaustionFromArtifacts,
   WeeklyQuotaExhaustionBreakdown
 } from '@/utils/ingestion/analytics';
-import { calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
-import { UserSummary } from './types';
-import { buildUserQuotaMapFromRows } from './quota';
+
+import type { OverageSummary } from './overage';
+
+export { computeOverageSummary } from './overage';
+export type { OverageSummary } from './overage';
 
 // -----------------------------
 // Legacy Constants & Scoring (preserved for tests)
@@ -52,17 +54,6 @@ export function computeWeeklyQuotaExhaustion(processedData: ProcessedData[]): We
   const quota = buildQuotaArtifactsFromProcessedData(processedData);
   const daily = buildDailyBucketsArtifactsFromProcessedData(processedData);
   return computeWeeklyQuotaExhaustionFromArtifacts(daily, quota);
-}
-
-export interface OverageSummary { totalOverageRequests: number; totalOverageCost: number; }
-export function computeOverageSummary(userData: UserSummary[], processedData: ProcessedData[]): OverageSummary {
-  const quotaMap = buildUserQuotaMapFromRows(processedData);
-  let totalOverageRequests = 0;
-  for (const u of userData) {
-    const quotaVal = quotaMap.get(u.user) ?? 'unlimited';
-    totalOverageRequests += calculateOverageRequests(u.totalRequests, quotaVal);
-  }
-  return { totalOverageRequests, totalOverageCost: calculateOverageCost(totalOverageRequests) };
 }
 
 // Convenience wrapper for tests migrating to artifact version directly
