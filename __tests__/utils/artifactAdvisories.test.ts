@@ -54,11 +54,13 @@ describe('buildAdvisoriesFromArtifacts', () => {
     };
 
     const advisories = buildAdvisoriesFromArtifacts(categories, weekly, usage, quota);
-    expect(advisories.find(a => a.type === 'perRequestBilling')).toMatchObject({
+    const perRequest = advisories.find(a => a.type === 'perRequestBilling');
+    expect(perRequest).toMatchObject({
       severity: 'high',
       affectedUsers: 2,
       description: expect.stringContaining('2 users (40%)')
     });
+    expect(perRequest?.description).not.toContain('3 users');
   });
 
   it('produces training advisory when low adoption threshold met', () => {

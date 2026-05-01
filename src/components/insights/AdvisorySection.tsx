@@ -125,15 +125,15 @@ export function AdvisorySection({
   const analysisCtx = useContext(AnalysisContext);
   const quotaArtifacts = analysisCtx?.quotaArtifacts as QuotaArtifacts | undefined;
   const usageArtifacts = analysisCtx?.usageArtifacts as UsageArtifacts | undefined;
-  const weeklyExhaustionEff = (analysisCtx?.weeklyExhaustion as WeeklyQuotaExhaustionBreakdown | undefined) ?? weeklyExhaustion;
+  const effectiveWeeklyExhaustion = (analysisCtx?.weeklyExhaustion as WeeklyQuotaExhaustionBreakdown | undefined) ?? weeklyExhaustion;
 
   const advisories = useMemo(() => {
     if (usageArtifacts && quotaArtifacts) {
       const categories = buildConsumptionCategoriesFromArtifacts(usageArtifacts, quotaArtifacts);
-      return buildAdvisoriesFromArtifacts(categories, weeklyExhaustionEff, usageArtifacts, quotaArtifacts);
+      return buildAdvisoriesFromArtifacts(categories, effectiveWeeklyExhaustion, usageArtifacts, quotaArtifacts);
     }
-    return generateAdvisories(userData, processedData, weeklyExhaustionEff);
-  }, [usageArtifacts, quotaArtifacts, userData, processedData, weeklyExhaustionEff]);
+    return generateAdvisories(userData, processedData, effectiveWeeklyExhaustion);
+  }, [usageArtifacts, quotaArtifacts, userData, processedData, effectiveWeeklyExhaustion]);
   
   if (advisories.length === 0) {
     return <NoActionRequired />;

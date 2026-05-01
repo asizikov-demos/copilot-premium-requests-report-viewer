@@ -16,6 +16,11 @@ export interface Advisory {
   documentationLink?: string;
 }
 
+/**
+ * Counts users who first exhausted quota during weeks 1-4 (days 1-28).
+ * This "early exhaustion" threshold is used to flag likely candidates for
+ * per-request billing before end-of-month quota disruption.
+ */
 export function countEarlyExhaustedUsers(weeklyExhaustion: WeeklyQuotaExhaustionBreakdown): number {
   return weeklyExhaustion.weeks.reduce((total, week) => (
     week.weekNumber <= 4 ? total + week.usersExhaustedInWeek : total

@@ -30,7 +30,10 @@ function getFallbackRange(weekNumber: number): string {
 
 function formatWeekRange(startDate?: string, endDate?: string): string {
   if (!startDate || !endDate) return '';
-  return `Days ${parseInt(startDate.slice(8, 10), 10)}-${parseInt(endDate.slice(8, 10), 10)}`;
+  // Week dates come from UTC date keys in YYYY-MM-DD format.
+  const startDay = startDate.split('-')[2];
+  const endDay = endDate.split('-')[2];
+  return `Days ${parseInt(startDay, 10)}-${parseInt(endDay, 10)}`;
 }
 
 export function WeeklyQuotaExhaustion({ weeklyExhaustion, totalUsers, height = 280 }: WeeklyQuotaExhaustionProps) {
