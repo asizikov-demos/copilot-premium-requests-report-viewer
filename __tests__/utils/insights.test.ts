@@ -1,6 +1,8 @@
 import { PRICING } from '@/constants/pricing';
-import { categorizeUserConsumption, calculateUnusedValue, CONSUMPTION_THRESHOLDS, UserConsumptionCategory, calculateFeatureUtilization } from '@/utils/analytics/insights';
+import { categorizeUserConsumption, calculateUnusedValue, CONSUMPTION_THRESHOLDS, UserConsumptionCategory } from '@/utils/analytics/insights';
 import { ProcessedData } from '@/types/csv';
+import { buildFeatureUtilizationFromArtifacts } from '@/utils/ingestion/analytics';
+import { FeatureUsageArtifacts } from '@/utils/ingestion/types';
 import { UserSummary } from '@/utils/analytics';
 
 function makeProcessed(row: Partial<ProcessedData>): ProcessedData {
@@ -23,6 +25,27 @@ function makeProcessed(row: Partial<ProcessedData>): ProcessedData {
     product: row.product,
     sku: row.sku,
   } as ProcessedData;
+}
+
+function makeFeatureUsageArtifacts(overrides?: Partial<FeatureUsageArtifacts>): FeatureUsageArtifacts {
+  return {
+    featureTotals: {
+      codeReview: 0,
+      codingAgent: 0,
+      spark: 0,
+      ...overrides?.featureTotals
+    },
+    featureUsers: {
+      codeReview: new Set<string>(),
+      codingAgent: new Set<string>(),
+      spark: new Set<string>(),
+      ...overrides?.featureUsers
+    },
+    specialTotals: {
+      nonCopilotCodeReview: 0,
+      ...overrides?.specialTotals
+    }
+  };
 }
 
 describe('insights analytics', () => {
@@ -59,17 +82,22 @@ describe('insights analytics', () => {
   });
 
   test('feature utilization counts sessions & users', () => {
-    const data: ProcessedData[] = [
-      makeProcessed({ user: 'u1', model: 'Code Review', requestsUsed: 3 }),
-      makeProcessed({ user: 'u2', model: 'code review', requestsUsed: 2 }),
-      makeProcessed({ user: '', model: 'Code Review', requestsUsed: 4, quotaValue: 0, totalQuota: '0', isNonCopilotUsage: true, usageBucket: 'non_copilot_code_review' }),
-      makeProcessed({ user: 'u1', model: 'Coding Agent', requestsUsed: 5 }),
-      makeProcessed({ user: 'u3', model: 'Padawan', requestsUsed: 4 }),
-      makeProcessed({ user: 'u2', model: 'gpt-4.1', product: 'spark', sku: 'spark_premium_request', requestsUsed: 7 }),
-      makeProcessed({ user: 'u4', model: 'o3-mini', product: 'spark', sku: 'spark_premium_request', requestsUsed: 1 }),
-      makeProcessed({ user: 'u5', model: 'Spark Helper', requestsUsed: 9 }),
-    ];
-    const stats = calculateFeatureUtilization(data);
+    const stats = buildFeatureUtilizationFromArtifacts(makeFeatureUsageArtifacts({
+      featureTotals: {
+        codeReview: 9,
+        codingAgent: 9,
+        spark: 8
+      },
+      featureUsers: {
+        codeReview: new Set(['test-user-one', 'test-user-two']),
+        codingAgent: new Set(['test-user-one', 'test-user-three']),
+        spark: new Set(['test-user-two', 'test-user-four'])
+      },
+      specialTotals: {
+        nonCopilotCodeReview: 4
+      }
+    }));
+
     expect(stats.codeReview.totalSessions).toBe(5);
     expect(stats.codeReview.userCount).toBe(2);
     expect(stats.nonCopilotCodeReview.totalSessions).toBe(4);
@@ -79,14 +107,15 @@ describe('insights analytics', () => {
     expect(stats.spark.userCount).toBe(2);
   });
 
-  test('feature utilization identifies spark from product or sku metadata', () => {
-    const data: ProcessedData[] = [
-      makeProcessed({ user: 'u1', model: 'gpt-4.1', product: 'spark', requestsUsed: 3 }),
-      makeProcessed({ user: 'u2', model: 'o3-mini', sku: 'spark_premium_request', requestsUsed: 2 }),
-      makeProcessed({ user: 'u3', model: 'Spark Helper', product: 'copilot', sku: 'copilot_premium_request', requestsUsed: 5 }),
-    ];
-
-    const stats = calculateFeatureUtilization(data);
+  test('feature utilization uses aggregated spark totals and distinct users', () => {
+    const stats = buildFeatureUtilizationFromArtifacts(makeFeatureUsageArtifacts({
+      featureTotals: {
+        spark: 5
+      },
+      featureUsers: {
+        spark: new Set(['test-user-one', 'test-user-two'])
+      }
+    }));
 
     expect(stats.spark.totalSessions).toBe(5);
     expect(stats.spark.userCount).toBe(2);

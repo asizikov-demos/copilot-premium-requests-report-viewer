@@ -10,7 +10,7 @@
  *  - featureTotals: total request quantities per feature
  *  - featureUsers: distinct user sets per feature
  *
- * This replaces on-render O(R) scans (e.g. calculateFeatureUtilization)
+ * This replaces on-render O(R) feature utilization scans
  * with incremental O(1) updates during ingestion.
  */
 import { Aggregator, AggregatorContext, NormalizedRow, FeatureUsageArtifacts } from './types';

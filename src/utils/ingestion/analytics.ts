@@ -450,8 +450,7 @@ export function buildDailyModelUsageFromArtifacts(
 // Feature Utilization From FeatureUsageArtifacts
 // -----------------------------
 /**
- * Build FeatureUtilizationStats (matching legacy calculateFeatureUtilization return shape)
- * directly from FeatureUsageAggregator artifacts.
+ * Build FeatureUtilizationStats directly from FeatureUsageAggregator artifacts.
  */
 export function buildFeatureUtilizationFromArtifacts(featureUsage: FeatureUsageArtifacts): FeatureUtilizationStats {
   const { featureTotals, featureUsers, specialTotals } = featureUsage;

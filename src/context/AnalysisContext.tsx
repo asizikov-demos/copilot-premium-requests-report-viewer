@@ -37,7 +37,7 @@ interface AnalysisContextValue {
   quotaArtifacts: QuotaArtifacts;
   usageArtifacts: UsageArtifacts;
   dailyBucketsArtifacts: DailyBucketsArtifacts;
-  featureUsageArtifacts?: FeatureUsageArtifacts; // optional until fully adopted
+  featureUsageArtifacts: FeatureUsageArtifacts;
   billingArtifacts?: BillingArtifacts; // new billing summary artifacts
   
   // Raw & processed (adapter bridge - to be phased out)
@@ -152,7 +152,7 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
     quotaArtifacts,
     usageArtifacts,
     dailyBucketsArtifacts,
-    featureUsageArtifacts: ingestionResult.outputs.featureUsage as FeatureUsageArtifacts | undefined,
+    featureUsageArtifacts: ingestionResult.outputs.featureUsage as FeatureUsageArtifacts,
     billingArtifacts: billingArtifacts,
     // Legacy adapter bridge
     baseProcessed,

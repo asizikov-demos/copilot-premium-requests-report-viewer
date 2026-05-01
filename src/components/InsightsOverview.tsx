@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { ProcessedData } from '@/types/csv';
 import { UserSummary } from '@/utils/analytics';
-import { categorizeUserConsumption, calculateFeatureUtilization, calculateUnusedValue, CONSUMPTION_THRESHOLDS } from '@/utils/analytics/insights';
+import { categorizeUserConsumption, calculateUnusedValue, CONSUMPTION_THRESHOLDS } from '@/utils/analytics/insights';
 
 import type { WeeklyExhaustionData } from '@/utils/analytics/weeklyQuota';
 import { AnalysisContext } from '@/context/AnalysisContext';
@@ -33,13 +33,16 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
   const usageArtifactsFromCtx = analysisCtx?.usageArtifacts as UsageArtifacts | undefined;
   const weeklyExhaustionArtifactsFromCtx = analysisCtx?.weeklyExhaustion as { weeks?: Array<{ weekNumber: number; usersExhaustedInWeek: number; startDate: string; endDate: string }>; totalUsersExhausted?: number } | undefined;
   const featureUsageArtifactsFromCtx = analysisCtx?.featureUsageArtifacts as FeatureUsageArtifacts | undefined;
-  const aggregateProcessedDataFromCtx = analysisCtx?.aggregateProcessedData;
 
   // Prefer explicitly passed artifacts (future-proof for isolated component tests) then context.
   const quotaArtifactsEff = quotaArtifacts || quotaArtifactsFromCtx;
   const usageArtifactsEff = usageArtifacts || usageArtifactsFromCtx;
   const featureUsageArtifactsEff = featureUsageArtifacts || featureUsageArtifactsFromCtx;
   const weeklyExhaustionArtifactsEff = weeklyExhaustionArtifacts || weeklyExhaustionArtifactsFromCtx;
+
+  if (!featureUsageArtifactsEff) {
+    throw new Error('InsightsOverview requires featureUsageArtifacts');
+  }
   
   const insightsData = useMemo(() => {
     if (usageArtifactsEff && quotaArtifactsEff) {
@@ -48,12 +51,10 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
     return categorizeUserConsumption(userData, processedData);
   }, [userData, processedData, usageArtifactsEff, quotaArtifactsEff]);
 
-  const featureUtilization = useMemo(() => {
-    if (featureUsageArtifactsEff) {
-      return buildFeatureUtilizationFromArtifacts(featureUsageArtifactsEff);
-    }
-    return calculateFeatureUtilization(aggregateProcessedDataFromCtx ?? processedData);
-  }, [aggregateProcessedDataFromCtx, processedData, featureUsageArtifactsEff]);
+  const featureUtilization = useMemo(
+    () => buildFeatureUtilizationFromArtifacts(featureUsageArtifactsEff),
+    [featureUsageArtifactsEff]
+  );
 
   const weeklyExhaustion = useMemo<WeeklyExhaustionData>(() => {
     if (weeklyExhaustionArtifactsEff && Array.isArray(weeklyExhaustionArtifactsEff.weeks)) {
