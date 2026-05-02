@@ -13,7 +13,7 @@ import { PRICING } from '@/constants/pricing';
 import type { AnalysisResults, ProcessedData } from '@/types/csv';
 import type { CodeReviewAnalysis } from '@/types/csv';
 import { CodingAgentAnalysis, UserDailyData } from '@/types/csv';
-import { Advisory as LegacyAdvisory } from '@/utils/analytics/advisory';
+import { getEarlyExhausterCount, type Advisory } from '@/utils/analytics/advisory';
 import { CONSUMPTION_THRESHOLDS, UserConsumptionCategory, InsightsOverviewData } from '@/utils/analytics/insights';
 import type { FeatureUtilizationStats } from '@/utils/analytics/insights';
 import { buildUserQuotaMapFromRows } from '@/utils/analytics/quota';
@@ -526,44 +526,30 @@ export function buildAdvisoriesFromArtifacts(
   weekly: WeeklyQuotaExhaustionBreakdown,
   usage: UsageArtifacts,
   quota: QuotaArtifacts
-): LegacyAdvisory[] {
+): Advisory[] {
   // Currently quota artifacts not directly used; retained for future advisory enhancements.
   void quota;
-  const advisories: LegacyAdvisory[] = [];
+  const advisories: Advisory[] = [];
   const totalUsers = usage.userCount;
   if (totalUsers === 0) return advisories;
 
-  // Early exhaustion: users who exhausted quota before day 28.
-  // We derive this from weekly breakdown weeks 1-4 combined.
-  const earlyUsersSet = new Set<string>();
-  for (const w of weekly.weeks) {
-    if (w.weekNumber <= 4) {
-      // Need users list to know actual identities; WeeklyQuotaExhaustionBreakdown only has counts.
-      // Artifact weekly breakdown lacks user identities; fallback: approximate using count ratio? For parity we retain legacy path when identities needed.
-      // Enhancement: extend artifact to carry user lists. For now we cannot produce per-request billing advisory from artifacts without user identities.
-    }
-  }
-  // If weekly breakdown cannot supply identities, we approximate by using category powerUsers as proxy for early exhausters.
-  if (earlyUsersSet.size === 0 && weekly.totalUsersExhausted > 0) {
-    categories.powerUsers.forEach(u => earlyUsersSet.add(u.user));
-  }
-  const earlyExhausterUsers = Array.from(earlyUsersSet);
-  const earlyExhausterPercentage = earlyExhausterUsers.length / Math.max(1, totalUsers);
-  if (earlyExhausterUsers.length > 0) {
-    const severity: LegacyAdvisory['severity'] = earlyExhausterPercentage >= 0.30 ? 'high' : 'medium';
+  const earlyExhausterCount = getEarlyExhausterCount(weekly);
+  const earlyExhausterPercentage = earlyExhausterCount / Math.max(1, totalUsers);
+  if (earlyExhausterCount > 0) {
+    const severity: Advisory['severity'] = earlyExhausterPercentage >= 0.30 ? 'high' : 'medium';
     advisories.push({
       type: 'perRequestBilling',
       severity,
       title: 'Consider Per-Request Billing for Power Users',
-      description: `${earlyExhausterUsers.length} user${earlyExhausterUsers.length === 1 ? '' : 's'} (${(earlyExhausterPercentage * 100).toFixed(0)}%) exhaust their quota before day 28 of the month. These power users could benefit from per-request billing to avoid disruption.`,
+      description: `${earlyExhausterCount} user${earlyExhausterCount === 1 ? '' : 's'} (${(earlyExhausterPercentage * 100).toFixed(0)}%) exhaust their quota before day 28 of the month. These power users could benefit from per-request billing to avoid disruption.`,
       actionItems: [
         'Review power user consumption patterns in detail',
         'Set up per-request billing budgets for high-consumption users',
         'Configure spending limits to control costs',
         'Consider upgrading to a higher plan for consistent power users'
       ],
-      affectedUsers: earlyExhausterUsers.length,
-      estimatedImpact: `Indicative additional cost: ~$${(earlyExhausterUsers.length * 50 * PRICING.OVERAGE_RATE_PER_REQUEST).toFixed(0)}/month (assuming 50 extra requests per early power user)`,
+      affectedUsers: earlyExhausterCount,
+      estimatedImpact: `Indicative additional cost: ~$${(earlyExhausterCount * 50 * PRICING.OVERAGE_RATE_PER_REQUEST).toFixed(0)}/month (assuming 50 extra requests per early power user)`,
       documentationLink: 'https://docs.github.com/en/enterprise-cloud@latest/billing/tutorials/set-up-budgets#managing-budgets-for-your-organization-or-enterprise'
     });
   }

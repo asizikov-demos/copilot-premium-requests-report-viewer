@@ -31,22 +31,81 @@ function makeQuota(entries: Array<{ user: string; quota: number | 'unlimited' }>
 describe('buildAdvisoriesFromArtifacts', () => {
   it('produces training advisory when low adoption threshold met', () => {
     const usage = makeUsage([
-      { user: 'u1', total: 5 },
-      { user: 'u2', total: 5 },
-      { user: 'u3', total: 90 },
-      { user: 'u4', total: 5 },
-      { user: 'u5', total: 5 }
+      { user: 'test-user-one', total: 5 },
+      { user: 'test-user-two', total: 5 },
+      { user: 'test-user-three', total: 90 },
+      { user: 'test-user-four', total: 5 },
+      { user: 'test-user-five', total: 5 }
     ]);
     const quota = makeQuota([
-      { user: 'u1', quota: 100 },
-      { user: 'u2', quota: 100 },
-      { user: 'u3', quota: 100 },
-      { user: 'u4', quota: 100 },
-      { user: 'u5', quota: 100 }
+      { user: 'test-user-one', quota: 100 },
+      { user: 'test-user-two', quota: 100 },
+      { user: 'test-user-three', quota: 100 },
+      { user: 'test-user-four', quota: 100 },
+      { user: 'test-user-five', quota: 100 }
     ]);
     const categories = buildConsumptionCategoriesFromArtifacts(usage, quota);
     const weekly: WeeklyQuotaExhaustionBreakdown = { totalUsersExhausted: 0, weeks: [] };
     const advisories = buildAdvisoriesFromArtifacts(categories, weekly, usage, quota);
     expect(advisories.find(a => a.type === 'training')).toBeTruthy();
+  });
+
+  it('uses week 1-4 exhaustion counts for per-request billing advisories', () => {
+    const usage = makeUsage([
+      { user: 'test-user-one', total: 300 },
+      { user: 'test-user-two', total: 300 },
+      { user: 'test-user-three', total: 10 },
+      { user: 'test-user-four', total: 10 },
+      { user: 'test-user-five', total: 10 }
+    ]);
+    const quota = makeQuota([
+      { user: 'test-user-one', quota: 300 },
+      { user: 'test-user-two', quota: 300 },
+      { user: 'test-user-three', quota: 300 },
+      { user: 'test-user-four', quota: 300 },
+      { user: 'test-user-five', quota: 300 }
+    ]);
+    const categories = buildConsumptionCategoriesFromArtifacts(usage, quota);
+    const weekly: WeeklyQuotaExhaustionBreakdown = {
+      totalUsersExhausted: 3,
+      weeks: [
+        { weekNumber: 1, startDate: '2025-06-01', endDate: '2025-06-07', usersExhaustedInWeek: 1 },
+        { weekNumber: 4, startDate: '2025-06-22', endDate: '2025-06-28', usersExhaustedInWeek: 1 },
+        { weekNumber: 5, startDate: '2025-06-29', endDate: '2025-06-30', usersExhaustedInWeek: 1 }
+      ]
+    };
+
+    const advisories = buildAdvisoriesFromArtifacts(categories, weekly, usage, quota);
+    const perRequestAdvisory = advisories.find(advisory => advisory.type === 'perRequestBilling');
+
+    expect(perRequestAdvisory).toMatchObject({
+      affectedUsers: 2,
+      severity: 'high'
+    });
+    expect(perRequestAdvisory?.description).toContain('2 users (40%)');
+  });
+
+  it('does not approximate early exhausters from power users when only week 5 exhaustion exists', () => {
+    const usage = makeUsage([
+      { user: 'test-user-one', total: 300 },
+      { user: 'test-user-two', total: 300 },
+      { user: 'test-user-three', total: 10 }
+    ]);
+    const quota = makeQuota([
+      { user: 'test-user-one', quota: 300 },
+      { user: 'test-user-two', quota: 300 },
+      { user: 'test-user-three', quota: 300 }
+    ]);
+    const categories = buildConsumptionCategoriesFromArtifacts(usage, quota);
+    const weekly: WeeklyQuotaExhaustionBreakdown = {
+      totalUsersExhausted: 2,
+      weeks: [
+        { weekNumber: 5, startDate: '2025-06-29', endDate: '2025-06-30', usersExhaustedInWeek: 2 }
+      ]
+    };
+
+    const advisories = buildAdvisoriesFromArtifacts(categories, weekly, usage, quota);
+
+    expect(advisories.find(advisory => advisory.type === 'perRequestBilling')).toBeUndefined();
   });
 });
