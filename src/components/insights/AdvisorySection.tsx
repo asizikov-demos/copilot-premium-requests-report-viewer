@@ -133,7 +133,7 @@ export function AdvisorySection({
       const categories = buildConsumptionCategoriesFromArtifacts(usageArtifacts, quotaArtifacts);
       return buildAdvisoriesFromArtifacts(categories, weeklyArtifacts, usageArtifacts, quotaArtifacts);
     }
-    return generateAdvisories(userData, processedData, weeklyExhaustion);
+    return generateAdvisories(userData, processedData, weeklyArtifacts);
   }, [usageArtifacts, quotaArtifacts, weeklyArtifacts, userData, processedData, weeklyExhaustion]);
   
   if (advisories.length === 0) {

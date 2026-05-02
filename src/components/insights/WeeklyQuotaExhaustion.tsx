@@ -21,19 +21,20 @@ interface WeeklyQuotaDatum {
   range: string; // days range for tooltip
 }
 
-function getUsersExhaustedInWeek(weeklyExhaustion: WeeklyQuotaExhaustionBreakdown, weekNumber: number): number {
-  return weeklyExhaustion.weeks
-    .filter(week => week.weekNumber === weekNumber)
-    .reduce((total, week) => total + week.usersExhaustedInWeek, 0);
-}
-
 export function WeeklyQuotaExhaustion({ weeklyExhaustion, totalUsers, height = 280 }: WeeklyQuotaExhaustionProps) {
-  const data: WeeklyQuotaDatum[] = useMemo(() => [
-    { week: 'Week 1', users: getUsersExhaustedInWeek(weeklyExhaustion, 1), range: 'Days 1-7' },
-    { week: 'Week 2', users: getUsersExhaustedInWeek(weeklyExhaustion, 2), range: 'Days 8-14' },
-    { week: 'Week 3', users: getUsersExhaustedInWeek(weeklyExhaustion, 3), range: 'Days 15-21' },
-    { week: 'Week 4', users: getUsersExhaustedInWeek(weeklyExhaustion, 4), range: 'Days 22-28' },
-  ], [weeklyExhaustion]);
+  const data: WeeklyQuotaDatum[] = useMemo(() => {
+    const usersByWeek = new Map<number, number>();
+    for (const week of weeklyExhaustion.weeks) {
+      usersByWeek.set(week.weekNumber, (usersByWeek.get(week.weekNumber) ?? 0) + week.usersExhaustedInWeek);
+    }
+
+    return [
+      { week: 'Week 1', users: usersByWeek.get(1) ?? 0, range: 'Days 1-7' },
+      { week: 'Week 2', users: usersByWeek.get(2) ?? 0, range: 'Days 8-14' },
+      { week: 'Week 3', users: usersByWeek.get(3) ?? 0, range: 'Days 15-21' },
+      { week: 'Week 4', users: usersByWeek.get(4) ?? 0, range: 'Days 22-28' },
+    ];
+  }, [weeklyExhaustion]);
 
   const totalEarly = data.reduce((total, week) => total + week.users, 0);
 
