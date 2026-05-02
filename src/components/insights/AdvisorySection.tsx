@@ -1,19 +1,19 @@
 "use client";
 
 import { useContext, useMemo } from 'react';
-import { WeeklyQuotaExhaustionBreakdown } from '@/utils/ingestion/analytics';
-import { Advisory, generateAdvisories } from '@/utils/analytics/advisory';
-import { buildAdvisoriesFromArtifacts, buildConsumptionCategoriesFromArtifacts } from '@/utils/ingestion/analytics';
+
 import { AnalysisContext } from '@/context/AnalysisContext';
-import { QuotaArtifacts, UsageArtifacts } from '@/utils/ingestion/types';
-import { UserSummary } from '@/utils/analytics/types';
 import { ProcessedData } from '@/types/csv';
-import { WeeklyExhaustionData } from '@/utils/analytics/weeklyQuota';
+import { Advisory, generateAdvisories } from '@/utils/analytics/advisory';
+import { UserSummary } from '@/utils/analytics/types';
+import { buildAdvisoriesFromArtifacts, buildConsumptionCategoriesFromArtifacts } from '@/utils/ingestion/analytics';
+import type { WeeklyQuotaExhaustionBreakdown } from '@/utils/ingestion/analytics';
+import { QuotaArtifacts, UsageArtifacts } from '@/utils/ingestion/types';
 
 interface AdvisorySectionProps {
   userData: UserSummary[];
   processedData: ProcessedData[];
-  weeklyExhaustion: WeeklyExhaustionData;
+  weeklyExhaustion: WeeklyQuotaExhaustionBreakdown;
 }
 
 // Highlight key phrases inside advisory descriptions without needing HTML in data layer
@@ -126,16 +126,14 @@ export function AdvisorySection({
   const analysisCtx = useContext(AnalysisContext);
   const quotaArtifacts = analysisCtx?.quotaArtifacts as QuotaArtifacts | undefined;
   const usageArtifacts = analysisCtx?.usageArtifacts as UsageArtifacts | undefined;
-  const weeklyArtifacts = analysisCtx?.weeklyExhaustion as WeeklyQuotaExhaustionBreakdown | undefined; // artifact form (if present)
+  const weeklyArtifacts = (analysisCtx?.weeklyExhaustion as WeeklyQuotaExhaustionBreakdown | undefined) ?? weeklyExhaustion;
 
   const advisories = useMemo(() => {
     if (usageArtifacts && quotaArtifacts && weeklyArtifacts && weeklyArtifacts.weeks) {
-      // Use artifact path: build categories then advisories
       const categories = buildConsumptionCategoriesFromArtifacts(usageArtifacts, quotaArtifacts);
       return buildAdvisoriesFromArtifacts(categories, weeklyArtifacts, usageArtifacts, quotaArtifacts);
     }
-    // Fallback to legacy generator
-    return generateAdvisories(userData, processedData, weeklyExhaustion);
+    return generateAdvisories(userData, processedData, weeklyArtifacts);
   }, [usageArtifacts, quotaArtifacts, weeklyArtifacts, userData, processedData, weeklyExhaustion]);
   
   if (advisories.length === 0) {

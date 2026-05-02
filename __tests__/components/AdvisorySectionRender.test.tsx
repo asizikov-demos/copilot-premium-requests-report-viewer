@@ -8,7 +8,7 @@ describe('AdvisorySection component', () => {
       <AdvisorySection
         userData={[]}
         processedData={[]}
-        weeklyExhaustion={{ week1Exhausted: [], week2Exhausted: [], week3Exhausted: [], currentPeriodOnly: true }}
+        weeklyExhaustion={{ totalUsersExhausted: 0, weeks: [] }}
       />
     );
     expect(screen.getByText('No Action Required')).toBeInTheDocument();

@@ -3,14 +3,14 @@
 import React, { useMemo } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 
-import { WeeklyExhaustionData } from '@/utils/analytics/weeklyQuota';
+import type { WeeklyQuotaExhaustionBreakdown } from '@/utils/ingestion/analytics';
 
 import { chartTooltipContentStyle, chartTooltipLabelStyle } from '../charts/chartTooltipStyles';
 
 type ResponsiveHeight = number | `${number}%`;
 
 interface WeeklyQuotaExhaustionProps {
-  weeklyExhaustion: WeeklyExhaustionData;
+  weeklyExhaustion: WeeklyQuotaExhaustionBreakdown;
   totalUsers: number;
   height?: ResponsiveHeight;
 }
@@ -22,26 +22,21 @@ interface WeeklyQuotaDatum {
 }
 
 export function WeeklyQuotaExhaustion({ weeklyExhaustion, totalUsers, height = 280 }: WeeklyQuotaExhaustionProps) {
-  // Backward compatibility: older WeeklyExhaustionData instances may not include week4Exhausted.
-  const {
-    week1Exhausted,
-    week2Exhausted,
-    week3Exhausted,
-    week4Exhausted = []
-  } = weeklyExhaustion;
+  const data: WeeklyQuotaDatum[] = useMemo(() => {
+    const usersByWeek = new Map<number, number>();
+    for (const week of weeklyExhaustion.weeks) {
+      usersByWeek.set(week.weekNumber, (usersByWeek.get(week.weekNumber) ?? 0) + week.usersExhaustedInWeek);
+    }
 
-  const totalEarly =
-    week1Exhausted.length +
-    week2Exhausted.length +
-    week3Exhausted.length +
-    week4Exhausted.length;
+    return [
+      { week: 'Week 1', users: usersByWeek.get(1) ?? 0, range: 'Days 1-7' },
+      { week: 'Week 2', users: usersByWeek.get(2) ?? 0, range: 'Days 8-14' },
+      { week: 'Week 3', users: usersByWeek.get(3) ?? 0, range: 'Days 15-21' },
+      { week: 'Week 4', users: usersByWeek.get(4) ?? 0, range: 'Days 22-28' },
+    ];
+  }, [weeklyExhaustion]);
 
-  const data: WeeklyQuotaDatum[] = useMemo(() => [
-    { week: 'Week 1', users: week1Exhausted.length, range: 'Days 1-7' },
-    { week: 'Week 2', users: week2Exhausted.length, range: 'Days 8-14' },
-    { week: 'Week 3', users: week3Exhausted.length, range: 'Days 15-21' },
-    { week: 'Week 4', users: week4Exhausted.length, range: 'Days 22-28' },
-  ], [week1Exhausted, week2Exhausted, week3Exhausted, week4Exhausted]);
+  const totalEarly = data.reduce((total, week) => total + week.users, 0);
 
   return (
     <div className="space-y-4" aria-label="Weekly quota exhaustion summary">
@@ -66,9 +61,9 @@ export function WeeklyQuotaExhaustion({ weeklyExhaustion, totalUsers, height = 2
             margin={{ top: 16, right: 16, left: 0, bottom: 8 }}
             barCategoryGap={40}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#d1d9e0" />
-            <XAxis dataKey="week" tick={{ fontSize: 11 }} />
-            <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={40} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis dataKey="week" tick={{ fontSize: 12, fill: '#636c76' }} axisLine={{ stroke: '#d1d9e0' }} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#636c76' }} axisLine={{ stroke: '#d1d9e0' }} width={40} />
             <Tooltip
               formatter={(value) => [`${value}`, 'Users']}
               labelFormatter={(label, items) => {
