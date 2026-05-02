@@ -5,7 +5,7 @@ import { newFormatRows } from '../fixtures/newFormatCSVData';
 import type { CSVData } from '@/types/csv';
 import { normalizeRow } from '@/utils/ingestion/normalizeRow';
 import type { IngestionResult } from '@/utils/ingestion';
-import type { NormalizedRow } from '@/utils/ingestion/types';
+import type { FeatureUsageArtifacts, NormalizedRow } from '@/utils/ingestion/types';
 
 // Mock ResizeObserver for Recharts ResponsiveContainer in JSDOM
 beforeAll(() => {
@@ -22,12 +22,18 @@ function createIngestionResultFromRawRows(rows: CSVData[]): IngestionResult {
   const normalizedRows = rows
     .map(row => normalizeRow(row, warnings))
     .filter((row): row is NormalizedRow => row !== null);
+  const emptyFeatureUsage: FeatureUsageArtifacts = {
+    featureTotals: { codeReview: 0, codingAgent: 0, spark: 0 },
+    featureUsers: { codeReview: new Set(), codingAgent: new Set(), spark: new Set() },
+    specialTotals: { nonCopilotCodeReview: 0 }
+  };
 
   return {
     outputs: {
       'quota': { quotaByUser: new Map(), conflicts: new Map(), distinctQuotas: new Set(), hasMixedQuotas: false, hasMixedLicenses: false },
       'usage': { users: [], userTotals: new Map(), modelBreakdown: new Map(), globalModelTotals: new Map(), topModelPerUser: new Map(), modelTotals: {}, userCount: 0, modelCount: 0 },
       'dailyBuckets': { dailyUserTotals: new Map(), startDate: new Date(), endDate: new Date() },
+      'featureUsage': emptyFeatureUsage,
       'rawData': normalizedRows
     },
     rowsProcessed: normalizedRows.length,

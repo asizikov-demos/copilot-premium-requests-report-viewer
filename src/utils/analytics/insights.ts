@@ -1,7 +1,6 @@
 import { PRICING } from '@/constants/pricing';
 import type { ProcessedData } from '@/types/csv';
 import { buildUserQuotaMapFromRows } from '@/utils/analytics/quota';
-import { isCodeReviewModel, isCodingAgentModel, isSparkProduct } from '@/utils/productClassification';
 
 import type { UserSummary } from './types';
 
@@ -30,41 +29,6 @@ export const CONSUMPTION_THRESHOLDS = Object.freeze({
   powerMinPct: 90,
   averageMinPct: 45
 });
-
-export function calculateFeatureUtilization(processedData: ProcessedData[]): FeatureUtilizationStats {
-  const codeReviewUsers = new Map<string, number>();
-  const codingAgentUsers = new Map<string, number>();
-  const sparkUsers = new Map<string, number>();
-  let totalCodeReviewSessions = 0;
-  let totalCodingAgentSessions = 0;
-  let totalSparkSessions = 0;
-  let totalNonCopilotCodeReviewSessions = 0;
-  processedData.forEach(row => {
-    if (isCodeReviewModel(row.model)) {
-      if (row.isNonCopilotUsage) {
-        totalNonCopilotCodeReviewSessions += row.requestsUsed;
-      } else {
-        totalCodeReviewSessions += row.requestsUsed;
-        codeReviewUsers.set(row.user, (codeReviewUsers.get(row.user) || 0) + row.requestsUsed);
-      }
-    }
-    if (isCodingAgentModel(row.model)) {
-      totalCodingAgentSessions += row.requestsUsed;
-      codingAgentUsers.set(row.user, (codingAgentUsers.get(row.user) || 0) + row.requestsUsed);
-    }
-    if (isSparkProduct(row.product, row.sku)) {
-      totalSparkSessions += row.requestsUsed;
-      sparkUsers.set(row.user, (sparkUsers.get(row.user) || 0) + row.requestsUsed);
-    }
-  });
-  const avg = (total: number, count: number) => (count > 0 ? total / count : 0);
-  return {
-    codeReview: { totalSessions: totalCodeReviewSessions, averagePerUser: avg(totalCodeReviewSessions, codeReviewUsers.size), userCount: codeReviewUsers.size },
-    codingAgent: { totalSessions: totalCodingAgentSessions, averagePerUser: avg(totalCodingAgentSessions, codingAgentUsers.size), userCount: codingAgentUsers.size },
-    spark: { totalSessions: totalSparkSessions, averagePerUser: avg(totalSparkSessions, sparkUsers.size), userCount: sparkUsers.size },
-    nonCopilotCodeReview: { totalSessions: totalNonCopilotCodeReviewSessions }
-  };
-}
 
 export function categorizeUserConsumption(userData: UserSummary[], processedData: ProcessedData[]): InsightsOverviewData {
   const userQuotaMap = buildUserQuotaMapFromRows(processedData);
