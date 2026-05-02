@@ -136,6 +136,7 @@ function DataAnalysisInner() {
     filename,
     quotaArtifacts,
     usageArtifacts,
+    featureUsageArtifacts,
     billingArtifacts
   } = useAnalysisContext();
 
@@ -382,6 +383,7 @@ function DataAnalysisInner() {
             <InsightsOverview
               userData={userData}
               processedData={processedData}
+              featureUsageArtifacts={featureUsageArtifacts}
             />
           ) : view === 'costOptimization' ? (
             <CostOptimizationInsights />

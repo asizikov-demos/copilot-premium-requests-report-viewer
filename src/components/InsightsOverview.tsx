@@ -5,7 +5,7 @@ import React, { useMemo, useState } from 'react';
 import { AnalysisContext } from '@/context/AnalysisContext';
 import { ProcessedData } from '@/types/csv';
 import { UserSummary } from '@/utils/analytics';
-import { categorizeUserConsumption, calculateFeatureUtilization, calculateUnusedValue, CONSUMPTION_THRESHOLDS } from '@/utils/analytics/insights';
+import { categorizeUserConsumption, calculateUnusedValue, CONSUMPTION_THRESHOLDS } from '@/utils/analytics/insights';
 import { QuotaArtifacts, UsageArtifacts, FeatureUsageArtifacts } from '@/utils/ingestion/types';
 import { buildConsumptionCategoriesFromArtifacts, buildFeatureUtilizationFromArtifacts } from '@/utils/ingestion/analytics';
 import type { WeeklyQuotaExhaustionBreakdown } from '@/utils/ingestion/analytics';
@@ -20,7 +20,7 @@ interface InsightsOverviewProps {
   processedData: ProcessedData[]; // transitional
   quotaArtifacts?: QuotaArtifacts;
   usageArtifacts?: UsageArtifacts;
-  featureUsageArtifacts?: FeatureUsageArtifacts;
+  featureUsageArtifacts: FeatureUsageArtifacts;
   weeklyExhaustionArtifacts?: WeeklyQuotaExhaustionBreakdown;
 }
 
@@ -37,13 +37,10 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
   const quotaArtifactsFromCtx = analysisCtx?.quotaArtifacts as QuotaArtifacts | undefined;
   const usageArtifactsFromCtx = analysisCtx?.usageArtifacts as UsageArtifacts | undefined;
   const weeklyExhaustionArtifactsFromCtx = analysisCtx?.weeklyExhaustion as WeeklyQuotaExhaustionBreakdown | undefined;
-  const featureUsageArtifactsFromCtx = analysisCtx?.featureUsageArtifacts as FeatureUsageArtifacts | undefined;
-  const aggregateProcessedDataFromCtx = analysisCtx?.aggregateProcessedData;
 
   // Prefer explicitly passed artifacts (future-proof for isolated component tests) then context.
   const quotaArtifactsEff = quotaArtifacts || quotaArtifactsFromCtx;
   const usageArtifactsEff = usageArtifacts || usageArtifactsFromCtx;
-  const featureUsageArtifactsEff = featureUsageArtifacts || featureUsageArtifactsFromCtx;
   const weeklyExhaustionArtifactsEff = weeklyExhaustionArtifacts || weeklyExhaustionArtifactsFromCtx || EMPTY_WEEKLY_EXHAUSTION;
   
   const insightsData = useMemo(() => {
@@ -54,11 +51,8 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
   }, [userData, processedData, usageArtifactsEff, quotaArtifactsEff]);
 
   const featureUtilization = useMemo(() => {
-    if (featureUsageArtifactsEff) {
-      return buildFeatureUtilizationFromArtifacts(featureUsageArtifactsEff);
-    }
-    return calculateFeatureUtilization(aggregateProcessedDataFromCtx ?? processedData);
-  }, [aggregateProcessedDataFromCtx, processedData, featureUsageArtifactsEff]);
+    return buildFeatureUtilizationFromArtifacts(featureUsageArtifacts);
+  }, [featureUsageArtifacts]);
 
   // Compute unutilized value (only for users with numeric quotas)
   const averageUnusedValueUSD = useMemo(() => calculateUnusedValue(insightsData.averageUsers), [insightsData]);

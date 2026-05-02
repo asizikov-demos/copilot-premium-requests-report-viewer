@@ -43,7 +43,11 @@ function createContextValue() {
       dailyUserModelTotals: new Map(),
       dateRange: { min: '2025-06-01', max: '2025-06-02' },
     } as DailyBucketsArtifacts,
-    featureUsageArtifacts: undefined as FeatureUsageArtifacts | undefined,
+    featureUsageArtifacts: {
+      featureTotals: { codeReview: 0, codingAgent: 0, spark: 0 },
+      featureUsers: { codeReview: new Set(), codingAgent: new Set(), spark: new Set() },
+      specialTotals: { nonCopilotCodeReview: 0 },
+    } as FeatureUsageArtifacts,
     billingArtifacts: undefined as BillingArtifacts | undefined,
     baseProcessed: [] as ProcessedData[],
     processedData: [] as ProcessedData[],
@@ -89,7 +93,7 @@ describe('CodingAgentOverview', () => {
       adoptionRate: 66.67,
       users: [
         {
-          user: 'bob',
+          user: 'test-user-one',
           totalRequests: 10,
           codeReviewRequests: 8,
           codeReviewPercentage: 80,
@@ -97,7 +101,7 @@ describe('CodingAgentOverview', () => {
           models: ['Code Review beta'],
         },
         {
-          user: 'alice',
+          user: 'test-user-two',
           totalRequests: 20,
           codeReviewRequests: 5,
           codeReviewPercentage: 25,

@@ -20,8 +20,27 @@ function createIngestionResultWithoutRawData(): IngestionResult {
     outputs: {
       quota: { quotaByUser: new Map(), conflicts: new Map(), distinctQuotas: new Set(), hasMixedQuotas: false, hasMixedLicenses: false },
       usage: { users: [], modelTotals: {}, userCount: 0, modelCount: 0 },
-      dailyBuckets: { dailyUserTotals: new Map(), dateRange: null, months: [] }
+      dailyBuckets: { dailyUserTotals: new Map(), dateRange: null, months: [] },
+      featureUsage: {
+        featureTotals: { codeReview: 0, codingAgent: 0, spark: 0 },
+        featureUsers: { codeReview: new Set(), codingAgent: new Set(), spark: new Set() },
+        specialTotals: { nonCopilotCodeReview: 0 }
+      }
       // Intentionally no rawData aggregator output
+    },
+    rowsProcessed: 0,
+    durationMs: 0,
+    warnings: []
+  };
+}
+
+function createIngestionResultWithoutFeatureUsage(): IngestionResult {
+  return {
+    outputs: {
+      quota: { quotaByUser: new Map(), conflicts: new Map(), distinctQuotas: new Set(), hasMixedQuotas: false, hasMixedLicenses: false },
+      usage: { users: [], modelTotals: {}, userCount: 0, modelCount: 0 },
+      dailyBuckets: { dailyUserTotals: new Map(), dateRange: null, months: [] },
+      rawData: []
     },
     rowsProcessed: 0,
     durationMs: 0,
@@ -35,5 +54,15 @@ describe('AnalysisProvider without rawData aggregator', () => {
     render(<DataAnalysis ingestionResult={ingestionResult} filename="no-raw.csv" onReset={() => {}} />);
     // Info bar should render with the filename
     expect(screen.getByText('no-raw.csv')).toBeInTheDocument();
+  });
+
+  it('throws a clear error when featureUsage artifacts are missing', () => {
+    const ingestionResult = createIngestionResultWithoutFeatureUsage();
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect(() => render(<DataAnalysis ingestionResult={ingestionResult} filename="no-feature.csv" onReset={() => {}} />))
+      .toThrow('Missing or invalid featureUsage output in ingestion result');
+
+    consoleError.mockRestore();
   });
 });

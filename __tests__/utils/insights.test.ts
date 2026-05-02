@@ -1,14 +1,17 @@
 import { PRICING } from '@/constants/pricing';
-import { categorizeUserConsumption, calculateUnusedValue, CONSUMPTION_THRESHOLDS, UserConsumptionCategory, calculateFeatureUtilization } from '@/utils/analytics/insights';
-import { ProcessedData } from '@/types/csv';
-import { UserSummary } from '@/utils/analytics';
+import type { ProcessedData } from '@/types/csv';
+import type { UserSummary } from '@/utils/analytics';
+import { categorizeUserConsumption, calculateUnusedValue, CONSUMPTION_THRESHOLDS } from '@/utils/analytics/insights';
+import type { UserConsumptionCategory } from '@/utils/analytics/insights';
+import { buildFeatureUtilizationFromArtifacts } from '@/utils/ingestion/analytics';
+import type { FeatureUsageArtifacts } from '@/utils/ingestion/types';
 
 function makeProcessed(row: Partial<ProcessedData>): ProcessedData {
   const timestamp = row.timestamp || new Date('2025-06-01T00:00:00Z');
   const iso = timestamp.toISOString();
   return {
     timestamp: timestamp as Date,
-    user: row.user || 'u',
+    user: row.user || 'test-user-default',
     model: row.model || 'o3-mini',
     requestsUsed: row.requestsUsed ?? 0,
     exceedsQuota: row.exceedsQuota ?? false,
@@ -25,14 +28,48 @@ function makeProcessed(row: Partial<ProcessedData>): ProcessedData {
   } as ProcessedData;
 }
 
+function makeFeatureUsageArtifacts({
+  codeReview = 0,
+  codingAgent = 0,
+  spark = 0,
+  nonCopilotCodeReview = 0,
+  codeReviewUsers = [],
+  codingAgentUsers = [],
+  sparkUsers = []
+}: {
+  codeReview?: number;
+  codingAgent?: number;
+  spark?: number;
+  nonCopilotCodeReview?: number;
+  codeReviewUsers?: string[];
+  codingAgentUsers?: string[];
+  sparkUsers?: string[];
+}): FeatureUsageArtifacts {
+  return {
+    featureTotals: {
+      codeReview,
+      codingAgent,
+      spark
+    },
+    featureUsers: {
+      codeReview: new Set(codeReviewUsers),
+      codingAgent: new Set(codingAgentUsers),
+      spark: new Set(sparkUsers)
+    },
+    specialTotals: {
+      nonCopilotCodeReview
+    }
+  };
+}
+
 describe('insights analytics', () => {
   test('categorizeUserConsumption threshold boundaries', () => {
     const quota = 300;
     const users: UserSummary[] = [
-      { user: 'lowEdgeBelow', totalRequests: (CONSUMPTION_THRESHOLDS.averageMinPct - 0.1) / 100 * quota, modelBreakdown: {} },
-      { user: 'avgEdge', totalRequests: (CONSUMPTION_THRESHOLDS.averageMinPct) / 100 * quota, modelBreakdown: {} },
-      { user: 'avgHigh', totalRequests: (CONSUMPTION_THRESHOLDS.powerMinPct - 0.1) / 100 * quota, modelBreakdown: {} },
-      { user: 'powerEdge', totalRequests: (CONSUMPTION_THRESHOLDS.powerMinPct) / 100 * quota, modelBreakdown: {} }
+      { user: 'test-user-low-edge-below', totalRequests: (CONSUMPTION_THRESHOLDS.averageMinPct - 0.1) / 100 * quota, modelBreakdown: {} },
+      { user: 'test-user-average-edge', totalRequests: (CONSUMPTION_THRESHOLDS.averageMinPct) / 100 * quota, modelBreakdown: {} },
+      { user: 'test-user-average-high', totalRequests: (CONSUMPTION_THRESHOLDS.powerMinPct - 0.1) / 100 * quota, modelBreakdown: {} },
+      { user: 'test-user-power-edge', totalRequests: (CONSUMPTION_THRESHOLDS.powerMinPct) / 100 * quota, modelBreakdown: {} }
     ];
     const processed: ProcessedData[] = users.map(u => makeProcessed({ user: u.user, quotaValue: quota }));
     const categorized = categorizeUserConsumption(users, processed);
@@ -41,35 +78,34 @@ describe('insights analytics', () => {
       ...categorized.averageUsers.map(u => [u.user, u.category]),
       ...categorized.powerUsers.map(u => [u.user, u.category])
     ]);
-    expect(byUser.lowEdgeBelow).toBe('low');
-    expect(byUser.avgEdge).toBe('average');
-    expect(byUser.avgHigh).toBe('average');
-    expect(byUser.powerEdge).toBe('power');
+    expect(byUser['test-user-low-edge-below']).toBe('low');
+    expect(byUser['test-user-average-edge']).toBe('average');
+    expect(byUser['test-user-average-high']).toBe('average');
+    expect(byUser['test-user-power-edge']).toBe('power');
   });
 
   test('calculateUnusedValue sums unused correctly', () => {
     const users: UserConsumptionCategory[] = [
-      { user: 'a', totalRequests: 100, quota: 300, consumptionPercentage: 33.33, category: 'low' },
-      { user: 'b', totalRequests: 250, quota: 300, consumptionPercentage: 83.33, category: 'average' },
-      { user: 'c', totalRequests: 500, quota: 'unlimited', consumptionPercentage: 0, category: 'low' }
+      { user: 'test-user-one', totalRequests: 100, quota: 300, consumptionPercentage: 33.33, category: 'low' },
+      { user: 'test-user-two', totalRequests: 250, quota: 300, consumptionPercentage: 83.33, category: 'average' },
+      { user: 'test-user-three', totalRequests: 500, quota: 'unlimited', consumptionPercentage: 0, category: 'low' }
     ];
     const total = calculateUnusedValue(users);
     // unused: a=200, b=50 => 250 * overage rate (import pricing constant to avoid magic number).
     expect(total).toBeCloseTo((200 + 50) * PRICING.OVERAGE_RATE_PER_REQUEST, 6);
   });
 
-  test('feature utilization counts sessions & users', () => {
-    const data: ProcessedData[] = [
-      makeProcessed({ user: 'u1', model: 'Code Review', requestsUsed: 3 }),
-      makeProcessed({ user: 'u2', model: 'code review', requestsUsed: 2 }),
-      makeProcessed({ user: '', model: 'Code Review', requestsUsed: 4, quotaValue: 0, totalQuota: '0', isNonCopilotUsage: true, usageBucket: 'non_copilot_code_review' }),
-      makeProcessed({ user: 'u1', model: 'Coding Agent', requestsUsed: 5 }),
-      makeProcessed({ user: 'u3', model: 'Padawan', requestsUsed: 4 }),
-      makeProcessed({ user: 'u2', model: 'gpt-4.1', product: 'spark', sku: 'spark_premium_request', requestsUsed: 7 }),
-      makeProcessed({ user: 'u4', model: 'o3-mini', product: 'spark', sku: 'spark_premium_request', requestsUsed: 1 }),
-      makeProcessed({ user: 'u5', model: 'Spark Helper', requestsUsed: 9 }),
-    ];
-    const stats = calculateFeatureUtilization(data);
+  test('feature utilization counts sessions & users from artifacts', () => {
+    const stats = buildFeatureUtilizationFromArtifacts(makeFeatureUsageArtifacts({
+      codeReview: 9,
+      codingAgent: 9,
+      spark: 8,
+      nonCopilotCodeReview: 4,
+      codeReviewUsers: ['test-user-one', 'test-user-two'],
+      codingAgentUsers: ['test-user-one', 'test-user-three'],
+      sparkUsers: ['test-user-two', 'test-user-four']
+    }));
+
     expect(stats.codeReview.totalSessions).toBe(5);
     expect(stats.codeReview.userCount).toBe(2);
     expect(stats.nonCopilotCodeReview.totalSessions).toBe(4);
@@ -79,14 +115,11 @@ describe('insights analytics', () => {
     expect(stats.spark.userCount).toBe(2);
   });
 
-  test('feature utilization identifies spark from product or sku metadata', () => {
-    const data: ProcessedData[] = [
-      makeProcessed({ user: 'u1', model: 'gpt-4.1', product: 'spark', requestsUsed: 3 }),
-      makeProcessed({ user: 'u2', model: 'o3-mini', sku: 'spark_premium_request', requestsUsed: 2 }),
-      makeProcessed({ user: 'u3', model: 'Spark Helper', product: 'copilot', sku: 'copilot_premium_request', requestsUsed: 5 }),
-    ];
-
-    const stats = calculateFeatureUtilization(data);
+  test('feature utilization uses spark totals and users from artifacts', () => {
+    const stats = buildFeatureUtilizationFromArtifacts(makeFeatureUsageArtifacts({
+      spark: 5,
+      sparkUsers: ['test-user-one', 'test-user-two']
+    }));
 
     expect(stats.spark.totalSessions).toBe(5);
     expect(stats.spark.userCount).toBe(2);

@@ -37,7 +37,7 @@ interface AnalysisContextValue {
   quotaArtifacts: QuotaArtifacts;
   usageArtifacts: UsageArtifacts;
   dailyBucketsArtifacts: DailyBucketsArtifacts;
-  featureUsageArtifacts?: FeatureUsageArtifacts; // optional until fully adopted
+  featureUsageArtifacts: FeatureUsageArtifacts;
   billingArtifacts?: BillingArtifacts; // new billing summary artifacts
   
   // Raw & processed (adapter bridge - to be phased out)
@@ -73,6 +73,39 @@ interface AnalysisContextValue {
   onReset: () => void;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isFeatureUsageArtifacts(value: unknown): value is FeatureUsageArtifacts {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  const { featureTotals, featureUsers, specialTotals } = value;
+
+  return (
+    isRecord(featureTotals) &&
+    typeof featureTotals.codeReview === 'number' &&
+    typeof featureTotals.codingAgent === 'number' &&
+    typeof featureTotals.spark === 'number' &&
+    isRecord(featureUsers) &&
+    featureUsers.codeReview instanceof Set &&
+    featureUsers.codingAgent instanceof Set &&
+    featureUsers.spark instanceof Set &&
+    isRecord(specialTotals) &&
+    typeof specialTotals.nonCopilotCodeReview === 'number'
+  );
+}
+
+function requireFeatureUsageArtifacts(value: unknown): FeatureUsageArtifacts {
+  if (!isFeatureUsageArtifacts(value)) {
+    throw new Error('Missing or invalid featureUsage output in ingestion result');
+  }
+
+  return value;
+}
+
 // Exporting the raw context as well (in addition to hook) enables optional consumption
 // in components that want to gracefully fallback when provider is absent in tests.
 export const AnalysisContext = createContext<AnalysisContextValue | null>(null);
@@ -82,12 +115,12 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
   const [view, setView] = useState<ViewType>('overview');
 
   // Extract aggregator outputs
-  const { quotaArtifacts, usageArtifacts, dailyBucketsArtifacts, billingArtifacts } = useMemo(() => {
+  const { quotaArtifacts, usageArtifacts, dailyBucketsArtifacts, featureUsageArtifacts, billingArtifacts } = useMemo(() => {
     return {
       quotaArtifacts: ingestionResult.outputs.quota as QuotaArtifacts,
       usageArtifacts: ingestionResult.outputs.usage as UsageArtifacts,
       dailyBucketsArtifacts: ingestionResult.outputs.dailyBuckets as DailyBucketsArtifacts,
-      featureUsageArtifacts: ingestionResult.outputs.featureUsage as FeatureUsageArtifacts | undefined,
+      featureUsageArtifacts: requireFeatureUsageArtifacts(ingestionResult.outputs.featureUsage),
       billingArtifacts: ingestionResult.outputs.billing as BillingArtifacts | undefined
     };
   }, [ingestionResult]);
@@ -152,7 +185,7 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
     quotaArtifacts,
     usageArtifacts,
     dailyBucketsArtifacts,
-    featureUsageArtifacts: ingestionResult.outputs.featureUsage as FeatureUsageArtifacts | undefined,
+    featureUsageArtifacts,
     billingArtifacts: billingArtifacts,
     // Legacy adapter bridge
     baseProcessed,
