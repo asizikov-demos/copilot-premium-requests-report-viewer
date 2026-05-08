@@ -17,7 +17,7 @@ import { getEarlyExhausterCount, type Advisory } from '@/utils/analytics/advisor
 import { CONSUMPTION_THRESHOLDS, UserConsumptionCategory, InsightsOverviewData } from '@/utils/analytics/insights';
 import type { FeatureUtilizationStats } from '@/utils/analytics/insights';
 import { buildUserQuotaMapFromRows } from '@/utils/analytics/quota';
-import { dayOfMonthToWeekBucket, enumerateDatesInclusive } from '@/utils/dateKeys';
+import { dayOfMonthToWeekBucket, enumerateDatesInclusive, monthKeyToLabel } from '@/utils/dateKeys';
 import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
 import { calculateBilledOverageFromRows, calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
 import {
@@ -706,21 +706,11 @@ export function buildDailyCodeReviewUsageFromArtifacts(
 // -----------------------------
 // Month List From Artifacts
 // -----------------------------
-/** Month names constant retained for consistent labeling (UTC context). */
-const MONTH_NAMES = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December'
-];
-
 /**
  * Build month list (value, label) directly from DailyBucketsArtifacts.months.
  * Returns empty array when months not present (e.g., legacy artifact shape).
  */
 export function buildMonthListFromArtifacts(daily: DailyBucketsArtifacts): { value: string; label: string }[] {
   if (!daily.months || daily.months.length === 0) return [];
-  return daily.months.map(key => {
-    const [yearStr, monthStr] = key.split('-');
-    const monthIndex = parseInt(monthStr, 10) - 1;
-    return { value: key, label: `${MONTH_NAMES[monthIndex]} ${yearStr}` };
-  });
+  return daily.months.map(key => ({ value: key, label: monthKeyToLabel(key) }));
 }

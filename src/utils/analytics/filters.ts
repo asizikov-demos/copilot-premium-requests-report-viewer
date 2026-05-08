@@ -1,32 +1,19 @@
-import { ProcessedData } from '@/types/csv';
+import type { ProcessedData } from '@/types/csv';
+import { buildDateKeys, monthKeyToLabel } from '@/utils/dateKeys';
 
-// Static UTC month names map to avoid locale/date allocations during month label generation.
-const MONTH_NAMES = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December'
-];
+export function getMonthKey(row: ProcessedData): string {
+  return row.monthKey || buildDateKeys(row.timestamp).monthKey;
+}
 
 // Get available months (UTC) present in dataset
 export function getAvailableMonths(data: ProcessedData[]): { value: string; label: string }[] {
   const monthsSet = new Set<string>();
   for (const row of data) {
-    if (row.monthKey) {
-      monthsSet.add(row.monthKey);
-    } else {
-      const d = row.timestamp;
-      const computed = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-      monthsSet.add(computed);
-    }
+    monthsSet.add(getMonthKey(row));
   }
   return Array.from(monthsSet)
     .sort()
-    .map(key => {
-      const [yearStr, monthStr] = key.split('-');
-      const year = yearStr; // already YYYY
-      const monthIndex = parseInt(monthStr, 10) - 1; // 0-based
-      const label = `${MONTH_NAMES[monthIndex]} ${year}`;
-      return { value: key, label };
-    });
+    .map(key => ({ value: key, label: monthKeyToLabel(key) }));
 }
 
 export function hasMultipleMonths(data: ProcessedData[]): boolean {
@@ -37,7 +24,7 @@ export function filterBySelectedMonths(data: ProcessedData[], selectedMonths: st
   if (selectedMonths.length === 0) return data;
   const selSet = new Set(selectedMonths);
   return data.filter(row => {
-    const key = row.monthKey || `${row.timestamp.getUTCFullYear()}-${String(row.timestamp.getUTCMonth() + 1).padStart(2, '0')}`;
+    const key = getMonthKey(row);
     return selSet.has(key);
   });
 }
