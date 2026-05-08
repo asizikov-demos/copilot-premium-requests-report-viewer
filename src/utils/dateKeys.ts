@@ -26,6 +26,12 @@ export interface WeekBucket {
   endDate: string;
 }
 
+// Static UTC month names map to avoid locale/date allocations during month label generation.
+export const MONTH_NAMES = [
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December'
+] as const;
+
 /**
  * Build cached UTC keys for a given Date.
  * The input Date must already represent the correct UTC timestamp provided by the CSV.
@@ -39,6 +45,12 @@ export function buildDateKeys(d: Date): DateKeys {
     monthKey: iso.slice(0, 7),
     epoch: d.getTime()
   };
+}
+
+export function monthKeyToLabel(monthKey: string): string {
+  const [yearStr, monthStr] = monthKey.split('-');
+  const monthIndex = parseInt(monthStr, 10) - 1;
+  return `${MONTH_NAMES[monthIndex]} ${yearStr}`;
 }
 
 /**

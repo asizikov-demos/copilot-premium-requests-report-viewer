@@ -1,6 +1,9 @@
 import { useState, useMemo, useCallback } from 'react';
+
+import type { ProcessedData } from '@/types/csv';
 import { DailyBucketsArtifacts, buildMonthListFromArtifacts } from '@/utils/ingestion';
-import { ProcessedData } from '@/types/csv';
+import { getMonthKey } from '@/utils/analytics/filters';
+import { monthKeyToLabel } from '@/utils/dateKeys';
 
 /**
  * Hook managing analysis filter state (billing period month selection).
@@ -16,22 +19,13 @@ export function useAnalysisFilters(processedData: ProcessedData[], dailyBucketsA
       const availableMonths = buildMonthListFromArtifacts(dailyBucketsArtifacts);
       return { availableMonths, hasMultipleMonthsData: availableMonths.length > 1 };
     }
-    // Legacy fallback: derive months from processedData inline (avoid importing deprecated utilities)
+    // Legacy fallback: derive months from processedData using the shared UTC-safe helpers.
     const monthsSet = new Set<string>();
     for (const row of processedData) {
-      const key = row.monthKey || `${row.timestamp.getUTCFullYear()}-${String(row.timestamp.getUTCMonth()+1).padStart(2,'0')}`;
-      monthsSet.add(key);
+      monthsSet.add(getMonthKey(row));
     }
     const sorted = Array.from(monthsSet).sort();
-    const MONTH_NAMES = [
-      'January','February','March','April','May','June',
-      'July','August','September','October','November','December'
-    ];
-    const availableMonths = sorted.map(key => {
-      const [yearStr, monthStr] = key.split('-');
-      const monthIndex = parseInt(monthStr, 10) - 1;
-      return { value: key, label: `${MONTH_NAMES[monthIndex]} ${yearStr}` };
-    });
+    const availableMonths = sorted.map(key => ({ value: key, label: monthKeyToLabel(key) }));
     return { availableMonths, hasMultipleMonthsData: availableMonths.length > 1 };
   }, [processedData, dailyBucketsArtifacts]);
 
