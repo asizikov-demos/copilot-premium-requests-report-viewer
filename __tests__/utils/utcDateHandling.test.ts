@@ -1,6 +1,8 @@
 import { buildMonthListFromArtifacts } from '@/utils/ingestion/analytics';
+import { filterBySelectedMonths } from '@/utils/analytics/filters';
+
 import { processCSVData } from '../helpers/processCSVData';
-import { buildMinimalDailyBucketsArtifact, filterBySelectedMonths } from '../helpers/testUtils';
+import { buildMinimalDailyBucketsArtifact } from '../helpers/testUtils';
 import { CSVData } from '../../src/types/csv';
 
 describe('UTC Date Handling and Billing Periods', () => {

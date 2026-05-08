@@ -4,15 +4,16 @@ import {
 import type { UsageArtifacts, QuotaArtifacts } from '@/utils/ingestion';
 import { buildMonthListFromArtifacts } from '@/utils/ingestion/analytics';
 import type { DailyBucketsArtifacts } from '@/utils/ingestion';
+import { filterBySelectedMonths } from '@/utils/analytics/filters';
 import { PRICING } from '@/constants/pricing';
-import { processCSVData, analyzeData } from '../helpers/processCSVData';
 import { CSVData, ProcessedData } from '@/types/csv';
+
+import { processCSVData, analyzeData } from '../helpers/processCSVData';
 import { validCSVData, powerUserCSVData } from '../fixtures/validCSVData';
 import {
   buildMinimalDailyBucketsArtifact,
   createMockCSVData,
-  createMockCSVDataArray,
-  filterBySelectedMonths
+  createMockCSVDataArray
 } from '../helpers/testUtils';
 
 // Explicit model requests interface to remove implicit any usage
