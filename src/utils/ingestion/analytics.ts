@@ -593,7 +593,7 @@ export function buildAdvisoriesFromArtifacts(
  * without scanning raw processedData rows. Leverages DailyBucketsAggregator's
  * dailyUserModelTotals nested map. Mirrors legacy computeDailyCodingAgentUsage
  * behavior by:
- *  - Including ONLY days with > 0 coding agent (or padawan) requests
+ *  - Including ONLY days with > 0 coding agent requests
  *  - Sorting by ascending date
  *  - Computing cumulativeRequests as running sum of dailyRequests
  * Falls back to empty array if required per-model breakdown map is absent.

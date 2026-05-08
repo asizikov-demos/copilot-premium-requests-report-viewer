@@ -13,7 +13,7 @@ describe('FeatureUsageAggregator', () => {
       makeNormalizedRow({ user: 'u1', model: 'Code Review', quantity: 3 }),
       makeNormalizedRow({ user: 'u2', model: 'code review session', quantity: 2 }),
       makeNormalizedRow({ user: 'u1', model: 'Coding Agent', quantity: 5 }),
-      makeNormalizedRow({ user: 'u3', model: 'Padawan', quantity: 4 }),
+      makeNormalizedRow({ user: 'u3', model: 'Copilot Coding Agent', quantity: 4 }),
       makeNormalizedRow({ user: 'u2', model: 'gpt-4.1', product: 'spark', sku: 'spark_premium_request', quantity: 7 }),
       makeNormalizedRow({ user: 'u4', model: 'o3-mini', product: 'spark', sku: 'spark_premium_request', quantity: 1 })
     ];
