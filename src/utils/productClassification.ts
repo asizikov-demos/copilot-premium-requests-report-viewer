@@ -15,7 +15,7 @@ function normalizeProductValue(value?: string): string {
 
 export function isCodingAgentModel(model: string): boolean {
   const normalizedModel = model.toLowerCase();
-  return normalizedModel.includes('coding agent') || normalizedModel.includes('padawan');
+  return normalizedModel.includes('coding agent');
 }
 
 export function isCodeReviewModel(model: string): boolean {

@@ -7,41 +7,33 @@ import {
   computeWeeklyQuotaExhaustionFromArtifacts,
   WeeklyQuotaExhaustionBreakdown
 } from '@/utils/ingestion/analytics';
+import { isCodeReviewModel, isCodingAgentModel, isSparkProduct } from '@/utils/productClassification';
 
 import type { OverageSummary } from './overage';
 
 export { computeOverageSummary } from './overage';
 export type { OverageSummary } from './overage';
 
-// -----------------------------
-// Legacy Constants & Scoring (preserved for tests)
-// -----------------------------
-
-interface SpecialFeatureConfig { readonly keyword: string; readonly score: number; readonly description: string; }
-export const SPECIAL_FEATURES_CONFIG: readonly SpecialFeatureConfig[] = [
-  { keyword: 'code review', score: 8, description: 'Code Review feature usage' },
-  { keyword: 'coding agent', score: 8, description: 'Coding Agent feature usage' },
-  { keyword: 'padawan', score: 8, description: 'Padawan feature usage' },
-  { keyword: 'spark', score: 4, description: 'Spark feature usage' }
-] as const;
+const CODE_REVIEW_SPECIAL_FEATURE_SCORE = 8;
+const CODING_AGENT_SPECIAL_FEATURE_SCORE = 8;
+const SPARK_SPECIAL_FEATURE_SCORE = 4;
 export const MAX_SPECIAL_FEATURES_SCORE = 20;
 
 export function calculateSpecialFeaturesScore(models: string[]): number {
-  const modelSet = new Set(models.map(m => m.toLowerCase()));
   let totalScore = 0;
-  const usedFeatureTypes = new Set<string>();
-  const featureGroups = [
-    { type: 'code_review', keywords: ['code review'], score: 8 },
-    { type: 'coding_agent', keywords: ['coding agent', 'padawan'], score: 8 },
-    { type: 'spark', keywords: ['spark'], score: 4 }
-  ];
-  for (const group of featureGroups) {
-    const hasFeature = group.keywords.some(keyword => modelSet.has(keyword));
-    if (hasFeature && !usedFeatureTypes.has(group.type)) {
-      totalScore += group.score;
-      usedFeatureTypes.add(group.type);
-    }
+
+  if (models.some(isCodeReviewModel)) {
+    totalScore += CODE_REVIEW_SPECIAL_FEATURE_SCORE;
   }
+
+  if (models.some(isCodingAgentModel)) {
+    totalScore += CODING_AGENT_SPECIAL_FEATURE_SCORE;
+  }
+
+  if (models.some(model => isSparkProduct(model))) {
+    totalScore += SPARK_SPECIAL_FEATURE_SCORE;
+  }
+
   return Math.min(totalScore, MAX_SPECIAL_FEATURES_SCORE);
 }
 

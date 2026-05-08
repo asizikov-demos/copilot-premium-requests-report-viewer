@@ -11,7 +11,7 @@ describe('buildDailyCodingAgentUsageFromArtifacts', () => {
     u1Models.set('o3-mini', 3); // non-coding agent should be ignored
     day1.set('u1', u1Models);
     const u2Models = new Map<string, number>();
-    u2Models.set('padawan-beta', 3); // counts toward coding agent
+    u2Models.set('copilot coding agent beta', 3); // counts toward coding agent
     day1.set('u2', u2Models);
     dailyUserModelTotals.set('2025-06-01', day1);
     // 2025-06-02
@@ -31,7 +31,7 @@ describe('buildDailyCodingAgentUsageFromArtifacts', () => {
     const artifacts = makeArtifacts();
     const result = buildDailyCodingAgentUsageFromArtifacts(artifacts);
     const expected: DailyCodingAgentUsageDatum[] = [
-      { date: '2025-06-01', dailyRequests: 5, cumulativeRequests: 5 }, // 2 + 3 padawan (ignores o3-mini)
+      { date: '2025-06-01', dailyRequests: 5, cumulativeRequests: 5 }, // 2 + 3 coding agent (ignores o3-mini)
       { date: '2025-06-02', dailyRequests: 5, cumulativeRequests: 10 }
     ];
     expect(result).toEqual(expected);

@@ -8,9 +8,8 @@ import {
 } from '@/utils/productClassification';
 
 describe('product classification', () => {
-  test('detects coding agent aliases', () => {
+  test('detects coding agent models', () => {
     expect(isCodingAgentModel('Copilot Coding Agent')).toBe(true);
-    expect(isCodingAgentModel('Padawan Session')).toBe(true);
     expect(isCodingAgentModel('Code Review')).toBe(false);
   });
 
@@ -28,7 +27,6 @@ describe('product classification', () => {
 
   test('classifies models into product buckets', () => {
     expect(classifyProductCategory('Coding Agent')).toBe('Coding Agent');
-    expect(classifyProductCategory('Padawan')).toBe('Coding Agent');
     expect(classifyProductCategory('Code Review')).toBe('Code Review');
     expect(classifyProductCategory('Code Review', undefined, undefined, { isNonCopilotUsage: true, usageBucket: 'non_copilot_code_review' })).toBe(NON_COPILOT_CODE_REVIEW_PRODUCT_CATEGORY);
     expect(classifyProductCategory('gpt-4.1')).toBe('Copilot');
