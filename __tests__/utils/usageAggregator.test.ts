@@ -111,8 +111,8 @@ describe('UsageAggregator', () => {
       model: row.model,
       requestsUsed: row.quantity,
       exceedsQuota: row.exceedsQuota ?? false,
-      totalQuota: row.quotaRaw ?? 'Unlimited',
-      quotaValue: row.quotaValue ?? 'unlimited',
+      totalQuota: row.quotaRaw ?? 'Unknown',
+      quotaValue: row.quotaValue ?? 'unknown',
       iso: `${row.day}T00:00:00.000Z`,
       dateKey: row.day,
       monthKey: row.day.slice(0, 7),
@@ -152,8 +152,8 @@ describe('processed data artifact builders', () => {
       model: row.model,
       requestsUsed: row.quantity,
       exceedsQuota: row.exceedsQuota ?? false,
-      totalQuota: row.quotaRaw ?? (row.quotaValue === 'unlimited' ? 'Unlimited' : String(row.quotaValue ?? 'Unlimited')),
-      quotaValue: row.quotaValue ?? 'unlimited',
+      totalQuota: row.quotaRaw ?? (row.quotaValue === 'unknown' ? 'Unknown' : String(row.quotaValue ?? 'Unknown')),
+      quotaValue: row.quotaValue ?? 'unknown',
       iso: `${row.day}T00:00:00.000Z`,
       dateKey: row.day,
       monthKey: row.day.slice(0, 7),
@@ -175,7 +175,7 @@ describe('processed data artifact builders', () => {
     const ctx: AggregatorContext = { pricing: PRICING };
     const rows: NormalizedRow[] = [
       makeNormalizedRow({ user: 'test-user-one', quotaValue: PRICING.BUSINESS_QUOTA, quotaRaw: String(PRICING.BUSINESS_QUOTA) }),
-      makeNormalizedRow({ user: 'test-user-two', quotaValue: 'unlimited', quotaRaw: 'Unlimited' }),
+      makeNormalizedRow({ user: 'test-user-two', quotaValue: 'unknown', quotaRaw: 'Unknown' }),
       makeNormalizedRow({
         user: '',
         model: 'Code Review',

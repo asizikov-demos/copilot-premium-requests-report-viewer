@@ -21,8 +21,8 @@ describe('computeOverageSummaryFromArtifacts', () => {
     };
     return usage;
   }
-  function makeQuota(entries: Array<{ user: string; quota: number | 'unlimited' }>): QuotaArtifacts {
-    const quotaByUser = new Map<string, number | 'unlimited'>();
+  function makeQuota(entries: Array<{ user: string; quota: number | 'unknown' }>): QuotaArtifacts {
+    const quotaByUser = new Map<string, number | 'unknown'>();
     for (const e of entries) quotaByUser.set(e.user, e.quota);
     return { quotaByUser } as QuotaArtifacts;
   }
@@ -55,13 +55,13 @@ describe('computeOverageSummaryFromArtifacts', () => {
     expect(res.totalOverageCost).toBeCloseTo(300 * PRICING.OVERAGE_RATE_PER_REQUEST, 5);
   });
 
-  it('ignores unlimited users for overage', () => {
+  it('ignores unknown users for overage', () => {
     const usage = makeUsage([
       { user: 'a', totalRequests: 5000 },
       { user: 'b', totalRequests: 50 }
     ]);
     const quota = makeQuota([
-      { user: 'a', quota: 'unlimited' },
+      { user: 'a', quota: 'unknown' },
       { user: 'b', quota: PRICING.BUSINESS_QUOTA }
     ]);
     const res = computeOverageSummaryFromArtifacts(usage, quota);
@@ -113,7 +113,7 @@ describe('computeOverageSummaryFromProcessedData', () => {
     netAmount?: number;
     grossAmount?: number;
     discountAmount?: number;
-    quotaValue?: number | 'unlimited';
+    quotaValue?: number | 'unknown';
     dateKey: string;
   }): ProcessedData => ({
     timestamp: new Date(`${dateKey}T00:00:00Z`),
@@ -121,7 +121,7 @@ describe('computeOverageSummaryFromProcessedData', () => {
     model: 'GPT-5',
     requestsUsed,
     exceedsQuota,
-    totalQuota: quotaValue === 'unlimited' ? 'Unlimited' : quotaValue.toString(),
+    totalQuota: quotaValue === 'unknown' ? 'Unknown' : quotaValue.toString(),
     quotaValue,
     iso: `${dateKey}T00:00:00.000Z`,
     dateKey,

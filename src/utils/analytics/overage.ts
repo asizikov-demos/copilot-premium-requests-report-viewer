@@ -11,13 +11,13 @@ export interface OverageSummary {
 
 /**
  * Compute aggregate overage requests & cost across all users taking into account
- * per-user quota values (including 'unlimited').
+ * per-user quota values (including 'unknown').
  * Pure + deterministic for unit testing.
  */
 export function computeOverageSummary(userData: UserSummary[], processedData: ProcessedData[]): OverageSummary {
   const quotaMap = buildUserQuotaMapFromRows(processedData);
   const totalOverageRequests = userData.reduce((total, user) => {
-    const userQuota = quotaMap.get(user.user) ?? 'unlimited';
+    const userQuota = quotaMap.get(user.user) ?? 'unknown';
     const overage = calculateOverageRequests(user.totalRequests, userQuota);
     return total + overage;
   }, 0);

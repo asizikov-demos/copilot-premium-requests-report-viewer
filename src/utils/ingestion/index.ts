@@ -24,6 +24,6 @@ import { QuotaArtifacts } from './types';
  * Helper to get user quota from aggregator artifacts (O(1) lookup).
  * Replaces the old O(R) getUserQuotaValue function.
  */
-export function getUserQuota(quotaArtifacts: QuotaArtifacts, user: string): number | 'unlimited' {
-  return quotaArtifacts.quotaByUser.get(user) ?? 'unlimited';
+export function getUserQuota(quotaArtifacts: QuotaArtifacts, user: string): number | 'unknown' {
+  return quotaArtifacts.quotaByUser.get(user) ?? 'unknown';
 }

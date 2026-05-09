@@ -27,6 +27,6 @@ export function enrichUserAggregates(
 ) {
   return usageArtifacts.users.map(user => ({
     ...user,
-    quotaValue: quotaArtifacts.quotaByUser.get(user.user) ?? 'unlimited'
+    quotaValue: quotaArtifacts.quotaByUser.get(user.user) ?? 'unknown'
   }));
 }

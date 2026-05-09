@@ -130,7 +130,7 @@ export function CodingAgentOverview({
                       {user.codingAgentRequests.toFixed(1)}
                     </td>
                     <td className="px-5 py-3 whitespace-nowrap text-sm text-[#636c76] text-right">
-                      {user.quota === 'unlimited' ? '∞' : user.quota}
+                      {user.quota === 'unknown' ? 'Unknown' : user.quota}
                     </td>
                   </tr>
                 ))}
@@ -190,7 +190,7 @@ export function CodingAgentOverview({
                       <tr key={user.user} className="hover:bg-[#fcfdff] transition-colors">
                         <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-[#1f2328]">{user.user}</td>
                         <td className="px-5 py-3 whitespace-nowrap text-sm font-mono text-[#1f2328] text-right">{user.codeReviewRequests.toFixed(1)}</td>
-                        <td className="px-5 py-3 whitespace-nowrap text-sm text-[#636c76] text-right">{user.quota === 'unlimited' ? '∞' : user.quota}</td>
+                        <td className="px-5 py-3 whitespace-nowrap text-sm text-[#636c76] text-right">{user.quota === 'unknown' ? 'Unknown' : user.quota}</td>
                       </tr>
                     ))}
                   </tbody>

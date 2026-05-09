@@ -10,7 +10,7 @@ function makeUsage(users: Array<{ user: string; totalRequests: number; modelBrea
   return { users, modelTotals, userCount: users.length, modelCount: Object.keys(modelTotals).length };
 }
 
-function makeQuota(entries: Array<[string, number | 'unlimited']>): QuotaArtifacts {
+function makeQuota(entries: Array<[string, number | 'unknown']>): QuotaArtifacts {
   return {
     quotaByUser: new Map(entries),
     conflicts: new Map(),
@@ -27,7 +27,7 @@ describe('analyzeCodeReviewAdoptionFromArtifacts', () => {
       { user: 'bob', totalRequests: 10, modelBreakdown: { 'Code Review beta': 8, 'o3-mini': 2 } },
       { user: 'carol', totalRequests: 5, modelBreakdown: { 'gpt-4o': 5 } },
     ]);
-    const quota = makeQuota([['alice', 'unlimited'], ['bob', 300], ['carol', 1000]]);
+    const quota = makeQuota([['alice', 'unknown'], ['bob', 300], ['carol', 1000]]);
 
     const result = analyzeCodeReviewAdoptionFromArtifacts(usage, quota);
 
@@ -41,7 +41,7 @@ describe('analyzeCodeReviewAdoptionFromArtifacts', () => {
     expect(result.users[0].quota).toBe(300);
     expect(result.users[1].user).toBe('alice');
     expect(result.users[1].codeReviewRequests).toBe(5);
-    expect(result.users[1].quota).toBe('unlimited');
+    expect(result.users[1].quota).toBe('unknown');
   });
 
   test('returns empty result when no users exist', () => {
@@ -60,7 +60,7 @@ describe('analyzeCodeReviewAdoptionFromArtifacts', () => {
     const usage = makeUsage([
       { user: 'alice', totalRequests: 10, modelBreakdown: { 'gpt-4o': 10 } },
     ]);
-    const quota = makeQuota([['alice', 'unlimited']]);
+    const quota = makeQuota([['alice', 'unknown']]);
     const result = analyzeCodeReviewAdoptionFromArtifacts(usage, quota);
 
     expect(result.totalUsers).toBe(0);
@@ -72,7 +72,7 @@ describe('analyzeCodeReviewAdoptionFromArtifacts', () => {
     const usage = makeUsage([
       { user: 'alice', totalRequests: 0, modelBreakdown: { 'code review v1': 0 } },
     ]);
-    const quota = makeQuota([['alice', 'unlimited']]);
+    const quota = makeQuota([['alice', 'unknown']]);
     const result = analyzeCodeReviewAdoptionFromArtifacts(usage, quota);
 
     // User has code review model but 0 requests — still counted as adopter
@@ -83,14 +83,14 @@ describe('analyzeCodeReviewAdoptionFromArtifacts', () => {
     }
   });
 
-  test('defaults quota to unlimited when user missing from quota map', () => {
+  test('defaults quota to unknown when user missing from quota map', () => {
     const usage = makeUsage([
       { user: 'alice', totalRequests: 10, modelBreakdown: { 'code review v1': 3 } },
     ]);
     const quota = makeQuota([]); // no entries
     const result = analyzeCodeReviewAdoptionFromArtifacts(usage, quota);
 
-    expect(result.users[0].quota).toBe('unlimited');
+    expect(result.users[0].quota).toBe('unknown');
   });
 
   test('matches code review models case-insensitively', () => {
@@ -119,7 +119,7 @@ describe('analyzeCodeReviewAdoptionFromArtifacts', () => {
         quotaValue: 0,
       },
     ];
-    const quota = makeQuota([['alice', 'unlimited'], ['bob', 300], ['carol', 1000]]);
+    const quota = makeQuota([['alice', 'unknown'], ['bob', 300], ['carol', 1000]]);
     quota.specialBucketQuotas = new Map([['non_copilot_code_review', 0]]);
 
     const result = analyzeCodeReviewAdoptionFromArtifacts(usage, quota);

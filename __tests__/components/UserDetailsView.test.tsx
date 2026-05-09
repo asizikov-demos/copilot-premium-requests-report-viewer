@@ -18,7 +18,7 @@ jest.mock('recharts', () => ({
 describe('UserDetailsView', () => {
   const mockOnBack = jest.fn();
 
-  const createMockProcessedData = (quotaValues: Array<number | 'unlimited'>): ProcessedData[] => {
+  const createMockProcessedData = (quotaValues: Array<number | 'unknown'>): ProcessedData[] => {
     return quotaValues.map((quotaValue, index) => {
       const timestamp = new Date(`2025-06-${10 + index}T10:00:00Z`);
       const iso = timestamp.toISOString();
@@ -28,7 +28,7 @@ describe('UserDetailsView', () => {
         model: 'gpt-4',
         requestsUsed: 1,
         exceedsQuota: false,
-        totalQuota: quotaValue === 'unlimited' ? 'Unlimited' : quotaValue.toString(),
+        totalQuota: quotaValue === 'unknown' ? 'Unknown' : quotaValue.toString(),
         quotaValue,
         iso,
         dateKey: iso.slice(0, 10),
@@ -70,19 +70,19 @@ describe('UserDetailsView', () => {
     });
   });
 
-  it('renders unlimited quota details', async () => {
+  it('renders unknown quota details', async () => {
     render(
       <UserDetailsView
         user="User1"
-        processedData={createMockProcessedData(['unlimited'])}
-        userQuotaValue="unlimited"
+        processedData={createMockProcessedData(['unknown'])}
+        userQuotaValue="unknown"
         onBack={mockOnBack}
       />
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Unlimited/)).toBeInTheDocument();
-      expect(screen.getByText(/\d+(\.\d+)?\s*\/\s*∞/)).toBeInTheDocument();
+      expect(screen.getByText(/Unknown/)).toBeInTheDocument();
+      expect(screen.getByText(/\d+(\.\d+)?\s*\/\s*Unknown/)).toBeInTheDocument();
     });
   });
 

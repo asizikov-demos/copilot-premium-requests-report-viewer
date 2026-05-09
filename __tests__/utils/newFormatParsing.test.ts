@@ -6,7 +6,6 @@ import type { NormalizedRow } from '@/utils/ingestion/types';
 
 import { processCSVData } from '../helpers/processCSVData';
 import { newFormatRows } from '../fixtures/newFormatCSVData';
-import type { CSVData } from '@/types/csv';
 
 describe('processCSVData (CSV format)', () => {
   it('maps CSV rows into ProcessedData correctly', () => {
@@ -28,8 +27,8 @@ describe('processCSVData (CSV format)', () => {
 
     const second = processed[1];
     expect(second.user).toBe('bob');
-    expect(second.quotaValue).toBe('unlimited');
-    expect(second.totalQuota.toLowerCase()).toBe('unlimited');
+    expect(second.quotaValue).toBe('unknown');
+    expect(second.totalQuota.toLowerCase()).toBe('unknown');
     expect(second.timestamp.toISOString()).toBe('2025-10-02T00:00:00.000Z');
     expect(second.requestsUsed).toBe(12);
   });
@@ -66,6 +65,62 @@ describe('processCSVData (CSV format)', () => {
     const processed = processCSVData(rows);
     expect(processed[0].aicQuantity).toBeCloseTo(8.68986);
     expect(processed[0].aicGrossAmount).toBeCloseTo(0.0868986);
+  });
+
+  it('zeros request quantity and PRU billing fields for non-request unit types', () => {
+    const rows: CSVData[] = [
+      {
+        date: '2026-03-01',
+        username: 'test-user-one',
+        product: 'copilot',
+        sku: 'copilot_premium_request',
+        unit_type: 'new-unit',
+        model: 'Claude Sonnet 4',
+        quantity: '12',
+        total_monthly_quota: '1000',
+        applied_cost_per_quantity: '0.04',
+        gross_amount: '0.48',
+        discount_amount: '0.08',
+        net_amount: '0.40',
+        organization: 'test-org-one',
+        cost_center_name: 'test-cost-center-one',
+        aic_quantity: '3.5',
+        aic_gross_amount: '0.035',
+      },
+      {
+        date: '2026-03-01',
+        username: 'test-user-two',
+        product: 'copilot',
+        sku: 'copilot_premium_request',
+        unit_type: 'requests',
+        model: 'Claude Sonnet 4',
+        quantity: '2',
+        total_monthly_quota: '1000',
+        applied_cost_per_quantity: '0.04',
+        gross_amount: '0.08',
+        discount_amount: '0.01',
+        net_amount: '0.07',
+      },
+    ];
+
+    const processed = processCSVData(rows);
+
+    expect(processed[0]).toMatchObject({
+      user: 'test-user-one',
+      requestsUsed: 0,
+      grossAmount: 0,
+      discountAmount: 0,
+      netAmount: 0,
+      aicQuantity: 3.5,
+      aicGrossAmount: 0.035,
+    });
+    expect(processed[1]).toMatchObject({
+      user: 'test-user-two',
+      requestsUsed: 2,
+      grossAmount: 0.08,
+      discountAmount: 0.01,
+      netAmount: 0.07,
+    });
   });
 
   it('maps blank-username Code Review rows into a non-Copilot usage bucket with zero quota', () => {

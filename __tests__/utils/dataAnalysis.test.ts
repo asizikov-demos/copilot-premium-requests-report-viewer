@@ -33,8 +33,8 @@ describe('CSV Data Processing', () => {
         model: 'gpt-4.1-2025-04-14',
         requestsUsed: 1.00,
         exceedsQuota: false,
-        totalQuota: 'Unlimited',
-        quotaValue: 'unlimited'
+        totalQuota: 'Unknown',
+        quotaValue: 'unknown'
       });
     });
 
@@ -104,7 +104,7 @@ describe('CSV Data Processing', () => {
       ];
 
       const result = processCSVData(testData);
-      expect(result[0].quotaValue).toBe('unlimited');
+      expect(result[0].quotaValue).toBe('unknown');
     });
 
     it('should handle empty array', () => {
@@ -147,7 +147,7 @@ describe('CSV Data Processing', () => {
         usersExceedingQuota: 0,
         requestsByModel: [],
         quotaBreakdown: {
-          unlimited: [],
+          unknown: [],
           business: [],
           enterprise: [],
           mixed: false,
@@ -161,7 +161,7 @@ describe('CSV Data Processing', () => {
       const result = analyzeData(processedData);
       
       expect(result.totalUniqueUsers).toBe(3); // test-user-a, test-user-b, test-user-c
-      expect(result.usersExceedingQuota).toBe(0); // Nobody actually exceeds their quota (test-user-b: 2.5/100, others unlimited)
+      expect(result.usersExceedingQuota).toBe(0); // Nobody actually exceeds their quota (test-user-b: 2.5/100, others unknown)
       expect(result.requestsByModel).toHaveLength(4); // 4 different models
     });
 
@@ -233,16 +233,16 @@ describe('CSV Data Processing', () => {
         createMockCSVData({
           username: 'test-user-two',
           quantity: '0',
-          total_monthly_quota: 'Unlimited',
+          total_monthly_quota: 'Unknown',
         }),
       ]);
 
       const result = analyzeData(processedData);
 
-      expect(result.usersExceedingQuota).toBe(0);
+      expect(result.usersExceedingQuota).toBe(1);
       expect(result.quotaBreakdown.enterprise).toEqual(['test-user-one']);
-      expect(result.quotaBreakdown.unlimited).toEqual(['test-user-two']);
-      expect(result.quotaBreakdown.business).toEqual([]);
+      expect(result.quotaBreakdown.unknown).toEqual([]);
+      expect(result.quotaBreakdown.business).toEqual(['test-user-two']);
     });
   });
 
@@ -384,7 +384,7 @@ describe('CSV Data Processing', () => {
 
   describe('computeWeeklyQuotaExhaustion (artifact-based)', () => {
 
-    const makeProcessed = (entries: Array<{ ts: string; user: string; used: number; quota: number | 'unlimited'; model?: string }>): ProcessedData[] => {
+    const makeProcessed = (entries: Array<{ ts: string; user: string; used: number; quota: number | 'unknown'; model?: string }>): ProcessedData[] => {
       return entries.map(e => {
         const timestamp = new Date(e.ts);
         const iso = timestamp.toISOString();
@@ -394,7 +394,7 @@ describe('CSV Data Processing', () => {
           model: e.model || 'test-model',
           requestsUsed: e.used,
           exceedsQuota: false,
-          totalQuota: e.quota === 'unlimited' ? 'Unlimited' : String(e.quota),
+          totalQuota: e.quota === 'unknown' ? 'Unknown' : String(e.quota),
           quotaValue: e.quota,
           iso,
           dateKey: iso.substring(0, 10),
@@ -419,8 +419,8 @@ describe('CSV Data Processing', () => {
       return { dailyUserTotals, dateRange: min && max ? { min, max } : null, months: Array.from(new Set(Array.from(dailyUserTotals.keys()).map(d => d.slice(0,7)))).sort() } as DailyBucketsArtifacts;
     }
     function buildQuotaArtifacts(entries: ProcessedData[]): QuotaArtifacts {
-      const quotaByUser = new Map<string, number | 'unlimited'>();
-      const conflicts = new Map<string, Set<number | 'unlimited'>>();
+      const quotaByUser = new Map<string, number | 'unknown'>();
+      const conflicts = new Map<string, Set<number | 'unknown'>>();
       const distinctQuotas = new Set<number>();
       for (const row of entries) {
         if (!quotaByUser.has(row.user)) quotaByUser.set(row.user, row.quotaValue);
@@ -447,12 +447,12 @@ describe('CSV Data Processing', () => {
     it('should compute week buckets and first exhaustion correctly (single month)', () => {
       // UserA quota 300: reaches exactly 300 on day 10 (week2) (100+100+100)
       // UserB quota 300: reaches 300 on day 7 (week1) (150+150)
-      // UserC unlimited: ignored
+      // UserC unknown: ignored
       // UserD quota 300: reaches 310 on day 29 (week5)
       const data = makeProcessed([
         { ts: '2025-06-01T10:00:00Z', user: 'UserB', used: 150, quota: 300 },
         { ts: '2025-06-03T10:00:00Z', user: 'UserA', used: 100, quota: 300 },
-        { ts: '2025-06-05T10:00:00Z', user: 'UserC', used: 500, quota: 'unlimited' },
+        { ts: '2025-06-05T10:00:00Z', user: 'UserC', used: 500, quota: 'unknown' },
         { ts: '2025-06-07T10:00:00Z', user: 'UserB', used: 150, quota: 300 }, // UserB exhausts week1 (day7)
         { ts: '2025-06-08T10:00:00Z', user: 'UserA', used: 100, quota: 300 },
         { ts: '2025-06-10T10:00:00Z', user: 'UserA', used: 100, quota: 300 }, // UserA exhausts week2 (day10)

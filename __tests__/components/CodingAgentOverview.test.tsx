@@ -57,7 +57,7 @@ function createContextValue() {
       totalUniqueUsers: 0,
       usersExceedingQuota: 0,
       requestsByModel: [],
-      quotaBreakdown: { unlimited: [], business: [], enterprise: [], mixed: false, suggestedPlan: null },
+      quotaBreakdown: { unknown: [], business: [], enterprise: [], mixed: false, suggestedPlan: null },
     },
     userData: [],
     allModels: [],
@@ -105,7 +105,7 @@ describe('CodingAgentOverview', () => {
           totalRequests: 20,
           codeReviewRequests: 5,
           codeReviewPercentage: 25,
-          quota: 'unlimited',
+          quota: 'unknown',
           models: ['code review v1'],
         },
         {

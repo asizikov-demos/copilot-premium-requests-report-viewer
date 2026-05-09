@@ -25,7 +25,7 @@ describe('Mixed Quota Support', () => {
       model: 'gpt-4.1-2025-04-14',
       quantity: '15.25',
       exceeds_quota: 'false',
-      total_monthly_quota: 'Unlimited'
+      total_monthly_quota: 'Unknown'
     },
     {
       date: '2025-07-10',
@@ -42,7 +42,7 @@ describe('Mixed Quota Support', () => {
     
     expect(processedData[0].quotaValue).toBe(300);
     expect(processedData[1].quotaValue).toBe(1000);
-    expect(processedData[2].quotaValue).toBe('unlimited');
+    expect(processedData[2].quotaValue).toBe('unknown');
     expect(processedData[3].quotaValue).toBe(300);
   });
 
@@ -52,7 +52,7 @@ describe('Mixed Quota Support', () => {
     
     expect(analysis.quotaBreakdown.business).toContain('UserA');
     expect(analysis.quotaBreakdown.enterprise).toContain('UserB');
-    expect(analysis.quotaBreakdown.unlimited).toContain('UserC');
+    expect(analysis.quotaBreakdown.unknown).toContain('UserC');
     expect(analysis.quotaBreakdown.mixed).toBe(true);
     expect(analysis.quotaBreakdown.suggestedPlan).toBe(null); // Mixed should not suggest a plan
   });
@@ -61,17 +61,17 @@ describe('Mixed Quota Support', () => {
     const processedData = processCSVData(mockData);
     const analysis = analyzeData(processedData);
     
-    // UserA exceeds 300 quota (355 total), UserB doesn't exceed 1000 quota (10.5 total), UserC unlimited
+    // UserA exceeds 300 quota (355 total), UserB doesn't exceed 1000 quota (10.5 total), UserC unknown
     expect(analysis.usersExceedingQuota).toBe(1); // Only UserA
   });
 
   it('should resolve user quota values from first occurrence', () => {
     const processedData = processCSVData(mockData);
-    const quota = (user: string) => processedData.find(r => r.user === user)?.quotaValue ?? 'unlimited';
+    const quota = (user: string) => processedData.find(r => r.user === user)?.quotaValue ?? 'unknown';
     expect(quota('UserA')).toBe(300);
     expect(quota('UserB')).toBe(1000);
-    expect(quota('UserC')).toBe('unlimited');
-    expect(quota('NonExistentUser')).toBe('unlimited');
+    expect(quota('UserC')).toBe('unknown');
+    expect(quota('NonExistentUser')).toBe('unknown');
   });
 
   it('should suggest business plan for all business users', () => {
@@ -101,7 +101,47 @@ describe('Mixed Quota Support', () => {
     expect(analysis.quotaBreakdown.suggestedPlan).toBe('business');
     expect(analysis.quotaBreakdown.business).toEqual(['UserA', 'UserB']);
     expect(analysis.quotaBreakdown.enterprise).toEqual([]);
-    expect(analysis.quotaBreakdown.unlimited).toEqual([]);
+    expect(analysis.quotaBreakdown.unknown).toEqual([]);
+  });
+
+  it('should ignore non-request unit rows when evaluating user plans', () => {
+    const businessWithNonRequestData: CSVData[] = [
+      {
+        date: '2026-03-01',
+        username: 'test-user-one',
+        model: 'Claude Sonnet 4',
+        unit_type: 'new-unit',
+        quantity: '10',
+        exceeds_quota: 'false',
+        total_monthly_quota: 'Unknown'
+      },
+      {
+        date: '2026-03-02',
+        username: 'test-user-one',
+        model: 'Claude Sonnet 4',
+        unit_type: 'requests',
+        quantity: '5',
+        exceeds_quota: 'false',
+        total_monthly_quota: '300'
+      },
+      {
+        date: '2026-03-02',
+        username: 'test-user-two',
+        model: 'Claude Sonnet 4',
+        unit_type: 'requests',
+        quantity: '5',
+        exceeds_quota: 'false',
+        total_monthly_quota: '300'
+      }
+    ];
+
+    const processedData = processCSVData(businessWithNonRequestData);
+    const analysis = analyzeData(processedData);
+
+    expect(analysis.quotaBreakdown.mixed).toBe(false);
+    expect(analysis.quotaBreakdown.suggestedPlan).toBe('business');
+    expect(analysis.quotaBreakdown.business).toEqual(['test-user-one', 'test-user-two']);
+    expect(analysis.quotaBreakdown.unknown).toEqual([]);
   });
 
   it('should suggest enterprise plan for all enterprise users', () => {
@@ -131,6 +171,6 @@ describe('Mixed Quota Support', () => {
     expect(analysis.quotaBreakdown.suggestedPlan).toBe('enterprise');
     expect(analysis.quotaBreakdown.business).toEqual([]);
     expect(analysis.quotaBreakdown.enterprise).toEqual(['UserA', 'UserB']);
-    expect(analysis.quotaBreakdown.unlimited).toEqual([]);
+    expect(analysis.quotaBreakdown.unknown).toEqual([]);
   });
 });

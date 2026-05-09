@@ -16,7 +16,7 @@ export interface UserDailyStackedChartProps {
   data: UserDailyDatum[]; // dynamic model columns + totalCumulative
   models: string[];
   modelColors: Record<string, string>;
-  quotaValue: number | 'unlimited';
+  quotaValue: number | 'unknown';
   tooltip: React.ReactElement; // preconfigured tooltip component instance
   height?: ResponsiveHeight;
 }
@@ -38,12 +38,12 @@ export function UserDailyStackedChart({ data, models, modelColors, quotaValue, t
         <YAxis 
           tick={{ fill: '#636c76', fontSize: 11 }}
           domain={[0, (dataMax: number) => {
-            const quotaLimit = quotaValue === 'unlimited' ? 0 : quotaValue;
+            const quotaLimit = quotaValue === 'unknown' ? 0 : quotaValue;
             return Math.max(quotaLimit, dataMax);
           }]}
         />
   <Tooltip content={tooltip} />
-        {quotaValue !== 'unlimited' && (
+        {quotaValue !== 'unknown' && (
           <ReferenceLine 
             y={quotaValue} 
             stroke="#ef4444" 

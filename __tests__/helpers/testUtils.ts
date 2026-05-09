@@ -20,7 +20,7 @@ export const createMockCSVData = (overrides: Partial<CSVData> = {}): CSVData => 
   model: 'test-model',
   quantity: '1.00',
   exceeds_quota: 'false',
-  total_monthly_quota: 'Unlimited',
+  total_monthly_quota: 'Unknown',
   ...overrides
 });
 

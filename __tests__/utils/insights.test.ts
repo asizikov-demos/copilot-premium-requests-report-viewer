@@ -88,7 +88,7 @@ describe('insights analytics', () => {
     const users: UserConsumptionCategory[] = [
       { user: 'test-user-one', totalRequests: 100, quota: 300, consumptionPercentage: 33.33, category: 'low' },
       { user: 'test-user-two', totalRequests: 250, quota: 300, consumptionPercentage: 83.33, category: 'average' },
-      { user: 'test-user-three', totalRequests: 500, quota: 'unlimited', consumptionPercentage: 0, category: 'low' }
+      { user: 'test-user-three', totalRequests: 500, quota: 'unknown', consumptionPercentage: 0, category: 'low' }
     ];
     const total = calculateUnusedValue(users);
     // unused: a=200, b=50 => 250 * overage rate (import pricing constant to avoid magic number).

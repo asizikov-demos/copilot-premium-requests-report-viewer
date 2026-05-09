@@ -157,6 +157,46 @@ describe('BillingAggregator', () => {
     expect(out.totals.aicAdditionalUsageGrossAmount).toBeCloseTo(10);
   });
 
+  it('uses the highest quota seen for AI Credits included estimates', () => {
+    const agg = new BillingAggregator();
+    agg.init?.(ctx);
+    agg.onRow(buildRow({ user: 'upgraded-user', quantity: 1, quotaValue: PRICING.BUSINESS_QUOTA, aicQuantity: 1000, aicGrossAmount: 10 }), ctx);
+    agg.onRow(buildRow({ user: 'upgraded-user', quantity: 1, quotaValue: PRICING.ENTERPRISE_QUOTA, aicQuantity: 1000, aicGrossAmount: 10 }), ctx);
+
+    const out = agg.finalize(ctx);
+
+    expect(out.userMap.get('upgraded-user')?.quotaValue).toBe(PRICING.ENTERPRISE_QUOTA);
+    expect(out.totals.aicIncludedCredits).toBe(PRICING.ENTERPRISE_AI_CREDITS_INCLUDED);
+    expect(out.totals.aicAdditionalUsageGrossAmount).toBe(0);
+  });
+
+  it('ignores non-request unit quotas when estimating included AI Credits from processed rows', () => {
+    const rows: ProcessedData[] = [
+      buildProcessedRow({
+        user: 'test-user-one',
+        requestsUsed: 0,
+        unitType: 'new-unit',
+        quotaValue: 'unknown',
+        aicQuantity: 1000,
+        aicGrossAmount: 10,
+      }),
+      buildProcessedRow({
+        user: 'test-user-one',
+        requestsUsed: 1,
+        unitType: 'requests',
+        quotaValue: PRICING.ENTERPRISE_QUOTA,
+        aicQuantity: undefined,
+        aicGrossAmount: undefined,
+      }),
+    ];
+
+    const out = buildBillingArtifactsFromProcessedData(rows);
+
+    expect(out.userMap.get('test-user-one')?.quotaValue).toBe(PRICING.ENTERPRISE_QUOTA);
+    expect(out.totals.aicIncludedCredits).toBe(PRICING.ENTERPRISE_AI_CREDITS_INCLUDED);
+    expect(out.totals.aicAdditionalUsageGrossAmount).toBe(0);
+  });
+
   it('does not estimate included AI Credits without AI Credits gross data', () => {
     const agg = new BillingAggregator();
     agg.init?.(ctx);

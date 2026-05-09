@@ -7,7 +7,7 @@ import type { UserSummary } from './types';
 export interface UserConsumptionCategory {
   user: string;
   totalRequests: number;
-  quota: number | 'unlimited';
+  quota: number | 'unknown';
   consumptionPercentage: number;
   category: 'power' | 'average' | 'low';
 }
@@ -33,7 +33,7 @@ export const CONSUMPTION_THRESHOLDS = Object.freeze({
 export function categorizeUserConsumption(userData: UserSummary[], processedData: ProcessedData[]): InsightsOverviewData {
   const userQuotaMap = buildUserQuotaMapFromRows(processedData);
   const categorized = userData.map(u => {
-    const quota = userQuotaMap.get(u.user) ?? 'unlimited';
+    const quota = userQuotaMap.get(u.user) ?? 'unknown';
     const pct = (typeof quota === 'number' && quota > 0) ? (u.totalRequests / quota) * 100 : 0;
     let category: 'power' | 'average' | 'low' = 'low';
     if (pct >= CONSUMPTION_THRESHOLDS.powerMinPct) category = 'power';

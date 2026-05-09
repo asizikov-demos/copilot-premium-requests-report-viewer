@@ -10,7 +10,6 @@ import type { UserSummary } from '@/utils/analytics';
 import {
   BillingArtifacts,
   buildBillingArtifactsFromProcessedData,
-  computeOverageSummaryFromProcessedData,
   getUserQuota,
   QuotaArtifacts,
   UsageArtifacts,
@@ -21,6 +20,10 @@ import { UserDetailsView } from './UserDetailsView';
 
 type DailyCumulativeData = { date: string; [user: string]: string | number };
 const ALL_FILTERS_VALUE = '__all__';
+
+function formatUserCount(count: number): string {
+  return `${count} ${count === 1 ? 'user' : 'users'}`;
+}
 
 interface UsersOverviewProps {
   userData: UserSummary[];
@@ -73,7 +76,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
   const getSortableValue = useCallback((row: UserSummary, column: ColumnKey) => {
     if (column === 'quota') {
       const q = getUserQuota(quotaArtifacts, row.user);
-      return q === 'unlimited' ? Number.MAX_SAFE_INTEGER : q;
+      return q === 'unknown' ? Number.NEGATIVE_INFINITY : q;
     }
 
     if (column === 'totalRequests') return row.totalRequests;
@@ -114,6 +117,28 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
     }
     return Array.from(plans).sort();
   }, [userData, getUserPlanLabel]);
+
+  const planSummary = useMemo(() => {
+    let businessUsers = 0;
+    let enterpriseUsers = 0;
+
+    for (const user of userData) {
+      const quota = getUserQuota(quotaArtifacts, user.user);
+      if (quota === PRICING.BUSINESS_QUOTA) {
+        businessUsers += 1;
+      } else if (quota === PRICING.ENTERPRISE_QUOTA) {
+        enterpriseUsers += 1;
+      }
+    }
+
+    const totalUsers = userData.length;
+    return {
+      businessUsers,
+      enterpriseUsers,
+      otherUsers: totalUsers - businessUsers - enterpriseUsers,
+      totalUsers,
+    };
+  }, [quotaArtifacts, userData]);
 
   const effectiveSelectedOrganization = organizationOptions.includes(selectedOrganization)
     ? selectedOrganization
@@ -160,32 +185,20 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
     };
   }, [usageArtifacts, filteredUserData]);
 
-  // Calculate total overage for the currently filtered users, preferring billed rows
-  // when present and falling back to quota-derived estimates otherwise.
-  const filteredProcessedData = useMemo(() => {
-    const filteredUsers = new Set(filteredUserData.map((user) => user.user));
-    return processedData.filter((row) => filteredUsers.has(row.user));
-  }, [filteredUserData, processedData]);
-
-  const { totalOverageRequests, totalOverageCost } = useMemo(() => (
-    computeOverageSummaryFromProcessedData(filteredProcessedData)
-  ), [filteredProcessedData]);
-  
   // Memoize quota types calculation for chart display - NOW using O(1) quota map!
   const quotaInfo = useMemo(() => {
     const quotaTypes = new Set<number>();
     filteredUserData.forEach(user => {
       const userQuota = getUserQuota(quotaArtifacts, user.user);
-      if (userQuota !== 'unlimited') {
+      if (userQuota !== 'unknown') {
         quotaTypes.add(userQuota);
       }
     });
     const hasMixedQuotas = quotaTypes.size > 1;
-    const hasMixedLicenses = quotaTypes.has(PRICING.BUSINESS_QUOTA) && quotaTypes.has(PRICING.ENTERPRISE_QUOTA);
-    return { quotaTypes, hasMixedQuotas, hasMixedLicenses };
+    return { quotaTypes, hasMixedQuotas };
   }, [filteredUserData, quotaArtifacts]);
 
-  const { quotaTypes, hasMixedQuotas, hasMixedLicenses } = quotaInfo;
+  const { quotaTypes, hasMixedQuotas } = quotaInfo;
   
   // Derive currentQuota from detected quota types for chart reference lines
   // Use first detected quota type, fallback to BUSINESS_QUOTA as default
@@ -228,27 +241,6 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight text-[#1f2328]">Users Overview</h2>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mt-1">
-            <p className="text-sm text-[#636c76]">
-              {hasMixedLicenses ? (
-                <>Business ({PRICING.BUSINESS_QUOTA}) &amp; Enterprise ({PRICING.ENTERPRISE_QUOTA})</>
-              ) : quotaTypes.has(PRICING.ENTERPRISE_QUOTA) ? (
-                <>Copilot Enterprise — {PRICING.ENTERPRISE_QUOTA} requests/mo</>
-              ) : quotaTypes.has(PRICING.BUSINESS_QUOTA) ? (
-                <>Copilot Business — {PRICING.BUSINESS_QUOTA} requests/mo</>
-              ) : (
-                <>Unlimited quota</>
-              )}
-            </p>
-            {totalOverageRequests > 0 && (
-              <p className="text-sm font-medium text-red-600">
-                Overage: ${totalOverageCost.toFixed(2)}
-              </p>
-            )}
-            <p className="text-sm text-[#636c76]">
-              Showing {filteredUserData.length} of {userData.length} users
-            </p>
-          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2">
@@ -262,6 +254,39 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
           )}
 
         </div>
+      </div>
+
+      <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
+        <table className="min-w-full" aria-label="Copilot plan summary">
+          <thead>
+            <tr className="border-b border-[#d1d9e0]">
+              <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
+                Plan
+              </th>
+              <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
+                Users
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#d1d9e0]">
+            <tr className="hover:bg-[#fcfdff] transition-colors duration-150">
+              <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-[#1f2328]">Copilot Business</td>
+              <td className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-[#636c76] text-right">{formatUserCount(planSummary.businessUsers)}</td>
+            </tr>
+            <tr className="hover:bg-[#fcfdff] transition-colors duration-150">
+              <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-[#1f2328]">Copilot Enterprise</td>
+              <td className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-[#636c76] text-right">{formatUserCount(planSummary.enterpriseUsers)}</td>
+            </tr>
+            <tr className="hover:bg-[#fcfdff] transition-colors duration-150">
+              <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-[#1f2328]">Others</td>
+              <td className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-[#636c76] text-right">{formatUserCount(planSummary.otherUsers)}</td>
+            </tr>
+            <tr className="bg-[#f6f8fa]">
+              <td className="px-5 py-3 whitespace-nowrap text-sm font-semibold text-[#1f2328]">Total</td>
+              <td className="px-5 py-3 whitespace-nowrap text-sm font-mono font-semibold tabular-nums text-[#1f2328] text-right">{formatUserCount(planSummary.totalUsers)}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       {/* Filters */}
@@ -398,8 +423,8 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
             <div className="p-4 space-y-2 sm:hidden">
               {paginatedUserData.map((user) => {
                 const userQuota = getUserQuota(quotaArtifacts, user.user);
-                const isOverQuota = userQuota !== 'unlimited' && user.totalRequests > userQuota;
-                const quotaDisplay = userQuota === 'unlimited' ? 'Unlimited' : `${userQuota}`;
+                const isOverQuota = userQuota !== 'unknown' && user.totalRequests > userQuota;
+                const quotaDisplay = userQuota === 'unknown' ? 'Unknown' : `${userQuota}`;
                 const costs = userCosts.get(user.user);
 
                 return (
@@ -466,7 +491,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
 
           {/* Desktop Table */}
           <div className="hidden sm:block overflow-auto">
-            <table className="min-w-full">
+            <table className="min-w-full" aria-label="Users">
             <thead className="bg-[#f6f8fa] sticky top-0 z-20">
               <tr>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-[0.05em] bg-[#f6f8fa] sticky left-0 z-30 min-w-40 border-r border-[#d1d9e0]">
@@ -561,8 +586,8 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
             <tbody className="divide-y divide-[#f6f8fa]">
               {paginatedUserData.map((user) => {
                 const userQuota = getUserQuota(quotaArtifacts, user.user);
-                const isOverQuota = userQuota !== 'unlimited' && user.totalRequests > userQuota;
-                const quotaDisplay = userQuota === 'unlimited' ? 'Unlimited' : userQuota.toString();
+                const isOverQuota = userQuota !== 'unknown' && user.totalRequests > userQuota;
+                const quotaDisplay = userQuota === 'unknown' ? 'Unknown' : userQuota.toString();
 
                 return (
                 <tr key={user.user} className="hover:bg-[#fcfdff] transition-colors duration-150">

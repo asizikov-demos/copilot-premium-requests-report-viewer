@@ -32,7 +32,7 @@ export const UserCategoryTable: React.FC<UserCategoryTableProps> = ({ users, col
           <tr key={user.user} className="bg-white hover:bg-[#fcfdff] transition-colors duration-150">
             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#1f2328]">{user.user}</td>
             <td className="px-6 py-4 whitespace-nowrap text-sm text-[#636c76]">{user.totalRequests.toFixed(2)}</td>
-            <td className="px-6 py-4 whitespace-nowrap text-sm text-[#636c76]">{user.quota === 'unlimited' ? 'Unlimited' : user.quota.toString()}</td>
+            <td className="px-6 py-4 whitespace-nowrap text-sm text-[#636c76]">{user.quota === 'unknown' ? 'Unknown' : user.quota.toString()}</td>
             <td className="px-6 py-4 whitespace-nowrap text-sm text-[#636c76]">
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${c.bg} ${c.text}`}>
                 {user.consumptionPercentage.toFixed(1)}%
