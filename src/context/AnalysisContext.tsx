@@ -1,10 +1,11 @@
 'use client';
 
 import React, { createContext, useContext, useMemo, useState, ReactNode } from 'react';
-import { ProcessedData } from '@/types/csv';
+
+import { PRICING } from '@/constants/pricing';
 import { useAnalysisFilters } from '@/hooks/useAnalysisFilters';
 import { useAnalyzedData } from '@/hooks/useAnalyzedData';
-import { PRICING } from '@/constants/pricing';
+import { ProcessedData } from '@/types/csv';
 import { 
   IngestionResult, 
   QuotaArtifacts, 
@@ -13,6 +14,7 @@ import {
   FeatureUsageArtifacts,
   BillingArtifacts,
   NormalizedRow,
+  buildBillingArtifactsFromProcessedData,
   buildProcessedDataFromRows
 } from '@/utils/ingestion';
 
@@ -106,6 +108,22 @@ function requireFeatureUsageArtifacts(value: unknown): FeatureUsageArtifacts {
   return value;
 }
 
+function withBillingArtifactDefaults(value: BillingArtifacts | undefined): BillingArtifacts | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  return {
+    ...value,
+    users: value.users ?? [],
+    userMap: value.userMap ?? new Map(),
+    orgTotals: value.orgTotals ?? new Map(),
+    costCenterTotals: value.costCenterTotals ?? new Map(),
+    billingByModel: value.billingByModel ?? new Map(),
+    specialBuckets: value.specialBuckets ?? [],
+  };
+}
+
 // Exporting the raw context as well (in addition to hook) enables optional consumption
 // in components that want to gracefully fallback when provider is absent in tests.
 export const AnalysisContext = createContext<AnalysisContextValue | null>(null);
@@ -121,7 +139,7 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
       usageArtifacts: ingestionResult.outputs.usage as UsageArtifacts,
       dailyBucketsArtifacts: ingestionResult.outputs.dailyBuckets as DailyBucketsArtifacts,
       featureUsageArtifacts: requireFeatureUsageArtifacts(ingestionResult.outputs.featureUsage),
-      billingArtifacts: ingestionResult.outputs.billing as BillingArtifacts | undefined
+      billingArtifacts: withBillingArtifactDefaults(ingestionResult.outputs.billing as BillingArtifacts | undefined)
     };
   }, [ingestionResult]);
 
@@ -156,6 +174,12 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
     dailyBucketsArtifacts
   });
 
+  const effectiveBillingArtifacts = useMemo(() => (
+    baseProcessed.length > 0
+      ? buildBillingArtifactsFromProcessedData(aggregateProcessedData)
+      : billingArtifacts
+  ), [aggregateProcessedData, baseProcessed.length, billingArtifacts]);
+
   // Use the suggested plan from data (auto-derived from report content)
   const selectedPlan = analysis.quotaBreakdown.suggestedPlan ?? 'business';
 
@@ -186,7 +210,7 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
     usageArtifacts,
     dailyBucketsArtifacts,
     featureUsageArtifacts,
-    billingArtifacts: billingArtifacts,
+    billingArtifacts: effectiveBillingArtifacts,
     // Legacy adapter bridge
     baseProcessed,
     processedData,

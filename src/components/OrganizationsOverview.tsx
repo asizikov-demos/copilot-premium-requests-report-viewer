@@ -1,14 +1,15 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+
 import { useAnalysisContext } from '@/context/AnalysisContext';
-import { hasAicFields } from '@/utils/aicFields';
 import {
   accumulateProductCost,
   createEmptyProductCostMap,
   getPopulatedProductCosts,
   ProductCost,
 } from '@/utils/productCosts';
+import { UNASSIGNED_BILLING_GROUP } from '@/utils/ingestion';
 
 interface OrganizationRow {
   name: string;
@@ -22,31 +23,23 @@ interface OrganizationRow {
 }
 
 export function OrganizationsOverview() {
-  const { aggregateProcessedData } = useAnalysisContext();
+  const { aggregateProcessedData, billingArtifacts } = useAnalysisContext();
   const [expandedOrg, setExpandedOrg] = useState<string | null>(null);
 
   const orgRows = useMemo((): OrganizationRow[] => {
     const map = new Map<string, {
       userSet: Set<string>;
       requests: number;
-      gross: number;
-      discount: number;
-      net: number;
-      aicGrossAmount: number;
       productBuckets: ReturnType<typeof createEmptyProductCostMap>;
     }>();
 
     for (const row of aggregateProcessedData) {
-      const org = row.organization || 'Unassigned';
+      const org = row.organization || UNASSIGNED_BILLING_GROUP;
       let entry = map.get(org);
       if (!entry) {
         entry = {
           userSet: new Set(),
           requests: 0,
-          gross: 0,
-          discount: 0,
-          net: 0,
-          aicGrossAmount: 0,
           productBuckets: createEmptyProductCostMap(),
         };
         map.set(org, entry);
@@ -56,29 +49,29 @@ export function OrganizationsOverview() {
         entry.userSet.add(row.user);
       }
       entry.requests += row.requestsUsed;
-      entry.gross += row.grossAmount ?? 0;
-      entry.discount += row.discountAmount ?? 0;
-      entry.net += row.netAmount ?? 0;
-      entry.aicGrossAmount += row.aicGrossAmount ?? 0;
       accumulateProductCost(entry.productBuckets, row);
     }
 
     return Array.from(map.entries())
-      .map(([name, data]) => ({
-        name,
-        users: data.userSet.size,
-        requests: data.requests,
-        gross: data.gross,
-        discount: data.discount,
-        net: data.net,
-        aicGrossAmount: data.aicGrossAmount,
-        products: getPopulatedProductCosts(data.productBuckets),
-      }))
+      .map(([name, data]) => {
+        const totals = billingArtifacts?.orgTotals.get(name);
+
+        return {
+          name,
+          users: data.userSet.size,
+          requests: data.requests,
+          gross: totals?.gross ?? 0,
+          discount: totals?.discount ?? 0,
+          net: totals?.net ?? 0,
+          aicGrossAmount: totals?.aicGrossAmount ?? 0,
+          products: getPopulatedProductCosts(data.productBuckets),
+        };
+      })
       .sort((a, b) => b.net - a.net);
-  }, [aggregateProcessedData]);
+  }, [aggregateProcessedData, billingArtifacts]);
 
   const hasCosts = orgRows.some(r => r.gross > 0 || r.net > 0);
-  const hasAicGross = hasAicFields(aggregateProcessedData);
+  const hasAicGross = billingArtifacts?.hasAnyAicData === true;
   const detailColSpan = 3 + (hasAicGross ? 1 : 0) + (hasCosts ? 3 : 0);
 
   return (

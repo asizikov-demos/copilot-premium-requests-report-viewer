@@ -1,14 +1,15 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+
 import { useAnalysisContext } from '@/context/AnalysisContext';
-import { hasAicFields } from '@/utils/aicFields';
 import {
   accumulateProductCost,
   createEmptyProductCostMap,
   getPopulatedProductCosts,
   ProductCost,
 } from '@/utils/productCosts';
+import { UNASSIGNED_BILLING_GROUP } from '@/utils/ingestion';
 
 interface CostCenterRow {
   name: string;
@@ -21,57 +22,49 @@ interface CostCenterRow {
 }
 
 export function CostCentersOverview() {
-  const { aggregateProcessedData } = useAnalysisContext();
+  const { aggregateProcessedData, billingArtifacts } = useAnalysisContext();
   const [expandedCenter, setExpandedCenter] = useState<string | null>(null);
 
   const costCenterRows = useMemo((): CostCenterRow[] => {
     const map = new Map<string, {
       requests: number;
-      gross: number;
-      discount: number;
-      net: number;
-      aicGrossAmount: number;
       productBuckets: ReturnType<typeof createEmptyProductCostMap>;
     }>();
 
     for (const row of aggregateProcessedData) {
-      const cc = row.costCenter || 'Unassigned';
+      const cc = row.costCenter || UNASSIGNED_BILLING_GROUP;
       let entry = map.get(cc);
       if (!entry) {
         entry = {
           requests: 0,
-          gross: 0,
-          discount: 0,
-          net: 0,
-          aicGrossAmount: 0,
           productBuckets: createEmptyProductCostMap(),
         };
         map.set(cc, entry);
       }
 
       entry.requests += row.requestsUsed;
-      entry.gross += row.grossAmount ?? 0;
-      entry.discount += row.discountAmount ?? 0;
-      entry.net += row.netAmount ?? 0;
-      entry.aicGrossAmount += row.aicGrossAmount ?? 0;
       accumulateProductCost(entry.productBuckets, row);
     }
 
     return Array.from(map.entries())
-      .map(([name, data]) => ({
-        name,
-        requests: data.requests,
-        gross: data.gross,
-        discount: data.discount,
-        net: data.net,
-        aicGrossAmount: data.aicGrossAmount,
-        products: getPopulatedProductCosts(data.productBuckets),
-      }))
+      .map(([name, data]) => {
+        const totals = billingArtifacts?.costCenterTotals.get(name);
+
+        return {
+          name,
+          requests: data.requests,
+          gross: totals?.gross ?? 0,
+          discount: totals?.discount ?? 0,
+          net: totals?.net ?? 0,
+          aicGrossAmount: totals?.aicGrossAmount ?? 0,
+          products: getPopulatedProductCosts(data.productBuckets),
+        };
+      })
       .sort((a, b) => b.net - a.net);
-  }, [aggregateProcessedData]);
+  }, [aggregateProcessedData, billingArtifacts]);
 
   const hasCosts = costCenterRows.some(r => r.gross > 0 || r.net > 0);
-  const hasAicGross = hasAicFields(aggregateProcessedData);
+  const hasAicGross = billingArtifacts?.hasAnyAicData === true;
   const detailColSpan = 2 + (hasAicGross ? 1 : 0) + (hasCosts ? 3 : 0);
 
   return (

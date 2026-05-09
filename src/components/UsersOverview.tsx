@@ -1,15 +1,23 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { UsersConsumptionHeatmap } from './charts/UsersConsumptionHeatmap';
-import { ProcessedData } from '@/types/csv';
-import { UserDetailsView } from './UserDetailsView';
-import { useSortableTable } from '@/hooks/useSortableTable';
-import { useIsMobile } from '@/hooks/useIsMobile';
+
 import { PRICING } from '@/constants/pricing';
-import { hasAicFields } from '@/utils/aicFields';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { useSortableTable } from '@/hooks/useSortableTable';
+import { ProcessedData } from '@/types/csv';
 import type { UserSummary } from '@/utils/analytics';
-import { getUserQuota, QuotaArtifacts, UsageArtifacts, computeOverageSummaryFromProcessedData } from '@/utils/ingestion';
+import {
+  BillingArtifacts,
+  buildBillingArtifactsFromProcessedData,
+  computeOverageSummaryFromProcessedData,
+  getUserQuota,
+  QuotaArtifacts,
+  UsageArtifacts,
+} from '@/utils/ingestion';
+
+import { UsersConsumptionHeatmap } from './charts/UsersConsumptionHeatmap';
+import { UserDetailsView } from './UserDetailsView';
 
 type DailyCumulativeData = { date: string; [user: string]: string | number };
 const ALL_FILTERS_VALUE = '__all__';
@@ -20,9 +28,10 @@ interface UsersOverviewProps {
   dailyCumulativeData: DailyCumulativeData[];
   quotaArtifacts: QuotaArtifacts;
   usageArtifacts: UsageArtifacts;
+  billingArtifacts?: BillingArtifacts;
 }
 
-export function UsersOverview({ userData, processedData, dailyCumulativeData, quotaArtifacts, usageArtifacts }: UsersOverviewProps) {
+export function UsersOverview({ userData, processedData, dailyCumulativeData, quotaArtifacts, usageArtifacts, billingArtifacts }: UsersOverviewProps) {
   const [showChart, setShowChart] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedOrganization, setSelectedOrganization] = useState(ALL_FILTERS_VALUE);
@@ -36,28 +45,23 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
 
   type ColumnKey = 'quota' | 'totalRequests' | 'aicGrossAmount' | 'gross' | 'discount' | 'net';
 
-  const userCosts = useMemo(() => {
-    const map = new Map<string, { gross: number; discount: number; net: number; aicGrossAmount: number }>();
-    for (const row of processedData) {
-      const prev = map.get(row.user) ?? { gross: 0, discount: 0, net: 0, aicGrossAmount: 0 };
-      prev.gross += row.grossAmount ?? 0;
-      prev.discount += row.discountAmount ?? 0;
-      prev.net += row.netAmount ?? 0;
-      prev.aicGrossAmount += row.aicGrossAmount ?? 0;
-      map.set(row.user, prev);
+  const effectiveBillingArtifacts = useMemo(() => (
+    billingArtifacts ?? buildBillingArtifactsFromProcessedData(processedData)
+  ), [billingArtifacts, processedData]);
+
+  const userCosts = effectiveBillingArtifacts.userMap;
+
+  const hasCosts = useMemo(() => {
+    for (const costs of userCosts.values()) {
+      if ((costs.gross ?? 0) > 0 || (costs.net ?? 0) > 0) {
+        return true;
+      }
     }
-    return map;
-  }, [processedData]);
 
-  const hasCosts = useMemo(() =>
-    processedData.some(r => (r.grossAmount ?? 0) > 0 || (r.netAmount ?? 0) > 0),
-    [processedData]
-  );
+    return false;
+  }, [userCosts]);
 
-  const hasAicGross = useMemo(() =>
-    hasAicFields(processedData),
-    [processedData]
-  );
+  const hasAicGross = effectiveBillingArtifacts.hasAnyAicData;
 
   const columns = useMemo<ColumnKey[]>(() => [
     'quota',
@@ -74,8 +78,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
 
     if (column === 'totalRequests') return row.totalRequests;
     if (column === 'gross' || column === 'discount' || column === 'net' || column === 'aicGrossAmount') {
-      const costs = userCosts.get(row.user) ?? { gross: 0, discount: 0, net: 0, aicGrossAmount: 0 };
-      return costs[column];
+      return userCosts.get(row.user)?.[column] ?? 0;
     }
     return 0;
   }, [quotaArtifacts, userCosts]);
@@ -397,7 +400,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                 const userQuota = getUserQuota(quotaArtifacts, user.user);
                 const isOverQuota = userQuota !== 'unlimited' && user.totalRequests > userQuota;
                 const quotaDisplay = userQuota === 'unlimited' ? 'Unlimited' : `${userQuota}`;
-                const costs = userCosts.get(user.user) ?? { gross: 0, discount: 0, net: 0, aicGrossAmount: 0 };
+                const costs = userCosts.get(user.user);
 
                 return (
                 <button
@@ -421,16 +424,16 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                       </span>
                     )}
                   </div>
-                  {hasCosts && (costs.gross > 0 || costs.discount > 0 || costs.net > 0) && (
+                  {hasCosts && ((costs?.gross ?? 0) > 0 || (costs?.discount ?? 0) > 0 || (costs?.net ?? 0) > 0) && (
                     <div className="flex items-center gap-3 mt-1.5 text-xs font-mono tabular-nums">
-                      <span className="text-[#636c76]">${costs.gross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      <span className="text-emerald-600">-${costs.discount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      <span className="font-semibold text-[#1f2328]">${costs.net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <span className="text-[#636c76]">${(costs?.gross ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <span className="text-emerald-600">-${(costs?.discount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <span className="font-semibold text-[#1f2328]">${(costs?.net ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                   )}
                   {hasAicGross && (
                     <div className="mt-1.5 text-xs font-mono tabular-nums text-[#636c76]">
-                      AI Credits Gross: ${costs.aicGrossAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      AI Credits Gross: ${(costs?.aicGrossAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                   )}
                 </button>
@@ -586,24 +589,24 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                     )}
                   </td>
                   {(() => {
-                    const costs = userCosts.get(user.user) ?? { gross: 0, discount: 0, net: 0, aicGrossAmount: 0 };
+                    const costs = userCosts.get(user.user);
                     return (
                       <>
                         {hasAicGross && (
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-[#636c76] font-mono tabular-nums text-right">
-                            ${costs.aicGrossAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            ${(costs?.aicGrossAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
                         )}
                         {hasCosts && (
                           <>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-[#636c76] font-mono tabular-nums text-right">
-                              ${costs.gross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              ${(costs?.gross ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-emerald-600 font-mono tabular-nums text-right">
-                              -${costs.discount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              -${(costs?.discount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-[#1f2328] font-mono tabular-nums text-right">
-                              ${costs.net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              ${(costs?.net ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
                           </>
                         )}

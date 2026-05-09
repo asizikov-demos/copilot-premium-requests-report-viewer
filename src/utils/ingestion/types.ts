@@ -6,6 +6,7 @@ import { PRICING } from '@/constants/pricing';
 
 export const NON_COPILOT_CODE_REVIEW_BUCKET = 'non_copilot_code_review' as const;
 export const NON_COPILOT_CODE_REVIEW_LABEL = 'Non-Copilot Users' as const;
+export const UNASSIGNED_BILLING_GROUP = 'Unassigned' as const;
 
 export type SpecialUsageBucketKey = typeof NON_COPILOT_CODE_REVIEW_BUCKET;
 
@@ -226,10 +227,25 @@ export interface BillingUserTotals {
   aicGrossAmount?: number;
 }
 
+export interface BillingFieldTotals {
+  gross: number;
+  discount: number;
+  net: number;
+  aicQuantity: number;
+  aicGrossAmount: number;
+}
+
+export interface BillingGroupTotals extends BillingFieldTotals {
+  quantity: number;
+}
+
 export interface BillingArtifacts {
-  totals: { gross: number; discount: number; net: number; aicQuantity: number; aicGrossAmount: number; aicIncludedCredits: number; aicAdditionalUsageGrossAmount: number };
+  totals: BillingFieldTotals & { aicIncludedCredits: number; aicAdditionalUsageGrossAmount: number };
   users: BillingUserTotals[]; // unsorted list; consumer may sort
   userMap: Map<string, BillingUserTotals>; // internal convenience map (exposed for advanced consumers)
+  orgTotals: Map<string, BillingGroupTotals>;
+  costCenterTotals: Map<string, BillingGroupTotals>;
+  billingByModel: Map<string, BillingGroupTotals>;
   hasAnyBillingData: boolean; // true if at least one billing numeric column encountered
   hasAnyAicData: boolean; // true if at least one AI Credits numeric column encountered
   specialBuckets?: SpecialBillingBucketTotals[];

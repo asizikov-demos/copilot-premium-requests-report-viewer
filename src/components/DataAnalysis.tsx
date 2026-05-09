@@ -5,8 +5,7 @@ import React, { useEffect, useMemo } from 'react';
 import { PRICING } from '@/constants/pricing';
 import { AnalysisProvider, useAnalysisContext } from '@/context/AnalysisContext';
 import { aggregateAutoModeSavings } from '@/utils/autoModeSavings';
-import { hasAicFields } from '@/utils/aicFields';
-import { calculateAicPoolEstimate, calculateIncludedAicCreditsForUsers } from '@/utils/aicPool';
+import { calculateAicPoolEstimate } from '@/utils/aicPool';
 import { getModelColor } from '@/utils/modelColors';
 import { aggregateProductCosts } from '@/utils/productCosts';
 
@@ -170,45 +169,11 @@ function DataAnalysisInner() {
     return items;
   }, [hasCostCenters, hasOrganizations]);
 
-  const processedCosts = useMemo(() => {
-    const hasBillingData = aggregateProcessedData.some(
-      (row) =>
-        row.netAmount !== undefined ||
-        row.grossAmount !== undefined ||
-        row.discountAmount !== undefined
-    );
+  const costMetricsAvailable = billingArtifacts?.hasAnyBillingData === true;
+  const aggregatedCosts = costMetricsAvailable && billingArtifacts ? billingArtifacts.totals : null;
 
-    if (!hasBillingData) {
-      return null;
-    }
-
-    return aggregateProcessedData.reduce((acc, row) => {
-      acc.net += row.netAmount ?? 0;
-      acc.gross += row.grossAmount ?? 0;
-      acc.discount += row.discountAmount ?? 0;
-      return acc;
-    }, { net: 0, gross: 0, discount: 0 });
-  }, [aggregateProcessedData]);
-
-  const costMetricsAvailable = processedCosts !== null || billingArtifacts?.hasAnyBillingData === true;
-  const aggregatedCosts = processedCosts ?? (billingArtifacts?.hasAnyBillingData ? billingArtifacts.totals : null);
-
-  const processedAic = useMemo(() => {
-    const hasAicData = hasAicFields(aggregateProcessedData);
-
-    if (!hasAicData) {
-      return null;
-    }
-
-    return aggregateProcessedData.reduce((acc, row) => {
-      acc.aicQuantity += row.aicQuantity ?? 0;
-      acc.aicGrossAmount += row.aicGrossAmount ?? 0;
-      return acc;
-    }, { aicQuantity: 0, aicGrossAmount: 0 });
-  }, [aggregateProcessedData]);
-
-  const aicMetricsAvailable = processedAic !== null || billingArtifacts?.hasAnyAicData === true;
-  const aggregatedAic = processedAic ?? (
+  const aicMetricsAvailable = billingArtifacts?.hasAnyAicData === true;
+  const aggregatedAic = (
     billingArtifacts?.hasAnyAicData
       ? {
         aicQuantity: billingArtifacts.totals.aicQuantity ?? 0,
@@ -220,33 +185,34 @@ function DataAnalysisInner() {
   );
   const aicPoolEstimate = aggregatedAic
     ? calculateAicPoolEstimate(
-      'aicIncludedCredits' in aggregatedAic
-        ? aggregatedAic.aicIncludedCredits
-        : calculateIncludedAicCreditsForUsers(aggregateProcessedData),
+      aggregatedAic.aicIncludedCredits,
       aggregatedAic.aicGrossAmount
     )
     : null;
 
   const modelRows = useMemo(() => {
-    const map = new Map<string, { model: string; requests: number; gross: number; discount: number; net: number; aicGrossAmount: number }>();
-    for (const row of aggregateProcessedData) {
-      const prev = map.get(row.model) ?? {
-        model: row.model,
-        requests: 0,
-        gross: 0,
-        discount: 0,
-        net: 0,
-        aicGrossAmount: 0,
-      };
-      prev.requests += row.requestsUsed;
-      prev.gross += row.grossAmount ?? 0;
-      prev.discount += row.discountAmount ?? 0;
-      prev.net += row.netAmount ?? 0;
-      prev.aicGrossAmount += row.aicGrossAmount ?? 0;
-      map.set(row.model, prev);
+    if (billingArtifacts) {
+      return Array.from(billingArtifacts.billingByModel.entries())
+        .map(([model, totals]) => ({
+          model,
+          requests: totals.quantity,
+          gross: totals.gross,
+          discount: totals.discount,
+          net: totals.net,
+          aicGrossAmount: totals.aicGrossAmount,
+        }))
+        .sort((left, right) => right.requests - left.requests);
     }
-    return Array.from(map.values()).sort((left, right) => right.requests - left.requests);
-  }, [aggregateProcessedData]);
+
+    return analysis.requestsByModel.map((row) => ({
+      model: row.model,
+      requests: row.totalRequests,
+      gross: 0,
+      discount: 0,
+      net: 0,
+      aicGrossAmount: 0,
+    }));
+  }, [analysis.requestsByModel, billingArtifacts]);
 
   const hasModelCosts = modelRows.some(
     (row) => row.gross > 0 || row.discount > 0 || row.net > 0
@@ -367,6 +333,7 @@ function DataAnalysisInner() {
               dailyCumulativeData={dailyCumulativeData}
               quotaArtifacts={quotaArtifacts}
               usageArtifacts={usageArtifacts}
+              billingArtifacts={billingArtifacts}
             />
           ) : view === 'costCenters' ? (
             <CostCentersOverview />
