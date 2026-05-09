@@ -47,6 +47,49 @@ describe('BillingAggregator', () => {
     expect(b.quantity).toBe(1);
   });
 
+  it('tracks grouped billing totals for organizations, cost centers, and models', () => {
+    const agg = new BillingAggregator();
+    agg.init?.(ctx);
+    agg.onRow(buildRow({
+      user: 'test-user-one',
+      model: 'Claude Sonnet 4',
+      organization: 'test-org-one',
+      costCenter: 'test-cost-center-one',
+      grossAmount: 2,
+      discountAmount: 0.5,
+      netAmount: 1.5,
+      aicQuantity: 10,
+      aicGrossAmount: 0.1,
+      quantity: 2,
+    }), ctx);
+    agg.onRow(buildRow({
+      user: 'test-user-two',
+      model: 'Claude Sonnet 4',
+      organization: 'test-org-one',
+      costCenter: 'test-cost-center-two',
+      grossAmount: 3,
+      discountAmount: 1,
+      netAmount: 2,
+      aicQuantity: 20,
+      aicGrossAmount: 0.2,
+      quantity: 3,
+    }), ctx);
+
+    const out = agg.finalize(ctx);
+    const orgTotals = out.orgTotals.get('test-org-one');
+    expect(orgTotals).toMatchObject({
+      gross: 5,
+      discount: 1.5,
+      net: 3.5,
+      aicQuantity: 30,
+      quantity: 5,
+    });
+    expect(orgTotals?.aicGrossAmount).toBeCloseTo(0.3);
+    expect(out.costCenterTotals.get('test-cost-center-one')?.net).toBe(1.5);
+    expect(out.costCenterTotals.get('test-cost-center-two')?.net).toBe(2);
+    expect(out.billingByModel.get('Claude Sonnet 4')?.quantity).toBe(5);
+  });
+
   it('handles absence of billing fields gracefully', () => {
     const agg = new BillingAggregator();
     agg.init?.(ctx);
@@ -126,5 +169,39 @@ describe('BillingAggregator', () => {
         quotaValue: 0
       })
     ]);
+  });
+
+  it('includes non-Copilot aggregate rows in grouped billing totals', () => {
+    const agg = new BillingAggregator();
+    agg.init?.(ctx);
+    agg.onRow(buildRow({
+      user: 'test-user-one',
+      model: 'Code Review',
+      organization: 'test-org-one',
+      costCenter: 'test-cost-center-one',
+      quantity: 1,
+      grossAmount: 2,
+      netAmount: 2,
+    }), ctx);
+    agg.onRow(buildRow({
+      user: '',
+      model: 'Code Review',
+      organization: 'test-org-one',
+      costCenter: 'test-cost-center-one',
+      quantity: 2,
+      grossAmount: 3,
+      netAmount: 3,
+      isNonCopilotUsage: true,
+      usageBucket: 'non_copilot_code_review',
+    }), ctx);
+
+    const out = agg.finalize(ctx);
+    expect(out.userMap.get('test-user-one')?.quantity).toBe(1);
+    expect(out.users).toHaveLength(1);
+    expect(out.specialBuckets?.[0]?.quantity).toBe(2);
+    expect(out.orgTotals.get('test-org-one')?.quantity).toBe(3);
+    expect(out.orgTotals.get('test-org-one')?.gross).toBe(5);
+    expect(out.costCenterTotals.get('test-cost-center-one')?.net).toBe(5);
+    expect(out.billingByModel.get('Code Review')?.quantity).toBe(3);
   });
 });
