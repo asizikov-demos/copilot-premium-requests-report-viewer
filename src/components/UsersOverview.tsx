@@ -51,10 +51,15 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
 
   const userCosts = effectiveBillingArtifacts.userMap;
 
-  const hasCosts = useMemo(() =>
-    Array.from(userCosts.values()).some(r => (r.gross ?? 0) > 0 || (r.net ?? 0) > 0),
-    [userCosts]
-  );
+  const hasCosts = useMemo(() => {
+    for (const costs of userCosts.values()) {
+      if ((costs.gross ?? 0) > 0 || (costs.net ?? 0) > 0) {
+        return true;
+      }
+    }
+
+    return false;
+  }, [userCosts]);
 
   const hasAicGross = effectiveBillingArtifacts.hasAnyAicData;
 

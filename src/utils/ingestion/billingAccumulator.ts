@@ -9,6 +9,7 @@ import {
   NON_COPILOT_CODE_REVIEW_LABEL,
   SpecialBillingBucketTotals,
   SpecialUsageBucketKey,
+  UNASSIGNED_BILLING_GROUP,
 } from './types';
 
 interface BillingAccumulatorRow {
@@ -138,8 +139,8 @@ export class BillingAccumulator {
     entry.quantity += row.quantity;
     addOptionalBillingFields(entry, row);
 
-    addGroupRow(this.orgTotals, row.organization || 'Unassigned', row);
-    addGroupRow(this.costCenterTotals, row.costCenter || 'Unassigned', row);
+    addGroupRow(this.orgTotals, row.organization || UNASSIGNED_BILLING_GROUP, row);
+    addGroupRow(this.costCenterTotals, row.costCenter || UNASSIGNED_BILLING_GROUP, row);
     addGroupRow(this.billingByModel, row.model, row);
 
     const signals = addBillingFields(this.totals, row);

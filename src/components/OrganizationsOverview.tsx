@@ -9,6 +9,7 @@ import {
   getPopulatedProductCosts,
   ProductCost,
 } from '@/utils/productCosts';
+import { UNASSIGNED_BILLING_GROUP } from '@/utils/ingestion';
 
 interface OrganizationRow {
   name: string;
@@ -33,7 +34,7 @@ export function OrganizationsOverview() {
     }>();
 
     for (const row of aggregateProcessedData) {
-      const org = row.organization || 'Unassigned';
+      const org = row.organization || UNASSIGNED_BILLING_GROUP;
       let entry = map.get(org);
       if (!entry) {
         entry = {

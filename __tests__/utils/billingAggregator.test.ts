@@ -1,3 +1,5 @@
+import type { ProcessedData } from '@/types/csv';
+import { buildBillingArtifactsFromProcessedData } from '@/utils/ingestion/billingAccumulator';
 import { BillingAggregator } from '@/utils/ingestion/BillingAggregator';
 import { AggregatorContext, NormalizedRow } from '@/utils/ingestion/types';
 import { PRICING } from '@/constants/pricing';
@@ -13,6 +15,25 @@ describe('BillingAggregator', () => {
       model: 'gpt-test',
       quantity: 1,
       ...partial
+    };
+  }
+
+  function buildProcessedRow(partial: Partial<ProcessedData>): ProcessedData {
+    const timestamp = new Date('2025-07-01T00:00:00Z');
+
+    return {
+      timestamp,
+      user: 'test-user-one',
+      model: 'Code Review',
+      requestsUsed: 1,
+      exceedsQuota: false,
+      totalQuota: '1000',
+      quotaValue: PRICING.ENTERPRISE_QUOTA,
+      iso: timestamp.toISOString(),
+      dateKey: '2025-07-01',
+      monthKey: '2025-07',
+      epoch: timestamp.getTime(),
+      ...partial,
     };
   }
 
@@ -203,5 +224,41 @@ describe('BillingAggregator', () => {
     expect(out.orgTotals.get('test-org-one')?.gross).toBe(5);
     expect(out.costCenterTotals.get('test-cost-center-one')?.net).toBe(5);
     expect(out.billingByModel.get('Code Review')?.quantity).toBe(3);
+  });
+
+  it('builds billing artifacts from filtered processed data', () => {
+    const out = buildBillingArtifactsFromProcessedData([
+      buildProcessedRow({
+        user: 'test-user-one',
+        organization: 'test-org-one',
+        costCenter: 'test-cost-center-one',
+        requestsUsed: 4,
+        grossAmount: 8,
+        netAmount: 8,
+      }),
+      buildProcessedRow({
+        user: '',
+        organization: 'test-org-one',
+        costCenter: 'test-cost-center-one',
+        requestsUsed: 2,
+        grossAmount: 3,
+        netAmount: 3,
+        isNonCopilotUsage: true,
+        usageBucket: 'non_copilot_code_review',
+      }),
+    ]);
+
+    expect(out.userMap.get('test-user-one')?.quantity).toBe(4);
+    expect(out.specialBuckets).toEqual([
+      expect.objectContaining({
+        key: 'non_copilot_code_review',
+        quantity: 2,
+        gross: 3,
+        net: 3,
+      }),
+    ]);
+    expect(out.orgTotals.get('test-org-one')?.quantity).toBe(6);
+    expect(out.costCenterTotals.get('test-cost-center-one')?.quantity).toBe(6);
+    expect(out.billingByModel.get('Code Review')?.quantity).toBe(6);
   });
 });
