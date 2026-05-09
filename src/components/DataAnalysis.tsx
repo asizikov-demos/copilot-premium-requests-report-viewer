@@ -447,10 +447,10 @@ function DataAnalysisInner() {
                           <span className="font-mono font-medium text-[#1f2328]">{analysis.quotaBreakdown.business.length}</span>
                         </div>
                       )}
-                      {analysis.quotaBreakdown.unlimited.length > 0 && (
+                      {analysis.quotaBreakdown.unknown.length > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-[#636c76]">Unlimited</span>
-                          <span className="font-mono font-medium text-[#1f2328]">{analysis.quotaBreakdown.unlimited.length}</span>
+                          <span className="text-[#636c76]">Unknown</span>
+                          <span className="font-mono font-medium text-[#1f2328]">{analysis.quotaBreakdown.unknown.length}</span>
                         </div>
                       )}
                     </div>

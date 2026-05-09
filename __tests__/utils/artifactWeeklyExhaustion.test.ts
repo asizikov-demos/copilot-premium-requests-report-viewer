@@ -20,8 +20,8 @@ function makeDailyBuckets(entries: Array<{ date: string; user: string; used: num
   } as DailyBucketsArtifacts;
 }
 
-function makeQuota(quotaEntries: Array<{ user: string; quota: number | 'unlimited' }>): QuotaArtifacts {
-  const quotaByUser = new Map<string, number | 'unlimited'>();
+function makeQuota(quotaEntries: Array<{ user: string; quota: number | 'unknown' }>): QuotaArtifacts {
+  const quotaByUser = new Map<string, number | 'unknown'>();
   for (const q of quotaEntries) quotaByUser.set(q.user, q.quota);
   return { quotaByUser } as QuotaArtifacts;
 }
@@ -37,7 +37,7 @@ describe('computeWeeklyQuotaExhaustionFromArtifacts', () => {
   it('computes week buckets and first exhaustion correctly (single month)', () => {
     // UserA quota 300: reaches exactly 300 on day 10 (week2) (100+100+100)
     // UserB quota 300: reaches 300 on day 7 (week1) (150+150)
-    // UserC unlimited: ignored
+    // UserC unknown: ignored
     // UserD quota 300: reaches 310 on day 29 (week5)
     const daily = makeDailyBuckets([
       { date: '2025-06-01', user: 'UserB', used: 150 },
@@ -52,7 +52,7 @@ describe('computeWeeklyQuotaExhaustionFromArtifacts', () => {
     const quota = makeQuota([
       { user: 'UserA', quota: 300 },
       { user: 'UserB', quota: 300 },
-      { user: 'UserC', quota: 'unlimited' },
+      { user: 'UserC', quota: 'unknown' },
       { user: 'UserD', quota: 300 }
     ]);
     const result = computeWeeklyQuotaExhaustionFromArtifacts(daily, quota);

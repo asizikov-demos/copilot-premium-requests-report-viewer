@@ -18,9 +18,9 @@ export function calculateUserTotalRequests(
  */
 export function calculateOverageRequests(
   totalRequests: number, 
-  quota: number | 'unlimited'
+  quota: number | 'unknown'
 ): number {
-  if (quota === 'unlimited') {
+  if (quota === 'unknown') {
     return 0;
   }
   return Math.max(0, totalRequests - quota);

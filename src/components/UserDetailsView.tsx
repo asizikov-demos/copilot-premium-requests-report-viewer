@@ -41,7 +41,7 @@ interface TooltipProps {
 export interface UserDetailsViewProps {
   user: string;
   processedData: ProcessedData[];
-  userQuotaValue: number | 'unlimited';
+  userQuotaValue: number | 'unknown';
   onBack: () => void;
 }
 
@@ -183,7 +183,7 @@ export function UserDetailsView({
     return calculateUserTotalRequests(processedData, user);
   }, [processedData, user, usageArtifacts]);
 
-  const effectiveQuota = effectiveUserQuotaValue === 'unlimited' ? Infinity : effectiveUserQuotaValue;
+  const effectiveQuota = effectiveUserQuotaValue === 'unknown' ? Infinity : effectiveUserQuotaValue;
   const billedOverage = useMemo(() => calculateBilledOverageFromRows(userData), [userData]);
   const estimatedOverageRequests = useMemo(
     () => calculateOverageRequests(userTotalRequests, effectiveQuota),
@@ -297,8 +297,8 @@ export function UserDetailsView({
   };
 
   const userActualPlan = useMemo(() => {
-    if (effectiveUserQuotaValue === 'unlimited') {
-      return 'unlimited';
+    if (effectiveUserQuotaValue === 'unknown') {
+      return 'unknown';
     }
     if (effectiveUserQuotaValue === PRICING.BUSINESS_QUOTA) {
       return 'business';
@@ -362,15 +362,15 @@ export function UserDetailsView({
 
         <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-1">
           <p className="text-sm text-[#636c76]">
-            {userActualPlan === 'unlimited'
-              ? 'Unlimited'
+            {userActualPlan === 'unknown'
+              ? 'Unknown'
               : planInfo[userActualPlan as 'business' | 'enterprise'].name}
             {organization ? ` • ${organization}` : ''}
             {costCenter ? ` • ${costCenter}` : ''}
             {' • '}
-            {userTotalRequests.toFixed(1)} / {effectiveUserQuotaValue === 'unlimited' ? '∞' : effectiveUserQuotaValue} PRUs consumed
+            {userTotalRequests.toFixed(1)} / {effectiveUserQuotaValue === 'unknown' ? 'Unknown' : effectiveUserQuotaValue} PRUs consumed
           </p>
-          {overageRequests > 0 && effectiveUserQuotaValue !== 'unlimited' && (
+          {overageRequests > 0 && effectiveUserQuotaValue !== 'unknown' && (
             <p className="text-sm text-red-600 font-medium" role="alert">
               Overage: {overageRequests.toFixed(1)} PRUs · ${overageCost.toFixed(2)}
             </p>

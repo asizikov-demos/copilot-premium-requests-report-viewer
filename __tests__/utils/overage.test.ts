@@ -17,8 +17,8 @@ function makeUsage(users: Array<{ user: string; totalRequests: number }>): Usage
   } as UsageArtifacts;
 }
 
-function makeQuota(entries: Array<{ user: string; quota: number | 'unlimited' }>): QuotaArtifacts {
-  const quotaByUser = new Map<string, number | 'unlimited'>();
+function makeQuota(entries: Array<{ user: string; quota: number | 'unknown' }>): QuotaArtifacts {
+  const quotaByUser = new Map<string, number | 'unknown'>();
   for (const e of entries) quotaByUser.set(e.user, e.quota);
   return { quotaByUser, conflicts: new Map(), distinctQuotas: new Set(), hasMixedQuotas: false, hasMixedLicenses: false } as QuotaArtifacts;
 }
@@ -72,13 +72,13 @@ describe('computeOverageSummary', () => {
     expect(res.totalOverageCost).toBeCloseTo(300 * PRICING.OVERAGE_RATE_PER_REQUEST, 5);
   });
 
-  it('ignores unlimited users for overage', () => {
+  it('ignores unknown users for overage', () => {
     const usage = makeUsage([
       { user: 'a', totalRequests: 5000 },
       { user: 'b', totalRequests: 50 }
     ]);
     const quota = makeQuota([
-      { user: 'a', quota: 'unlimited' },
+      { user: 'a', quota: 'unknown' },
       { user: 'b', quota: PRICING.BUSINESS_QUOTA }
     ]);
     const res = computeOverageSummaryFromArtifacts(usage, quota);
@@ -122,11 +122,11 @@ describe('computeOverageSummary', () => {
       makeProcessed({ user: 'test-user-one', requestsUsed: 400, quotaValue: PRICING.BUSINESS_QUOTA }),
       makeProcessed({ user: 'test-user-one', requestsUsed: 0, quotaValue: PRICING.ENTERPRISE_QUOTA }),
       makeProcessed({ user: 'test-user-two', requestsUsed: 1200, quotaValue: PRICING.BUSINESS_QUOTA }),
-      makeProcessed({ user: 'test-user-two', requestsUsed: 0, quotaValue: 'unlimited', totalQuota: 'Unlimited' }),
+      makeProcessed({ user: 'test-user-two', requestsUsed: 0, quotaValue: 'unknown', totalQuota: 'Unknown' }),
     ];
 
-    expect(computeOverageSummary(users, processed).totalOverageRequests).toBe(0);
-    expect(computeOverageSummaryFromProcessedData(processed).totalOverageRequests).toBe(0);
+    expect(computeOverageSummary(users, processed).totalOverageRequests).toBe(900);
+    expect(computeOverageSummaryFromProcessedData(processed).totalOverageRequests).toBe(900);
   });
 
   it('keeps the artifact shims overage export aligned with the canonical implementation', () => {

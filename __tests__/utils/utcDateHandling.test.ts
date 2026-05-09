@@ -45,7 +45,7 @@ describe('UTC Date Handling and Billing Periods', () => {
       model: 'o3-mini',
       quantity: '5.00',
       exceeds_quota: 'false',
-      total_monthly_quota: 'Unlimited'
+      total_monthly_quota: 'Unknown'
     }
   ];
 

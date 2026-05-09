@@ -7,7 +7,7 @@ export const validCSVData: CSVData[] = [
     model: 'gpt-4.1-2025-04-14',
     quantity: '1.00',
     exceeds_quota: 'false',
-    total_monthly_quota: 'Unlimited'
+    total_monthly_quota: 'Unknown'
   },
   {
     date: '2025-06-03',
@@ -23,7 +23,7 @@ export const validCSVData: CSVData[] = [
     model: 'gemini-2.0-flash',
     quantity: '0.75',
     exceeds_quota: 'false',
-    total_monthly_quota: 'Unlimited'
+    total_monthly_quota: 'Unknown'
   },
   {
     date: '2025-06-04',
@@ -31,15 +31,15 @@ export const validCSVData: CSVData[] = [
     model: 'o3-mini',
     quantity: '1.25',
     exceeds_quota: 'false',
-    total_monthly_quota: 'Unlimited'
+    total_monthly_quota: 'Unknown'
   }
 ];
 
 export const validCSVString = `date,username,model,quantity,exceeds_quota,total_monthly_quota
-2025-06-03,test-user-a,gpt-4.1-2025-04-14,1.00,false,Unlimited
+2025-06-03,test-user-a,gpt-4.1-2025-04-14,1.00,false,Unknown
 2025-06-03,test-user-b,claude-3.7-sonnet-thought,2.50,true,100
-2025-06-04,test-user-c,gemini-2.0-flash,0.75,false,Unlimited
-2025-06-04,test-user-a,o3-mini,1.25,false,Unlimited`;
+2025-06-04,test-user-c,gemini-2.0-flash,0.75,false,Unknown
+2025-06-04,test-user-a,o3-mini,1.25,false,Unknown`;
 
 export const powerUserCSVData: CSVData[] = [
   {
@@ -48,7 +48,7 @@ export const powerUserCSVData: CSVData[] = [
     model: 'gpt-4.5',
     quantity: '5.00',
     exceeds_quota: 'false',
-    total_monthly_quota: 'Unlimited'
+    total_monthly_quota: 'Unknown'
   },
   {
     date: '2025-06-01',
@@ -56,7 +56,7 @@ export const powerUserCSVData: CSVData[] = [
     model: 'claude-3.7-sonnet-thought',
     quantity: '8.00',
     exceeds_quota: 'false',
-    total_monthly_quota: 'Unlimited'
+    total_monthly_quota: 'Unknown'
   },
   {
     date: '2025-06-01',
@@ -64,7 +64,7 @@ export const powerUserCSVData: CSVData[] = [
     model: 'gemini-2.0-flash',
     quantity: '3.00',
     exceeds_quota: 'false',
-    total_monthly_quota: 'Unlimited'
+    total_monthly_quota: 'Unknown'
   },
   {
     date: '2025-06-01',
@@ -72,7 +72,7 @@ export const powerUserCSVData: CSVData[] = [
     model: 'o3-mini',
     quantity: '2.00',
     exceeds_quota: 'false',
-    total_monthly_quota: 'Unlimited'
+    total_monthly_quota: 'Unknown'
   },
   {
     date: '2025-06-01',
@@ -80,7 +80,7 @@ export const powerUserCSVData: CSVData[] = [
     model: 'Code Review',
     quantity: '1.50',
     exceeds_quota: 'false',
-    total_monthly_quota: 'Unlimited'
+    total_monthly_quota: 'Unknown'
   },
   {
     date: '2025-06-01',
@@ -88,7 +88,7 @@ export const powerUserCSVData: CSVData[] = [
     model: 'gpt-4-vision',
     quantity: '2.50',
     exceeds_quota: 'false',
-    total_monthly_quota: 'Unlimited'
+    total_monthly_quota: 'Unknown'
   },
   {
     date: '2025-06-02',
@@ -96,6 +96,6 @@ export const powerUserCSVData: CSVData[] = [
     model: 'gpt-4.1-2025-04-14',
     quantity: '1.00',
     exceeds_quota: 'false',
-    total_monthly_quota: 'Unlimited'
+    total_monthly_quota: 'Unknown'
   }
 ];

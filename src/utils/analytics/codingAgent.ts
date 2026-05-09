@@ -9,7 +9,7 @@ export function analyzeCodingAgentAdoption(data: ProcessedData[]): import('@/typ
   }
   const allUsers = new Set(data.map(d => d.user));
   const totalUniqueUsers = allUsers.size;
-  const userStats = new Map<string, { totalRequests: number; codingAgentRequests: number; models: Set<string>; quota: number | 'unlimited'; }>();
+  const userStats = new Map<string, { totalRequests: number; codingAgentRequests: number; models: Set<string>; quota: number | 'unknown'; }>();
   data.forEach(row => {
     const isCodingAgent = isCodingAgentModel(row.model);
     if (!userStats.has(row.user)) {

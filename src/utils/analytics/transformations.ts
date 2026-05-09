@@ -21,7 +21,7 @@ export function analyzeData(data: ProcessedData[]): AnalysisResults {
       usersExceedingQuota: 0,
       requestsByModel: [],
       quotaBreakdown: {
-        unlimited: [],
+        unknown: [],
         business: [],
         enterprise: [],
         mixed: false,
@@ -56,7 +56,7 @@ export function analyzeData(data: ProcessedData[]): AnalysisResults {
   });
   for (const [user, totalRequests] of userTotalRequests) {
     const quota = userQuotas.get(user);
-    if (quota && quota !== 'unlimited' && totalRequests > quota) {
+    if (quota && quota !== 'unknown' && totalRequests > quota) {
       usersExceedingQuota.add(user);
     }
   }

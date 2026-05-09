@@ -16,8 +16,8 @@ function makeUsage(users: Array<{ user: string; total: number; models?: Record<s
   };
 }
 
-function makeQuota(entries: Array<{ user: string; quota: number | 'unlimited' }>): QuotaArtifacts {
-  const quotaByUser = new Map<string, number | 'unlimited'>();
+function makeQuota(entries: Array<{ user: string; quota: number | 'unknown' }>): QuotaArtifacts {
+  const quotaByUser = new Map<string, number | 'unknown'>();
   entries.forEach(e => quotaByUser.set(e.user, e.quota));
   return {
     quotaByUser,

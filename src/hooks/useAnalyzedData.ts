@@ -60,7 +60,7 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
       const filtered = filteredUserRows;
       const analysis: AnalysisResults = (() => {
         const userFiltered = filtered;
-        if (filteredAllRows.length === 0) return { timeFrame: { start: '', end: '' }, totalUniqueUsers: 0, usersExceedingQuota: 0, requestsByModel: [], quotaBreakdown: { unlimited: [], business: [], enterprise: [], mixed: false, suggestedPlan: null } };
+        if (filteredAllRows.length === 0) return { timeFrame: { start: '', end: '' }, totalUniqueUsers: 0, usersExceedingQuota: 0, requestsByModel: [], quotaBreakdown: { unknown: [], business: [], enterprise: [], mixed: false, suggestedPlan: null } };
         const sorted = [...filteredAllRows].sort((a,b)=> a.epoch - b.epoch);
         const timeFrame = { start: sorted[0].dateKey, end: sorted[sorted.length-1].dateKey };
         const uniqueUsers = new Set(userFiltered.map(r=> r.user));
