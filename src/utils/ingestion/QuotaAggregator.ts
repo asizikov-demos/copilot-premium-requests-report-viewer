@@ -3,6 +3,8 @@
  * Eliminates O(U*R) repeated lookups by maintaining O(1) map.
  */
 
+import { isRequestUnitType } from '@/utils/unitType';
+
 import {
   Aggregator,
   AggregatorContext,
@@ -14,8 +16,8 @@ import {
 export class QuotaAggregator implements Aggregator<QuotaArtifacts> {
   readonly id = 'quota';
   
-  private quotaByUser = new Map<string, number | 'unlimited'>();
-  private conflicts = new Map<string, Set<number | 'unlimited'>>();
+  private quotaByUser = new Map<string, number | 'unknown'>();
+  private conflicts = new Map<string, Set<number | 'unknown'>>();
   private distinctQuotas = new Set<number>();
   private specialBucketQuotas = new Map<SpecialUsageBucketKey, 0>();
   
@@ -35,7 +37,7 @@ export class QuotaAggregator implements Aggregator<QuotaArtifacts> {
       return;
     }
 
-    if (row.quotaValue === undefined) return;
+    if (row.quotaValue === undefined || !isRequestUnitType(row.unitType)) return;
     
     const existing = this.quotaByUser.get(row.user);
     const current = row.quotaValue;
@@ -55,8 +57,8 @@ export class QuotaAggregator implements Aggregator<QuotaArtifacts> {
       }
       set.add(current);
       
-      // Resolution policy: prefer 'unlimited' > higher numeric > existing
-      if (current === 'unlimited' 
+      // Resolution policy: numeric quotas win over unknown values; higher numeric quota wins.
+      if ((existing === 'unknown' && typeof current === 'number')
         || (typeof current === 'number' && typeof existing === 'number' && current > existing)) {
         this.quotaByUser.set(row.user, current);
         if (typeof current === 'number') {
@@ -70,9 +72,9 @@ export class QuotaAggregator implements Aggregator<QuotaArtifacts> {
     const hasMixedLicenses = this.distinctQuotas.has(ctx.pricing.BUSINESS_QUOTA)
       && this.distinctQuotas.has(ctx.pricing.ENTERPRISE_QUOTA);
     
-    const hasUnlimited = Array.from(this.quotaByUser.values()).includes('unlimited');
+    const hasUnknown = Array.from(this.quotaByUser.values()).includes('unknown');
     const hasMixedQuotas = this.distinctQuotas.size > 1 
-      || (this.distinctQuotas.size >= 1 && hasUnlimited);
+      || (this.distinctQuotas.size >= 1 && hasUnknown);
     
     return {
       quotaByUser: this.quotaByUser,

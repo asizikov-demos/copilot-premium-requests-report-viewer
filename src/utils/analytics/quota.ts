@@ -1,8 +1,9 @@
 import { PRICING } from '@/constants/pricing';
 import { ProcessedData } from '@/types/csv';
+import { isRequestUnitType } from '@/utils/unitType';
 
 export interface QuotaBreakdownResult {
-  unlimited: string[];
+  unknown: string[];
   business: string[];
   enterprise: string[];
   mixed: boolean;
@@ -10,24 +11,24 @@ export interface QuotaBreakdownResult {
 }
 
 // Parse quota value from string
-export function parseQuotaValue(quotaString: string): number | 'unlimited' {
+export function parseQuotaValue(quotaString: string): number | 'unknown' {
   const trimmed = quotaString.trim().toLowerCase();
-  if (trimmed === 'unlimited') {
-    return 'unlimited';
+  if (trimmed === 'unknown') {
+    return 'unknown';
   }
   const parsed = parseInt(trimmed, 10);
-  return isNaN(parsed) ? 'unlimited' : parsed;
+  return isNaN(parsed) ? 'unknown' : parsed;
 }
 
 /**
  * Build per-user quotas from processed rows using the canonical policy:
- * 'unlimited' wins over numeric quotas, otherwise the highest numeric quota wins.
+ * numeric quotas win over unknown values, and the highest numeric quota wins.
  */
-export function buildUserQuotaMapFromRows(data: ProcessedData[]): Map<string, number | 'unlimited'> {
-  const userQuotas = new Map<string, number | 'unlimited'>();
+export function buildUserQuotaMapFromRows(data: ProcessedData[]): Map<string, number | 'unknown'> {
+  const userQuotas = new Map<string, number | 'unknown'>();
 
   for (const row of data) {
-    if (row.isNonCopilotUsage) {
+    if (row.isNonCopilotUsage || !isRequestUnitType(row.unitType)) {
       continue;
     }
 
@@ -36,7 +37,7 @@ export function buildUserQuotaMapFromRows(data: ProcessedData[]): Map<string, nu
 
     if (
       existing === undefined
-      || current === 'unlimited'
+      || (existing === 'unknown' && typeof current === 'number')
       || (typeof current === 'number' && typeof existing === 'number' && current > existing)
     ) {
       userQuotas.set(row.user, current);
@@ -49,13 +50,13 @@ export function buildUserQuotaMapFromRows(data: ProcessedData[]): Map<string, nu
 export function buildQuotaBreakdown(data: ProcessedData[]): QuotaBreakdownResult {
   const userQuotas = buildUserQuotaMapFromRows(data);
 
-  const unlimited: string[] = [];
+  const unknown: string[] = [];
   const business: string[] = [];
   const enterprise: string[] = [];
 
   for (const [user, quota] of userQuotas) {
-    if (quota === 'unlimited') {
-      unlimited.push(user);
+    if (quota === 'unknown') {
+      unknown.push(user);
     } else if (quota === PRICING.BUSINESS_QUOTA) {
       business.push(user);
     } else if (quota === PRICING.ENTERPRISE_QUOTA) {
@@ -64,14 +65,14 @@ export function buildQuotaBreakdown(data: ProcessedData[]): QuotaBreakdownResult
   }
 
   const quotaTypes = [
-    unlimited.length > 0 ? 'unlimited' : null,
+    unknown.length > 0 ? 'unknown' : null,
     business.length > 0 ? 'business' : null,
     enterprise.length > 0 ? 'enterprise' : null
   ].filter(Boolean);
 
   const mixed = quotaTypes.length > 1;
   let suggestedPlan: 'business' | 'enterprise' | null = null;
-  if (!mixed && unlimited.length === 0) {
+  if (!mixed && unknown.length === 0) {
     if (business.length > 0 && enterprise.length === 0) {
       suggestedPlan = 'business';
     } else if (enterprise.length > 0 && business.length === 0) {
@@ -79,5 +80,5 @@ export function buildQuotaBreakdown(data: ProcessedData[]): QuotaBreakdownResult
     }
   }
 
-  return { unlimited, business, enterprise, mixed, suggestedPlan };
+  return { unknown, business, enterprise, mixed, suggestedPlan };
 }

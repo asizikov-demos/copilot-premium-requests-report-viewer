@@ -2,7 +2,7 @@ import { PRICING } from '@/constants/pricing';
 
 interface AicPoolUser {
   user: string;
-  quotaValue?: number | 'unlimited';
+  quotaValue?: number | 'unknown';
   isNonCopilotUsage?: boolean;
 }
 
@@ -12,7 +12,7 @@ export interface AicPoolEstimate {
   additionalUsageGrossAmount: number;
 }
 
-export function getIncludedAicCreditsForQuota(quotaValue: number | 'unlimited' | undefined): number {
+export function getIncludedAicCreditsForQuota(quotaValue: number | 'unknown' | undefined): number {
   if (quotaValue === PRICING.BUSINESS_QUOTA) {
     return PRICING.BUSINESS_AI_CREDITS_INCLUDED;
   }
@@ -25,14 +25,22 @@ export function getIncludedAicCreditsForQuota(quotaValue: number | 'unlimited' |
 }
 
 export function calculateIncludedAicCreditsForUsers(users: Iterable<AicPoolUser>): number {
-  const quotaByUser = new Map<string, number | 'unlimited' | undefined>();
+  const quotaByUser = new Map<string, number | 'unknown' | undefined>();
 
   for (const user of users) {
-    if (user.isNonCopilotUsage || quotaByUser.has(user.user)) {
+    if (user.isNonCopilotUsage) {
       continue;
     }
 
-    quotaByUser.set(user.user, user.quotaValue);
+    const existingQuota = quotaByUser.get(user.user);
+    const currentQuota = user.quotaValue;
+    if (
+      !quotaByUser.has(user.user)
+      || (existingQuota === 'unknown' && typeof currentQuota === 'number')
+      || (typeof currentQuota === 'number' && typeof existingQuota === 'number' && currentQuota > existingQuota)
+    ) {
+      quotaByUser.set(user.user, currentQuota);
+    }
   }
 
   return Array.from(quotaByUser.values()).reduce<number>(

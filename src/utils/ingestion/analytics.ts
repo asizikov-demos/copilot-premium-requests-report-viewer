@@ -78,12 +78,15 @@ function buildNormalizedRowFromProcessedData(row: ProcessedData): NormalizedRow 
     exceedsQuota: row.exceedsQuota,
     product: row.product,
     sku: row.sku,
+    unitType: row.unitType,
     organization: row.organization,
     costCenter: row.costCenter,
     appliedCostPerQuantity: row.appliedCostPerQuantity,
     grossAmount: row.grossAmount,
     discountAmount: row.discountAmount,
     netAmount: row.netAmount,
+    aicQuantity: row.aicQuantity,
+    aicGrossAmount: row.aicGrossAmount,
     isNonCopilotUsage: row.isNonCopilotUsage,
     usageBucket: row.usageBucket,
   };
@@ -114,30 +117,30 @@ export function buildDailyBucketsArtifactsFromProcessedData(processed: Processed
  * Replicates logic of legacy buildQuotaBreakdown but avoids scanning ProcessedData.
  */
 export function buildQuotaBreakdownFromArtifacts(quota: QuotaArtifacts): AnalysisResults['quotaBreakdown'] {
-  const unlimited: string[] = [];
+  const unknown: string[] = [];
   const business: string[] = [];
   const enterprise: string[] = [];
 
   for (const [user, q] of quota.quotaByUser.entries()) {
-    if (q === 'unlimited') unlimited.push(user);
+    if (q === 'unknown') unknown.push(user);
     else if (q === PRICING.BUSINESS_QUOTA) business.push(user);
     else if (q === PRICING.ENTERPRISE_QUOTA) enterprise.push(user);
   }
 
   const quotaTypes = [
-    unlimited.length > 0 ? 'unlimited' : null,
+    unknown.length > 0 ? 'unknown' : null,
     business.length > 0 ? 'business' : null,
     enterprise.length > 0 ? 'enterprise' : null
   ].filter(Boolean);
 
   const mixed = quotaTypes.length > 1;
   let suggestedPlan: 'business' | 'enterprise' | null = null;
-  if (!mixed && unlimited.length === 0) {
+  if (!mixed && unknown.length === 0) {
     if (business.length > 0 && enterprise.length === 0) suggestedPlan = 'business';
     else if (enterprise.length > 0 && business.length === 0) suggestedPlan = 'enterprise';
   }
 
-  return { unlimited, business, enterprise, mixed, suggestedPlan };
+  return { unknown, business, enterprise, mixed, suggestedPlan };
 }
 
 /** Build requestsByModel array from usageArtifacts.modelTotals */
@@ -152,7 +155,7 @@ export function buildUsersExceedingQuota(usage: UsageArtifacts, quota: QuotaArti
   let count = 0;
   for (const u of usage.users) {
     const q = quota.quotaByUser.get(u.user);
-    if (q && q !== 'unlimited' && u.totalRequests > q) count++;
+    if (q && q !== 'unknown' && u.totalRequests > q) count++;
   }
   return count;
 }
@@ -232,7 +235,7 @@ export interface OverageSummary { totalOverageRequests: number; totalOverageCost
 export function computeOverageSummaryFromArtifacts(usage: UsageArtifacts, quota: QuotaArtifacts): OverageSummary {
   let totalOverageRequests = 0;
   for (const u of usage.users) {
-    const q = quota.quotaByUser.get(u.user) ?? 'unlimited';
+    const q = quota.quotaByUser.get(u.user) ?? 'unknown';
     totalOverageRequests += calculateOverageRequests(u.totalRequests, q);
   }
   return { totalOverageRequests, totalOverageCost: calculateOverageCost(totalOverageRequests) };
@@ -256,7 +259,7 @@ export function computeOverageSummaryFromProcessedData(processedData: ProcessedD
 
   let totalOverageRequests = 0;
   for (const [user, totalRequests] of totalsByUser) {
-    totalOverageRequests += calculateOverageRequests(totalRequests, quotaByUser.get(user) ?? 'unlimited');
+    totalOverageRequests += calculateOverageRequests(totalRequests, quotaByUser.get(user) ?? 'unknown');
   }
 
   return { totalOverageRequests, totalOverageCost: calculateOverageCost(totalOverageRequests) };
@@ -296,7 +299,7 @@ export function computeWeeklyQuotaExhaustionFromArtifacts(
       // Skip if already exhausted
       if (records.some(r => r.user === user)) continue;
       const quotaVal = quota.quotaByUser.get(user);
-      if (!quotaVal || quotaVal === 'unlimited') continue;
+      if (!quotaVal || quotaVal === 'unknown') continue;
       const newTotal = (cumulative.get(user) || 0) + val;
       cumulative.set(user, newTotal);
       if (newTotal >= quotaVal) {
@@ -338,7 +341,7 @@ export function analyzeCodingAgentAdoptionFromArtifacts(usage: UsageArtifacts, q
     if (models.length === 0) continue;
     const caRequests = models.reduce((sum, m) => sum + u.modelBreakdown[m], 0);
     totalCodingAgentRequests += caRequests;
-    const quotaVal = quota.quotaByUser.get(u.user) ?? 'unlimited';
+    const quotaVal = quota.quotaByUser.get(u.user) ?? 'unknown';
     codingAgentUsers.push({
       user: u.user,
       totalRequests: u.totalRequests,
@@ -491,7 +494,7 @@ export function buildConsumptionCategoriesFromArtifacts(
   quota: QuotaArtifacts
 ): InsightsOverviewData {
   const categorized: UserConsumptionCategory[] = usage.users.map(u => {
-    const quotaVal = quota.quotaByUser.get(u.user) ?? 'unlimited';
+    const quotaVal = quota.quotaByUser.get(u.user) ?? 'unknown';
     const pct = (typeof quotaVal === 'number' && quotaVal > 0)
       ? (u.totalRequests / quotaVal) * 100
       : 0;
@@ -645,7 +648,7 @@ export function analyzeCodeReviewAdoptionFromArtifacts(usage: UsageArtifacts, qu
     const crRequests = models.reduce((sum, m) => sum + u.modelBreakdown[m], 0);
     totalCodeReviewRequests += crRequests;
     totalReviewUsers += 1;
-    const quotaVal = quota.quotaByUser.get(u.user) ?? 'unlimited';
+    const quotaVal = quota.quotaByUser.get(u.user) ?? 'unknown';
     codeReviewUsers.push({
       user: u.user,
       totalRequests: u.totalRequests,

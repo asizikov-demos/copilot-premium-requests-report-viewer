@@ -1,5 +1,6 @@
 import type { ProcessedData } from '@/types/csv';
 import { calculateAicPoolEstimate, calculateIncludedAicCreditsForUsers } from '@/utils/aicPool';
+import { isRequestUnitType } from '@/utils/unitType';
 
 import {
   BillingArtifacts,
@@ -16,7 +17,8 @@ interface BillingAccumulatorRow {
   user: string;
   model: string;
   quantity: number;
-  quotaValue?: number | 'unlimited';
+  unitType?: string;
+  quotaValue?: number | 'unknown';
   organization?: string;
   costCenter?: string;
   grossAmount?: number;
@@ -102,6 +104,21 @@ function addGroupRow(groups: Map<string, BillingGroupTotals>, key: string, row: 
   groups.set(key, entry);
 }
 
+function shouldUseQuotaValue(
+  existing: number | 'unknown' | undefined,
+  current: number | 'unknown' | undefined
+): boolean {
+  if (current === undefined) {
+    return false;
+  }
+
+  return (
+    existing === undefined
+    || (existing === 'unknown' && typeof current === 'number')
+    || (typeof current === 'number' && typeof existing === 'number' && current > existing)
+  );
+}
+
 export class BillingAccumulator {
   private totals = createBillingFieldTotals();
   private userMap = new Map<string, BillingUserTotals>();
@@ -131,7 +148,7 @@ export class BillingAccumulator {
         entry = { user: row.user, quantity: 0 };
         this.userMap.set(row.user, entry);
       }
-      if (entry.quotaValue === undefined && row.quotaValue !== undefined) {
+      if (isRequestUnitType(row.unitType) && shouldUseQuotaValue(entry.quotaValue, row.quotaValue)) {
         entry.quotaValue = row.quotaValue;
       }
     }
@@ -181,6 +198,7 @@ export function buildBillingArtifactsFromProcessedData(rows: ProcessedData[]): B
     accumulator.addRow({
       ...row,
       quantity: row.requestsUsed,
+      quotaValue: isRequestUnitType(row.unitType) ? row.quotaValue : undefined,
     });
   }
 
