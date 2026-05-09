@@ -41,12 +41,13 @@ export interface NormalizedRow {
   model: string;
   quantity: number;        // Parsed numeric value
   quotaRaw?: string;       // Raw quota string from CSV
-  quotaValue?: number | 'unlimited';
+  quotaValue?: number | 'unknown';
   exceedsQuota?: boolean;
   // Additional fields can be added as needed
   // Extended commercial & billing fields (parsed during normalization)
   product?: string;
   sku?: string;
+  unitType?: string;
   organization?: string;
   costCenter?: string; // normalized from cost_center_name
   appliedCostPerQuantity?: number;
@@ -124,8 +125,8 @@ export interface IngestionResult {
  * Quota-related artifacts (output of QuotaAggregator).
  */
 export interface QuotaArtifacts {
-  quotaByUser: Map<string, number | 'unlimited'>;
-  conflicts: Map<string, Set<number | 'unlimited'>>;
+  quotaByUser: Map<string, number | 'unknown'>;
+  conflicts: Map<string, Set<number | 'unknown'>>;
   distinctQuotas: Set<number>;
   hasMixedQuotas: boolean;
   hasMixedLicenses: boolean;
@@ -141,7 +142,7 @@ export interface UserAggregate {
   modelBreakdown: Record<string, number>;
   topModel?: string;
   topModelValue?: number;
-  quotaValue?: number | 'unlimited';
+  quotaValue?: number | 'unknown';
   organization?: string;
   costCenter?: string;
 }
@@ -219,7 +220,7 @@ export interface FeatureUsageArtifacts {
 export interface BillingUserTotals {
   user: string;
   quantity: number; // total request quantity (duplicate of usageArtifacts but convenient for billing view)
-  quotaValue?: number | 'unlimited';
+  quotaValue?: number | 'unknown';
   gross?: number;
   discount?: number;
   net?: number;

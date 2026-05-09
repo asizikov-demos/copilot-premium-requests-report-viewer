@@ -5,12 +5,13 @@
 
 import { parseQuotaValue } from '@/utils/analytics/quota';
 import type { CSVData } from '@/types/csv';
+import { isCodeReviewModel } from '@/utils/productClassification';
+import { isRequestUnitType } from '@/utils/unitType';
 
 import {
   NON_COPILOT_CODE_REVIEW_BUCKET,
   NormalizedRow,
 } from './types';
-import { isCodeReviewModel } from '@/utils/productClassification';
 
 /**
  * Normalize a raw CSV row object into a typed, validated structure.
@@ -25,6 +26,7 @@ export function normalizeRow(
   warnings: string[],
   options: { allowInvalidQuantity?: boolean } = {}
 ): NormalizedRow | null {
+  const rawRecord = raw as Record<string, unknown>;
   const {
     date,
     username,
@@ -34,6 +36,7 @@ export function normalizeRow(
     exceeds_quota,
     product,
     sku,
+    unit_type,
     organization,
     cost_center_name,
     applied_cost_per_quantity,
@@ -42,7 +45,7 @@ export function normalizeRow(
     net_amount,
     aic_quantity,
     aic_gross_amount
-  } = raw as Record<string, unknown>;
+  } = rawRecord;
   
   // Type guard and validate required fields
   if (typeof date !== 'string' || typeof username !== 'string' || typeof model !== 'string' || quantity == null) {
@@ -57,17 +60,21 @@ export function normalizeRow(
     return null;
   }
   
+  const unitType = typeof unit_type === 'string' ? unit_type.trim() : undefined;
+  const shouldUseRequestValues = isRequestUnitType(unitType);
+
   // Parse quantity
-  const qty = typeof quantity === 'number' ? quantity : parseFloat(String(quantity));
-  if (Number.isNaN(qty) && !options.allowInvalidQuantity) {
+  const parsedQty = typeof quantity === 'number' ? quantity : parseFloat(String(quantity));
+  if (shouldUseRequestValues && Number.isNaN(parsedQty) && !options.allowInvalidQuantity) {
     warnings.push(`Invalid quantity for user=${username} date=${date}`);
     return null;
   }
+  const qty = shouldUseRequestValues ? parsedQty : 0;
   
   // Parse quota if present
   const quotaValue = isNonCopilotCodeReviewUsage
     ? 0
-    : total_monthly_quota && typeof total_monthly_quota === 'string'
+    : shouldUseRequestValues && total_monthly_quota && typeof total_monthly_quota === 'string'
       ? parseQuotaValue(total_monthly_quota)
       : undefined;
   
@@ -82,6 +89,12 @@ export function normalizeRow(
     const n = typeof v === 'number' ? v : parseFloat(String(v));
     return Number.isNaN(n) ? undefined : n;
   };
+  const parseRequestBillingAmount = (fieldName: string, v: unknown): number | undefined => {
+    if (shouldUseRequestValues) {
+      return parseNum(v);
+    }
+    return Object.prototype.hasOwnProperty.call(rawRecord, fieldName) ? 0 : undefined;
+  };
 
   return {
     date,
@@ -91,19 +104,20 @@ export function normalizeRow(
     quantity: qty,
     quotaRaw: isNonCopilotCodeReviewUsage
       ? '0'
-      : typeof total_monthly_quota === 'string'
+      : shouldUseRequestValues && typeof total_monthly_quota === 'string'
         ? total_monthly_quota
         : undefined,
     quotaValue,
     exceedsQuota,
     product: typeof product === 'string' ? product : undefined,
     sku: typeof sku === 'string' ? sku : undefined,
+    unitType,
     organization: typeof organization === 'string' ? organization : undefined,
     costCenter: typeof cost_center_name === 'string' ? cost_center_name : undefined,
     appliedCostPerQuantity: parseNum(applied_cost_per_quantity),
-    grossAmount: parseNum(gross_amount),
-    discountAmount: parseNum(discount_amount),
-    netAmount: parseNum(net_amount),
+    grossAmount: parseRequestBillingAmount('gross_amount', gross_amount),
+    discountAmount: parseRequestBillingAmount('discount_amount', discount_amount),
+    netAmount: parseRequestBillingAmount('net_amount', net_amount),
     aicQuantity: parseNum(aic_quantity),
     aicGrossAmount: parseNum(aic_gross_amount),
     isNonCopilotUsage: isNonCopilotCodeReviewUsage,

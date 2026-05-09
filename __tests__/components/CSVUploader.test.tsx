@@ -385,7 +385,7 @@ describe('CSVUploader', () => {
       model: 'gpt-4.1-2025-04-14',
       quantity: '1.00',
       exceeds_quota: 'false',
-      total_monthly_quota: 'Unlimited',
+      total_monthly_quota: 'Unknown',
       extra_column: 'extra_value'
     }];
     ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onComplete: (result: IngestionResult) => void }) => {

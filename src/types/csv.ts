@@ -5,10 +5,11 @@ export interface CSVData {
   username: string;
   product?: string;
   sku?: string;
+  unit_type?: string;
   model: string;
   quantity: string; // may be fractional (e.g. '3.6')
   exceeds_quota?: string; // 'True' | 'False'
-  total_monthly_quota?: string; // numeric or 'Unlimited'
+  total_monthly_quota?: string; // numeric or 'Unknown'
   applied_cost_per_quantity?: string; // numeric string
   gross_amount?: string; // numeric string
   discount_amount?: string; // numeric string
@@ -26,8 +27,8 @@ export interface ProcessedData {
   model: string; // normalized raw model name (prefixes like 'Auto: ' stripped later in analytics if needed)
   requestsUsed: number; // float-safe parsed quantity/requests used
   exceedsQuota: boolean; // derived from boolean field (defaults false if absent)
-  totalQuota: string; // original string (numeric or 'Unlimited')
-  quotaValue: number | 'unlimited'; // Parsed quota value using pricing constants/logic
+  totalQuota: string; // original string (numeric or 'Unknown')
+  quotaValue: number | 'unknown'; // Parsed quota value using pricing constants/logic
   // Cached UTC-derived keys
   iso: string; // Full UTC ISO string (timestamp.toISOString())
   dateKey: string; // YYYY-MM-DD (first 10 chars of ISO) for fast daily grouping
@@ -36,6 +37,7 @@ export interface ProcessedData {
   // Extended fields from CSV
   product?: string;
   sku?: string;
+  unitType?: string;
   organization?: string;
   costCenter?: string;
   appliedCostPerQuantity?: number;
@@ -60,7 +62,7 @@ export interface AnalysisResults {
     totalRequests: number;
   }>;
   quotaBreakdown: {
-    unlimited: string[];
+    unknown: string[];
     business: string[]; // Users with Business quota (300)
     enterprise: string[]; // Users with Enterprise quota (1000)
     mixed: boolean;
@@ -81,7 +83,7 @@ export interface CodingAgentUser {
   totalRequests: number;
   codingAgentRequests: number;
   codingAgentPercentage: number;
-  quota: number | 'unlimited';
+  quota: number | 'unknown';
   models: string[]; // coding agent models used
 }
 
@@ -99,7 +101,7 @@ export interface CodeReviewUser {
   totalRequests: number;
   codeReviewRequests: number;
   codeReviewPercentage: number;
-  quota: number | 'unlimited';
+  quota: number | 'unknown';
   models: string[];
   isSyntheticNonCopilotRow?: boolean;
 }

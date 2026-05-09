@@ -26,7 +26,7 @@ export const newFormatRows: CSVData[] = [
     model: 'GPT-5',
     quantity: '12',
     exceeds_quota: 'False',
-    total_monthly_quota: 'Unlimited',
+    total_monthly_quota: 'Unknown',
     applied_cost_per_quantity: '0.04',
     gross_amount: '0.48',
     discount_amount: '0',
