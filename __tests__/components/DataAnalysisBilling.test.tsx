@@ -57,6 +57,7 @@ describe('DataAnalysis billing summary', () => {
     });
 
     expect(screen.queryByText('Usage-based billing preview')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'AI Usage' })).not.toBeInTheDocument();
   });
 
   it('renders AI Credits callout and overview card when AIC fields are present', async () => {
@@ -133,6 +134,16 @@ describe('DataAnalysis billing summary', () => {
       expect(screen.getAllByRole('columnheader', { name: 'AI Credits Gross' })).toHaveLength(2);
       expect(screen.getAllByText('$0.27').length).toBeGreaterThan(0);
       expect(screen.getAllByText('$0.12').length).toBeGreaterThan(0);
+      expect(screen.getAllByRole('button', { name: 'AI Usage' }).length).toBeGreaterThan(0);
+    });
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'AI Usage' })[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'AI Usage' })).toBeInTheDocument();
+      expect(screen.getByText('AI Credits User Clusters')).toBeInTheDocument();
+      expect(screen.getByRole('table', { name: 'AI Credits user clusters' })).toBeInTheDocument();
+      expect(screen.getByText('Heavy AIC users')).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Cost Centers' })[0]);

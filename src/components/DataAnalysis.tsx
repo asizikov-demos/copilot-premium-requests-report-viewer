@@ -9,6 +9,7 @@ import { calculateAicPoolEstimate } from '@/utils/aicPool';
 import { getModelColor } from '@/utils/modelColors';
 import { aggregateProductCosts } from '@/utils/productCosts';
 
+import { AiUsageOverview } from './AiUsageOverview';
 import { CodingAgentOverview } from './CodingAgentOverview';
 import { CostCentersOverview } from './CostCentersOverview';
 import { CostOptimizationInsights } from './CostOptimizationInsights';
@@ -25,7 +26,7 @@ interface DataAnalysisProps {
 }
 
 type NavigationItem = {
-  key: 'overview' | 'users' | 'costCenters' | 'organizations' | 'codingAgent' | 'insights' | 'costOptimization' | 'modelTrends';
+  key: 'overview' | 'users' | 'costCenters' | 'organizations' | 'codingAgent' | 'insights' | 'costOptimization' | 'modelTrends' | 'aiUsage';
   label: string;
   icon: React.ReactNode;
 };
@@ -111,6 +112,16 @@ const NAV_ITEMS: NavigationItem[] = [
   },
 ];
 
+const AI_USAGE_NAV_ITEM: NavigationItem = {
+  key: 'aiUsage' as const,
+  label: 'AI Usage',
+  icon: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.091-3.091L2.25 12l2.846-.813a4.5 4.5 0 003.091-3.091L9 5.25l.813 2.846a4.5 4.5 0 003.091 3.091L15.75 12l-2.846.813a4.5 4.5 0 00-3.091 3.091zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.456-2.456L14.25 6l1.035-.259a3.375 3.375 0 002.456-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+    </svg>
+  ),
+};
+
 function DataAnalysisInner() {
   const {
     view,
@@ -147,14 +158,7 @@ function DataAnalysisInner() {
     return baseProcessed.some((row) => row.organization);
   }, [baseProcessed]);
 
-  useEffect(() => {
-    if (!hasCostCenters && view === 'costCenters') {
-      setView('overview');
-    }
-    if (!hasOrganizations && view === 'organizations') {
-      setView('overview');
-    }
-  }, [hasCostCenters, hasOrganizations, setView, view]);
+  const aicMetricsAvailable = billingArtifacts?.hasAnyAicData === true;
 
   const navItems = useMemo(() => {
     const items = [...NAV_ITEMS];
@@ -166,13 +170,27 @@ function DataAnalysisInner() {
     if (hasOrganizations) {
       items.splice(insertIdx, 0, ORGANIZATIONS_NAV_ITEM);
     }
+    if (aicMetricsAvailable) {
+      items.push(AI_USAGE_NAV_ITEM);
+    }
     return items;
-  }, [hasCostCenters, hasOrganizations]);
+  }, [aicMetricsAvailable, hasCostCenters, hasOrganizations]);
+
+  useEffect(() => {
+    if (!hasCostCenters && view === 'costCenters') {
+      setView('overview');
+    }
+    if (!hasOrganizations && view === 'organizations') {
+      setView('overview');
+    }
+    if (!aicMetricsAvailable && view === 'aiUsage') {
+      setView('overview');
+    }
+  }, [aicMetricsAvailable, hasCostCenters, hasOrganizations, setView, view]);
 
   const costMetricsAvailable = billingArtifacts?.hasAnyBillingData === true;
   const aggregatedCosts = costMetricsAvailable && billingArtifacts ? billingArtifacts.totals : null;
 
-  const aicMetricsAvailable = billingArtifacts?.hasAnyAicData === true;
   const aggregatedAic = (
     billingArtifacts?.hasAnyAicData
       ? {
@@ -356,6 +374,8 @@ function DataAnalysisInner() {
             <CostOptimizationInsights />
           ) : view === 'modelTrends' ? (
             <ModelUsageTrendsOverview />
+          ) : view === 'aiUsage' ? (
+            <AiUsageOverview />
           ) : (
             /* Overview — chart + model table */
             <div className="space-y-6">
