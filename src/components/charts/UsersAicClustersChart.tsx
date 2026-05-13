@@ -14,14 +14,12 @@ import {
   ZAxis,
 } from 'recharts';
 
-import type { UserSummary } from '@/utils/analytics';
 import type { BillingUserTotals } from '@/utils/ingestion';
 
 import { chartTooltipContentStyle, chartTooltipLabelStyle } from './chartTooltipStyles';
 
 interface UsersAicClustersChartProps {
-  users: UserSummary[];
-  userCosts: Map<string, BillingUserTotals>;
+  users: BillingUserTotals[];
 }
 
 interface UserAicPoint {
@@ -77,11 +75,11 @@ function summarizeCluster(
   };
 }
 
-function buildUserAicClusters(users: UserSummary[], userCosts: Map<string, BillingUserTotals>): UserAicCluster[] {
+function buildUserAicClusters(users: BillingUserTotals[]): UserAicCluster[] {
   const points = users.map((user) => ({
     user: user.user,
-    totalRequests: user.totalRequests,
-    aicGrossAmount: userCosts.get(user.user)?.aicGrossAmount ?? 0,
+    totalRequests: user.quantity,
+    aicGrossAmount: user.aicGrossAmount ?? 0,
   }));
 
   const totalAicGrossAmount = points.reduce((sum, point) => sum + point.aicGrossAmount, 0);
@@ -132,8 +130,8 @@ function buildUserAicClusters(users: UserSummary[], userCosts: Map<string, Billi
   return clusters;
 }
 
-export function UsersAicClustersChart({ users, userCosts }: UsersAicClustersChartProps) {
-  const clusters = useMemo(() => buildUserAicClusters(users, userCosts), [users, userCosts]);
+export function UsersAicClustersChart({ users }: UsersAicClustersChartProps) {
+  const clusters = useMemo(() => buildUserAicClusters(users), [users]);
 
   if (users.length === 0) {
     return (

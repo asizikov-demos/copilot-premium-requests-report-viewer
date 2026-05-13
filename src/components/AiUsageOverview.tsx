@@ -1,32 +1,11 @@
 'use client';
 
-import { useMemo } from 'react';
-
 import { useAnalysisContext } from '@/context/AnalysisContext';
-import type { UserSummary } from '@/utils/analytics';
 
 import { UsersAicClustersChart } from './charts/UsersAicClustersChart';
 
 export function AiUsageOverview() {
-  const { billingArtifacts, userData } = useAnalysisContext();
-  const users = useMemo<UserSummary[]>(() => {
-    if (!billingArtifacts) {
-      return userData;
-    }
-
-    const usersByName = new Map(userData.map((user) => [user.user, user]));
-    for (const billingUser of billingArtifacts.users) {
-      if (!usersByName.has(billingUser.user)) {
-        usersByName.set(billingUser.user, {
-          user: billingUser.user,
-          totalRequests: billingUser.quantity,
-          modelBreakdown: {},
-        });
-      }
-    }
-
-    return Array.from(usersByName.values());
-  }, [billingArtifacts, userData]);
+  const { billingArtifacts } = useAnalysisContext();
 
   if (!billingArtifacts?.hasAnyAicData) {
     return (
@@ -58,7 +37,7 @@ export function AiUsageOverview() {
           </p>
         </div>
         <div className="p-5">
-          <UsersAicClustersChart users={users} userCosts={billingArtifacts.userMap} />
+          <UsersAicClustersChart users={billingArtifacts.users} />
         </div>
       </div>
     </div>
