@@ -1,4 +1,5 @@
 import type { ProcessedData } from '@/types/csv';
+import { shouldReplaceQuotaValue } from '@/utils/analytics/quota';
 import { calculateAicPoolEstimate, calculateIncludedAicCreditsForUsers } from '@/utils/aicPool';
 import { isRequestUnitType } from '@/utils/unitType';
 
@@ -104,21 +105,6 @@ function addGroupRow(groups: Map<string, BillingGroupTotals>, key: string, row: 
   groups.set(key, entry);
 }
 
-function shouldUseQuotaValue(
-  existing: number | 'unknown' | undefined,
-  current: number | 'unknown' | undefined
-): boolean {
-  if (current === undefined) {
-    return false;
-  }
-
-  return (
-    existing === undefined
-    || (existing === 'unknown' && typeof current === 'number')
-    || (typeof current === 'number' && typeof existing === 'number' && current > existing)
-  );
-}
-
 export class BillingAccumulator {
   private totals = createBillingFieldTotals();
   private userMap = new Map<string, BillingUserTotals>();
@@ -148,8 +134,13 @@ export class BillingAccumulator {
         entry = { user: row.user, quantity: 0 };
         this.userMap.set(row.user, entry);
       }
-      if (isRequestUnitType(row.unitType) && shouldUseQuotaValue(entry.quotaValue, row.quotaValue)) {
-        entry.quotaValue = row.quotaValue;
+      const incomingQuota = row.quotaValue;
+      if (
+        isRequestUnitType(row.unitType)
+        && incomingQuota !== undefined
+        && shouldReplaceQuotaValue(entry.quotaValue, incomingQuota)
+      ) {
+        entry.quotaValue = incomingQuota;
       }
     }
 
