@@ -14,12 +14,12 @@ interface UseBillingGroupRowsOptions<TState, TExtraFields extends object> {
   rows: ProcessedData[];
   totalsByGroup?: Map<string, BillingGroupTotals>;
   getGroupName: (row: ProcessedData) => string;
-  createExtraState: () => TState;
-  updateExtraState: (state: TState, row: ProcessedData) => void;
-  getExtraFields: (state: TState) => TExtraFields;
+  createExtraState?: () => TState;
+  updateExtraState?: (state: TState, row: ProcessedData) => void;
+  getExtraFields?: (state: TState) => TExtraFields;
 }
 
-export function useBillingGroupRows<TState, TExtraFields extends object = Record<string, never>>({
+export function useBillingGroupRows<TState = undefined, TExtraFields extends object = Record<string, never>>({
   rows,
   totalsByGroup,
   getGroupName,
@@ -28,6 +28,8 @@ export function useBillingGroupRows<TState, TExtraFields extends object = Record
   getExtraFields,
 }: UseBillingGroupRowsOptions<TState, TExtraFields>): Array<BillingGroupRow & TExtraFields> {
   return useMemo(() => {
+    const createState = createExtraState ?? (() => undefined as TState);
+    const getFields = getExtraFields ?? (() => ({} as TExtraFields));
     const map = new Map<string, {
       requests: number;
       productBuckets: ReturnType<typeof createEmptyProductCostMap>;
@@ -41,14 +43,14 @@ export function useBillingGroupRows<TState, TExtraFields extends object = Record
         entry = {
           requests: 0,
           productBuckets: createEmptyProductCostMap(),
-          extraState: createExtraState(),
+          extraState: createState(),
         };
         map.set(groupName, entry);
       }
 
       entry.requests += row.requestsUsed;
       accumulateProductCost(entry.productBuckets, row);
-      updateExtraState(entry.extraState, row);
+      updateExtraState?.(entry.extraState, row);
     }
 
     return Array.from(map.entries())
@@ -63,7 +65,7 @@ export function useBillingGroupRows<TState, TExtraFields extends object = Record
           net: totals?.net ?? 0,
           aicGrossAmount: totals?.aicGrossAmount ?? 0,
           products: getPopulatedProductCosts(data.productBuckets),
-          ...getExtraFields(data.extraState),
+          ...getFields(data.extraState),
         };
       })
       .sort((a, b) => b.net - a.net);

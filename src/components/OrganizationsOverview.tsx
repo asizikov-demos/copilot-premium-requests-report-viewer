@@ -1,11 +1,11 @@
 'use client';
 
+import { useAnalysisContext } from '@/context/AnalysisContext';
 import type { ProcessedData } from '@/types/csv';
 import { UNASSIGNED_BILLING_GROUP } from '@/utils/ingestion';
 
 import { BillingGroupRow, BillingGroupTable } from './BillingGroupTable';
 import { useBillingGroupRows } from './useBillingGroupRows';
-import { useAnalysisContext } from '@/context/AnalysisContext';
 
 interface OrganizationExtraState {
   userSet: Set<string>;
