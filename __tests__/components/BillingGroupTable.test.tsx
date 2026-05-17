@@ -21,7 +21,7 @@ interface OrganizationRow extends BillingGroupRow {
 describe('BillingGroupTable', () => {
   it('renders extra columns and expandable product billing breakdowns', () => {
     const rows: OrganizationRow[] = [{
-      name: 'org-a',
+      name: 'test-org-one',
       users: 2,
       requests: 3,
       gross: 1.2,
@@ -48,7 +48,7 @@ describe('BillingGroupTable', () => {
     expect(screen.getByRole('columnheader', { name: 'Users' })).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'org-a' }));
+    fireEvent.click(screen.getByRole('button', { name: 'test-org-one' }));
 
     expect(screen.getAllByRole('columnheader', { name: 'AI Credits Gross' })).toHaveLength(2);
     expect(screen.getAllByRole('columnheader', { name: 'Gross' })).toHaveLength(2);
@@ -61,7 +61,7 @@ describe('BillingGroupTable', () => {
 
   it('renders cost center rows without organization-specific columns', () => {
     const rows: BillingGroupRow[] = [{
-      name: 'cost-center-a',
+      name: 'test-cost-center-one',
       requests: 3,
       gross: 1.2,
       discount: 0.2,
@@ -87,7 +87,7 @@ describe('BillingGroupTable', () => {
     expect(within(table!).queryByRole('columnheader', { name: 'Users' })).not.toBeInTheDocument();
     expect(within(table!).queryByRole('columnheader', { name: 'AI Credits Gross' })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'cost-center-a' }));
+    fireEvent.click(screen.getByRole('button', { name: 'test-cost-center-one' }));
 
     expect(screen.getByText('Copilot')).toBeInTheDocument();
     expect(screen.getAllByRole('columnheader', { name: 'Gross' })).toHaveLength(2);
