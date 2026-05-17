@@ -24,7 +24,7 @@ export interface BillingGroupRow {
 export interface BillingGroupEntry {
   requests: number;
   productBuckets: ReturnType<typeof createEmptyProductCostMap>;
-  users: Set<string>;
+  users?: Set<string>;
 }
 
 interface UseBillingGroupRowsOptions<TExtra extends object> {
@@ -52,7 +52,6 @@ export function useBillingGroupRows<TExtra extends object = object>({
         entry = {
           requests: 0,
           productBuckets: createEmptyProductCostMap(),
-          users: new Set<string>(),
         };
         map.set(groupName, entry);
       }

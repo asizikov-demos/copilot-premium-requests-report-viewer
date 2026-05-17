@@ -17,10 +17,11 @@ export function OrganizationsOverview() {
     getTotals: (name) => billingArtifacts?.orgTotals.get(name),
     updateEntry: (entry: BillingGroupEntry, row) => {
       if (!row.isNonCopilotUsage) {
+        entry.users ??= new Set<string>();
         entry.users.add(row.user);
       }
     },
-    getExtraFields: (entry) => ({ users: entry.users.size }),
+    getExtraFields: (entry) => ({ users: entry.users?.size ?? 0 }),
   });
 
   const hasCosts = orgRows.some(r => r.gross > 0 || r.net > 0);

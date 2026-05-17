@@ -8,7 +8,7 @@ interface OrganizationBillingGroupRow extends BillingGroupRow {
 }
 
 const billingRow: OrganizationBillingGroupRow = {
-  name: 'Org One',
+  name: 'test-org-one',
   users: 2,
   requests: 5,
   gross: 1.2,
@@ -52,7 +52,7 @@ describe('BillingGroupTable', () => {
     expect(screen.getByRole('columnheader', { name: 'Discount' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Net' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Org One/i }));
+    fireEvent.click(screen.getByRole('button', { name: /test-org-one/i }));
 
     const details = document.getElementById('organization-details-0');
     expect(details).not.toBeNull();
