@@ -21,7 +21,7 @@ interface OrganizationRow extends BillingGroupRow {
 describe('BillingGroupTable', () => {
   it('renders extra columns and expandable product billing breakdowns', () => {
     const rows: OrganizationRow[] = [{
-      name: 'example-org',
+      name: 'test-org-one',
       users: 2,
       requests: 3,
       gross: 1.2,
@@ -48,7 +48,7 @@ describe('BillingGroupTable', () => {
     expect(screen.getByRole('columnheader', { name: 'Users' })).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'example-org' }));
+    fireEvent.click(screen.getByRole('button', { name: 'test-org-one' }));
 
     expect(screen.getAllByRole('columnheader', { name: 'AI Credits Gross' })).toHaveLength(2);
     expect(screen.getAllByRole('columnheader', { name: 'Gross' })).toHaveLength(2);
