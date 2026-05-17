@@ -1,4 +1,4 @@
-import { filterBySelectedMonths, getAvailableMonths, getMonthKey } from '@/utils/analytics/filters';
+import { filterBySelectedMonths, filterDailySeriesByMonths, getAvailableMonths, getMonthKey } from '@/utils/analytics/filters';
 
 import type { ProcessedData } from '@/types/csv';
 
@@ -47,5 +47,13 @@ describe('analytics filters month helpers', () => {
     const july = createProcessedData('2025-07-01T00:00:00Z');
 
     expect(filterBySelectedMonths([june, july], ['2025-06'])).toEqual([june]);
+  });
+
+  it('filters daily series by the UTC date string month key', () => {
+    const june = { date: '2025-06-30', value: 1 };
+    const july = { date: '2025-07-01', value: 2 };
+
+    expect(filterDailySeriesByMonths([june, july], ['2025-06'])).toEqual([june]);
+    expect(filterDailySeriesByMonths([june, july], [])).toEqual([june, july]);
   });
 });

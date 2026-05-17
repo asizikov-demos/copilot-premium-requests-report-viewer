@@ -5,6 +5,7 @@ import { CodingAgentUsageChart } from './charts/CodingAgentUsageChart';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useAnalysisContext } from '@/context/AnalysisContext';
 import { DailyBucketsArtifacts, buildDailyCodingAgentUsageFromArtifacts, buildDailyCodeReviewUsageFromArtifacts } from '@/utils/ingestion';
+import { filterDailySeriesByMonths } from '@/utils/analytics/filters';
 import type { CodeReviewAnalysis } from '@/types/csv';
 
 interface CodingAgentOverviewProps {
@@ -31,9 +32,7 @@ export function CodingAgentOverview({
   const dailyCodingAgentData = useMemo(() => {
     if (typedDailyBuckets?.dailyUserModelTotals) {
       const raw = buildDailyCodingAgentUsageFromArtifacts(typedDailyBuckets);
-      return selectedMonths.length === 0
-        ? raw
-        : raw.filter(d => selectedMonths.includes(d.date.slice(0, 7)));
+      return filterDailySeriesByMonths(raw, selectedMonths);
     }
     return [];
   }, [typedDailyBuckets, selectedMonths]);
@@ -41,9 +40,7 @@ export function CodingAgentOverview({
   const dailyCodeReviewData = useMemo(() => {
     if (typedDailyBuckets?.dailyUserModelTotals) {
       const raw = buildDailyCodeReviewUsageFromArtifacts(typedDailyBuckets);
-      return selectedMonths.length === 0
-        ? raw
-        : raw.filter(d => selectedMonths.includes(d.date.slice(0, 7)));
+      return filterDailySeriesByMonths(raw, selectedMonths);
     }
     return [];
   }, [typedDailyBuckets, selectedMonths]);
