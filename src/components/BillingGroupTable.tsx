@@ -27,21 +27,30 @@ export interface BillingGroupEntry {
   users?: Set<string>;
 }
 
-interface UseBillingGroupRowsOptions<TExtra extends object> {
+interface UseBillingGroupRowsBaseOptions {
   sourceRows: ProcessedData[];
   getGroupName: (row: ProcessedData) => string;
   getTotals: (name: string) => BillingGroupTotals | undefined;
   updateEntry?: (entry: BillingGroupEntry, row: ProcessedData) => void;
-  getExtraFields?: (entry: BillingGroupEntry) => TExtra;
 }
 
-export function useBillingGroupRows<TExtra extends object = object>({
-  sourceRows,
-  getGroupName,
-  getTotals,
-  updateEntry,
-  getExtraFields,
-}: UseBillingGroupRowsOptions<TExtra>): Array<BillingGroupRow & TExtra> {
+interface UseBillingGroupRowsWithExtrasOptions<TExtra extends object> extends UseBillingGroupRowsBaseOptions {
+  getExtraFields: (entry: BillingGroupEntry) => TExtra;
+}
+
+export function useBillingGroupRows(options: UseBillingGroupRowsBaseOptions): BillingGroupRow[];
+export function useBillingGroupRows<TExtra extends object>(options: UseBillingGroupRowsWithExtrasOptions<TExtra>): Array<BillingGroupRow & TExtra>;
+export function useBillingGroupRows<TExtra extends object>(
+  options: UseBillingGroupRowsBaseOptions | UseBillingGroupRowsWithExtrasOptions<TExtra>
+): Array<BillingGroupRow | (BillingGroupRow & TExtra)> {
+  const {
+    sourceRows,
+    getGroupName,
+    getTotals,
+    updateEntry,
+  } = options;
+  const getExtraFields = 'getExtraFields' in options ? options.getExtraFields : undefined;
+
   return useMemo(() => {
     const map = new Map<string, BillingGroupEntry>();
 
@@ -65,7 +74,7 @@ export function useBillingGroupRows<TExtra extends object = object>({
       .map(([name, data]) => {
         const totals = getTotals(name);
 
-        return {
+        const baseRow: BillingGroupRow = {
           name,
           requests: data.requests,
           gross: totals?.gross ?? 0,
@@ -73,14 +82,16 @@ export function useBillingGroupRows<TExtra extends object = object>({
           net: totals?.net ?? 0,
           aicGrossAmount: totals?.aicGrossAmount ?? 0,
           products: getPopulatedProductCosts(data.productBuckets),
-          ...(getExtraFields?.(data) ?? {} as TExtra),
         };
+
+        return getExtraFields ? { ...baseRow, ...getExtraFields(data) } : baseRow;
       })
       .sort((a, b) => b.net - a.net);
   }, [sourceRows, getGroupName, getTotals, updateEntry, getExtraFields]);
 }
 
 interface BillingGroupExtraColumn<T extends BillingGroupRow> {
+  key?: string;
   header: string;
   render: (row: T) => React.ReactNode;
   headerClassName?: string;
@@ -131,8 +142,8 @@ export function BillingGroupTable<T extends BillingGroupRow>({
             <thead>
               <tr className="border-b border-[#d1d9e0]">
                 <th className="px-6 py-3 text-left text-xs font-bold text-[#636c76] uppercase tracking-wider">{nameColumnLabel}</th>
-                {extraColumns.map((column) => (
-                  <th key={column.header} className={column.headerClassName ?? 'px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider'}>
+                {extraColumns.map((column, index) => (
+                  <th key={column.key ?? `${column.header}-${index}`} className={column.headerClassName ?? 'px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider'}>
                     {column.header}
                   </th>
                 ))}
@@ -178,8 +189,8 @@ export function BillingGroupTable<T extends BillingGroupRow>({
                           <span>{row.name}</span>
                         )}
                       </td>
-                      {extraColumns.map((column) => (
-                        <td key={column.header} className={column.cellClassName ?? 'px-6 py-3.5 text-sm text-[#636c76] text-right font-mono'}>
+                      {extraColumns.map((column, index) => (
+                        <td key={column.key ?? `${column.header}-${index}`} className={column.cellClassName ?? 'px-6 py-3.5 text-sm text-[#636c76] text-right font-mono'}>
                           {column.render(row)}
                         </td>
                       ))}
