@@ -38,6 +38,7 @@ export function OrganizationsOverview() {
       detailIdPrefix="organization-details"
       extraColumns={[
         {
+          key: 'users',
           header: 'Users',
           render: (row) => row.users.toLocaleString(),
         },

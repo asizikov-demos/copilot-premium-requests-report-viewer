@@ -91,7 +91,7 @@ export function useBillingGroupRows<TExtra extends object>(
 }
 
 interface BillingGroupExtraColumn<T extends BillingGroupRow> {
-  key?: string;
+  key: string;
   header: string;
   render: (row: T) => React.ReactNode;
   headerClassName?: string;
@@ -142,8 +142,8 @@ export function BillingGroupTable<T extends BillingGroupRow>({
             <thead>
               <tr className="border-b border-[#d1d9e0]">
                 <th className="px-6 py-3 text-left text-xs font-bold text-[#636c76] uppercase tracking-wider">{nameColumnLabel}</th>
-                {extraColumns.map((column, index) => (
-                  <th key={column.key ?? `${column.header}-${index}`} className={column.headerClassName ?? 'px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider'}>
+                {extraColumns.map((column) => (
+                  <th key={column.key} className={column.headerClassName ?? 'px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider'}>
                     {column.header}
                   </th>
                 ))}
@@ -189,8 +189,8 @@ export function BillingGroupTable<T extends BillingGroupRow>({
                           <span>{row.name}</span>
                         )}
                       </td>
-                      {extraColumns.map((column, index) => (
-                        <td key={column.key ?? `${column.header}-${index}`} className={column.cellClassName ?? 'px-6 py-3.5 text-sm text-[#636c76] text-right font-mono'}>
+                      {extraColumns.map((column) => (
+                        <td key={column.key} className={column.cellClassName ?? 'px-6 py-3.5 text-sm text-[#636c76] text-right font-mono'}>
                           {column.render(row)}
                         </td>
                       ))}

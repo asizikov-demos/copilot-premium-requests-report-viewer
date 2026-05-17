@@ -39,7 +39,7 @@ describe('BillingGroupTable', () => {
         hasCosts={true}
         hasAicGross={true}
         detailIdPrefix="organization-details"
-        extraColumns={[{ header: 'Users', render: (row) => row.users.toLocaleString() }]}
+        extraColumns={[{ key: 'users', header: 'Users', render: (row) => row.users.toLocaleString() }]}
       />
     );
 
