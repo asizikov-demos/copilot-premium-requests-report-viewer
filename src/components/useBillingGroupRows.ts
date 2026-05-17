@@ -10,28 +10,28 @@ import {
 
 import type { BillingGroupRow } from './BillingGroupTable';
 
-interface UseBillingGroupRowsOptions<TExtraState, TExtraFields extends object> {
+interface UseBillingGroupRowsOptions<TState, TExtraFields extends object> {
   rows: ProcessedData[];
   totalsByGroup?: Map<string, BillingGroupTotals>;
   getGroupName: (row: ProcessedData) => string;
-  createExtraState: () => TExtraState;
-  updateExtraState: (state: TExtraState, row: ProcessedData) => void;
-  getExtraFields: (state: TExtraState) => TExtraFields;
+  createExtraState: () => TState;
+  updateExtraState: (state: TState, row: ProcessedData) => void;
+  getExtraFields: (state: TState) => TExtraFields;
 }
 
-export function useBillingGroupRows<TExtraState, TExtraFields extends object = Record<string, never>>({
+export function useBillingGroupRows<TState, TExtraFields extends object = Record<string, never>>({
   rows,
   totalsByGroup,
   getGroupName,
   createExtraState,
   updateExtraState,
   getExtraFields,
-}: UseBillingGroupRowsOptions<TExtraState, TExtraFields>): Array<BillingGroupRow & TExtraFields> {
+}: UseBillingGroupRowsOptions<TState, TExtraFields>): Array<BillingGroupRow & TExtraFields> {
   return useMemo(() => {
     const map = new Map<string, {
       requests: number;
       productBuckets: ReturnType<typeof createEmptyProductCostMap>;
-      extraState: TExtraState;
+      extraState: TState;
     }>();
 
     for (const row of rows) {
