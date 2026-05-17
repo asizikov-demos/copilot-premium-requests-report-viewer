@@ -20,6 +20,17 @@ export function parseQuotaValue(quotaString: string): number | 'unknown' {
   return isNaN(parsed) ? 'unknown' : parsed;
 }
 
+export function shouldReplaceQuotaValue(
+  existing: number | 'unknown' | undefined,
+  incoming: number | 'unknown'
+): boolean {
+  return (
+    existing === undefined
+    || (existing === 'unknown' && typeof incoming === 'number')
+    || (typeof incoming === 'number' && typeof existing === 'number' && incoming > existing)
+  );
+}
+
 /**
  * Build per-user quotas from processed rows using the canonical policy:
  * numeric quotas win over unknown values, and the highest numeric quota wins.
@@ -35,11 +46,7 @@ export function buildUserQuotaMapFromRows(data: ProcessedData[]): Map<string, nu
     const existing = userQuotas.get(row.user);
     const current = row.quotaValue;
 
-    if (
-      existing === undefined
-      || (existing === 'unknown' && typeof current === 'number')
-      || (typeof current === 'number' && typeof existing === 'number' && current > existing)
-    ) {
+    if (shouldReplaceQuotaValue(existing, current)) {
       userQuotas.set(row.user, current);
     }
   }

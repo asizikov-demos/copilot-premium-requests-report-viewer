@@ -3,6 +3,7 @@
  * Eliminates O(U*R) repeated lookups by maintaining O(1) map.
  */
 
+import { shouldReplaceQuotaValue } from '@/utils/analytics/quota';
 import { isRequestUnitType } from '@/utils/unitType';
 
 import {
@@ -42,13 +43,7 @@ export class QuotaAggregator implements Aggregator<QuotaArtifacts> {
     const existing = this.quotaByUser.get(row.user);
     const current = row.quotaValue;
     
-    if (existing === undefined) {
-      // First encounter
-      this.quotaByUser.set(row.user, current);
-      if (typeof current === 'number') {
-        this.distinctQuotas.add(current);
-      }
-    } else if (existing !== current) {
+    if (existing !== undefined && existing !== current) {
       // Conflict detected
       let set = this.conflicts.get(row.user);
       if (!set) {
@@ -56,14 +51,12 @@ export class QuotaAggregator implements Aggregator<QuotaArtifacts> {
         this.conflicts.set(row.user, set);
       }
       set.add(current);
-      
-      // Resolution policy: numeric quotas win over unknown values; higher numeric quota wins.
-      if ((existing === 'unknown' && typeof current === 'number')
-        || (typeof current === 'number' && typeof existing === 'number' && current > existing)) {
-        this.quotaByUser.set(row.user, current);
-        if (typeof current === 'number') {
-          this.distinctQuotas.add(current);
-        }
+    }
+
+    if (shouldReplaceQuotaValue(existing, current)) {
+      this.quotaByUser.set(row.user, current);
+      if (typeof current === 'number') {
+        this.distinctQuotas.add(current);
       }
     }
   }
