@@ -1,6 +1,6 @@
 import { shouldReplaceQuotaValue } from '@/utils/analytics/quota';
 
-describe('quota policy', () => {
+describe('shouldReplaceQuotaValue', () => {
   test.each([
     [undefined, 'unknown', true],
     [undefined, 300, true],

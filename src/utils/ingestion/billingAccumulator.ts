@@ -134,12 +134,13 @@ export class BillingAccumulator {
         entry = { user: row.user, quantity: 0 };
         this.userMap.set(row.user, entry);
       }
+      const incomingQuota = row.quotaValue;
       if (
         isRequestUnitType(row.unitType)
-        && row.quotaValue !== undefined
-        && shouldReplaceQuotaValue(entry.quotaValue, row.quotaValue)
+        && incomingQuota !== undefined
+        && shouldReplaceQuotaValue(entry.quotaValue, incomingQuota)
       ) {
-        entry.quotaValue = row.quotaValue;
+        entry.quotaValue = incomingQuota;
       }
     }
 
