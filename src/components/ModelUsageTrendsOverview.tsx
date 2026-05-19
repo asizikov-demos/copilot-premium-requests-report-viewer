@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import { useAnalysisContext } from '@/context/AnalysisContext';
 import { ModelDailyStackedChart } from '@/components/charts/ModelDailyStackedChart';
 import { buildDailyModelUsageFromArtifacts } from '@/utils/ingestion/analytics';
+import { filterDailySeriesByMonths } from '@/utils/analytics/filters';
 import { generateModelColors } from '@/utils/modelColors';
 
 export function ModelUsageTrendsOverview() {
@@ -21,9 +22,7 @@ export function ModelUsageTrendsOverview() {
     const raw = buildDailyModelUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
 
     // Optional: filter by selectedMonths if provided and artifact dateRange spans multiple months.
-    const filtered = selectedMonths.length === 0
-      ? raw
-      : raw.filter(d => selectedMonths.includes(d.date.slice(0, 7)));
+    const filtered = filterDailySeriesByMonths(raw, selectedMonths);
 
     const modelKeys = Object.keys(usageArtifacts.modelTotals).sort();
     return { data: filtered, models: modelKeys };
