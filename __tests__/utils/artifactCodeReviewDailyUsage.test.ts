@@ -1,5 +1,4 @@
-import { buildDailyCodeReviewUsageFromArtifacts, DailyBucketsArtifacts } from '@/utils/ingestion';
-import { DailyCodingAgentUsageDatum } from '@/utils/analytics/codingAgent';
+import { buildDailyCodeReviewUsageFromArtifacts, DailyBucketsArtifacts, DailyCodingAgentUsageDatum } from '@/utils/ingestion';
 
 describe('buildDailyCodeReviewUsageFromArtifacts', () => {
   function makeArtifacts(): DailyBucketsArtifacts {

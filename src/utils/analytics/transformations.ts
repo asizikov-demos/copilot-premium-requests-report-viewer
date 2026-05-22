@@ -3,7 +3,6 @@ import { CSVData, ProcessedData, AnalysisResults } from '@/types/csv';
 import { buildProcessedDataFromRawRows } from '../ingestion/adapters';
 
 import { buildQuotaBreakdown, buildUserQuotaMapFromRows } from './quota';
-import type { UserSummary } from './types';
 
 // Re-export for backwards compatibility
 export type { UserSummary } from './types';
@@ -77,33 +76,4 @@ export function analyzeData(data: ProcessedData[]): AnalysisResults {
     requestsByModel,
     quotaBreakdown
   };
-}
-
-export function analyzeUserData(data: ProcessedData[]): UserSummary[] {
-  const userMap = new Map<string, UserSummary>();
-  data.forEach(row => {
-    if (row.isNonCopilotUsage) {
-      return;
-    }
-    if (!userMap.has(row.user)) {
-      userMap.set(row.user, {
-        user: row.user,
-        totalRequests: 0,
-        modelBreakdown: {},
-        organization: row.organization,
-        costCenter: row.costCenter
-      });
-    }
-    const userSummary = userMap.get(row.user)!;
-    userSummary.totalRequests += row.requestsUsed;
-    if (!userSummary.modelBreakdown[row.model]) userSummary.modelBreakdown[row.model] = 0;
-    userSummary.modelBreakdown[row.model] += row.requestsUsed;
-    if (!userSummary.organization && row.organization) {
-      userSummary.organization = row.organization;
-    }
-    if (!userSummary.costCenter && row.costCenter) {
-      userSummary.costCenter = row.costCenter;
-    }
-  });
-  return Array.from(userMap.values()).sort((a, b) => b.totalRequests - a.totalRequests);
 }
