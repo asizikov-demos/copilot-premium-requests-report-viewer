@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react';
 
 import type { ProcessedData } from '@/types/csv';
 import type { BillingGroupTotals } from '@/utils/ingestion';
+import { formatCurrency } from '@/utils/formatters';
 import {
   accumulateProductCost,
   createEmptyProductCostMap,
@@ -107,10 +108,6 @@ interface BillingGroupTableProps<T extends BillingGroupRow> {
   hasAicGross: boolean;
   detailIdPrefix: string;
   extraColumns?: Array<BillingGroupExtraColumn<T>>;
-}
-
-function formatCurrency(value: number): string {
-  return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function formatQuantity(value: number): string {

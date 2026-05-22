@@ -3,6 +3,7 @@
 import React, { useMemo } from 'react';
 import { useAnalysisContext } from '@/context/AnalysisContext';
 import { computeCostOptimizationFromArtifacts } from '@/utils/analytics/costOptimization';
+import { formatCurrency } from '@/utils/formatters';
 import { PRICING, COST_OPTIMIZATION_THRESHOLDS } from '@/constants/pricing';
 
 export function CostOptimizationInsights() {
@@ -58,21 +59,21 @@ export function CostOptimizationInsights() {
         </div>
         <div className="bg-white border border-[#d1d9e0] p-5 rounded-md">
           <p className="text-xs font-semibold text-[#636c76] uppercase tracking-[0.05em]">Current overage cost (Business)</p>
-          <p className="text-2xl font-bold tabular-nums text-[#cf222e] mt-2">${totalOverageCost.toFixed(2)}</p>
+          <p className="text-2xl font-bold tabular-nums text-[#cf222e] mt-2">{formatCurrency(totalOverageCost)}</p>
           <p className="text-xs text-[#636c76] mt-1">
             Calculated using per-request overage rate from billing
           </p>
         </div>
         <div className="bg-white border border-[#d1d9e0] p-5 rounded-md">
           <p className="text-xs font-semibold text-[#636c76] uppercase tracking-[0.05em]">Estimated upgrade cost (GitHub Copilot Enterprise)</p>
-          <p className="text-2xl font-bold tabular-nums text-[#d97706] mt-2">${estimatedEnterpriseCost.toFixed(2)}</p>
+          <p className="text-2xl font-bold tabular-nums text-[#d97706] mt-2">{formatCurrency(estimatedEnterpriseCost)}</p>
           <p className="text-xs text-[#636c76] mt-1">
             Approximate cost for granting GitHub Copilot Enterprise quota ({PRICING.ENTERPRISE_QUOTA} RPU) to all candidates
           </p>
         </div>
         <div className="bg-white border border-[#d1d9e0] p-5 rounded-md">
           <p className="text-xs font-semibold text-[#636c76] uppercase tracking-[0.05em]">Estimated savings after upgrade</p>
-          <p className="text-2xl font-bold tabular-nums text-[#2da44e] mt-2">${totalPotentialSavings.toFixed(2)}</p>
+          <p className="text-2xl font-bold tabular-nums text-[#2da44e] mt-2">{formatCurrency(totalPotentialSavings)}</p>
           <p className="text-xs text-[#636c76] mt-1">
             Difference between current Business overage spend and GitHub Copilot Enterprise uplift for recommended users
           </p>
@@ -90,7 +91,7 @@ export function CostOptimizationInsights() {
           <div>
             <p className="font-semibold text-[#2da44e]">Cost savings opportunity with GitHub Copilot Enterprise</p>
             <p className="text-sm text-[#1f2328] mt-1">
-              Upgrading high-consumption Copilot Business users to GitHub Copilot Enterprise can reduce overage spend by replacing per-request charges with a higher included monthly quota. Based on current data, the estimated potential monthly savings is <span className="font-bold">${totalPotentialSavings.toFixed(2)}</span> for the identified users.
+              Upgrading high-consumption Copilot Business users to GitHub Copilot Enterprise can reduce overage spend by replacing per-request charges with a higher included monthly quota. Based on current data, the estimated potential monthly savings is <span className="font-bold">{formatCurrency(totalPotentialSavings)}</span> for the identified users.
             </p>
             <p className="text-xs text-[#2da44e] mt-2 italic">
               This analysis uses the configured overage rate per request and a fixed monthly Enterprise uplift per user. It does not replace your billing system of record.
@@ -162,13 +163,13 @@ export function CostOptimizationInsights() {
                       {candidate.overageRequests.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-[#636c76] text-right">
-                      ${candidate.overageCost.toFixed(2)}
+                      {formatCurrency(candidate.overageCost)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-[#636c76]">
                       {PRICING.ENTERPRISE_QUOTA} included ({PRICING.ENTERPRISE_QUOTA - PRICING.BUSINESS_QUOTA} extra over Business)
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-mono font-semibold text-[#2da44e] text-right">
-                      ${candidate.potentialSavings.toFixed(2)}
+                      {formatCurrency(candidate.potentialSavings)}
                     </td>
                   </tr>
                 ))}
@@ -216,7 +217,7 @@ export function CostOptimizationInsights() {
                       {user.overageRequests.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-[#636c76] text-right">
-                      ${user.overageCost.toFixed(2)}
+                      {formatCurrency(user.overageCost)}
                     </td>
                   </tr>
                 ))}
