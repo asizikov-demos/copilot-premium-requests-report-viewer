@@ -9,6 +9,7 @@ describe('formatCurrency', () => {
   });
 
   it('preserves the existing dollar-prefix behavior for negative values', () => {
+    // Matches the previously duplicated `$${value.toLocaleString(...)}` formatter behavior.
     expect(formatCurrency(-100.99)).toBe('$-100.99');
   });
 });
