@@ -16,6 +16,7 @@ import {
 import { hasAicFields } from '@/utils/aicFields';
 import { generateModelColors } from '@/utils/modelColors';
 import { calculateEnterpriseUpgradeSavings } from '@/utils/analytics/costOptimization';
+import { formatCurrency } from '@/utils/formatters';
 import { aggregateProductCosts } from '@/utils/productCosts';
 import {
   calculateBilledOverageFromRows,
@@ -372,7 +373,7 @@ export function UserDetailsView({
           </p>
           {overageRequests > 0 && effectiveUserQuotaValue !== 'unknown' && (
             <p className="text-sm text-red-600 font-medium" role="alert">
-              Overage: {overageRequests.toFixed(1)} PRUs · ${overageCost.toFixed(2)}
+              Overage: {overageRequests.toFixed(1)} PRUs · {formatCurrency(overageCost)}
             </p>
           )}
         </div>
@@ -388,7 +389,7 @@ export function UserDetailsView({
                 <p className="text-sm text-[#1f2328]">
                   <span className="font-semibold text-[#2da44e]">Cost saving opportunity: </span>
                   Upgrading this user to <span className="font-medium">Copilot Enterprise</span> would have saved{' '}
-                  <span className="font-semibold text-[#2da44e]">${savings.potentialSavings.toFixed(2)}</span> this period.
+                  <span className="font-semibold text-[#2da44e]">{formatCurrency(savings.potentialSavings)}</span> this period.
                 </p>
               </div>
             );
@@ -421,11 +422,11 @@ export function UserDetailsView({
                     <td className="px-5 py-3 text-sm font-medium text-[#1f2328]">{product.label}</td>
                     <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono">{product.requests.toFixed(2)}</td>
                     {hasAicGross && (
-                      <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono">${product.aicGrossAmount.toFixed(2)}</td>
+                      <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono">{formatCurrency(product.aicGrossAmount)}</td>
                     )}
-                    <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono">${product.gross.toFixed(2)}</td>
-                    <td className="px-5 py-3 text-sm text-emerald-600 text-right font-mono">-${product.discount.toFixed(2)}</td>
-                    <td className="px-5 py-3 text-sm font-semibold text-[#1f2328] text-right font-mono">${product.net.toFixed(2)}</td>
+                    <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono">{formatCurrency(product.gross)}</td>
+                    <td className="px-5 py-3 text-sm text-emerald-600 text-right font-mono">-{formatCurrency(product.discount)}</td>
+                    <td className="px-5 py-3 text-sm font-semibold text-[#1f2328] text-right font-mono">{formatCurrency(product.net)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -517,11 +518,11 @@ export function UserDetailsView({
                     <td className="px-5 py-3 text-sm text-[#636c76]">- {row.model}</td>
                     <td className="px-5 py-3 text-sm font-mono text-[#1f2328] text-right">{row.requests.toFixed(2)}</td>
                     {hasAicGross && (
-                      <td className="px-5 py-3 text-sm font-mono text-[#636c76] text-right">${row.aicGrossAmount.toFixed(2)}</td>
+                      <td className="px-5 py-3 text-sm font-mono text-[#636c76] text-right">{formatCurrency(row.aicGrossAmount)}</td>
                     )}
-                    <td className="px-5 py-3 text-sm font-mono text-[#636c76] text-right">${row.gross.toFixed(2)}</td>
-                    <td className="px-5 py-3 text-sm font-mono text-emerald-600 text-right">-${row.discount.toFixed(2)}</td>
-                    <td className="px-5 py-3 text-sm font-mono font-semibold text-[#1f2328] text-right">${row.net.toFixed(2)}</td>
+                    <td className="px-5 py-3 text-sm font-mono text-[#636c76] text-right">{formatCurrency(row.gross)}</td>
+                    <td className="px-5 py-3 text-sm font-mono text-emerald-600 text-right">-{formatCurrency(row.discount)}</td>
+                    <td className="px-5 py-3 text-sm font-mono font-semibold text-[#1f2328] text-right">{formatCurrency(row.net)}</td>
                   </tr>
                 ))}
               </tbody>

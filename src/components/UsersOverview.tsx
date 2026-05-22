@@ -7,6 +7,7 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 import { useSortableTable } from '@/hooks/useSortableTable';
 import { ProcessedData } from '@/types/csv';
 import type { UserSummary } from '@/utils/analytics';
+import { formatCurrency } from '@/utils/formatters';
 import {
   BillingArtifacts,
   buildBillingArtifactsFromProcessedData,
@@ -451,14 +452,14 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                   </div>
                   {hasCosts && ((costs?.gross ?? 0) > 0 || (costs?.discount ?? 0) > 0 || (costs?.net ?? 0) > 0) && (
                     <div className="flex items-center gap-3 mt-1.5 text-xs font-mono tabular-nums">
-                      <span className="text-[#636c76]">${(costs?.gross ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      <span className="text-emerald-600">-${(costs?.discount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      <span className="font-semibold text-[#1f2328]">${(costs?.net ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <span className="text-[#636c76]">{formatCurrency(costs?.gross ?? 0)}</span>
+                      <span className="text-emerald-600">-{formatCurrency(costs?.discount ?? 0)}</span>
+                      <span className="font-semibold text-[#1f2328]">{formatCurrency(costs?.net ?? 0)}</span>
                     </div>
                   )}
                   {hasAicGross && (
                     <div className="mt-1.5 text-xs font-mono tabular-nums text-[#636c76]">
-                      AI Credits Gross: ${(costs?.aicGrossAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      AI Credits Gross: {formatCurrency(costs?.aicGrossAmount ?? 0)}
                     </div>
                   )}
                 </button>
@@ -619,19 +620,19 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                       <>
                         {hasAicGross && (
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-[#636c76] font-mono tabular-nums text-right">
-                            ${(costs?.aicGrossAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {formatCurrency(costs?.aicGrossAmount ?? 0)}
                           </td>
                         )}
                         {hasCosts && (
                           <>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-[#636c76] font-mono tabular-nums text-right">
-                              ${(costs?.gross ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              {formatCurrency(costs?.gross ?? 0)}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-emerald-600 font-mono tabular-nums text-right">
-                              -${(costs?.discount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              -{formatCurrency(costs?.discount ?? 0)}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-[#1f2328] font-mono tabular-nums text-right">
-                              ${(costs?.net ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              {formatCurrency(costs?.net ?? 0)}
                             </td>
                           </>
                         )}

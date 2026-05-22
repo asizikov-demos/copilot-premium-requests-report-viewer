@@ -15,6 +15,7 @@ import {
 } from 'recharts';
 
 import type { BillingUserTotals } from '@/utils/ingestion';
+import { formatCurrency } from '@/utils/formatters';
 
 import { chartTooltipContentStyle, chartTooltipLabelStyle } from './chartTooltipStyles';
 
@@ -44,10 +45,6 @@ interface UserAicCluster {
 
 const CLUSTER_COLORS = ['#8c959f', '#60a5fa', '#6366f1', '#8b5cf6'];
 const CLUSTER_DOT_CLASSES = ['bg-[#8c959f]', 'bg-[#60a5fa]', 'bg-indigo-500', 'bg-[#8b5cf6]'];
-
-function formatUsd(value: number): string {
-  return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
 
 function summarizeCluster(
   cluster: string,
@@ -171,7 +168,7 @@ export function UsersAicClustersChart({ users }: UsersAicClustersChartProps) {
               tick={{ fontSize: 12, fill: '#636c76' }}
               axisLine={{ stroke: '#d1d9e0' }}
               tickLine={{ stroke: '#d1d9e0' }}
-              tickFormatter={(value) => formatUsd(Number(value))}
+              tickFormatter={(value) => formatCurrency(Number(value))}
             />
             <ZAxis type="number" dataKey="users" range={[90, 900]} name="Users" />
             <Tooltip
@@ -179,7 +176,7 @@ export function UsersAicClustersChart({ users }: UsersAicClustersChartProps) {
               contentStyle={chartTooltipContentStyle}
               labelStyle={chartTooltipLabelStyle}
               formatter={(value, name) => {
-                if (name === 'Avg AI Credits gross') return [formatUsd(Number(value)), name];
+                if (name === 'Avg AI Credits gross') return [formatCurrency(Number(value)), name];
                 if (name === 'Avg premium requests') return [Number(value).toFixed(1), name];
                 return [Number(value).toLocaleString(), name];
               }}
@@ -230,17 +227,17 @@ export function UsersAicClustersChart({ users }: UsersAicClustersChartProps) {
                     {cluster.cluster}
                   </span>
                   <p className="mt-0.5 text-xs font-normal text-[#636c76]">
-                    {formatUsd(cluster.minAicGrossAmount)}-{formatUsd(cluster.maxAicGrossAmount)} per user
+                    {formatCurrency(cluster.minAicGrossAmount)}-{formatCurrency(cluster.maxAicGrossAmount)} per user
                   </p>
                 </td>
                 <td className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-[#636c76] text-right">
                   {cluster.users.toLocaleString()}
                 </td>
                 <td className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-[#636c76] text-right">
-                  {formatUsd(cluster.averageAicGrossAmount)}
+                  {formatCurrency(cluster.averageAicGrossAmount)}
                 </td>
                 <td className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums font-semibold text-[#1f2328] text-right">
-                  {formatUsd(cluster.totalAicGrossAmount)}
+                  {formatCurrency(cluster.totalAicGrossAmount)}
                 </td>
                 <td className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-[#636c76] text-right">
                   {cluster.averageRequests.toFixed(1)}

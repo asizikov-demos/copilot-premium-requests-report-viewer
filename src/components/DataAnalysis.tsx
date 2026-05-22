@@ -5,6 +5,7 @@ import React, { useEffect, useMemo } from 'react';
 import { PRICING } from '@/constants/pricing';
 import { AnalysisProvider, useAnalysisContext } from '@/context/AnalysisContext';
 import { aggregateAutoModeSavings } from '@/utils/autoModeSavings';
+import { formatCurrency } from '@/utils/formatters';
 import { calculateAicPoolEstimate } from '@/utils/aicPool';
 import { getModelColor } from '@/utils/modelColors';
 import { aggregateProductCosts } from '@/utils/productCosts';
@@ -30,10 +31,6 @@ type NavigationItem = {
   label: string;
   icon: React.ReactNode;
 };
-
-function formatAutoModeCurrency(value: number): string {
-  return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
 
 const COST_CENTERS_NAV_ITEM: NavigationItem = {
   key: 'costCenters' as const,
@@ -417,31 +414,31 @@ function DataAnalysisInner() {
                   <div className="bg-white border border-[#d1d9e0] rounded-md p-5">
                     <p className="text-xs font-bold text-[#636c76] uppercase tracking-wider text-center mb-3">Current Billing</p>
                     <p className="text-3xl font-bold text-[#1f2328] text-center">
-                      ${aggregatedCosts.net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {formatCurrency(aggregatedCosts.net)}
                     </p>
                     <p className="text-sm text-[#636c76] text-center mt-1">
                       {aggregateProcessedData.reduce((sum, r) => sum + r.requestsUsed, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PRUs
                     </p>
                     <p className="text-xs text-[#636c76] text-center mt-0.5">
-                      1 PRU = ${PRICING.OVERAGE_RATE_PER_REQUEST.toFixed(2)}
+                      1 PRU = {formatCurrency(PRICING.OVERAGE_RATE_PER_REQUEST)}
                     </p>
                     <div className="mt-4 pt-4 border-t border-[#d1d9e0] space-y-2 text-sm" aria-label="billing-summary">
                       <div className="flex justify-between">
                         <span className="text-[#636c76]">Gross cost</span>
                         <span className="font-mono font-medium text-[#1f2328]">
-                          ${aggregatedCosts.gross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {formatCurrency(aggregatedCosts.gross)}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-[#636c76]">Discounts</span>
                         <span className="font-mono font-medium text-[#1f2328]">
-                          &minus;${aggregatedCosts.discount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          &minus;{formatCurrency(aggregatedCosts.discount)}
                         </span>
                       </div>
                       <div className="flex justify-between pt-2 mt-2 border-t-2 border-[#d1d9e0]">
                         <span className="text-[#1f2328] font-bold">Net cost</span>
                         <span className="font-mono font-bold text-[#1f2328]">
-                          ${aggregatedCosts.net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {formatCurrency(aggregatedCosts.net)}
                         </span>
                       </div>
                     </div>
@@ -484,13 +481,13 @@ function DataAnalysisInner() {
                       </p>
                       <p className="text-sm text-[#636c76] text-center mt-1">credits consumed</p>
                       <p className="text-xs text-[#636c76] text-center mt-0.5">
-                        1 credit = ${PRICING.AI_CREDIT_USD_VALUE.toFixed(2)}
+                        1 credit = {formatCurrency(PRICING.AI_CREDIT_USD_VALUE)}
                       </p>
                       <div className="mt-4 pt-4 border-t border-[#d1d9e0] space-y-2 text-sm" aria-label="ai-credits-summary">
                         <div className="flex justify-between">
                           <span className="text-[#636c76]">Gross cost</span>
                           <span className="font-mono font-medium text-[#1f2328]">
-                            ${aggregatedAic.aicGrossAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {formatCurrency(aggregatedAic.aicGrossAmount)}
                           </span>
                         </div>
                         {aicPoolEstimate && (
@@ -504,7 +501,7 @@ function DataAnalysisInner() {
                             <div className="flex justify-between">
                               <span className="text-[#636c76]">AI Credits additional usage gross</span>
                               <span className="font-mono font-medium text-[#1f2328]">
-                                ${aicPoolEstimate.additionalUsageGrossAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                {formatCurrency(aicPoolEstimate.additionalUsageGrossAmount)}
                               </span>
                             </div>
                           </>
@@ -548,13 +545,13 @@ function DataAnalysisInner() {
                             <td className="px-6 py-3.5 text-sm font-medium text-[#1f2328]">{product.label}</td>
                             <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">{product.requests.toFixed(2)}</td>
                             {showProductAicGross && (
-                              <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">${product.aicGrossAmount.toFixed(2)}</td>
+                              <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">{formatCurrency(product.aicGrossAmount)}</td>
                             )}
                             {showProductCosts && (
                               <>
-                                <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">${product.gross.toFixed(2)}</td>
-                                <td className="px-6 py-3.5 text-sm text-emerald-600 text-right font-mono">-${product.discount.toFixed(2)}</td>
-                                <td className="px-6 py-3.5 text-sm font-semibold text-[#1f2328] text-right font-mono">${product.net.toFixed(2)}</td>
+                                <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">{formatCurrency(product.gross)}</td>
+                                <td className="px-6 py-3.5 text-sm text-emerald-600 text-right font-mono">-{formatCurrency(product.discount)}</td>
+                                <td className="px-6 py-3.5 text-sm font-semibold text-[#1f2328] text-right font-mono">{formatCurrency(product.net)}</td>
                               </>
                             )}
                           </tr>
@@ -574,7 +571,7 @@ function DataAnalysisInner() {
                         <p className="text-sm text-[#636c76] mt-0.5">Savings compare billed cost with the cost before Auto Mode&apos;s 10% PRU discount.</p>
                       </div>
                       <span className="text-sm font-semibold text-[#2da44e]">
-                        {formatAutoModeCurrency(autoModeSavingsTotal.savings)} saved
+                        {formatCurrency(autoModeSavingsTotal.savings)} saved
                       </span>
                     </div>
                   </div>
@@ -593,8 +590,8 @@ function DataAnalysisInner() {
                           <tr key={item.model} className="table-row-hover transition-colors duration-150">
                             <td className="px-6 py-3.5 text-sm font-medium text-[#1f2328]">{item.model}</td>
                             <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">{item.requests.toFixed(2)}</td>
-                            <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">{formatAutoModeCurrency(item.costBeforeAuto)}</td>
-                            <td className="px-6 py-3.5 text-sm font-semibold text-[#2da44e] text-right font-mono">{formatAutoModeCurrency(item.savings)}</td>
+                            <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">{formatCurrency(item.costBeforeAuto)}</td>
+                            <td className="px-6 py-3.5 text-sm font-semibold text-[#2da44e] text-right font-mono">{formatCurrency(item.savings)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -602,8 +599,8 @@ function DataAnalysisInner() {
                         <tr className="border-t-2 border-[#d1d9e0] bg-[#f6f8fa]">
                           <td className="px-6 py-3.5 text-sm font-bold text-[#1f2328]">Total</td>
                           <td className="px-6 py-3.5 text-sm font-bold text-[#1f2328] text-right font-mono">{autoModeSavingsTotal.requests.toFixed(2)}</td>
-                          <td className="px-6 py-3.5 text-sm font-bold text-[#1f2328] text-right font-mono">{formatAutoModeCurrency(autoModeSavingsTotal.costBeforeAuto)}</td>
-                          <td className="px-6 py-3.5 text-sm font-bold text-[#2da44e] text-right font-mono">{formatAutoModeCurrency(autoModeSavingsTotal.savings)}</td>
+                          <td className="px-6 py-3.5 text-sm font-bold text-[#1f2328] text-right font-mono">{formatCurrency(autoModeSavingsTotal.costBeforeAuto)}</td>
+                          <td className="px-6 py-3.5 text-sm font-bold text-[#2da44e] text-right font-mono">{formatCurrency(autoModeSavingsTotal.savings)}</td>
                         </tr>
                       </tfoot>
                     </table>
@@ -658,19 +655,19 @@ function DataAnalysisInner() {
                             </td>
                             {hasModelAic && (
                               <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
-                                ${item.aicGrossAmount.toFixed(2)}
+                                {formatCurrency(item.aicGrossAmount)}
                               </td>
                             )}
                             {hasModelCosts && (
                               <>
                                 <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
-                                  ${item.gross.toFixed(2)}
+                                  {formatCurrency(item.gross)}
                                 </td>
                                 <td className="px-6 py-3.5 text-sm text-emerald-600 text-right font-mono">
-                                  -${item.discount.toFixed(2)}
+                                  -{formatCurrency(item.discount)}
                                 </td>
                                 <td className="px-6 py-3.5 text-sm font-semibold text-[#1f2328] text-right font-mono">
-                                  ${item.net.toFixed(2)}
+                                  {formatCurrency(item.net)}
                                 </td>
                               </>
                             )}
