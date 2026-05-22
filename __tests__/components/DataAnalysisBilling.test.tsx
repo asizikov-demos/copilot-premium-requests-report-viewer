@@ -5,7 +5,7 @@ import { newFormatRows } from '../fixtures/newFormatCSVData';
 import type { CSVData } from '@/types/csv';
 import { normalizeRow } from '@/utils/ingestion/normalizeRow';
 import type { IngestionResult } from '@/utils/ingestion';
-import type { FeatureUsageArtifacts, NormalizedRow } from '@/utils/ingestion/types';
+import type { BillingArtifacts, FeatureUsageArtifacts, NormalizedRow } from '@/utils/ingestion/types';
 
 // Mock ResizeObserver for Recharts ResponsiveContainer in JSDOM
 beforeAll(() => {
@@ -42,6 +42,25 @@ function createIngestionResultFromRawRows(rows: CSVData[]): IngestionResult {
   };
 }
 
+function createIngestionResultWithBillingArtifacts(billingArtifacts: BillingArtifacts): IngestionResult {
+  return {
+    outputs: {
+      'quota': { quotaByUser: new Map(), conflicts: new Map(), distinctQuotas: new Set(), hasMixedQuotas: false, hasMixedLicenses: false },
+      'usage': { users: [], userTotals: new Map(), modelBreakdown: new Map(), globalModelTotals: new Map(), topModelPerUser: new Map(), modelTotals: {}, userCount: 0, modelCount: 0 },
+      'dailyBuckets': { dailyUserTotals: new Map(), startDate: new Date(), endDate: new Date() },
+      'featureUsage': {
+        featureTotals: { codeReview: 0, codingAgent: 0, spark: 0 },
+        featureUsers: { codeReview: new Set(), codingAgent: new Set(), spark: new Set() },
+        specialTotals: { nonCopilotCodeReview: 0 }
+      },
+      'billing': billingArtifacts
+    },
+    rowsProcessed: 0,
+    durationMs: 100,
+    warnings: []
+  };
+}
+
 describe('DataAnalysis billing summary', () => {
   it('renders billing summary when cost fields are present', async () => {
     const ingestionResult = createIngestionResultFromRawRows(newFormatRows);
@@ -58,6 +77,39 @@ describe('DataAnalysis billing summary', () => {
 
     expect(screen.queryByText('Usage-based billing preview')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'AI Usage' })).not.toBeInTheDocument();
+  });
+
+  it('renders stored AI Credits pool totals from billing artifacts', async () => {
+    const billingArtifacts: BillingArtifacts = {
+      totals: {
+        gross: 1,
+        discount: 0,
+        net: 1,
+        aicQuantity: 100,
+        aicGrossAmount: 1,
+        aicIncludedCredits: 1234,
+        aicAdditionalUsageGrossAmount: 4.56,
+      },
+      users: [],
+      userMap: new Map(),
+      orgTotals: new Map(),
+      costCenterTotals: new Map(),
+      billingByModel: new Map(),
+      hasAnyBillingData: true,
+      hasAnyAicData: true,
+      specialBuckets: [],
+    };
+    const ingestionResult = createIngestionResultWithBillingArtifacts(billingArtifacts);
+
+    render(<DataAnalysis ingestionResult={ingestionResult} filename="stored-billing.csv" onReset={() => {}} />);
+
+    await waitFor(() => {
+      const summary = screen.getByLabelText('ai-credits-summary');
+      expect(summary).toHaveTextContent('AI Credits included');
+      expect(summary).toHaveTextContent('1,234');
+      expect(summary).toHaveTextContent('AI Credits additional usage gross');
+      expect(summary).toHaveTextContent('$4.56');
+    });
   });
 
   it('renders AI Credits callout and overview card when AIC fields are present', async () => {

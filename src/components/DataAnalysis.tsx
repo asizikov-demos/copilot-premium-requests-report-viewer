@@ -6,7 +6,6 @@ import { PRICING } from '@/constants/pricing';
 import { AnalysisProvider, useAnalysisContext } from '@/context/AnalysisContext';
 import { aggregateAutoModeSavings } from '@/utils/autoModeSavings';
 import { formatCurrency } from '@/utils/formatters';
-import { calculateAicPoolEstimate } from '@/utils/aicPool';
 import { getModelColor } from '@/utils/modelColors';
 import { aggregateProductCosts } from '@/utils/productCosts';
 
@@ -198,12 +197,6 @@ function DataAnalysisInner() {
       }
       : null
   );
-  const aicPoolEstimate = aggregatedAic
-    ? calculateAicPoolEstimate(
-      aggregatedAic.aicIncludedCredits,
-      aggregatedAic.aicGrossAmount
-    )
-    : null;
 
   const modelRows = useMemo(() => {
     if (billingArtifacts) {
@@ -490,22 +483,18 @@ function DataAnalysisInner() {
                             {formatCurrency(aggregatedAic.aicGrossAmount)}
                           </span>
                         </div>
-                        {aicPoolEstimate && (
-                          <>
-                            <div className="flex justify-between">
-                              <span className="text-[#636c76]">AI Credits included</span>
-                              <span className="font-mono font-medium text-[#1f2328]">
-                                {aicPoolEstimate.includedCredits.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-[#636c76]">AI Credits additional usage gross</span>
-                              <span className="font-mono font-medium text-[#1f2328]">
-                                {formatCurrency(aicPoolEstimate.additionalUsageGrossAmount)}
-                              </span>
-                            </div>
-                          </>
-                        )}
+                        <div className="flex justify-between">
+                          <span className="text-[#636c76]">AI Credits included</span>
+                          <span className="font-mono font-medium text-[#1f2328]">
+                            {aggregatedAic.aicIncludedCredits.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-[#636c76]">AI Credits additional usage gross</span>
+                          <span className="font-mono font-medium text-[#1f2328]">
+                            {formatCurrency(aggregatedAic.aicAdditionalUsageGrossAmount)}
+                          </span>
+                        </div>
                         <p className="text-xs text-[#636c76]">
                           Estimated values. Gross cost excludes any discounts applied to the final bill.
                         </p>
