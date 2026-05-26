@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GitHub Copilot Premium Requests Viewer",
+  title: "Copilot Billing Report Viewer",
   description: "Upload your CSV file to analyze user requests and quota usage",
 };
 

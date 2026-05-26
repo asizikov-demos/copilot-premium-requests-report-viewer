@@ -1,4 +1,4 @@
-# GitHub Copilot Premium Requests Viewer
+# Copilot Billing Report Viewer
 
 Analyze CSV exports from GitHub Copilot usage reports. See per-user consumption, quota tracking, model breakdowns, and cost optimization — all processed locally in your browser.
 
