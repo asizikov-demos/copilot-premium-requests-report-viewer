@@ -57,7 +57,7 @@ describe('CSVUploader', () => {
   it('should show accepted file hint', () => {
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
     expect(screen.getByText(/Accepted:/i)).toBeInTheDocument();
-    expect(screen.getByText(/Premium Request Usage report/i)).toBeInTheDocument();
+    expect(screen.getByText('Accepted: .csv files from the GitHub Copilot AI Usage report')).toBeInTheDocument();
   });
   it('should handle CSV parsing', async () => {
     const mockFile = createMockFile('new-format.csv content', 'new-format.csv');

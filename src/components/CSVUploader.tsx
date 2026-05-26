@@ -208,7 +208,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
             Analyze your usage data
           </h2>
           <p className="text-lg text-[#636c76] max-w-md mx-auto leading-relaxed">
-            Upload your GitHub Copilot premium requests report to visualize usage patterns and optimize costs.
+            Upload your GitHub Copilot AI Usage report to review usage patterns, quota consumption, and billing details locally in your browser.
           </p>
         </div>
 
@@ -304,7 +304,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
 
         {/* Accepted file hint */}
         <p className="mt-4 text-xs text-center text-[#636c76] font-medium tracking-wide">
-          Accepted: .csv files from the Premium Request Usage report
+          Accepted: .csv files from the GitHub Copilot AI Usage report
         </p>
 
         {/* Sample data button */}
