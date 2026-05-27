@@ -229,6 +229,99 @@ describe('DataAnalysis billing summary', () => {
     });
   });
 
+  it('renders the top three AI Credits models on the Models page with mixed AIC fields', async () => {
+    const aicRows: CSVData[] = [
+      {
+        date: '2026-03-01',
+        username: 'test-user-one',
+        product: 'copilot',
+        sku: 'copilot_premium_request',
+        model: 'Model Alpha',
+        quantity: '10',
+        total_monthly_quota: '1000',
+        organization: 'test-org-one',
+        cost_center_name: 'test-cost-center-one',
+        aic_quantity: '50',
+        aic_gross_amount: '0.5',
+      },
+      {
+        date: '2026-03-02',
+        username: 'test-user-two',
+        product: 'copilot',
+        sku: 'copilot_premium_request',
+        model: 'Model Beta',
+        quantity: '20',
+        total_monthly_quota: '1000',
+        organization: 'test-org-one',
+        cost_center_name: 'test-cost-center-one',
+        aic_quantity: '100',
+        aic_gross_amount: '1',
+      },
+      {
+        date: '2026-03-03',
+        username: 'test-user-three',
+        product: 'copilot',
+        sku: 'copilot_premium_request',
+        model: 'Model Gamma',
+        quantity: '5',
+        total_monthly_quota: '1000',
+        organization: 'test-org-two',
+        cost_center_name: 'test-cost-center-two',
+        aic_quantity: '30',
+        aic_gross_amount: '0.3',
+      },
+      {
+        date: '2026-03-04',
+        username: 'test-user-four',
+        product: 'copilot',
+        sku: 'copilot_premium_request',
+        model: 'Model Delta',
+        quantity: '8',
+        total_monthly_quota: '1000',
+        organization: 'test-org-two',
+        cost_center_name: 'test-cost-center-two',
+        aic_quantity: '80',
+        aic_gross_amount: '0.8',
+      },
+      {
+        date: '2026-03-05',
+        username: 'test-user-five',
+        product: 'copilot',
+        sku: 'copilot_premium_request',
+        model: 'Model Epsilon',
+        quantity: '12',
+        total_monthly_quota: '1000',
+        organization: 'test-org-three',
+        cost_center_name: 'test-cost-center-three',
+        aic_gross_amount: '1.2',
+      },
+    ];
+
+    const ingestionResult = createIngestionResultFromRawRows(aicRows);
+    render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Models' })[0]);
+
+    const topModelsTable = await screen.findByRole('table', { name: 'Top AI Credits models' });
+    const rows = within(topModelsTable).getAllByRole('row');
+
+    expect(screen.getByText(/Top 3 models drive/)).toHaveTextContent('Top 3 models drive 78.9% of total AI Credits consumption.');
+    expect(rows).toHaveLength(4);
+    expect(rows[1]).toHaveTextContent('#1');
+    expect(rows[1]).toHaveTextContent('Model Epsilon');
+    expect(rows[1]).toHaveTextContent('120.00');
+    expect(rows[1]).toHaveTextContent('$1.20');
+    expect(rows[1]).toHaveTextContent('31.6%');
+    expect(rows[2]).toHaveTextContent('Model Beta');
+    expect(rows[2]).toHaveTextContent('100.00');
+    expect(rows[2]).toHaveTextContent('$1.00');
+    expect(rows[2]).toHaveTextContent('26.3%');
+    expect(rows[3]).toHaveTextContent('Model Delta');
+    expect(rows[3]).toHaveTextContent('21.1%');
+    expect(within(topModelsTable).queryByText('Model Alpha')).not.toBeInTheDocument();
+    expect(within(topModelsTable).queryByText('Model Gamma')).not.toBeInTheDocument();
+  });
+
   it('renders AI Credits columns for zero-value new-format AIC fields', async () => {
     const zeroAicRows: CSVData[] = [{
       date: '2026-03-01',
