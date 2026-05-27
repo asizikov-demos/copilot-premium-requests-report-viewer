@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 
+import { PRICING } from '@/constants/pricing';
 import { useAnalysisContext } from '@/context/AnalysisContext';
 import { ModelDailyStackedChart } from '@/components/charts/ModelDailyStackedChart';
 import { filterDailySeriesByMonths } from '@/utils/analytics/filters';
@@ -15,6 +16,12 @@ interface TopAicModelRow {
   aicQuantity: number;
   aicGrossAmount: number;
   share: number;
+}
+
+function getEffectiveAicQuantity(aicQuantity: number, aicGrossAmount: number): number {
+  const quantityDerivedFromGross = aicGrossAmount / PRICING.AI_CREDIT_USD_VALUE;
+
+  return Math.max(aicQuantity, quantityDerivedFromGross);
 }
 
 export function ModelUsageTrendsOverview() {
@@ -51,41 +58,28 @@ export function ModelUsageTrendsOverview() {
       .map(([model, totals]) => ({
         model,
         requests: totals.quantity,
-        aicQuantity: totals.aicQuantity,
+        aicQuantity: getEffectiveAicQuantity(totals.aicQuantity, totals.aicGrossAmount),
         aicGrossAmount: totals.aicGrossAmount,
       }))
       .filter((row) => row.aicQuantity > 0 || row.aicGrossAmount > 0);
 
-    const hasCreditQuantity = rows.some((row) => row.aicQuantity > 0);
-    const totalConsumption = rows.reduce(
-      (sum, row) => sum + (hasCreditQuantity ? row.aicQuantity : row.aicGrossAmount),
-      0
-    );
+    const totalConsumption = rows.reduce((sum, row) => sum + row.aicQuantity, 0);
 
     const topRows = rows
       .sort((left, right) => {
-        const leftConsumption = hasCreditQuantity ? left.aicQuantity : left.aicGrossAmount;
-        const rightConsumption = hasCreditQuantity ? right.aicQuantity : right.aicGrossAmount;
-
-        if (rightConsumption !== leftConsumption) {
-          return rightConsumption - leftConsumption;
+        if (right.aicQuantity !== left.aicQuantity) {
+          return right.aicQuantity - left.aicQuantity;
         }
 
         return left.model.localeCompare(right.model);
       })
       .slice(0, 3)
-      .map((row) => {
-        const consumption = hasCreditQuantity ? row.aicQuantity : row.aicGrossAmount;
-        return {
-          ...row,
-          share: totalConsumption > 0 ? (consumption / totalConsumption) * 100 : 0,
-        };
-      });
+      .map((row) => ({
+        ...row,
+        share: totalConsumption > 0 ? (row.aicQuantity / totalConsumption) * 100 : 0,
+      }));
 
-    const topConsumption = topRows.reduce(
-      (sum, row) => sum + (hasCreditQuantity ? row.aicQuantity : row.aicGrossAmount),
-      0
-    );
+    const topConsumption = topRows.reduce((sum, row) => sum + row.aicQuantity, 0);
 
     return {
       rows: topRows,

@@ -229,7 +229,7 @@ describe('DataAnalysis billing summary', () => {
     });
   });
 
-  it('renders the top three AI Credits models on the Models page', async () => {
+  it('renders the top three AI Credits models on the Models page with mixed AIC fields', async () => {
     const aicRows: CSVData[] = [
       {
         date: '2026-03-01',
@@ -242,7 +242,7 @@ describe('DataAnalysis billing summary', () => {
         organization: 'test-org-one',
         cost_center_name: 'test-cost-center-one',
         aic_quantity: '50',
-        aic_gross_amount: '5',
+        aic_gross_amount: '0.5',
       },
       {
         date: '2026-03-02',
@@ -255,7 +255,7 @@ describe('DataAnalysis billing summary', () => {
         organization: 'test-org-one',
         cost_center_name: 'test-cost-center-one',
         aic_quantity: '100',
-        aic_gross_amount: '10',
+        aic_gross_amount: '1',
       },
       {
         date: '2026-03-03',
@@ -268,7 +268,7 @@ describe('DataAnalysis billing summary', () => {
         organization: 'test-org-two',
         cost_center_name: 'test-cost-center-two',
         aic_quantity: '30',
-        aic_gross_amount: '3',
+        aic_gross_amount: '0.3',
       },
       {
         date: '2026-03-04',
@@ -281,7 +281,19 @@ describe('DataAnalysis billing summary', () => {
         organization: 'test-org-two',
         cost_center_name: 'test-cost-center-two',
         aic_quantity: '80',
-        aic_gross_amount: '8',
+        aic_gross_amount: '0.8',
+      },
+      {
+        date: '2026-03-05',
+        username: 'test-user-five',
+        product: 'copilot',
+        sku: 'copilot_premium_request',
+        model: 'Model Epsilon',
+        quantity: '12',
+        total_monthly_quota: '1000',
+        organization: 'test-org-three',
+        cost_center_name: 'test-cost-center-three',
+        aic_gross_amount: '1.2',
       },
     ];
 
@@ -293,17 +305,20 @@ describe('DataAnalysis billing summary', () => {
     const topModelsTable = await screen.findByRole('table', { name: 'Top AI Credits models' });
     const rows = within(topModelsTable).getAllByRole('row');
 
-    expect(screen.getByText(/Top 3 models drive/)).toHaveTextContent('Top 3 models drive 88.5% of total AI Credits consumption.');
+    expect(screen.getByText(/Top 3 models drive/)).toHaveTextContent('Top 3 models drive 78.9% of total AI Credits consumption.');
     expect(rows).toHaveLength(4);
     expect(rows[1]).toHaveTextContent('#1');
-    expect(rows[1]).toHaveTextContent('Model Beta');
-    expect(rows[1]).toHaveTextContent('100.00');
-    expect(rows[1]).toHaveTextContent('$10.00');
-    expect(rows[1]).toHaveTextContent('38.5%');
-    expect(rows[2]).toHaveTextContent('Model Delta');
-    expect(rows[2]).toHaveTextContent('30.8%');
-    expect(rows[3]).toHaveTextContent('Model Alpha');
-    expect(rows[3]).toHaveTextContent('19.2%');
+    expect(rows[1]).toHaveTextContent('Model Epsilon');
+    expect(rows[1]).toHaveTextContent('120.00');
+    expect(rows[1]).toHaveTextContent('$1.20');
+    expect(rows[1]).toHaveTextContent('31.6%');
+    expect(rows[2]).toHaveTextContent('Model Beta');
+    expect(rows[2]).toHaveTextContent('100.00');
+    expect(rows[2]).toHaveTextContent('$1.00');
+    expect(rows[2]).toHaveTextContent('26.3%');
+    expect(rows[3]).toHaveTextContent('Model Delta');
+    expect(rows[3]).toHaveTextContent('21.1%');
+    expect(within(topModelsTable).queryByText('Model Alpha')).not.toBeInTheDocument();
     expect(within(topModelsTable).queryByText('Model Gamma')).not.toBeInTheDocument();
   });
 
