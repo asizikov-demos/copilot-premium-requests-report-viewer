@@ -41,6 +41,36 @@ describe('processCSVData (CSV format)', () => {
     });
   });
 
+  it('converts US M/D/YY dates (newer AI Usage report) into valid UTC timestamps', () => {
+    const rows: CSVData[] = [
+      {
+        date: '5/29/26',
+        username: 'test-user-one',
+        product: 'copilot',
+        sku: 'copilot_ai_credit',
+        model: 'Auto: Claude Haiku 4.5',
+        quantity: '96.9990345',
+        unit_type: 'ai-credits',
+        applied_cost_per_quantity: '0.01',
+        gross_amount: '0.969990345',
+        discount_amount: '0',
+        net_amount: '0.969990345',
+        total_monthly_quota: '3900',
+        organization: 'test-org-one',
+        cost_center_name: 'test-cost-center-one',
+        aic_quantity: '96.9990345',
+        aic_gross_amount: '0.969990345',
+      },
+    ];
+
+    const processed = processCSVData(rows);
+    expect(processed).toHaveLength(1);
+    expect(processed[0].timestamp.toISOString()).toBe('2026-05-29T00:00:00.000Z');
+    expect(processed[0].dateKey).toBe('2026-05-29');
+    expect(processed[0].monthKey).toBe('2026-05');
+    expect(processed[0].aicQuantity).toBeCloseTo(96.9990345);
+  });
+
   it('maps AI Credits fields from the billing report', () => {
     const rows: CSVData[] = [
       {
