@@ -1,9 +1,9 @@
 import { PRICING } from '@/constants/pricing';
-import { ProcessedData } from '@/types/csv';
+import type { ProcessedData } from '@/types/csv';
 import type { WeeklyQuotaExhaustionBreakdown } from '@/utils/ingestion/analytics';
 
 import { categorizeUserConsumption, calculateUnusedValue as calculateUnusedValueFromInsights, type UserConsumptionCategory } from './insights';
-import { UserSummary } from './types';
+import type { UserSummary } from './types';
 
 export interface Advisory {
   type: 'perRequestBilling' | 'training' | 'optimization';
