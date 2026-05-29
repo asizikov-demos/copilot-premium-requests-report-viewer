@@ -124,7 +124,6 @@ function DataAnalysisInner() {
     setView,
     analysis,
     userData,
-    allModels,
     dailyCumulativeData,
     codingAgentAnalysis,
     codeReviewAnalysis,
