@@ -5,6 +5,7 @@
 import type { CSVData, ProcessedData } from '@/types/csv';
 
 import { buildDateKeys } from '../dateKeys';
+import { normalizeDateToIso } from './dateNormalization';
 import { normalizeRow } from './normalizeRow';
 import {
   NormalizedRow,
@@ -14,18 +15,34 @@ import {
   DailyBucketsArtifacts,
 } from './types';
 
+function buildTimestampFromRowDate(row: NormalizedRow, warnings: string[]): Date | null {
+  const isoDate = normalizeDateToIso(row.day) ?? normalizeDateToIso(row.date);
+  if (isoDate === null) {
+    warnings.push(`Unrecognized date format for user=${row.user} date=${row.date}`);
+    return null;
+  }
+
+  return new Date(`${isoDate}T00:00:00Z`);
+}
+
 /**
  * Reconstructs a ProcessedData array from normalized rows.
  * Used by hooks that haven't been migrated to aggregator outputs yet.
  */
-export function buildProcessedDataFromRows(rows: NormalizedRow[] | undefined | null): ProcessedData[] {
+export function buildProcessedDataFromRows(
+  rows: NormalizedRow[] | undefined | null,
+  warnings: string[] = []
+): ProcessedData[] {
   if (!Array.isArray(rows) || rows.length === 0) {
     return [];
   }
-  return rows.map(row => {
-    const timestamp = new Date(`${row.date.substring(0, 10)}T00:00:00Z`);
+  const processed: ProcessedData[] = [];
+  for (const row of rows) {
+    const timestamp = buildTimestampFromRowDate(row, warnings);
+    if (timestamp === null) continue;
+
     const keys = buildDateKeys(timestamp);
-    return {
+    processed.push({
       timestamp,
       user: row.user,
       model: row.model,
@@ -47,8 +64,9 @@ export function buildProcessedDataFromRows(rows: NormalizedRow[] | undefined | n
       isNonCopilotUsage: row.isNonCopilotUsage,
       usageBucket: row.usageBucket,
       ...keys
-    };
-  });
+    });
+  }
+  return processed;
 }
 
 export function buildProcessedDataFromRawRows(
@@ -62,7 +80,7 @@ export function buildProcessedDataFromRawRows(
     .map(row => normalizeRow(row, warnings, { allowInvalidQuantity: true }))
     .filter((row): row is NormalizedRow => row !== null);
 
-  return buildProcessedDataFromRows(normalizedRows);
+  return buildProcessedDataFromRows(normalizedRows, warnings);
 }
 
 /**
