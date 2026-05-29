@@ -8,6 +8,7 @@ import type { CSVData } from '@/types/csv';
 import { isCodeReviewModel } from '@/utils/productClassification';
 import { isRequestUnitType } from '@/utils/unitType';
 
+import { normalizeDateToIso, type DateNormalizer } from './dateNormalization';
 import {
   NON_COPILOT_CODE_REVIEW_BUCKET,
   NormalizedRow,
@@ -20,11 +21,15 @@ import {
  * When `options.allowInvalidQuantity` is true, rows with a non-numeric quantity
  * are not rejected; instead the returned row will have `quantity` as `NaN`.
  * Callers using this option must handle NaN quantity values themselves.
+ *
+ * `options.normalizeDate` lets the streaming orchestrator inject a date parser
+ * selected once from the first row. When omitted, each value is detected
+ * individually via `normalizeDateToIso`.
  */
 export function normalizeRow(
   raw: CSVData | Record<string, unknown>,
   warnings: string[],
-  options: { allowInvalidQuantity?: boolean } = {}
+  options: { allowInvalidQuantity?: boolean; normalizeDate?: DateNormalizer } = {}
 ): NormalizedRow | null {
   const rawRecord = raw as Record<string, unknown>;
   const {
@@ -49,6 +54,14 @@ export function normalizeRow(
   
   // Type guard and validate required fields
   if (typeof date !== 'string' || typeof username !== 'string' || typeof model !== 'string' || quantity == null) {
+    return null;
+  }
+
+  // Normalize the date into ISO YYYY-MM-DD so downstream code can rely on it.
+  const normalizeDate = options.normalizeDate ?? normalizeDateToIso;
+  const isoDate = normalizeDate(date);
+  if (isoDate === null) {
+    warnings.push(`Unrecognized date format for user=${username} date=${date}`);
     return null;
   }
 
@@ -97,8 +110,8 @@ export function normalizeRow(
   };
 
   return {
-    date,
-    day: date.substring(0, 10), // Extract YYYY-MM-DD, preserving UTC
+    date: isoDate,
+    day: isoDate, // YYYY-MM-DD, UTC preserved (no timezone conversion)
     user: trimmedUsername,
     model,
     quantity: qty,

@@ -5,6 +5,7 @@
 
 import Papa from 'papaparse';
 import { PRICING } from '@/constants/pricing';
+import { createDateNormalizer, detectDateFormat, type DateNormalizer } from './dateNormalization';
 import { normalizeRow } from './normalizeRow';
 import {
   Aggregator,
@@ -44,6 +45,10 @@ export function ingestStream(
   let rowsProcessed = 0;
   const warnings: string[] = [];
   const t0 = performance.now();
+
+  // Date parser is selected once from the first row that carries a date value,
+  // then reused for every subsequent row to avoid per-row format detection.
+  let dateNormalizer: DateNormalizer | undefined;
   
   Papa.parse(file, {
     header: true,
@@ -60,7 +65,18 @@ export function ingestStream(
       
       // Process each row in chunk
       for (const rawRow of data as Record<string, unknown>[]) {
-        const normalized = normalizeRow(rawRow, warnings);
+        if (!dateNormalizer) {
+          const rawDate = rawRow['date'];
+          if (typeof rawDate === 'string' && rawDate.trim() !== '') {
+            const format = detectDateFormat(rawDate);
+            if (format === 'unknown') {
+              warnings.push(`Unrecognized date format in CSV: ${rawDate}`);
+            }
+            dateNormalizer = createDateNormalizer(format);
+          }
+        }
+
+        const normalized = normalizeRow(rawRow, warnings, { normalizeDate: dateNormalizer });
         if (!normalized) continue;
         
         // Dispatch to all aggregators
