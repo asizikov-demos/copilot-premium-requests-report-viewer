@@ -28,8 +28,18 @@ function pad2(value: number): string {
   return value < 10 ? `0${value}` : String(value);
 }
 
-function isValidMonthDay(month: number, day: number): boolean {
-  return month >= 1 && month <= 12 && day >= 1 && day <= 31;
+function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
+function daysInMonth(year: number, month: number): number {
+  if (month === 2) return isLeapYear(year) ? 29 : 28;
+  if (month === 4 || month === 6 || month === 9 || month === 11) return 30;
+  return 31;
+}
+
+function isValidMonthDay(year: number, month: number, day: number): boolean {
+  return month >= 1 && month <= 12 && day >= 1 && day <= daysInMonth(year, month);
 }
 
 /**
@@ -46,9 +56,10 @@ export function detectDateFormat(value: string): DateFormat {
 function normalizeIso(value: string): string | null {
   const match = ISO_DATE.exec(value.trim());
   if (!match) return null;
+  const year = Number(match[1]);
   const month = Number(match[2]);
   const day = Number(match[3]);
-  if (!isValidMonthDay(month, day)) return null;
+  if (!isValidMonthDay(year, month, day)) return null;
   return `${match[1]}-${match[2]}-${match[3]}`;
 }
 
@@ -57,8 +68,8 @@ function normalizeUsSlash(value: string): string | null {
   if (!match) return null;
   const month = Number(match[1]);
   const day = Number(match[2]);
-  if (!isValidMonthDay(month, day)) return null;
   const year = match[3].length === 2 ? TWO_DIGIT_YEAR_BASE + Number(match[3]) : Number(match[3]);
+  if (!isValidMonthDay(year, month, day)) return null;
   return `${year}-${pad2(month)}-${pad2(day)}`;
 }
 

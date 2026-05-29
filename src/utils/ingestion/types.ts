@@ -35,7 +35,7 @@ export interface SpecialBillingBucketTotals {
  * All aggregators receive this uniform shape.
  */
 export interface NormalizedRow {
-  date: string;            // Normalized YYYY-MM-DD (UTC preserved)
+  date: string;            // Source date: YYYY-MM-DD or full ISO timestamp
   day: string;             // Precomputed YYYY-MM-DD (UTC preserved)
   user: string;
   model: string;

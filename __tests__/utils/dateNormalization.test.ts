@@ -42,6 +42,19 @@ describe('dateNormalization', () => {
       expect(normalizeDateToIso('garbage')).toBeNull();
     });
 
+    it('rejects impossible calendar dates', () => {
+      expect(normalizeDateToIso('4/31/26')).toBeNull();
+      expect(normalizeDateToIso('2/30/26')).toBeNull();
+      expect(normalizeDateToIso('2/29/26')).toBeNull();
+      expect(normalizeDateToIso('2026-04-31')).toBeNull();
+      expect(normalizeDateToIso('2026-02-29')).toBeNull();
+    });
+
+    it('accepts leap day in leap years', () => {
+      expect(normalizeDateToIso('2/29/24')).toBe('2024-02-29');
+      expect(normalizeDateToIso('2024-02-29')).toBe('2024-02-29');
+    });
+
     it('never applies local-timezone conversion (string-only math)', () => {
       // A naive `new Date("5/29/26")` would be timezone-dependent; the
       // string parser must always yield the same UTC calendar date.
