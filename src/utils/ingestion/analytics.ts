@@ -592,16 +592,6 @@ export function buildAdvisoriesFromArtifacts(
 // Coding Agent Daily Usage From Artifacts
 // -----------------------------
 /**
- * Build daily coding agent usage time series (date, dailyRequests, cumulativeRequests)
- * without scanning raw processedData rows. Leverages DailyBucketsAggregator's
- * dailyUserModelTotals nested map. Mirrors legacy computeDailyCodingAgentUsage
- * behavior by:
- *  - Including ONLY days with > 0 coding agent requests
- *  - Sorting by ascending date
- *  - Computing cumulativeRequests as running sum of dailyRequests
- * Falls back to empty array if required per-model breakdown map is absent.
- */
-/**
  * Shared implementation for building a daily usage time series filtered to a
  * subset of models. Iterates dailyUserModelTotals, sums per-model quantities for
  * models matching the predicate, includes only days with > 0 requests, sorts by
@@ -633,6 +623,16 @@ function buildDailyModelSubsetUsageFromArtifacts(
   });
 }
 
+/**
+ * Build daily coding agent usage time series (date, dailyRequests, cumulativeRequests)
+ * without scanning raw processedData rows. Leverages DailyBucketsAggregator's
+ * dailyUserModelTotals nested map. Mirrors legacy computeDailyCodingAgentUsage
+ * behavior by:
+ *  - Including ONLY days with > 0 coding agent requests
+ *  - Sorting by ascending date
+ *  - Computing cumulativeRequests as running sum of dailyRequests
+ * Falls back to empty array if required per-model breakdown map is absent.
+ */
 export function buildDailyCodingAgentUsageFromArtifacts(
   daily: DailyBucketsArtifacts
 ): DailyCodingAgentUsageDatum[] {
