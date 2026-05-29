@@ -19,3 +19,8 @@ export const chartTooltipLabelStyle: CSSProperties = {
   borderBottom: '1px solid #e2e8f0',
   paddingBottom: 6,
 };
+
+export function utcDateTickFormatter(value: string): string {
+  const date = new Date(value);
+  return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
+}

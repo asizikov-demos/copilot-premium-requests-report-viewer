@@ -3,6 +3,8 @@
 import React from 'react';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
+import { utcDateTickFormatter } from './chartTooltipStyles';
+
 export interface UserDailyDatum {
   date: string;
   totalCumulative: number;
@@ -30,10 +32,7 @@ export function UserDailyStackedChart({ data, models, modelColors, quotaValue, t
         <XAxis 
           dataKey="date" 
           tick={{ fill: '#636c76', fontSize: 11 }}
-          tickFormatter={(value) => {
-            const date = new Date(value);
-            return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
-          }}
+          tickFormatter={utcDateTickFormatter}
         />
         <YAxis 
           tick={{ fill: '#636c76', fontSize: 11 }}

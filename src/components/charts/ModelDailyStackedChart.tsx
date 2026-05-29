@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { chartTooltipContentStyle, chartTooltipLabelStyle } from './chartTooltipStyles';
+import { chartTooltipContentStyle, chartTooltipLabelStyle, utcDateTickFormatter } from './chartTooltipStyles';
 
 export interface ModelDailyDatum {
   date: string;
@@ -27,10 +27,7 @@ export function ModelDailyStackedChart({ data, models, modelColors, height = '10
         <XAxis
           dataKey="date"
           tick={{ fill: '#636c76', fontSize: 11 }}
-          tickFormatter={(value) => {
-            const date = new Date(value);
-            return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
-          }}
+          tickFormatter={utcDateTickFormatter}
         />
         <YAxis tick={{ fill: '#636c76', fontSize: 11 }} />
         <Tooltip
