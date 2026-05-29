@@ -16,7 +16,7 @@ import { CodingAgentAnalysis, UserDailyData } from '@/types/csv';
 import { getEarlyExhausterCount, type Advisory } from '@/utils/analytics/advisory';
 import { CONSUMPTION_THRESHOLDS, UserConsumptionCategory, InsightsOverviewData } from '@/utils/analytics/insights';
 import type { FeatureUtilizationStats } from '@/utils/analytics/insights';
-import { buildUserQuotaMapFromRows } from '@/utils/analytics/quota';
+import { buildUserQuotaMapFromRows, classifyQuotaMap } from '@/utils/analytics/quota';
 import { dayOfMonthToWeekBucket, enumerateDatesInclusive, monthKeyToLabel } from '@/utils/dateKeys';
 import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
 import { calculateBilledOverageFromRows, calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
@@ -114,33 +114,11 @@ export function buildDailyBucketsArtifactsFromProcessedData(processed: Processed
 
 /**
  * Build quota breakdown lists & suggested plan using quotaArtifacts.
- * Replicates logic of legacy buildQuotaBreakdown but avoids scanning ProcessedData.
+ * Delegates tier classification to the shared classifyQuotaMap to avoid
+ * duplicating quota tier logic.
  */
 export function buildQuotaBreakdownFromArtifacts(quota: QuotaArtifacts): AnalysisResults['quotaBreakdown'] {
-  const unknown: string[] = [];
-  const business: string[] = [];
-  const enterprise: string[] = [];
-
-  for (const [user, q] of quota.quotaByUser.entries()) {
-    if (q === 'unknown') unknown.push(user);
-    else if (q === PRICING.BUSINESS_QUOTA) business.push(user);
-    else if (q === PRICING.ENTERPRISE_QUOTA) enterprise.push(user);
-  }
-
-  const quotaTypes = [
-    unknown.length > 0 ? 'unknown' : null,
-    business.length > 0 ? 'business' : null,
-    enterprise.length > 0 ? 'enterprise' : null
-  ].filter(Boolean);
-
-  const mixed = quotaTypes.length > 1;
-  let suggestedPlan: 'business' | 'enterprise' | null = null;
-  if (!mixed && unknown.length === 0) {
-    if (business.length > 0 && enterprise.length === 0) suggestedPlan = 'business';
-    else if (enterprise.length > 0 && business.length === 0) suggestedPlan = 'enterprise';
-  }
-
-  return { unknown, business, enterprise, mixed, suggestedPlan };
+  return classifyQuotaMap(quota.quotaByUser);
 }
 
 /** Build requestsByModel array from usageArtifacts.modelTotals */
