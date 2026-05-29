@@ -601,8 +601,15 @@ export function buildAdvisoriesFromArtifacts(
  *  - Computing cumulativeRequests as running sum of dailyRequests
  * Falls back to empty array if required per-model breakdown map is absent.
  */
-export function buildDailyCodingAgentUsageFromArtifacts(
-  daily: DailyBucketsArtifacts
+/**
+ * Shared implementation for building a daily usage time series filtered to a
+ * subset of models. Iterates dailyUserModelTotals, sums per-model quantities for
+ * models matching the predicate, includes only days with > 0 requests, sorts by
+ * ascending date, and computes a running cumulative total.
+ */
+function buildDailyModelSubsetUsageFromArtifacts(
+  daily: DailyBucketsArtifacts,
+  modelFilter: (model: string) => boolean
 ): DailyCodingAgentUsageDatum[] {
   if (!daily.dailyUserModelTotals) return [];
   const dayTotals: Array<{ date: string; total: number }> = [];
@@ -610,7 +617,7 @@ export function buildDailyCodingAgentUsageFromArtifacts(
     let daySum = 0;
     for (const modelMap of userMap.values()) {
       for (const [model, qty] of modelMap.entries()) {
-        if (isCodingAgentModel(model)) {
+        if (modelFilter(model)) {
           daySum += qty;
         }
       }
@@ -624,6 +631,12 @@ export function buildDailyCodingAgentUsageFromArtifacts(
     cumulative += d.total;
     return { date: d.date, dailyRequests: d.total, cumulativeRequests: cumulative } as DailyCodingAgentUsageDatum;
   });
+}
+
+export function buildDailyCodingAgentUsageFromArtifacts(
+  daily: DailyBucketsArtifacts
+): DailyCodingAgentUsageDatum[] {
+  return buildDailyModelSubsetUsageFromArtifacts(daily, isCodingAgentModel);
 }
 
 // -----------------------------
@@ -684,26 +697,7 @@ export function analyzeCodeReviewAdoptionFromArtifacts(usage: UsageArtifacts, qu
 export function buildDailyCodeReviewUsageFromArtifacts(
   daily: DailyBucketsArtifacts
 ): DailyCodingAgentUsageDatum[] {
-  if (!daily.dailyUserModelTotals) return [];
-  const dayTotals: Array<{ date: string; total: number }> = [];
-  for (const [date, userMap] of daily.dailyUserModelTotals.entries()) {
-    let daySum = 0;
-    for (const modelMap of userMap.values()) {
-      for (const [model, qty] of modelMap.entries()) {
-        if (isCodeReviewModel(model)) {
-          daySum += qty;
-        }
-      }
-    }
-    if (daySum > 0) dayTotals.push({ date, total: daySum });
-  }
-  if (dayTotals.length === 0) return [];
-  dayTotals.sort((a, b) => a.date.localeCompare(b.date));
-  let cumulative = 0;
-  return dayTotals.map(d => {
-    cumulative += d.total;
-    return { date: d.date, dailyRequests: d.total, cumulativeRequests: cumulative } as DailyCodingAgentUsageDatum;
-  });
+  return buildDailyModelSubsetUsageFromArtifacts(daily, isCodeReviewModel);
 }
 
 // -----------------------------
