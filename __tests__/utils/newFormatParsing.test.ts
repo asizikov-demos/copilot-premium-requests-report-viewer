@@ -178,6 +178,42 @@ describe('processCSVData (CSV format)', () => {
     expect(special.totalQuota).toBe('0');
   });
 
+  it('reconstructs timestamps from the normalized UTC day', () => {
+    const rows: NormalizedRow[] = [{
+      date: '5/29/26',
+      day: '2026-05-29',
+      user: 'test-user-one',
+      model: 'Claude Sonnet 4',
+      quantity: 2,
+      quotaRaw: '1000',
+      quotaValue: 1000,
+      exceedsQuota: false,
+      product: 'copilot',
+      sku: 'copilot_premium_request',
+    }];
+
+    const processed = buildProcessedDataFromRows(rows);
+
+    expect(processed).toHaveLength(1);
+    expect(processed[0].timestamp.toISOString()).toBe('2026-05-29T00:00:00.000Z');
+    expect(processed[0].dateKey).toBe('2026-05-29');
+    expect(processed[0].monthKey).toBe('2026-05');
+  });
+
+  it('skips malformed adapter row dates with a warning instead of throwing', () => {
+    const warnings: string[] = [];
+    const rows: NormalizedRow[] = [{
+      date: 'not-a-date',
+      day: 'not-a-date',
+      user: 'test-user-one',
+      model: 'Claude Sonnet 4',
+      quantity: 2,
+    }];
+
+    expect(buildProcessedDataFromRows(rows, warnings)).toEqual([]);
+    expect(warnings).toEqual(['Unrecognized date format for user=test-user-one date=not-a-date']);
+  });
+
   it('keeps legacy CSV wrappers aligned with the normalized conversion path', () => {
     const rows: CSVData[] = [{
       date: '2025-10-04',
