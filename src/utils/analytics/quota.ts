@@ -54,14 +54,20 @@ export function buildUserQuotaMapFromRows(data: ProcessedData[]): Map<string, nu
   return userQuotas;
 }
 
-export function buildQuotaBreakdown(data: ProcessedData[]): QuotaBreakdownResult {
-  const userQuotas = buildUserQuotaMapFromRows(data);
-
+/**
+ * Canonical quota tier classification: bucketizes each user's quota into
+ * `unknown`, `business`, or `enterprise`, computes the `mixed` flag, and derives
+ * `suggestedPlan`. This is the single source of truth for quota tier logic, shared
+ * by both the ProcessedData and artifact-based breakdown builders.
+ */
+export function classifyQuotaMap(
+  quotaByUser: Map<string, number | 'unknown'>
+): QuotaBreakdownResult {
   const unknown: string[] = [];
   const business: string[] = [];
   const enterprise: string[] = [];
 
-  for (const [user, quota] of userQuotas) {
+  for (const [user, quota] of quotaByUser) {
     if (quota === 'unknown') {
       unknown.push(user);
     } else if (quota === PRICING.BUSINESS_QUOTA) {
@@ -88,4 +94,8 @@ export function buildQuotaBreakdown(data: ProcessedData[]): QuotaBreakdownResult
   }
 
   return { unknown, business, enterprise, mixed, suggestedPlan };
+}
+
+export function buildQuotaBreakdown(data: ProcessedData[]): QuotaBreakdownResult {
+  return classifyQuotaMap(buildUserQuotaMapFromRows(data));
 }
