@@ -9,6 +9,13 @@ export const PRICING = {
   ENTERPRISE_UPGRADE_DELTA: 20,
 } as const;
 
+// Recognized premium-request quota tiers. Any other numeric quota (e.g. the
+// 2147483647 sentinel emitted for non-billable events) is treated as unknown.
+export const KNOWN_QUOTA_VALUES: readonly number[] = [
+  PRICING.BUSINESS_QUOTA,
+  PRICING.ENTERPRISE_QUOTA,
+];
+
 // Cost optimization thresholds
 export const COST_OPTIMIZATION_THRESHOLDS = {
   MIN_OVERAGE_THRESHOLD: 100,

@@ -31,7 +31,9 @@ export function buildProcessedDataFromRows(rows: NormalizedRow[] | undefined | n
       model: row.model,
       requestsUsed: row.quantity,
       exceedsQuota: row.exceedsQuota ?? false,
-      totalQuota: row.quotaRaw || (row.quotaValue === 'unknown' ? 'Unknown' : String(row.quotaValue ?? 'Unknown')),
+      totalQuota: row.quotaValue === 'unknown'
+        ? 'Unknown'
+        : (row.quotaRaw || String(row.quotaValue ?? 'Unknown')),
       quotaValue: row.quotaValue ?? 'unknown',
       product: row.product,
       sku: row.sku,

@@ -144,6 +144,53 @@ describe('Mixed Quota Support', () => {
     expect(analysis.quotaBreakdown.unknown).toEqual([]);
   });
 
+  it('should treat the non-billable quota sentinel as unknown', () => {
+    const sentinelData: CSVData[] = [
+      {
+        date: '2026-03-01',
+        username: 'test-user-one',
+        model: 'Claude Sonnet 4',
+        quantity: '5.00',
+        exceeds_quota: 'false',
+        total_monthly_quota: '2147483647'
+      }
+    ];
+
+    const processedData = processCSVData(sentinelData);
+
+    expect(processedData[0].quotaValue).toBe('unknown');
+    expect(processedData[0].totalQuota).toBe('Unknown');
+  });
+
+  it('should pick the highest known quota and ignore the sentinel', () => {
+    const mixedWithSentinel: CSVData[] = [
+      {
+        date: '2026-03-01',
+        username: 'test-user-one',
+        model: 'Claude Sonnet 4',
+        quantity: '5.00',
+        exceeds_quota: 'false',
+        total_monthly_quota: '1000'
+      },
+      {
+        date: '2026-03-02',
+        username: 'test-user-one',
+        model: 'Claude Sonnet 4',
+        quantity: '2.00',
+        exceeds_quota: 'false',
+        total_monthly_quota: '2147483647'
+      }
+    ];
+
+    const processedData = processCSVData(mixedWithSentinel);
+    const analysis = analyzeData(processedData);
+
+    expect(analysis.quotaBreakdown.enterprise).toEqual(['test-user-one']);
+    expect(analysis.quotaBreakdown.business).toEqual([]);
+    expect(analysis.quotaBreakdown.unknown).toEqual([]);
+    expect(analysis.quotaBreakdown.suggestedPlan).toBe('enterprise');
+  });
+
   it('should suggest enterprise plan for all enterprise users', () => {
     const enterpriseOnlyData: CSVData[] = [
       {

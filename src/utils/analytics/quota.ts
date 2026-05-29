@@ -1,4 +1,4 @@
-import { PRICING } from '@/constants/pricing';
+import { KNOWN_QUOTA_VALUES, PRICING } from '@/constants/pricing';
 import { ProcessedData } from '@/types/csv';
 import { isRequestUnitType } from '@/utils/unitType';
 
@@ -10,14 +10,19 @@ export interface QuotaBreakdownResult {
   suggestedPlan: 'business' | 'enterprise' | null;
 }
 
-// Parse quota value from string
+// Parse quota value from string. Only recognized quota tiers are kept as
+// numbers; anything else (blank, 'Unlimited', the non-billable sentinel, etc.)
+// resolves to 'unknown' so plan detection considers only known values.
 export function parseQuotaValue(quotaString: string): number | 'unknown' {
   const trimmed = quotaString.trim().toLowerCase();
   if (trimmed === 'unknown') {
     return 'unknown';
   }
   const parsed = parseInt(trimmed, 10);
-  return isNaN(parsed) ? 'unknown' : parsed;
+  if (isNaN(parsed) || !KNOWN_QUOTA_VALUES.includes(parsed)) {
+    return 'unknown';
+  }
+  return parsed;
 }
 
 export function shouldReplaceQuotaValue(

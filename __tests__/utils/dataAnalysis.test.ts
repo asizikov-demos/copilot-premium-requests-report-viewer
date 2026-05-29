@@ -121,8 +121,8 @@ describe('CSV Data Processing', () => {
         model: 'claude-3.7-sonnet-thought',
         requestsUsed: 2.50,
         exceedsQuota: true,
-        totalQuota: '100',
-        quotaValue: 100
+        totalQuota: 'Unknown',
+        quotaValue: 'unknown'
       });
     });
 
@@ -161,7 +161,7 @@ describe('CSV Data Processing', () => {
       const result = analyzeData(processedData);
       
       expect(result.totalUniqueUsers).toBe(3); // test-user-a, test-user-b, test-user-c
-      expect(result.usersExceedingQuota).toBe(0); // Nobody actually exceeds their quota (test-user-b: 2.5/100, others unknown)
+      expect(result.usersExceedingQuota).toBe(0); // Nobody actually exceeds their quota (test-user-b: 2.5, unknown quota; others unknown)
       expect(result.requestsByModel).toHaveLength(4); // 4 different models
     });
 
