@@ -1,8 +1,10 @@
 import { render, RenderOptions } from '@testing-library/react';
 import { ReactElement } from 'react';
 
+import { PRICING } from '@/constants/pricing';
 import type { DailyBucketsArtifacts } from '@/utils/ingestion';
 import type { CSVData, ProcessedData } from '@/types/csv';
+import { buildDateKeys } from '@/utils/dateKeys';
 
 // Custom render function with providers if needed
 export const customRender = (
@@ -23,6 +25,34 @@ export const createMockCSVData = (overrides: Partial<CSVData> = {}): CSVData => 
   total_monthly_quota: 'Unknown',
   ...overrides
 });
+
+// Shared factory for ProcessedData test objects.
+// Builds a complete, non-PII record with sensible defaults and derives the
+// cached UTC keys (iso/dateKey/monthKey/epoch) from the timestamp via
+// buildDateKeys so date handling stays UTC-safe. Any provided fields override
+// the defaults, including extended billing fields.
+export const makeProcessedData = (partial: Partial<ProcessedData> = {}): ProcessedData => {
+  const timestamp = partial.timestamp ?? new Date('2025-06-01T00:00:00Z');
+  const { iso, dateKey, monthKey, epoch } = buildDateKeys(timestamp);
+  const quotaValue = partial.quotaValue ?? PRICING.BUSINESS_QUOTA;
+  const totalQuota = quotaValue === 'unknown' ? 'Unknown' : String(quotaValue);
+
+  return {
+    timestamp,
+    user: 'test-user-one',
+    model: 'test-model',
+    requestsUsed: 0,
+    exceedsQuota: false,
+    totalQuota,
+    quotaValue,
+    unitType: 'requests',
+    iso,
+    dateKey,
+    monthKey,
+    epoch,
+    ...partial,
+  };
+};
 
 // Helper to create multiple mock CSV entries
 export const createMockCSVDataArray = (count: number, overrides: Partial<CSVData> = {}): CSVData[] => {

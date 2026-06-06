@@ -6,27 +6,7 @@ import type { UserConsumptionCategory } from '@/utils/analytics/insights';
 import { buildFeatureUtilizationFromArtifacts } from '@/utils/ingestion/analytics';
 import type { FeatureUsageArtifacts } from '@/utils/ingestion/types';
 
-function makeProcessed(row: Partial<ProcessedData>): ProcessedData {
-  const timestamp = row.timestamp || new Date('2025-06-01T00:00:00Z');
-  const iso = timestamp.toISOString();
-  return {
-    timestamp: timestamp as Date,
-    user: row.user || 'test-user-default',
-    model: row.model || 'o3-mini',
-    requestsUsed: row.requestsUsed ?? 0,
-    exceedsQuota: row.exceedsQuota ?? false,
-    totalQuota: row.totalQuota || '300',
-    quotaValue: row.quotaValue ?? 300,
-    iso,
-    dateKey: iso.slice(0, 10),
-    monthKey: iso.slice(0, 7),
-    epoch: (timestamp as Date).getTime(),
-    isNonCopilotUsage: row.isNonCopilotUsage,
-    usageBucket: row.usageBucket,
-    product: row.product,
-    sku: row.sku,
-  } as ProcessedData;
-}
+import { makeProcessedData } from '../helpers/testUtils';
 
 function makeFeatureUsageArtifacts({
   codeReview = 0,
@@ -71,7 +51,7 @@ describe('insights analytics', () => {
       { user: 'test-user-average-high', totalRequests: (CONSUMPTION_THRESHOLDS.powerMinPct - 0.1) / 100 * quota, modelBreakdown: {} },
       { user: 'test-user-power-edge', totalRequests: (CONSUMPTION_THRESHOLDS.powerMinPct) / 100 * quota, modelBreakdown: {} }
     ];
-    const processed: ProcessedData[] = users.map(u => makeProcessed({ user: u.user, quotaValue: quota }));
+    const processed: ProcessedData[] = users.map(u => makeProcessedData({ user: u.user, quotaValue: quota }));
     const categorized = categorizeUserConsumption(users, processed);
     const byUser = Object.fromEntries([
       ...categorized.lowAdoptionUsers.map(u => [u.user, u.category]),
