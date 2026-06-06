@@ -3,7 +3,7 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-import { chartTooltipContentStyle, chartTooltipLabelStyle, utcDateTickFormatter } from './chartTooltipStyles';
+import { chartTooltipContentStyle, chartTooltipLabelStyle, utcDateLabelFormatter, utcDateTickFormatter } from './chartTooltipStyles';
 
 export interface CodingAgentUsageDatum {
   date: string;              // YYYY-MM-DD (UTC original date fragment)
@@ -34,10 +34,7 @@ export function CodingAgentUsageChart({ data, height = '100%', valueUnitLabel = 
         />
         <YAxis tick={{ fill: '#636c76', fontSize: 11 }} />
         <Tooltip 
-          labelFormatter={(label) => {
-            const date = new Date(label);
-            return date.toLocaleDateString('en-US', { timeZone: 'UTC' });
-          }}
+          labelFormatter={utcDateLabelFormatter}
           formatter={(value, name) => [
             `${Number(value).toFixed(1)} ${valueUnitLabel}`,
             name === dailyLabel ? 'Daily' : 'Cumulative'
