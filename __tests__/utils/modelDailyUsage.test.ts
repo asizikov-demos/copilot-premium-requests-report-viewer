@@ -1,39 +1,26 @@
 import { buildDailyModelUsageFromArtifacts } from '@/utils/ingestion/analytics';
 import type { DailyBucketsArtifacts, UsageArtifacts } from '@/utils/ingestion';
+import { makeUsageArtifacts as makeUsageArtifactsHelper, makeDailyBucketsArtifacts as makeDailyBucketsHelper } from '../helpers/makeArtifacts';
 
 function makeUsageArtifacts(modelTotals: Record<string, number>): UsageArtifacts {
-  return {
-    users: [],
-    userCount: 0,
-    modelTotals,
-    totalRequests: Object.values(modelTotals).reduce((a, b) => a + b, 0)
-  } as unknown as UsageArtifacts;
+  const total = Object.values(modelTotals).reduce((a, b) => a + b, 0);
+  const users = Object.keys(modelTotals).length
+    ? [{ user: 'test-user-one', totalRequests: total, modelBreakdown: modelTotals }]
+    : [];
+  return makeUsageArtifactsHelper(users);
 }
 
 function makeDailyBucketsArtifacts(dates: string[], data: Array<Record<string, Record<string, number>>>): DailyBucketsArtifacts {
-  const dailyUserModelTotals = new Map<string, Map<string, Map<string, number>>>();
+  const entries: Array<{ date: string; user: string; used: number; model: string }> = [];
   dates.forEach((date, idx) => {
-    const usersForDay = data[idx];
-    const userMap = new Map<string, Map<string, number>>();
+    const usersForDay = data[idx] || {};
     Object.entries(usersForDay).forEach(([user, models]) => {
-      const modelMap = new Map<string, number>();
       Object.entries(models).forEach(([model, qty]) => {
-        modelMap.set(model, qty);
+        entries.push({ date, user, used: qty, model });
       });
-      userMap.set(user, modelMap);
     });
-    dailyUserModelTotals.set(date, userMap);
   });
-
-  return {
-    dateRange: {
-      min: dates[0],
-      max: dates[dates.length - 1]
-    },
-    dailyUserTotals: new Map(),
-    dailyUserModelTotals,
-    months: Array.from(new Set(dates.map(d => d.slice(0, 7))))
-  } as unknown as DailyBucketsArtifacts;
+  return makeDailyBucketsHelper(entries);
 }
 
 describe('buildDailyModelUsageFromArtifacts', () => {

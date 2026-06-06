@@ -1,43 +1,16 @@
 import { buildConsumptionCategoriesFromArtifacts, buildAdvisoriesFromArtifacts, WeeklyQuotaExhaustionBreakdown } from '@/utils/ingestion/analytics';
-import { UsageArtifacts, QuotaArtifacts } from '@/utils/ingestion/types';
-
-function makeUsage(users: Array<{ user: string; total: number; models?: Record<string, number> }>): UsageArtifacts {
-  return {
-    users: users.map(u => ({
-      user: u.user,
-      totalRequests: u.total,
-      modelBreakdown: u.models || { 'model-a': u.total },
-      topModel: 'model-a',
-      topModelValue: u.total
-    })),
-    modelTotals: { 'model-a': users.reduce((s,u)=> s+u.total,0) },
-    userCount: users.length,
-    modelCount: 1
-  };
-}
-
-function makeQuota(entries: Array<{ user: string; quota: number | 'unknown' }>): QuotaArtifacts {
-  const quotaByUser = new Map<string, number | 'unknown'>();
-  entries.forEach(e => quotaByUser.set(e.user, e.quota));
-  return {
-    quotaByUser,
-    conflicts: new Map(),
-    distinctQuotas: new Set(entries.filter(e => typeof e.quota === 'number').map(e => e.quota as number)),
-    hasMixedQuotas: true,
-    hasMixedLicenses: false
-  };
-}
+import { makeUsageArtifacts, makeQuotaArtifacts } from '../helpers/makeArtifacts';
 
 describe('buildAdvisoriesFromArtifacts', () => {
   it('produces training advisory when low adoption threshold met', () => {
-    const usage = makeUsage([
-      { user: 'test-user-one', total: 5 },
-      { user: 'test-user-two', total: 5 },
-      { user: 'test-user-three', total: 90 },
-      { user: 'test-user-four', total: 5 },
-      { user: 'test-user-five', total: 5 }
+    const usage = makeUsageArtifacts([
+      { user: 'test-user-one', totalRequests: 5 },
+      { user: 'test-user-two', totalRequests: 5 },
+      { user: 'test-user-three', totalRequests: 90 },
+      { user: 'test-user-four', totalRequests: 5 },
+      { user: 'test-user-five', totalRequests: 5 }
     ]);
-    const quota = makeQuota([
+    const quota = makeQuotaArtifacts([
       { user: 'test-user-one', quota: 100 },
       { user: 'test-user-two', quota: 100 },
       { user: 'test-user-three', quota: 100 },
@@ -51,14 +24,14 @@ describe('buildAdvisoriesFromArtifacts', () => {
   });
 
   it('uses week 1-4 exhaustion counts for per-request billing advisories', () => {
-    const usage = makeUsage([
-      { user: 'test-user-one', total: 300 },
-      { user: 'test-user-two', total: 300 },
-      { user: 'test-user-three', total: 10 },
-      { user: 'test-user-four', total: 10 },
-      { user: 'test-user-five', total: 10 }
+    const usage = makeUsageArtifacts([
+      { user: 'test-user-one', totalRequests: 300 },
+      { user: 'test-user-two', totalRequests: 300 },
+      { user: 'test-user-three', totalRequests: 10 },
+      { user: 'test-user-four', totalRequests: 10 },
+      { user: 'test-user-five', totalRequests: 10 }
     ]);
-    const quota = makeQuota([
+    const quota = makeQuotaArtifacts([
       { user: 'test-user-one', quota: 300 },
       { user: 'test-user-two', quota: 300 },
       { user: 'test-user-three', quota: 300 },
@@ -86,12 +59,12 @@ describe('buildAdvisoriesFromArtifacts', () => {
   });
 
   it('does not approximate early exhausters from power users when only week 5 exhaustion exists', () => {
-    const usage = makeUsage([
-      { user: 'test-user-one', total: 300 },
-      { user: 'test-user-two', total: 300 },
-      { user: 'test-user-three', total: 10 }
+    const usage = makeUsageArtifacts([
+      { user: 'test-user-one', totalRequests: 300 },
+      { user: 'test-user-two', totalRequests: 300 },
+      { user: 'test-user-three', totalRequests: 10 }
     ]);
-    const quota = makeQuota([
+    const quota = makeQuotaArtifacts([
       { user: 'test-user-one', quota: 300 },
       { user: 'test-user-two', quota: 300 },
       { user: 'test-user-three', quota: 300 }

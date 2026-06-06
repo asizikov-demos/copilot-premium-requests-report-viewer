@@ -1,23 +1,6 @@
 import { calculateEnterpriseUpgradeSavings, computeCostOptimizationFromArtifacts } from '@/utils/analytics/costOptimization';
-import type { UsageArtifacts, QuotaArtifacts } from '@/utils/ingestion';
 import { PRICING } from '@/constants/pricing';
-
-function makeUsage(users: Array<{ user: string; totalRequests: number }>): UsageArtifacts {
-  return {
-    users: users.map(u => ({ user: u.user, totalRequests: u.totalRequests, modelBreakdown: {} })),
-    userCount: users.length,
-    modelTotals: {},
-    modelCount: 0
-  };
-}
-
-function makeQuota(entries: Array<{ user: string; quota: number | 'unknown' }>): QuotaArtifacts {
-  const quotaByUser = new Map<string, number | 'unknown'>();
-  for (const e of entries) {
-    quotaByUser.set(e.user, e.quota);
-  }
-  return { quotaByUser } as QuotaArtifacts;
-}
+import { makeUsageArtifacts as makeUsage, makeQuotaArtifacts as makeQuota } from '../helpers/makeArtifacts';
 
 describe('computeCostOptimizationFromArtifacts', () => {
   it('caps avoided overage at the extra Enterprise capacity', () => {

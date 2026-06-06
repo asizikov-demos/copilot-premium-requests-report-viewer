@@ -1,32 +1,9 @@
 import { computeOverageSummaryFromArtifacts, computeOverageSummaryFromProcessedData } from '@/utils/ingestion/analytics';
-import type { UsageArtifacts, QuotaArtifacts } from '@/utils/ingestion';
 import { PRICING } from '@/constants/pricing';
 import type { ProcessedData } from '@/types/csv';
+import { makeUsageArtifacts as makeUsage, makeQuotaArtifacts as makeQuota } from '../helpers/makeArtifacts';
 
 describe('computeOverageSummaryFromArtifacts', () => {
-  function makeUsage(users: Array<{ user: string; totalRequests: number; modelBreakdown?: Record<string, number> }>): UsageArtifacts {
-    // Derive modelTotals + modelCount consistent with UsageAggregator output
-    const modelTotals: Record<string, number> = {};
-    for (const u of users) {
-      const breakdown = u.modelBreakdown || { m: u.totalRequests };
-      for (const [model, qty] of Object.entries(breakdown)) {
-        modelTotals[model] = (modelTotals[model] || 0) + qty;
-      }
-    }
-    const usage: UsageArtifacts = {
-      users: users.map(u => ({ user: u.user, totalRequests: u.totalRequests, modelBreakdown: u.modelBreakdown || { m: u.totalRequests } })),
-      modelTotals,
-      userCount: users.length,
-      modelCount: Object.keys(modelTotals).length
-    };
-    return usage;
-  }
-  function makeQuota(entries: Array<{ user: string; quota: number | 'unknown' }>): QuotaArtifacts {
-    const quotaByUser = new Map<string, number | 'unknown'>();
-    for (const e of entries) quotaByUser.set(e.user, e.quota);
-    return { quotaByUser } as QuotaArtifacts;
-  }
-
   it('returns zero overage when all users under quota', () => {
     const usage = makeUsage([
       { user: 'a', totalRequests: 100 },

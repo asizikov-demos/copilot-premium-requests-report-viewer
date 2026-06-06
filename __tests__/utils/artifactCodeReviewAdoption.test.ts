@@ -1,28 +1,13 @@
-import { analyzeCodeReviewAdoptionFromArtifacts, UsageArtifacts, QuotaArtifacts } from '@/utils/ingestion';
+import { analyzeCodeReviewAdoptionFromArtifacts } from '@/utils/ingestion';
+import { makeUsageArtifacts, makeQuotaArtifacts } from '../helpers/makeArtifacts';
 
-function makeUsage(users: Array<{ user: string; totalRequests: number; modelBreakdown: Record<string, number> }>): UsageArtifacts {
-  const modelTotals: Record<string, number> = {};
-  for (const u of users) {
-    for (const [model, qty] of Object.entries(u.modelBreakdown)) {
-      modelTotals[model] = (modelTotals[model] || 0) + qty;
-    }
-  }
-  return { users, modelTotals, userCount: users.length, modelCount: Object.keys(modelTotals).length };
-}
-
-function makeQuota(entries: Array<[string, number | 'unknown']>): QuotaArtifacts {
-  return {
-    quotaByUser: new Map(entries),
-    conflicts: new Map(),
-    distinctQuotas: new Set(),
-    hasMixedQuotas: false,
-    hasMixedLicenses: false,
-  };
+function makeQuota(entries: Array<[string, number | 'unknown']>) {
+  return makeQuotaArtifacts(entries.map(([user, quota]) => ({ user, quota })));
 }
 
 describe('analyzeCodeReviewAdoptionFromArtifacts', () => {
   test('computes adoption rate, total requests, and sorts users by review requests', () => {
-    const usage = makeUsage([
+    const usage = makeUsageArtifacts([
       { user: 'alice', totalRequests: 20, modelBreakdown: { 'code review v1': 5, 'gpt-4o': 15 } },
       { user: 'bob', totalRequests: 10, modelBreakdown: { 'Code Review beta': 8, 'o3-mini': 2 } },
       { user: 'carol', totalRequests: 5, modelBreakdown: { 'gpt-4o': 5 } },
@@ -45,7 +30,7 @@ describe('analyzeCodeReviewAdoptionFromArtifacts', () => {
   });
 
   test('returns empty result when no users exist', () => {
-    const usage = makeUsage([]);
+    const usage = makeUsageArtifacts([]);
     const quota = makeQuota([]);
     const result = analyzeCodeReviewAdoptionFromArtifacts(usage, quota);
 
@@ -57,7 +42,7 @@ describe('analyzeCodeReviewAdoptionFromArtifacts', () => {
   });
 
   test('returns zero adoption when no users have code review models', () => {
-    const usage = makeUsage([
+    const usage = makeUsageArtifacts([
       { user: 'alice', totalRequests: 10, modelBreakdown: { 'gpt-4o': 10 } },
     ]);
     const quota = makeQuota([['alice', 'unknown']]);
@@ -69,7 +54,7 @@ describe('analyzeCodeReviewAdoptionFromArtifacts', () => {
   });
 
   test('handles user with zero totalRequests without NaN', () => {
-    const usage = makeUsage([
+    const usage = makeUsageArtifacts([
       { user: 'alice', totalRequests: 0, modelBreakdown: { 'code review v1': 0 } },
     ]);
     const quota = makeQuota([['alice', 'unknown']]);
@@ -84,7 +69,7 @@ describe('analyzeCodeReviewAdoptionFromArtifacts', () => {
   });
 
   test('defaults quota to unknown when user missing from quota map', () => {
-    const usage = makeUsage([
+    const usage = makeUsageArtifacts([
       { user: 'alice', totalRequests: 10, modelBreakdown: { 'code review v1': 3 } },
     ]);
     const quota = makeQuota([]); // no entries
@@ -94,7 +79,7 @@ describe('analyzeCodeReviewAdoptionFromArtifacts', () => {
   });
 
   test('matches code review models case-insensitively', () => {
-    const usage = makeUsage([
+    const usage = makeUsageArtifacts([
       { user: 'alice', totalRequests: 10, modelBreakdown: { 'CODE REVIEW Ultra': 4, 'code review lite': 2 } },
     ]);
     const quota = makeQuota([['alice', 1000]]);
@@ -105,7 +90,7 @@ describe('analyzeCodeReviewAdoptionFromArtifacts', () => {
   });
 
   test('includes non-Copilot review bucket as synthetic table row without affecting adoption denominator', () => {
-    const usage = makeUsage([
+    const usage = makeUsageArtifacts([
       { user: 'alice', totalRequests: 20, modelBreakdown: { 'code review v1': 5, 'gpt-4o': 15 } },
       { user: 'bob', totalRequests: 10, modelBreakdown: { 'Code Review beta': 8, 'o3-mini': 2 } },
       { user: 'carol', totalRequests: 5, modelBreakdown: { 'gpt-4o': 5 } },
@@ -140,7 +125,7 @@ describe('analyzeCodeReviewAdoptionFromArtifacts', () => {
   });
 
   test('returns synthetic non-Copilot row when it is the only code review usage', () => {
-    const usage = makeUsage([]);
+    const usage = makeUsageArtifacts([]);
     usage.specialBuckets = [
       {
         key: 'non_copilot_code_review',
