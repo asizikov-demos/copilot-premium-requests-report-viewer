@@ -68,12 +68,10 @@ describe('buildDailyAicCumulativeDataFromArtifacts', () => {
       {
         date: '2026-06-01',
         'test-user-one': 0,
-        'test-user-two': 0,
       },
       {
         date: '2026-06-02',
         'test-user-one': 100,
-        'test-user-two': 0,
       },
     ]);
   });

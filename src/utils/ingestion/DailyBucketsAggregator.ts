@@ -97,6 +97,7 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
         }
         userAicModelMap.set(model, (userAicModelMap.get(model) || 0) + aiCredits);
       }
+      return;
     }
     
     // Accumulate daily totals
