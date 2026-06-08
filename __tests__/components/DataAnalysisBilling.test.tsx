@@ -433,6 +433,8 @@ describe('DataAnalysis billing summary', () => {
       expect(screen.getByText('Total: 42.50 AI Credits')).toBeInTheDocument();
       expect(screen.getAllByRole('columnheader', { name: 'Included Credits' }).length).toBeGreaterThanOrEqual(2);
       expect(screen.getAllByRole('columnheader', { name: 'Additional usage' }).length).toBeGreaterThanOrEqual(2);
+      expect(screen.queryAllByRole('button', { name: 'Insights' })).toHaveLength(0);
+      expect(screen.queryAllByRole('button', { name: 'Cost Optimization' })).toHaveLength(0);
     });
 
     const modelDetailsHeading = screen.getByRole('heading', { name: 'Model Details' });
@@ -475,6 +477,49 @@ describe('DataAnalysis billing summary', () => {
       expect(screen.getByRole('columnheader', { name: 'Additional usage' })).toBeInTheDocument();
       expect(screen.queryByRole('columnheader', { name: 'AI Credits Gross' })).not.toBeInTheDocument();
       expect(screen.queryByRole('columnheader', { name: 'Gross' })).not.toBeInTheDocument();
+    });
+  });
+
+  it.each([
+    { buttonName: 'Insights', headingName: 'Consumption Insights' },
+    { buttonName: 'Cost Optimization', headingName: 'Cost Optimization' },
+  ])('redirects from $buttonName when rerendered with a usage-based report', async ({ buttonName, headingName }) => {
+    const usageBasedRows: CSVData[] = [
+      {
+        date: '2026-06-01',
+        username: 'test-user-one',
+        product: 'copilot',
+        sku: 'copilot_ai_credit',
+        model: 'Auto: Claude Haiku 4.5',
+        quantity: '42.5',
+        unit_type: 'ai-credits',
+        applied_cost_per_quantity: '0.01',
+        gross_amount: '0.425',
+        discount_amount: '0.425',
+        net_amount: '0',
+        total_monthly_quota: '3900',
+        organization: 'test-org-one',
+        cost_center_name: 'test-cost-center-one',
+      },
+    ];
+    const requestReport = createIngestionResultFromRawRows(newFormatRows);
+    const usageBasedReport = createIngestionResultFromRawRows(usageBasedRows);
+    const { rerender } = render(
+      <DataAnalysis ingestionResult={requestReport} filename="request-report.csv" onReset={() => {}} />
+    );
+
+    fireEvent.click(screen.getAllByRole('button', { name: buttonName })[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: headingName })).toBeInTheDocument();
+    });
+
+    rerender(<DataAnalysis ingestionResult={usageBasedReport} filename="usage-based.csv" onReset={() => {}} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'AI Credits by Model' })).toBeInTheDocument();
+      expect(screen.queryAllByRole('button', { name: 'Insights' })).toHaveLength(0);
+      expect(screen.queryAllByRole('button', { name: 'Cost Optimization' })).toHaveLength(0);
     });
   });
 
