@@ -144,6 +144,37 @@ describe('BillingAggregator', () => {
     expect(a.aicGrossAmount).toBeCloseTo(0.1);
   });
 
+  it('uses billing quantity and current AI Credits quotas for usage-based rows', () => {
+    const agg = new BillingAggregator();
+    agg.init?.(ctx);
+    agg.onRow(buildRow({
+      user: 'test-user-one',
+      sku: 'copilot_ai_credit',
+      unitType: 'ai-credits',
+      usageUnit: 'ai_credit',
+      quantity: 0,
+      billingQuantity: 42.726213,
+      quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
+      grossAmount: 0.42726213,
+      discountAmount: 0.42726213,
+      netAmount: 0,
+      aicQuantity: 42.726213,
+      aicGrossAmount: 0.42726213,
+    }), ctx);
+
+    const out = agg.finalize(ctx);
+
+    expect(out.userMap.get('test-user-one')?.quantity).toBeCloseTo(42.726213);
+    expect(out.userMap.get('test-user-one')?.quotaValue).toBe(PRICING.ENTERPRISE_AI_CREDIT_QUOTA);
+    expect(out.totals.gross).toBeCloseTo(0.42726213);
+    expect(out.totals.discount).toBeCloseTo(0.42726213);
+    expect(out.totals.net).toBe(0);
+    expect(out.totals.aicQuantity).toBeCloseTo(42.726213);
+    expect(out.totals.aicGrossAmount).toBeCloseTo(0.42726213);
+    expect(out.totals.aicIncludedCredits).toBe(PRICING.ENTERPRISE_AI_CREDIT_QUOTA);
+    expect(out.totals.aicAdditionalUsageGrossAmount).toBe(0);
+  });
+
   it('estimates included AI Credits and additional usage gross by user quota', () => {
     const agg = new BillingAggregator();
     agg.init?.(ctx);

@@ -399,6 +399,85 @@ describe('DataAnalysis billing summary', () => {
     expect(table.getByText('$0.13')).toBeInTheDocument();
   });
 
+  it('renames discount and net billing labels for usage-based AI Credits reports', async () => {
+    const usageBasedRows: CSVData[] = [
+      {
+        date: '2026-06-01',
+        username: 'test-user-one',
+        product: 'copilot',
+        sku: 'copilot_ai_credit',
+        model: 'Auto: Claude Haiku 4.5',
+        quantity: '42.5',
+        unit_type: 'ai-credits',
+        applied_cost_per_quantity: '0.01',
+        gross_amount: '0.425',
+        discount_amount: '0.425',
+        net_amount: '0',
+        total_monthly_quota: '3900',
+        organization: 'test-org-one',
+        cost_center_name: 'test-cost-center-one',
+      },
+    ];
+
+    const ingestionResult = createIngestionResultFromRawRows(usageBasedRows);
+    render(<DataAnalysis ingestionResult={ingestionResult} filename="usage-based.csv" onReset={() => {}} />);
+
+    await waitFor(() => {
+      const billing = screen.getByLabelText('billing-summary');
+      expect(billing).toHaveTextContent('Included credits');
+      expect(billing).toHaveTextContent('Additional usage');
+      expect(billing).not.toHaveTextContent('Discounts');
+      expect(billing).not.toHaveTextContent('Net cost');
+      expect(screen.getByRole('heading', { name: 'AI Credits by Model' })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Requests by Model' })).not.toBeInTheDocument();
+      expect(screen.getByText('Total: 42.50 AI Credits')).toBeInTheDocument();
+      expect(screen.getAllByRole('columnheader', { name: 'Included Credits' }).length).toBeGreaterThanOrEqual(2);
+      expect(screen.getAllByRole('columnheader', { name: 'Additional usage' }).length).toBeGreaterThanOrEqual(2);
+    });
+
+    const modelDetailsHeading = screen.getByRole('heading', { name: 'Model Details' });
+    const modelDetailsCard = modelDetailsHeading.closest('.bg-white');
+    expect(modelDetailsCard).not.toBeNull();
+    const modelDetailsTable = within(modelDetailsCard as HTMLElement).getByRole('table');
+    expect(within(modelDetailsTable).getByRole('columnheader', { name: 'AI Credits' })).toBeInTheDocument();
+    expect(within(modelDetailsTable).getByRole('columnheader', { name: 'Gross Amount' })).toBeInTheDocument();
+    expect(within(modelDetailsTable).getByRole('columnheader', { name: 'Included Credits' })).toBeInTheDocument();
+    expect(within(modelDetailsTable).getByRole('columnheader', { name: 'Additional usage' })).toBeInTheDocument();
+    expect(within(modelDetailsTable).queryByRole('columnheader', { name: 'Requests' })).not.toBeInTheDocument();
+    expect(within(modelDetailsTable).queryByRole('columnheader', { name: 'AI Credits Gross' })).not.toBeInTheDocument();
+    expect(within(modelDetailsTable).queryByRole('columnheader', { name: 'Gross' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Models' })[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Model Usage Trends' })).toBeInTheDocument();
+      expect(screen.getByText('Daily stacked AI Credits by model (UTC)')).toBeInTheDocument();
+      expect(screen.queryByText('No model usage data available for the selected period.')).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Cost Centers' })[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Cost Centers' })).toBeInTheDocument();
+      expect(screen.getByRole('columnheader', { name: 'Gross Amount' })).toBeInTheDocument();
+      expect(screen.getByRole('columnheader', { name: 'Included Credits' })).toBeInTheDocument();
+      expect(screen.getByRole('columnheader', { name: 'Additional usage' })).toBeInTheDocument();
+      expect(screen.queryByRole('columnheader', { name: 'AI Credits Gross' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('columnheader', { name: 'Gross' })).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Organizations' })[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Organizations' })).toBeInTheDocument();
+      expect(screen.getByRole('columnheader', { name: 'Gross Amount' })).toBeInTheDocument();
+      expect(screen.getByRole('columnheader', { name: 'Included Credits' })).toBeInTheDocument();
+      expect(screen.getByRole('columnheader', { name: 'Additional usage' })).toBeInTheDocument();
+      expect(screen.queryByRole('columnheader', { name: 'AI Credits Gross' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('columnheader', { name: 'Gross' })).not.toBeInTheDocument();
+    });
+  });
+
   it('renders cost per product and per-model billing details on the overview page', async () => {
     const billingRows: CSVData[] = [
       {
