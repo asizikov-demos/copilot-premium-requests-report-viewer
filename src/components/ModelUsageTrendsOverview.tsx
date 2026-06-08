@@ -5,6 +5,8 @@ import React, { useMemo } from 'react';
 import { PRICING } from '@/constants/pricing';
 import { useAnalysisContext } from '@/context/AnalysisContext';
 import { ModelDailyStackedChart } from '@/components/charts/ModelDailyStackedChart';
+import type { ModelDailyDatum } from '@/components/charts/ModelDailyStackedChart';
+import type { ProcessedData } from '@/types/csv';
 import { filterDailySeriesByMonths } from '@/utils/analytics/filters';
 import { formatCurrency } from '@/utils/formatters';
 import { buildDailyModelUsageFromArtifacts } from '@/utils/ingestion/analytics';
@@ -24,10 +26,74 @@ function getEffectiveAicQuantity(aicQuantity: number, aicGrossAmount: number): n
   return Math.max(aicQuantity, quantityDerivedFromGross);
 }
 
+function enumerateDateKeys(start: string, end: string): string[] {
+  const dates: string[] = [];
+  const current = new Date(`${start}T00:00:00Z`);
+  const last = new Date(`${end}T00:00:00Z`);
+
+  while (current.getTime() <= last.getTime()) {
+    dates.push(current.toISOString().slice(0, 10));
+    current.setUTCDate(current.getUTCDate() + 1);
+  }
+
+  return dates;
+}
+
+function buildDailyModelBillingQuantity(rows: ProcessedData[]): { data: ModelDailyDatum[]; models: string[] } {
+  const usageRows = rows.filter((row) => !row.isNonCopilotUsage && row.usageUnit === 'ai_credit');
+  if (usageRows.length === 0) {
+    return { data: [], models: [] };
+  }
+
+  const models = Array.from(new Set(usageRows.map((row) => row.model))).sort();
+  const sortedDates = usageRows.map((row) => row.dateKey).sort();
+  const dates = enumerateDateKeys(sortedDates[0], sortedDates[sortedDates.length - 1]);
+  const byDateModel = new Map<string, Map<string, number>>();
+
+  for (const row of usageRows) {
+    const dayMap = byDateModel.get(row.dateKey) ?? new Map<string, number>();
+    dayMap.set(row.model, (dayMap.get(row.model) ?? 0) + (row.billingQuantity ?? row.requestsUsed));
+    byDateModel.set(row.dateKey, dayMap);
+  }
+
+  return {
+    models,
+    data: dates.map((date) => {
+      const dayMap = byDateModel.get(date);
+      const datum: ModelDailyDatum = { date, totalRequests: 0 };
+      let dayTotal = 0;
+
+      for (const model of models) {
+        const value = dayMap?.get(model) ?? 0;
+        datum[model] = value;
+        dayTotal += value;
+      }
+
+      datum.totalRequests = dayTotal;
+      return datum;
+    }),
+  };
+}
+
 export function ModelUsageTrendsOverview() {
-  const { usageArtifacts, dailyBucketsArtifacts, selectedMonths, billingArtifacts } = useAnalysisContext();
+  const {
+    usageArtifacts,
+    dailyBucketsArtifacts,
+    selectedMonths,
+    billingArtifacts,
+    aggregateProcessedData,
+  } = useAnalysisContext();
+  const isUsageBasedBilling = useMemo(() => {
+    const hasAiCreditUsage = aggregateProcessedData.some((row) => row.usageUnit === 'ai_credit');
+    const hasRequestUsage = aggregateProcessedData.some((row) => row.usageUnit === 'request' && row.requestsUsed > 0);
+    return hasAiCreditUsage && !hasRequestUsage;
+  }, [aggregateProcessedData]);
 
   const { data, models } = useMemo(() => {
+    if (isUsageBasedBilling) {
+      return buildDailyModelBillingQuantity(aggregateProcessedData);
+    }
+
     // For now, we ignore month filtering at the aggregation level and rely on
     // the existing dateRange from dailyBucketsArtifacts, which is already
     // derived in UTC from the ingested CSV. Future refinement could slice the
@@ -43,7 +109,7 @@ export function ModelUsageTrendsOverview() {
 
     const modelKeys = Object.keys(usageArtifacts.modelTotals).sort();
     return { data: filtered, models: modelKeys };
-  }, [usageArtifacts, dailyBucketsArtifacts, selectedMonths]);
+  }, [aggregateProcessedData, dailyBucketsArtifacts, isUsageBasedBilling, selectedMonths, usageArtifacts]);
 
   const modelColors: Record<string, string> = useMemo(() => {
     return generateModelColors(models);
@@ -93,7 +159,7 @@ export function ModelUsageTrendsOverview() {
       <div>
         <h2 className="text-2xl font-semibold tracking-tight text-[#1f2328]">Model Usage Trends</h2>
         <p className="text-sm text-[#636c76] mt-1">
-          Daily stacked view by model (UTC)
+          {isUsageBasedBilling ? 'Daily stacked AI Credits by model (UTC)' : 'Daily stacked request view by model (UTC)'}
         </p>
       </div>
 
@@ -142,7 +208,12 @@ export function ModelUsageTrendsOverview() {
           <p className="text-sm text-[#636c76]">No model usage data available for the selected period.</p>
         ) : (
           <div className="h-80 2xl:h-96">
-            <ModelDailyStackedChart data={data} models={models} modelColors={modelColors} />
+            <ModelDailyStackedChart
+              data={data}
+              models={models}
+              modelColors={modelColors}
+              valueUnitLabel={isUsageBasedBilling ? 'AI Credits' : undefined}
+            />
           </div>
         )}
       </div>

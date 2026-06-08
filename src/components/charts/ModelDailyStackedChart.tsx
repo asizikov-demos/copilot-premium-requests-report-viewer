@@ -17,9 +17,16 @@ export interface ModelDailyStackedChartProps {
   models: string[];
   modelColors: Record<string, string>;
   height?: ResponsiveHeight;
+  valueUnitLabel?: string;
 }
 
-export function ModelDailyStackedChart({ data, models, modelColors, height = '100%' }: ModelDailyStackedChartProps) {
+export function ModelDailyStackedChart({
+  data,
+  models,
+  modelColors,
+  height = '100%',
+  valueUnitLabel,
+}: ModelDailyStackedChartProps) {
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
@@ -34,7 +41,10 @@ export function ModelDailyStackedChart({ data, models, modelColors, height = '10
           contentStyle={chartTooltipContentStyle}
           labelStyle={chartTooltipLabelStyle}
           labelFormatter={(value) => value as string}
-          formatter={(value, name) => [Number(value).toFixed(2), String(name)]}
+          formatter={(value, name) => [
+            valueUnitLabel ? `${Number(value).toFixed(2)} ${valueUnitLabel}` : Number(value).toFixed(2),
+            String(name),
+          ]}
           wrapperStyle={{ zIndex: 1000 }}
         />
         <Legend wrapperStyle={{ fontSize: 12, color: '#636c76' }} />
