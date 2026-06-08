@@ -247,10 +247,22 @@ describe('UsersOverview - sorting', () => {
           makeUsageRow('test-user-three', 'unknown', 0.3),
         ]}
         dailyCumulativeData={[{ date: '2026-06-01T00:00:00Z' }]}
+        dailyAicCumulativeData={[{
+          date: '2026-06-01',
+          'test-user-one': 10,
+          'test-user-two': 20,
+          'test-user-three': 30,
+        }]}
         quotaArtifacts={quotaArtifacts}
         usageArtifacts={makeUsage(userData)}
       />
     );
+
+    expect(screen.getByText('AI Credits Consumption')).toBeInTheDocument();
+    expect(screen.getByText('Daily cumulative AI Credits usage')).toBeInTheDocument();
+    expect(screen.getByText('AI Credits Used')).toBeInTheDocument();
+    expect(screen.getByText('1,900 Business')).toBeInTheDocument();
+    expect(screen.getByText('3,900 Enterprise')).toBeInTheDocument();
 
     const table = screen.getByRole('table', { name: 'Users' });
     expect(within(table).getByRole('columnheader', { name: /Plan/ })).toBeInTheDocument();

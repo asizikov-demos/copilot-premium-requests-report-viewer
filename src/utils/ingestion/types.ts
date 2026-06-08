@@ -168,6 +168,11 @@ export interface UsageArtifacts {
  */
 export interface DailyBucketsArtifacts {
   dailyUserTotals: Map<string, Map<string, number>>;
+  /**
+   * Optional AI Credits totals: day -> user -> AI Credits quantity.
+   * Kept separate from request totals because usage-based rows have zero request quantity.
+   */
+  dailyUserAicTotals?: Map<string, Map<string, number>>;
   dateRange: { min: string; max: string } | null;
   /**
    * Optional richer breakdown: day -> user -> model -> quantity.
@@ -175,6 +180,11 @@ export interface DailyBucketsArtifacts {
    * Present when produced by the updated DailyBucketsAggregator.
    */
   dailyUserModelTotals?: Map<string, Map<string, Map<string, number>>>;
+  /**
+   * Optional richer AI Credits breakdown: day -> user -> model -> AI Credits quantity.
+   * Used by user detail model charts for usage-based billing reports.
+   */
+  dailyUserAicModelTotals?: Map<string, Map<string, Map<string, number>>>;
   /**
    * Optional special bucket totals: day -> bucket -> quantity.
    * Used for non-user usage such as non-Copilot Code Review rows.

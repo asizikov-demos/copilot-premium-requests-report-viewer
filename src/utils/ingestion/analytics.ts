@@ -173,17 +173,20 @@ export interface ArtifactCoreAnalysis {
 export interface DailyCumulativeData { date: string; [user: string]: string | number; }
 
 /**
- * Construct daily cumulative per-user usage series from bucket artifacts.
+ * Construct daily cumulative per-user usage series from daily user totals.
  * This mirrors legacy generateDailyCumulativeData but avoids raw row scans.
  */
-export function buildDailyCumulativeDataFromArtifacts(daily: DailyBucketsArtifacts): DailyCumulativeData[] {
-  if (!daily.dateRange) return [];
-  const { min, max } = daily.dateRange;
+function buildDailyCumulativeDataFromUserTotals(
+  dailyUserTotals: Map<string, Map<string, number>>,
+  dateRange: DailyBucketsArtifacts['dateRange']
+): DailyCumulativeData[] {
+  if (!dateRange) return [];
+  const { min, max } = dateRange;
   const dates = enumerateDatesInclusive(min, max);
 
   // Collect all users encountered in any day map
   const users = new Set<string>();
-  for (const dayMap of daily.dailyUserTotals.values()) {
+  for (const dayMap of dailyUserTotals.values()) {
     for (const user of dayMap.keys()) users.add(user);
   }
   const userList = Array.from(users).sort();
@@ -194,7 +197,7 @@ export function buildDailyCumulativeDataFromArtifacts(daily: DailyBucketsArtifac
 
   const result: DailyCumulativeData[] = [];
   for (const date of dates) {
-    const dayMap = daily.dailyUserTotals.get(date);
+    const dayMap = dailyUserTotals.get(date);
     if (dayMap) {
       for (const [user, val] of dayMap) {
         cumulative.set(user, (cumulative.get(user) || 0) + val);
@@ -205,6 +208,14 @@ export function buildDailyCumulativeDataFromArtifacts(daily: DailyBucketsArtifac
     result.push(row);
   }
   return result;
+}
+
+export function buildDailyCumulativeDataFromArtifacts(daily: DailyBucketsArtifacts): DailyCumulativeData[] {
+  return buildDailyCumulativeDataFromUserTotals(daily.dailyUserTotals, daily.dateRange);
+}
+
+export function buildDailyAicCumulativeDataFromArtifacts(daily: DailyBucketsArtifacts): DailyCumulativeData[] {
+  return buildDailyCumulativeDataFromUserTotals(daily.dailyUserAicTotals ?? new Map(), daily.dateRange);
 }
 
 // -----------------------------
@@ -353,7 +364,24 @@ export function buildUserDailyModelDataFromArtifacts(
   usage: UsageArtifacts,
   user: string
 ): UserDailyData[] {
-  if (!daily.dateRange || !daily.dailyUserModelTotals) return [];
+  return buildUserDailyModelDataFromModelTotals(daily, usage, user, daily.dailyUserModelTotals);
+}
+
+export function buildUserDailyAicModelDataFromArtifacts(
+  daily: DailyBucketsArtifacts,
+  usage: UsageArtifacts,
+  user: string
+): UserDailyData[] {
+  return buildUserDailyModelDataFromModelTotals(daily, usage, user, daily.dailyUserAicModelTotals);
+}
+
+function buildUserDailyModelDataFromModelTotals(
+  daily: DailyBucketsArtifacts,
+  usage: UsageArtifacts,
+  user: string,
+  dailyUserModelTotals: Map<string, Map<string, Map<string, number>>> | undefined
+): UserDailyData[] {
+  if (!daily.dateRange || !dailyUserModelTotals) return [];
   // Locate user aggregate for model list & quick existence check
   const userAgg = usage.users.find(u => u.user === user);
   if (!userAgg) return [];
@@ -363,7 +391,7 @@ export function buildUserDailyModelDataFromArtifacts(
   let cumulative = 0;
   const result: UserDailyData[] = [];
   for (const date of dates) {
-    const dayUserMap = daily.dailyUserModelTotals.get(date);
+    const dayUserMap = dailyUserModelTotals.get(date);
     const modelMap = dayUserMap?.get(user);
     const row: UserDailyData = { date, totalCumulative: 0 } as UserDailyData;
     let dailyTotal = 0;

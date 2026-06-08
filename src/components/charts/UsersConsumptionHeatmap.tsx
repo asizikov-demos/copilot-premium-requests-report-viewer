@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { PRICING } from '@/constants/pricing';
+
+import { getQuotaTier } from '@/utils/analytics/quota';
 
 export interface UsersConsumptionHeatmapProps {
   dailyCumulativeData: { date: string; [user: string]: string | number }[];
@@ -10,6 +11,11 @@ export interface UsersConsumptionHeatmapProps {
   quotaTypes: Set<number>;
   hasMixedQuotas: boolean;
   showQuotaReference?: boolean;
+  title?: string;
+  valueAxisLabel?: string;
+  valueUnitLabel?: string;
+  referenceLabelSuffix?: string;
+  formatValue?: (value: number) => string;
 }
 
 interface HeatmapCell {
@@ -49,7 +55,7 @@ function calculateHeatmapData(
         date: dayData.date as string,
         bin: binIndex,
         count,
-        percentage: (count / totalUsers) * 100
+        percentage: totalUsers > 0 ? (count / totalUsers) * 100 : 0
       });
     });
   });
@@ -75,10 +81,21 @@ export function UsersConsumptionHeatmap({
   currentQuota,
   quotaTypes,
   hasMixedQuotas,
-  showQuotaReference = true
+  showQuotaReference = true,
+  title,
+  valueAxisLabel = 'Premium Requests Used',
+  valueUnitLabel = 'requests',
+  referenceLabelSuffix = 'quota',
+  formatValue = (value) => Math.round(value).toString()
 }: UsersConsumptionHeatmapProps) {
   const { heatmapData, maxConsumption, binSize } = useMemo(() => {
     let maxValue = currentQuota * 1.2;
+
+    if (showQuotaReference) {
+      for (const quota of quotaTypes) {
+        maxValue = Math.max(maxValue, quota * 1.2);
+      }
+    }
     
     // Find max consumption without spreading thousands of values
     for (const day of dailyCumulativeData) {
@@ -94,7 +111,7 @@ export function UsersConsumptionHeatmap({
     const calculatedBinSize = maxValue / CONSUMPTION_BINS;
 
     return { heatmapData: data, maxConsumption: maxValue, binSize: calculatedBinSize };
-  }, [dailyCumulativeData, users, currentQuota]);
+  }, [dailyCumulativeData, users, currentQuota, quotaTypes, showQuotaReference]);
 
   const dates = useMemo(() => 
     dailyCumulativeData.map(d => d.date as string),
@@ -122,13 +139,11 @@ export function UsersConsumptionHeatmap({
   const formatBinLabel = (binIndex: number) => {
     const binStart = binIndex * binSize;
     const binEnd = (binIndex + 1) * binSize;
-    if (binEnd > 1000) {
-      return `${Math.round(binStart)}-${Math.round(binEnd)}`;
-    }
-    return `${Math.round(binStart)}-${Math.round(binEnd)}`;
+    return `${formatValue(binStart)}-${formatValue(binEnd)}`;
   };
 
   const dateTickIndices = useMemo(() => {
+    if (dates.length === 0) return [];
     const maxTicks = 10;
     const step = Math.max(1, Math.floor(dates.length / maxTicks));
     const indices: number[] = [];
@@ -160,34 +175,24 @@ export function UsersConsumptionHeatmap({
       return lines;
     }
 
-    if (hasMixedQuotas) {
-      if (quotaTypes.has(PRICING.BUSINESS_QUOTA)) {
-        const binIndex = (PRICING.BUSINESS_QUOTA / maxConsumption) * CONSUMPTION_BINS;
-        lines.push({
-          y: chartHeight - (binIndex * cellHeight),
-          label: `${PRICING.BUSINESS_QUOTA} Business`,
-          color: '#f97316'
-        });
-      }
-      if (quotaTypes.has(PRICING.ENTERPRISE_QUOTA)) {
-        const binIndex = (PRICING.ENTERPRISE_QUOTA / maxConsumption) * CONSUMPTION_BINS;
-        lines.push({
-          y: chartHeight - (binIndex * cellHeight),
-          label: `${PRICING.ENTERPRISE_QUOTA} Enterprise`,
-          color: '#dc2626'
-        });
-      }
-    } else {
-      const binIndex = (currentQuota / maxConsumption) * CONSUMPTION_BINS;
+    const referenceQuotas = hasMixedQuotas ? Array.from(quotaTypes).sort((a, b) => a - b) : [currentQuota];
+
+    for (const quota of referenceQuotas) {
+      const tier = getQuotaTier(quota);
+      const binIndex = (quota / maxConsumption) * CONSUMPTION_BINS;
+      const label = hasMixedQuotas
+        ? `${formatValue(quota)} ${tier === 'business' ? 'Business' : tier === 'enterprise' ? 'Enterprise' : referenceLabelSuffix}`
+        : `${formatValue(quota)} ${referenceLabelSuffix}`;
+
       lines.push({
         y: chartHeight - (binIndex * cellHeight),
-        label: `${currentQuota} quota`,
-        color: '#ef4444'
+        label,
+        color: tier === 'business' ? '#f97316' : tier === 'enterprise' ? '#dc2626' : '#ef4444'
       });
     }
     
     return lines;
-  }, [hasMixedQuotas, quotaTypes, currentQuota, maxConsumption, chartHeight, showQuotaReference]);
+  }, [hasMixedQuotas, quotaTypes, currentQuota, maxConsumption, chartHeight, showQuotaReference, formatValue, referenceLabelSuffix]);
 
   return (
     <div className="w-full h-full">
@@ -200,7 +205,7 @@ export function UsersConsumptionHeatmap({
             className="text-sm font-medium"
             fill="#1f2328"
           >
-            User Consumption Density Over Time ({users.length} users)
+            {title ?? `User Consumption Density Over Time (${users.length} users)`}
           </text>
 
           {/* Y-axis label */}
@@ -212,7 +217,7 @@ export function UsersConsumptionHeatmap({
             className="text-xs font-medium"
             fill="#636c76"
           >
-            Premium Requests Used
+            {valueAxisLabel}
           </text>
 
           {/* Heatmap cells */}
@@ -236,7 +241,7 @@ export function UsersConsumptionHeatmap({
                     strokeWidth={0.5}
                   />
                   <title>
-                    {formatDate(cell.date)}: {formatBinLabel(cell.bin)} requests
+                    {formatDate(cell.date)}: {formatBinLabel(cell.bin)} {valueUnitLabel}
                     {'\n'}{cell.count} users ({cell.percentage.toFixed(1)}%)
                   </title>
                 </g>
@@ -290,7 +295,7 @@ export function UsersConsumptionHeatmap({
                     className="text-xs"
                     fill="#636c76"
                   >
-                    {Math.round(binIndex * binSize)}
+                    {formatValue(binIndex * binSize)}
                   </text>
                 </g>
               );
