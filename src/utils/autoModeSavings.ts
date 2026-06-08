@@ -24,6 +24,10 @@ export function aggregateAutoModeSavings(rows: ProcessedData[]): AutoModeSavings
   const buckets = new Map<string, AutoModeSavingsRow>();
 
   for (const row of rows) {
+    if (row.usageUnit === 'ai_credit') {
+      continue;
+    }
+
     const model = getAutoModeBaseModel(row.model);
 
     if (!model) {

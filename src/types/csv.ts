@@ -38,6 +38,8 @@ export interface ProcessedData {
   product?: string;
   sku?: string;
   unitType?: string;
+  usageUnit?: 'request' | 'ai_credit' | 'unknown';
+  billingQuantity?: number;
   organization?: string;
   costCenter?: string;
   appliedCostPerQuantity?: number;

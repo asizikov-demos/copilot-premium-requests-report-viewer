@@ -2,7 +2,7 @@ import { CSVData, ProcessedData, AnalysisResults } from '@/types/csv';
 
 import { buildProcessedDataFromRawRows } from '../ingestion/adapters';
 
-import { buildQuotaBreakdown, buildUserQuotaMapFromRows } from './quota';
+import { buildQuotaBreakdown, buildUserQuotaMapFromRows, isLegacyPremiumRequestQuotaValue } from './quota';
 
 // Re-export for backwards compatibility
 export type { UserSummary } from './types';
@@ -55,7 +55,7 @@ export function analyzeData(data: ProcessedData[]): AnalysisResults {
   });
   for (const [user, totalRequests] of userTotalRequests) {
     const quota = userQuotas.get(user);
-    if (quota && quota !== 'unknown' && totalRequests > quota) {
+    if (isLegacyPremiumRequestQuotaValue(quota) && totalRequests > quota) {
       usersExceedingQuota.add(user);
     }
   }

@@ -1,7 +1,7 @@
 import type { ProcessedData } from '@/types/csv';
 import { shouldReplaceQuotaValue } from '@/utils/analytics/quota';
 import { calculateAicPoolEstimate, calculateIncludedAicCreditsForUsers } from '@/utils/aicPool';
-import { isRequestUnitType } from '@/utils/unitType';
+import { isSupportedUsageUnitType, type UsageUnitKind } from '@/utils/unitType';
 
 import {
   BillingArtifacts,
@@ -18,7 +18,10 @@ interface BillingAccumulatorRow {
   user: string;
   model: string;
   quantity: number;
+  billingQuantity?: number;
   unitType?: string;
+  usageUnit?: UsageUnitKind;
+  sku?: string;
   quotaValue?: number | 'unknown';
   organization?: string;
   costCenter?: string;
@@ -116,27 +119,31 @@ export class BillingAccumulator {
   private hasAnyAicData = false;
 
   addRow(row: BillingAccumulatorRow): void {
+    const billingRow = {
+      ...row,
+      quantity: row.billingQuantity ?? row.quantity,
+    };
     let entry: BillingUserTotals | SpecialBillingBucketTotals | undefined;
-    if (row.isNonCopilotUsage && row.usageBucket) {
-      entry = this.specialBucketMap.get(row.usageBucket);
+    if (billingRow.isNonCopilotUsage && billingRow.usageBucket) {
+      entry = this.specialBucketMap.get(billingRow.usageBucket);
       if (!entry) {
         entry = {
-          key: row.usageBucket,
+          key: billingRow.usageBucket,
           label: NON_COPILOT_CODE_REVIEW_LABEL,
           quantity: 0,
           quotaValue: 0,
         };
-        this.specialBucketMap.set(row.usageBucket, entry);
+        this.specialBucketMap.set(billingRow.usageBucket, entry);
       }
     } else {
-      entry = this.userMap.get(row.user);
+      entry = this.userMap.get(billingRow.user);
       if (!entry) {
-        entry = { user: row.user, quantity: 0 };
-        this.userMap.set(row.user, entry);
+        entry = { user: billingRow.user, quantity: 0 };
+        this.userMap.set(billingRow.user, entry);
       }
-      const incomingQuota = row.quotaValue;
+      const incomingQuota = billingRow.quotaValue;
       if (
-        isRequestUnitType(row.unitType)
+        isSupportedUsageUnitType(billingRow.unitType, billingRow.sku)
         && incomingQuota !== undefined
         && shouldReplaceQuotaValue(entry.quotaValue, incomingQuota)
       ) {
@@ -144,14 +151,14 @@ export class BillingAccumulator {
       }
     }
 
-    entry.quantity += row.quantity;
-    addOptionalBillingFields(entry, row);
+    entry.quantity += billingRow.quantity;
+    addOptionalBillingFields(entry, billingRow);
 
-    addGroupRow(this.orgTotals, row.organization || UNASSIGNED_BILLING_GROUP, row);
-    addGroupRow(this.costCenterTotals, row.costCenter || UNASSIGNED_BILLING_GROUP, row);
-    addGroupRow(this.billingByModel, row.model, row);
+    addGroupRow(this.orgTotals, billingRow.organization || UNASSIGNED_BILLING_GROUP, billingRow);
+    addGroupRow(this.costCenterTotals, billingRow.costCenter || UNASSIGNED_BILLING_GROUP, billingRow);
+    addGroupRow(this.billingByModel, billingRow.model, billingRow);
 
-    const signals = addBillingFields(this.totals, row);
+    const signals = addBillingFields(this.totals, billingRow);
     if (signals.sawBilling) this.hasAnyBillingData = true;
     if (signals.sawAicGross) this.hasAnyAicData = true;
   }
@@ -189,7 +196,8 @@ export function buildBillingArtifactsFromProcessedData(rows: ProcessedData[]): B
     accumulator.addRow({
       ...row,
       quantity: row.requestsUsed,
-      quotaValue: isRequestUnitType(row.unitType) ? row.quotaValue : undefined,
+      billingQuantity: row.billingQuantity,
+      quotaValue: isSupportedUsageUnitType(row.unitType, row.sku) ? row.quotaValue : undefined,
     });
   }
 

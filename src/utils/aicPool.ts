@@ -1,4 +1,5 @@
 import { PRICING } from '@/constants/pricing';
+import { shouldReplaceQuotaValue } from '@/utils/analytics/quota';
 
 interface AicPoolUser {
   user: string;
@@ -13,6 +14,10 @@ export interface AicPoolEstimate {
 }
 
 export function getIncludedAicCreditsForQuota(quotaValue: number | 'unknown' | undefined): number {
+  if (quotaValue === PRICING.BUSINESS_AI_CREDIT_QUOTA || quotaValue === PRICING.ENTERPRISE_AI_CREDIT_QUOTA) {
+    return quotaValue;
+  }
+
   if (quotaValue === PRICING.BUSINESS_QUOTA) {
     return PRICING.BUSINESS_AI_CREDITS_INCLUDED;
   }
@@ -34,11 +39,7 @@ export function calculateIncludedAicCreditsForUsers(users: Iterable<AicPoolUser>
 
     const existingQuota = quotaByUser.get(user.user);
     const currentQuota = user.quotaValue;
-    if (
-      !quotaByUser.has(user.user)
-      || (existingQuota === 'unknown' && typeof currentQuota === 'number')
-      || (typeof currentQuota === 'number' && typeof existingQuota === 'number' && currentQuota > existingQuota)
-    ) {
+    if (!quotaByUser.has(user.user) || shouldReplaceQuotaValue(existingQuota, currentQuota ?? 'unknown')) {
       quotaByUser.set(user.user, currentQuota);
     }
   }
