@@ -7,7 +7,7 @@ import { chartTooltipContentStyle, chartTooltipLabelStyle, utcDateTickFormatter 
 
 export interface CodingAgentUsageDatum {
   date: string;              // YYYY-MM-DD (UTC original date fragment)
-  dailyRequests: number;     // requests that day
+  dailyRequests: number;     // usage that day
   cumulativeRequests: number;// cumulative total up to that day
 }
 
@@ -16,9 +16,13 @@ type ResponsiveHeight = number | `${number}%`;
 interface CodingAgentUsageChartProps {
   data: CodingAgentUsageDatum[];
   height?: ResponsiveHeight;
+  valueUnitLabel?: string;
 }
 
-export function CodingAgentUsageChart({ data, height = '100%' }: CodingAgentUsageChartProps) {
+export function CodingAgentUsageChart({ data, height = '100%', valueUnitLabel = 'requests' }: CodingAgentUsageChartProps) {
+  const dailyLabel = valueUnitLabel === 'AI Credits' ? 'Daily AI Credits' : 'Daily Requests';
+  const cumulativeLabel = valueUnitLabel === 'AI Credits' ? 'Cumulative AI Credits' : 'Cumulative Requests';
+
   return (
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data}>
@@ -35,8 +39,8 @@ export function CodingAgentUsageChart({ data, height = '100%' }: CodingAgentUsag
             return date.toLocaleDateString('en-US', { timeZone: 'UTC' });
           }}
           formatter={(value, name) => [
-            `${Number(value).toFixed(1)} requests`,
-            name === 'Daily Requests' ? 'Daily' : 'Cumulative'
+            `${Number(value).toFixed(1)} ${valueUnitLabel}`,
+            name === dailyLabel ? 'Daily' : 'Cumulative'
           ]}
           contentStyle={chartTooltipContentStyle}
           labelStyle={chartTooltipLabelStyle}
@@ -49,7 +53,7 @@ export function CodingAgentUsageChart({ data, height = '100%' }: CodingAgentUsag
           strokeWidth={2}
           dot={{ r: 3 }}
           activeDot={{ r: 5 }}
-          name="Cumulative Requests"
+          name={cumulativeLabel}
         />
         <Line
           type="monotone"
@@ -58,7 +62,7 @@ export function CodingAgentUsageChart({ data, height = '100%' }: CodingAgentUsag
           strokeWidth={2}
           dot={{ r: 3 }}
           activeDot={{ r: 5 }}
-          name="Daily Requests"
+          name={dailyLabel}
         />
       </LineChart>
     </ResponsiveContainer>

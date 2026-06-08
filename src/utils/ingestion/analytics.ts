@@ -554,17 +554,17 @@ export function buildAdvisoriesFromArtifacts(
 // -----------------------------
 /**
  * Shared implementation for building a daily usage time series filtered to a
- * subset of models. Iterates dailyUserModelTotals, sums per-model quantities for
- * models matching the predicate, includes only days with > 0 requests, sorts by
+ * subset of models. Iterates the provided daily user/model map, sums per-model quantities for
+ * models matching the predicate, includes only days with > 0 usage, sorts by
  * ascending date, and computes a running cumulative total.
  */
 function buildDailyModelSubsetUsageFromArtifacts(
-  daily: DailyBucketsArtifacts,
+  dailyUserModelTotals: Map<string, Map<string, Map<string, number>>> | undefined,
   modelFilter: (model: string) => boolean
 ): DailyCodingAgentUsageDatum[] {
-  if (!daily.dailyUserModelTotals) return [];
+  if (!dailyUserModelTotals) return [];
   const dayTotals: Array<{ date: string; total: number }> = [];
-  for (const [date, userMap] of daily.dailyUserModelTotals.entries()) {
+  for (const [date, userMap] of dailyUserModelTotals.entries()) {
     let daySum = 0;
     for (const modelMap of userMap.values()) {
       for (const [model, qty] of modelMap.entries()) {
@@ -597,7 +597,13 @@ function buildDailyModelSubsetUsageFromArtifacts(
 export function buildDailyCodingAgentUsageFromArtifacts(
   daily: DailyBucketsArtifacts
 ): DailyCodingAgentUsageDatum[] {
-  return buildDailyModelSubsetUsageFromArtifacts(daily, isCodingAgentModel);
+  return buildDailyModelSubsetUsageFromArtifacts(daily.dailyUserModelTotals, isCodingAgentModel);
+}
+
+export function buildDailyCodingAgentAicUsageFromArtifacts(
+  daily: DailyBucketsArtifacts
+): DailyCodingAgentUsageDatum[] {
+  return buildDailyModelSubsetUsageFromArtifacts(daily.dailyUserAicModelTotals, isCodingAgentModel);
 }
 
 // -----------------------------
@@ -658,7 +664,13 @@ export function analyzeCodeReviewAdoptionFromArtifacts(usage: UsageArtifacts, qu
 export function buildDailyCodeReviewUsageFromArtifacts(
   daily: DailyBucketsArtifacts
 ): DailyCodingAgentUsageDatum[] {
-  return buildDailyModelSubsetUsageFromArtifacts(daily, isCodeReviewModel);
+  return buildDailyModelSubsetUsageFromArtifacts(daily.dailyUserModelTotals, isCodeReviewModel);
+}
+
+export function buildDailyCodeReviewAicUsageFromArtifacts(
+  daily: DailyBucketsArtifacts
+): DailyCodingAgentUsageDatum[] {
+  return buildDailyModelSubsetUsageFromArtifacts(daily.dailyUserAicModelTotals, isCodeReviewModel);
 }
 
 // -----------------------------

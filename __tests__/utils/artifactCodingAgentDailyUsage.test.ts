@@ -1,4 +1,9 @@
-import { buildDailyCodingAgentUsageFromArtifacts, DailyBucketsArtifacts, DailyCodingAgentUsageDatum } from '@/utils/ingestion';
+import {
+  buildDailyCodingAgentAicUsageFromArtifacts,
+  buildDailyCodingAgentUsageFromArtifacts,
+  DailyBucketsArtifacts,
+  DailyCodingAgentUsageDatum,
+} from '@/utils/ingestion';
 
 describe('buildDailyCodingAgentUsageFromArtifacts', () => {
   function makeArtifacts(): DailyBucketsArtifacts {
@@ -57,5 +62,25 @@ describe('buildDailyCodingAgentUsageFromArtifacts', () => {
       dateRange: { min: '2025-06-01', max: '2025-06-02' }
     };
     expect(buildDailyCodingAgentUsageFromArtifacts(artifacts)).toEqual([]);
+  });
+
+  test('aggregates AI Credits from the AI Credits per-model breakdown', () => {
+    const dailyUserAicModelTotals = new Map<string, Map<string, Map<string, number>>>();
+    const day = new Map<string, Map<string, number>>();
+    const userModels = new Map<string, number>();
+    userModels.set('Coding Agent model', 12.5);
+    userModels.set('Code Review model', 4);
+    day.set('test-user-one', userModels);
+    dailyUserAicModelTotals.set('2026-03-01', day);
+
+    const artifacts: DailyBucketsArtifacts = {
+      dailyUserTotals: new Map(),
+      dailyUserAicModelTotals,
+      dateRange: { min: '2026-03-01', max: '2026-03-01' }
+    };
+
+    expect(buildDailyCodingAgentAicUsageFromArtifacts(artifacts)).toEqual([
+      { date: '2026-03-01', dailyRequests: 12.5, cumulativeRequests: 12.5 }
+    ]);
   });
 });
