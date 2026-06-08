@@ -114,8 +114,14 @@ export function CodingAgentOverview({
   const [showAllReviewUsers, setShowAllReviewUsers] = useState(false);
   const { aggregateProcessedData, dailyBucketsArtifacts, selectedMonths } = useAnalysisContext();
   const typedDailyBuckets = dailyBucketsArtifacts as DailyBucketsArtifacts | undefined;
-  const hasAiCreditUsage = aggregateProcessedData.some((row) => row.usageUnit === 'ai_credit');
-  const hasRequestUsage = aggregateProcessedData.some((row) => row.usageUnit === 'request' && row.requestsUsed > 0);
+  const hasAiCreditUsage = useMemo(
+    () => aggregateProcessedData.some((row) => row.usageUnit === 'ai_credit'),
+    [aggregateProcessedData]
+  );
+  const hasRequestUsage = useMemo(
+    () => aggregateProcessedData.some((row) => row.usageUnit === 'request' && row.requestsUsed > 0),
+    [aggregateProcessedData]
+  );
   const isUsageBasedBilling = hasAiCreditUsage && !hasRequestUsage;
   const quantityColumnLabel = isUsageBasedBilling ? 'AI Credits' : 'Premium Requests';
   const valueUnitLabel = isUsageBasedBilling ? 'AI Credits' : 'requests';

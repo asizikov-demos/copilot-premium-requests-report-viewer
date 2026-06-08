@@ -41,7 +41,7 @@ describe('Auto Mode savings', () => {
     const [result] = aggregateAutoModeSavings(rows);
 
     expect(result.model).toBe('GPT-5.3-Codex');
-    expect(result.requests).toBeCloseTo(2.7);
+    expect(result.quantity).toBeCloseTo(2.7);
     expect(result.costBeforeAuto).toBeCloseTo(0.1188);
     expect(result.savings).toBeCloseTo(0.0108);
   });
@@ -59,7 +59,7 @@ describe('Auto Mode savings', () => {
     const [result] = aggregateAutoModeSavings(rows);
 
     expect(result.model).toBe('GPT-5.3-Codex');
-    expect(result.requests).toBeCloseTo(0.9);
+    expect(result.quantity).toBeCloseTo(0.9);
     expect(result.costBeforeAuto).toBeCloseTo(0.0396);
     expect(result.savings).toBeCloseTo(0.0036);
   });
@@ -75,7 +75,7 @@ describe('Auto Mode savings', () => {
 
     const [result] = aggregateAutoModeSavings(rows);
 
-    expect(result.requests).toBeCloseTo(553.5);
+    expect(result.quantity).toBeCloseTo(553.5);
     expect(result.costBeforeAuto).toBeCloseTo(24.354);
     expect(result.savings).toBeCloseTo(2.214);
   });
@@ -97,9 +97,29 @@ describe('Auto Mode savings', () => {
     const [result] = aggregateAutoModeSavings(rows);
 
     expect(result.model).toBe('GPT-5.3-Codex');
-    expect(result.requests).toBeCloseTo(100);
+    expect(result.quantity).toBeCloseTo(100);
     expect(result.costBeforeAuto).toBeCloseTo(1.1);
     expect(result.savings).toBeCloseTo(0.1);
+  });
+
+  it('uses row-specific AI Credit unit cost when gross amount is absent', () => {
+    const rows: ProcessedData[] = [
+      createRow({
+        requestsUsed: 0,
+        usageUnit: 'ai_credit',
+        billingQuantity: 100,
+        aicQuantity: 100,
+        appliedCostPerQuantity: 0.02,
+        grossAmount: undefined,
+        netAmount: undefined,
+      }),
+    ];
+
+    const [result] = aggregateAutoModeSavings(rows);
+
+    expect(result.quantity).toBeCloseTo(100);
+    expect(result.costBeforeAuto).toBeCloseTo(2.2);
+    expect(result.savings).toBeCloseTo(0.2);
   });
 
   it('keeps consumed AI Credits separate from the 10% higher before-Auto cost', () => {
@@ -115,7 +135,7 @@ describe('Auto Mode savings', () => {
 
     const [result] = aggregateAutoModeSavings(rows);
 
-    expect(result.requests).toBeCloseTo(21404.23);
+    expect(result.quantity).toBeCloseTo(21404.23);
     expect(result.costBeforeAuto).toBeCloseTo(235.444);
     expect(result.savings).toBeCloseTo(21.404);
   });

@@ -6,7 +6,7 @@ const COST_BEFORE_AUTO_MULTIPLIER = 1 + PRICING.AUTO_MODE_DISCOUNT_RATE;
 
 export interface AutoModeSavingsRow {
   model: string;
-  requests: number;
+  quantity: number;
   costBeforeAuto: number;
   savings: number;
 }
@@ -21,7 +21,7 @@ function getBilledQuantity(row: ProcessedData): number {
 
 function getUnitCost(row: ProcessedData): number {
   if (row.usageUnit === 'ai_credit') {
-    return PRICING.AI_CREDIT_USD_VALUE;
+    return row.appliedCostPerQuantity ?? PRICING.AI_CREDIT_USD_VALUE;
   }
 
   return row.appliedCostPerQuantity ?? PRICING.OVERAGE_RATE_PER_REQUEST;
@@ -52,12 +52,12 @@ export function aggregateAutoModeSavings(rows: ProcessedData[]): AutoModeSavings
     const savings = costBeforeAuto - billedGrossAmount;
     const bucket = buckets.get(model) ?? {
       model,
-      requests: 0,
+      quantity: 0,
       costBeforeAuto: 0,
       savings: 0,
     };
 
-    bucket.requests += billedQuantity;
+    bucket.quantity += billedQuantity;
     bucket.costBeforeAuto += costBeforeAuto;
     bucket.savings += savings;
     buckets.set(model, bucket);
