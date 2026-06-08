@@ -1,18 +1,105 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { CodingAgentUsageChart } from './charts/CodingAgentUsageChart';
-import { useIsMobile } from '@/hooks/useIsMobile';
+
 import { useAnalysisContext } from '@/context/AnalysisContext';
-import { DailyBucketsArtifacts, buildDailyCodingAgentUsageFromArtifacts, buildDailyCodeReviewUsageFromArtifacts } from '@/utils/ingestion';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import type { CodeReviewAnalysis, CodingAgentUser, ProcessedData } from '@/types/csv';
+import { getBillingCostLabels } from '@/utils/billingLabels';
+import { formatCurrency } from '@/utils/formatters';
+import {
+  buildDailyCodeReviewAicUsageFromArtifacts,
+  buildDailyCodeReviewUsageFromArtifacts,
+  buildDailyCodingAgentAicUsageFromArtifacts,
+  buildDailyCodingAgentUsageFromArtifacts,
+  DailyBucketsArtifacts,
+  NON_COPILOT_CODE_REVIEW_LABEL,
+} from '@/utils/ingestion';
 import { filterDailySeriesByMonths } from '@/utils/analytics/filters';
-import type { CodeReviewAnalysis } from '@/types/csv';
+import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
+
+import { CodingAgentUsageChart } from './charts/CodingAgentUsageChart';
 
 interface CodingAgentOverviewProps {
-  codingAgentUsers: import('@/types/csv').CodingAgentUser[];
+  codingAgentUsers: CodingAgentUser[];
   totalUniqueUsers: number;
   adoptionRate: number;
   codeReviewAnalysis: CodeReviewAnalysis;
+}
+
+interface AgentUsageTableRow {
+  user: string;
+  quantity: number;
+  gross: number;
+  included: number;
+  additional: number;
+  quota: number | 'unknown';
+  isSyntheticNonCopilotRow?: boolean;
+}
+
+function formatUsageQuantity(value: number, isUsageBasedBilling: boolean): string {
+  if (isUsageBasedBilling) {
+    return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  return value.toFixed(1);
+}
+
+function formatQuotaValue(quota: number | 'unknown'): string {
+  return quota === 'unknown' ? 'Unknown' : quota.toLocaleString();
+}
+
+function buildUsageBasedAgentRows(
+  rows: ProcessedData[],
+  modelFilter: (model: string) => boolean
+): AgentUsageTableRow[] {
+  const rowsByUser = new Map<string, AgentUsageTableRow>();
+
+  for (const row of rows) {
+    if (!modelFilter(row.model)) {
+      continue;
+    }
+
+    const user = row.isNonCopilotUsage ? NON_COPILOT_CODE_REVIEW_LABEL : row.user;
+    const current = rowsByUser.get(user) ?? {
+      user,
+      quantity: 0,
+      gross: 0,
+      included: 0,
+      additional: 0,
+      quota: row.isNonCopilotUsage ? 0 : row.quotaValue ?? 'unknown',
+      isSyntheticNonCopilotRow: row.isNonCopilotUsage,
+    };
+
+    current.quantity += row.aicQuantity ?? row.billingQuantity ?? 0;
+    current.gross += row.grossAmount ?? row.aicGrossAmount ?? 0;
+    current.included += row.discountAmount ?? 0;
+    current.additional += row.netAmount ?? 0;
+    rowsByUser.set(user, current);
+  }
+
+  return Array.from(rowsByUser.values())
+    .filter((row) => row.quantity > 0 || row.gross > 0 || row.included > 0 || row.additional > 0)
+    .sort((left, right) => right.quantity - left.quantity);
+}
+
+function getVisibleRows<T extends { isSyntheticNonCopilotRow?: boolean }>(
+  rows: T[],
+  showAllRows: boolean,
+  previewCount: number
+): T[] {
+  if (showAllRows) {
+    return rows;
+  }
+
+  const preview = rows.slice(0, previewCount);
+  const syntheticRow = rows.find((row) => row.isSyntheticNonCopilotRow);
+
+  if (!syntheticRow || preview.some((row) => row.isSyntheticNonCopilotRow)) {
+    return preview;
+  }
+
+  return [...preview.slice(0, Math.max(0, previewCount - 1)), syntheticRow];
 }
 
 export function CodingAgentOverview({ 
@@ -25,45 +112,81 @@ export function CodingAgentOverview({
   const [showChart, setShowChart] = useState(true);
   const [showAllUsers, setShowAllUsers] = useState(false);
   const [showAllReviewUsers, setShowAllReviewUsers] = useState(false);
-  const { dailyBucketsArtifacts, selectedMonths } = useAnalysisContext();
+  const { aggregateProcessedData, dailyBucketsArtifacts, selectedMonths } = useAnalysisContext();
   const typedDailyBuckets = dailyBucketsArtifacts as DailyBucketsArtifacts | undefined;
-  
+  const hasAiCreditUsage = useMemo(
+    () => aggregateProcessedData.some((row) => row.usageUnit === 'ai_credit'),
+    [aggregateProcessedData]
+  );
+  const hasRequestUsage = useMemo(
+    () => aggregateProcessedData.some((row) => row.usageUnit === 'request' && row.requestsUsed > 0),
+    [aggregateProcessedData]
+  );
+  const isUsageBasedBilling = hasAiCreditUsage && !hasRequestUsage;
+  const quantityColumnLabel = isUsageBasedBilling ? 'AI Credits' : 'Premium Requests';
+  const valueUnitLabel = isUsageBasedBilling ? 'AI Credits' : 'requests';
+  const costLabels = useMemo(() => getBillingCostLabels(isUsageBasedBilling), [isUsageBasedBilling]);
+   
   // Memoize daily coding agent data, filtered by selected billing months
   const dailyCodingAgentData = useMemo(() => {
-    if (typedDailyBuckets?.dailyUserModelTotals) {
-      const raw = buildDailyCodingAgentUsageFromArtifacts(typedDailyBuckets);
+    if (typedDailyBuckets) {
+      const raw = isUsageBasedBilling
+        ? buildDailyCodingAgentAicUsageFromArtifacts(typedDailyBuckets)
+        : buildDailyCodingAgentUsageFromArtifacts(typedDailyBuckets);
       return filterDailySeriesByMonths(raw, selectedMonths);
     }
     return [];
-  }, [typedDailyBuckets, selectedMonths]);
+  }, [isUsageBasedBilling, typedDailyBuckets, selectedMonths]);
 
   const dailyCodeReviewData = useMemo(() => {
-    if (typedDailyBuckets?.dailyUserModelTotals) {
-      const raw = buildDailyCodeReviewUsageFromArtifacts(typedDailyBuckets);
+    if (typedDailyBuckets) {
+      const raw = isUsageBasedBilling
+        ? buildDailyCodeReviewAicUsageFromArtifacts(typedDailyBuckets)
+        : buildDailyCodeReviewUsageFromArtifacts(typedDailyBuckets);
       return filterDailySeriesByMonths(raw, selectedMonths);
     }
     return [];
-  }, [typedDailyBuckets, selectedMonths]);
+  }, [isUsageBasedBilling, typedDailyBuckets, selectedMonths]);
 
   const TABLE_PREVIEW_COUNT = 5;
-  const visibleUsers = showAllUsers ? codingAgentUsers : codingAgentUsers.slice(0, TABLE_PREVIEW_COUNT);
-  const hasMore = codingAgentUsers.length > TABLE_PREVIEW_COUNT;
-
-  const visibleReviewUsers = useMemo(() => {
-    if (showAllReviewUsers) {
-      return codeReviewAnalysis.users;
+  const codingAgentTableRows = useMemo<AgentUsageTableRow[]>(() => {
+    if (isUsageBasedBilling) {
+      return buildUsageBasedAgentRows(aggregateProcessedData, isCodingAgentModel);
     }
 
-    const preview = codeReviewAnalysis.users.slice(0, TABLE_PREVIEW_COUNT);
-    const syntheticRow = codeReviewAnalysis.users.find((user) => user.isSyntheticNonCopilotRow);
+    return codingAgentUsers.map((user) => ({
+      user: user.user,
+      quantity: user.codingAgentRequests,
+      gross: 0,
+      included: 0,
+      additional: 0,
+      quota: user.quota,
+    }));
+  }, [aggregateProcessedData, codingAgentUsers, isUsageBasedBilling]);
 
-    if (!syntheticRow || preview.some((user) => user.isSyntheticNonCopilotRow)) {
-      return preview;
+  const codeReviewTableRows = useMemo<AgentUsageTableRow[]>(() => {
+    if (isUsageBasedBilling) {
+      return buildUsageBasedAgentRows(aggregateProcessedData, isCodeReviewModel);
     }
 
-    return [...preview.slice(0, Math.max(0, TABLE_PREVIEW_COUNT - 1)), syntheticRow];
-  }, [codeReviewAnalysis.users, showAllReviewUsers]);
-  const hasMoreReviewUsers = codeReviewAnalysis.users.length > TABLE_PREVIEW_COUNT;
+    return codeReviewAnalysis.users.map((user) => ({
+      user: user.user,
+      quantity: user.codeReviewRequests,
+      gross: 0,
+      included: 0,
+      additional: 0,
+      quota: user.quota,
+      isSyntheticNonCopilotRow: user.isSyntheticNonCopilotRow,
+    }));
+  }, [aggregateProcessedData, codeReviewAnalysis.users, isUsageBasedBilling]);
+
+  const visibleUsers = showAllUsers ? codingAgentTableRows : codingAgentTableRows.slice(0, TABLE_PREVIEW_COUNT);
+  const hasMore = codingAgentTableRows.length > TABLE_PREVIEW_COUNT;
+
+  const visibleReviewUsers = useMemo(() => (
+    getVisibleRows(codeReviewTableRows, showAllReviewUsers, TABLE_PREVIEW_COUNT)
+  ), [codeReviewTableRows, showAllReviewUsers]);
+  const hasMoreReviewUsers = codeReviewTableRows.length > TABLE_PREVIEW_COUNT;
 
   return (
     <div className="space-y-6">
@@ -89,9 +212,12 @@ export function CodingAgentOverview({
       {/* Chart */}
       {(!isMobile || showChart) && dailyCodingAgentData.length > 0 && (
         <div className="bg-white border border-[#d1d9e0] rounded-md p-5">
-          <h3 className="text-sm font-medium text-[#1f2328] mb-4">Usage Over Time</h3>
+          <h3 className="text-sm font-medium text-[#1f2328]">Usage Over Time</h3>
+          <p className="text-xs text-[#636c76] mt-0.5 mb-4">
+            Daily and cumulative {valueUnitLabel} usage
+          </p>
           <div className="h-56 sm:h-72">
-            <CodingAgentUsageChart data={dailyCodingAgentData} />
+            <CodingAgentUsageChart data={dailyCodingAgentData} valueUnitLabel={valueUnitLabel} />
           </div>
         </div>
       )}
@@ -110,11 +236,25 @@ export function CodingAgentOverview({
                     User
                   </th>
                   <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
-                    Premium Requests
+                    {quantityColumnLabel}
                   </th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
-                    Quota
-                  </th>
+                  {isUsageBasedBilling ? (
+                    <>
+                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
+                        {costLabels.gross}
+                      </th>
+                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
+                        {costLabels.discount}
+                      </th>
+                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
+                        {costLabels.net}
+                      </th>
+                    </>
+                  ) : (
+                    <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
+                      Quota
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#d1d9e0]">
@@ -124,11 +264,25 @@ export function CodingAgentOverview({
                       {user.user}
                     </td>
                     <td className="px-5 py-3 whitespace-nowrap text-sm font-mono text-[#1f2328] text-right">
-                      {user.codingAgentRequests.toFixed(1)}
+                      {formatUsageQuantity(user.quantity, isUsageBasedBilling)}
                     </td>
-                    <td className="px-5 py-3 whitespace-nowrap text-sm text-[#636c76] text-right">
-                      {user.quota === 'unknown' ? 'Unknown' : user.quota}
-                    </td>
+                    {isUsageBasedBilling ? (
+                      <>
+                        <td className="px-5 py-3 whitespace-nowrap text-sm font-mono text-[#636c76] text-right">
+                          {formatCurrency(user.gross)}
+                        </td>
+                        <td className="px-5 py-3 whitespace-nowrap text-sm font-mono text-emerald-600 text-right">
+                          -{formatCurrency(user.included)}
+                        </td>
+                        <td className="px-5 py-3 whitespace-nowrap text-sm font-mono font-semibold text-[#1f2328] text-right">
+                          {formatCurrency(user.additional)}
+                        </td>
+                      </>
+                    ) : (
+                      <td className="px-5 py-3 whitespace-nowrap text-sm text-[#636c76] text-right">
+                        {formatQuotaValue(user.quota)}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -140,7 +294,7 @@ export function CodingAgentOverview({
                 onClick={() => setShowAllUsers(!showAllUsers)}
                 className="text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
               >
-                {showAllUsers ? `Show top ${TABLE_PREVIEW_COUNT}` : `Show all ${codingAgentUsers.length} users`}
+                {showAllUsers ? `Show top ${TABLE_PREVIEW_COUNT}` : `Show all ${codingAgentTableRows.length} users`}
               </button>
             </div>
           )}
@@ -160,9 +314,12 @@ export function CodingAgentOverview({
           {/* Code Review Chart */}
           {(!isMobile || showChart) && dailyCodeReviewData.length > 0 && (
             <div className="bg-white border border-[#d1d9e0] rounded-md p-5">
-              <h3 className="text-sm font-medium text-[#1f2328] mb-4">Usage Over Time</h3>
+              <h3 className="text-sm font-medium text-[#1f2328]">Usage Over Time</h3>
+              <p className="text-xs text-[#636c76] mt-0.5 mb-4">
+                Daily and cumulative {valueUnitLabel} usage
+              </p>
               <div className="h-56 sm:h-72">
-                <CodingAgentUsageChart data={dailyCodeReviewData} />
+                <CodingAgentUsageChart data={dailyCodeReviewData} valueUnitLabel={valueUnitLabel} />
               </div>
             </div>
           )}
@@ -178,16 +335,32 @@ export function CodingAgentOverview({
                   <thead>
                     <tr className="border-b border-[#d1d9e0]">
                       <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">User</th>
-                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Premium Requests</th>
-                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Quota</th>
+                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{quantityColumnLabel}</th>
+                      {isUsageBasedBilling ? (
+                        <>
+                          <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{costLabels.gross}</th>
+                          <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{costLabels.discount}</th>
+                          <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{costLabels.net}</th>
+                        </>
+                      ) : (
+                        <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Quota</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#d1d9e0]">
                     {visibleReviewUsers.map((user) => (
                       <tr key={user.user} className="hover:bg-[#fcfdff] transition-colors">
                         <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-[#1f2328]">{user.user}</td>
-                        <td className="px-5 py-3 whitespace-nowrap text-sm font-mono text-[#1f2328] text-right">{user.codeReviewRequests.toFixed(1)}</td>
-                        <td className="px-5 py-3 whitespace-nowrap text-sm text-[#636c76] text-right">{user.quota === 'unknown' ? 'Unknown' : user.quota}</td>
+                        <td className="px-5 py-3 whitespace-nowrap text-sm font-mono text-[#1f2328] text-right">{formatUsageQuantity(user.quantity, isUsageBasedBilling)}</td>
+                        {isUsageBasedBilling ? (
+                          <>
+                            <td className="px-5 py-3 whitespace-nowrap text-sm font-mono text-[#636c76] text-right">{formatCurrency(user.gross)}</td>
+                            <td className="px-5 py-3 whitespace-nowrap text-sm font-mono text-emerald-600 text-right">-{formatCurrency(user.included)}</td>
+                            <td className="px-5 py-3 whitespace-nowrap text-sm font-mono font-semibold text-[#1f2328] text-right">{formatCurrency(user.additional)}</td>
+                          </>
+                        ) : (
+                          <td className="px-5 py-3 whitespace-nowrap text-sm text-[#636c76] text-right">{formatQuotaValue(user.quota)}</td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -199,7 +372,7 @@ export function CodingAgentOverview({
                     onClick={() => setShowAllReviewUsers(!showAllReviewUsers)}
                     className="text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
                   >
-                    {showAllReviewUsers ? `Show top ${TABLE_PREVIEW_COUNT}` : `Show all ${codeReviewAnalysis.users.length} users`}
+                    {showAllReviewUsers ? `Show top ${TABLE_PREVIEW_COUNT}` : `Show all ${codeReviewTableRows.length} users`}
                   </button>
                 </div>
               )}
