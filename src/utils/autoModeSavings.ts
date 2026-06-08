@@ -2,13 +2,29 @@ import { PRICING } from '@/constants/pricing';
 import type { ProcessedData } from '@/types/csv';
 
 const AUTO_MODE_MODEL_PREFIX = /^auto:\s*/i;
-const AUTO_MODE_PRU_MULTIPLIER = 1 - PRICING.AUTO_MODE_DISCOUNT_RATE;
+const COST_BEFORE_AUTO_MULTIPLIER = 1 + PRICING.AUTO_MODE_DISCOUNT_RATE;
 
 export interface AutoModeSavingsRow {
   model: string;
   requests: number;
   costBeforeAuto: number;
   savings: number;
+}
+
+function getBilledQuantity(row: ProcessedData): number {
+  if (row.usageUnit === 'ai_credit') {
+    return row.aicQuantity ?? row.billingQuantity ?? 0;
+  }
+
+  return row.requestsUsed;
+}
+
+function getUnitCost(row: ProcessedData): number {
+  if (row.usageUnit === 'ai_credit') {
+    return PRICING.AI_CREDIT_USD_VALUE;
+  }
+
+  return row.appliedCostPerQuantity ?? PRICING.OVERAGE_RATE_PER_REQUEST;
 }
 
 export function getAutoModeBaseModel(model: string): string | null {
@@ -24,20 +40,15 @@ export function aggregateAutoModeSavings(rows: ProcessedData[]): AutoModeSavings
   const buckets = new Map<string, AutoModeSavingsRow>();
 
   for (const row of rows) {
-    if (row.usageUnit === 'ai_credit') {
-      continue;
-    }
-
     const model = getAutoModeBaseModel(row.model);
 
     if (!model) {
       continue;
     }
 
-    const appliedCostPerRequest = row.appliedCostPerQuantity ?? PRICING.OVERAGE_RATE_PER_REQUEST;
-    const requests = row.requestsUsed / AUTO_MODE_PRU_MULTIPLIER;
-    const billedGrossAmount = row.grossAmount ?? row.requestsUsed * appliedCostPerRequest;
-    const costBeforeAuto = billedGrossAmount / AUTO_MODE_PRU_MULTIPLIER;
+    const billedQuantity = getBilledQuantity(row);
+    const billedGrossAmount = row.grossAmount ?? billedQuantity * getUnitCost(row);
+    const costBeforeAuto = billedGrossAmount * COST_BEFORE_AUTO_MULTIPLIER;
     const savings = costBeforeAuto - billedGrossAmount;
     const bucket = buckets.get(model) ?? {
       model,
@@ -46,7 +57,7 @@ export function aggregateAutoModeSavings(rows: ProcessedData[]): AutoModeSavings
       savings: 0,
     };
 
-    bucket.requests += requests;
+    bucket.requests += billedQuantity;
     bucket.costBeforeAuto += costBeforeAuto;
     bucket.savings += savings;
     buckets.set(model, bucket);

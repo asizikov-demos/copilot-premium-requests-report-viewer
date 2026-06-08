@@ -579,7 +579,9 @@ function DataAnalysisInner() {
                     <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <h3 className="text-lg font-semibold text-[#1f2328]">Auto Mode Savings</h3>
-                        <p className="text-sm text-[#636c76] mt-0.5">Savings compare billed cost with the cost before Auto Mode&apos;s 10% PRU discount.</p>
+                        <p className="text-sm text-[#636c76] mt-0.5">
+                          Savings compare billed cost with the cost before Auto Mode&apos;s 10% {isUsageBasedBilling ? 'AI Credits' : 'PRU'} discount.
+                        </p>
                       </div>
                       <span className="text-sm font-semibold text-[#2da44e]">
                         {formatCurrency(autoModeSavingsTotal.savings)} saved

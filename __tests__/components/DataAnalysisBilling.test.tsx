@@ -431,6 +431,12 @@ describe('DataAnalysis billing summary', () => {
       expect(screen.getByRole('heading', { name: 'AI Credits by Model' })).toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: 'Requests by Model' })).not.toBeInTheDocument();
       expect(screen.getByText('Total: 42.50 AI Credits')).toBeInTheDocument();
+      expect(screen.getByText('Auto Mode Savings')).toBeInTheDocument();
+      expect(screen.getByText(/10% AI Credits discount/)).toBeInTheDocument();
+      expect(screen.getAllByText('42.50').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('$0.47').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('$0.04').length).toBeGreaterThan(0);
+      expect(screen.getByText('$0.04 saved')).toBeInTheDocument();
       expect(screen.getAllByRole('columnheader', { name: 'Included Credits' }).length).toBeGreaterThanOrEqual(2);
       expect(screen.getAllByRole('columnheader', { name: 'Additional usage' }).length).toBeGreaterThanOrEqual(2);
       expect(screen.queryAllByRole('button', { name: 'Insights' })).toHaveLength(0);
@@ -631,7 +637,7 @@ describe('DataAnalysis billing summary', () => {
     await waitFor(() => {
       expect(screen.getByText('Auto Mode Savings')).toBeInTheDocument();
       expect(screen.getByText('GPT-5.3-Codex')).toBeInTheDocument();
-      expect(screen.getAllByText('1.00').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('0.90').length).toBeGreaterThan(0);
       expect(screen.getAllByText('$0.04').length).toBeGreaterThan(0);
       expect(screen.getAllByText('$0.00').length).toBeGreaterThan(0);
       expect(screen.getByText('$0.00 saved')).toBeInTheDocument();
