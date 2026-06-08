@@ -119,6 +119,11 @@ const AI_USAGE_NAV_ITEM: NavigationItem = {
   ),
 };
 
+const USAGE_BASED_BILLING_HIDDEN_VIEWS = new Set<NavigationItem['key']>([
+  'insights',
+  'costOptimization',
+]);
+
 function DataAnalysisInner() {
   const {
     view,
@@ -184,7 +189,9 @@ function DataAnalysisInner() {
   }, [analysis.quotaBreakdown.mixed, planInfo, quotaArtifacts.distinctQuotas, selectedPlan]);
 
   const navItems = useMemo(() => {
-    const items = [...NAV_ITEMS];
+    const items = isUsageBasedBilling
+      ? NAV_ITEMS.filter((item) => !USAGE_BASED_BILLING_HIDDEN_VIEWS.has(item.key))
+      : [...NAV_ITEMS];
     let insertIdx = 2; // After 'users'
     if (hasCostCenters) {
       items.splice(insertIdx, 0, COST_CENTERS_NAV_ITEM);
@@ -197,7 +204,7 @@ function DataAnalysisInner() {
       items.push(AI_USAGE_NAV_ITEM);
     }
     return items;
-  }, [aicMetricsAvailable, hasCostCenters, hasOrganizations]);
+  }, [aicMetricsAvailable, hasCostCenters, hasOrganizations, isUsageBasedBilling]);
 
   useEffect(() => {
     if (!hasCostCenters && view === 'costCenters') {
@@ -209,7 +216,10 @@ function DataAnalysisInner() {
     if (!aicMetricsAvailable && view === 'aiUsage') {
       setView('overview');
     }
-  }, [aicMetricsAvailable, hasCostCenters, hasOrganizations, setView, view]);
+    if (isUsageBasedBilling && USAGE_BASED_BILLING_HIDDEN_VIEWS.has(view)) {
+      setView('overview');
+    }
+  }, [aicMetricsAvailable, hasCostCenters, hasOrganizations, isUsageBasedBilling, setView, view]);
 
   const costMetricsAvailable = billingArtifacts?.hasAnyBillingData === true;
   const aggregatedCosts = costMetricsAvailable && billingArtifacts ? billingArtifacts.totals : null;

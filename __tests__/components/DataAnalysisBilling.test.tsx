@@ -433,6 +433,8 @@ describe('DataAnalysis billing summary', () => {
       expect(screen.getByText('Total: 42.50 AI Credits')).toBeInTheDocument();
       expect(screen.getAllByRole('columnheader', { name: 'Included Credits' }).length).toBeGreaterThanOrEqual(2);
       expect(screen.getAllByRole('columnheader', { name: 'Additional usage' }).length).toBeGreaterThanOrEqual(2);
+      expect(screen.queryByRole('button', { name: 'Insights' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Cost Optimization' })).not.toBeInTheDocument();
     });
 
     const modelDetailsHeading = screen.getByRole('heading', { name: 'Model Details' });
