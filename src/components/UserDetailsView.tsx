@@ -6,6 +6,7 @@ import { COST_OPTIMIZATION_THRESHOLDS, PRICING } from '@/constants/pricing';
 import { AnalysisContext } from '@/context/AnalysisContext';
 import { UserDailyStackedChart } from '@/components/charts/UserDailyStackedChart';
 import type { ProcessedData, UserDailyData } from '@/types/csv';
+import { getQuotaTier, isLegacyPremiumRequestQuotaValue } from '@/utils/analytics/quota';
 import {
   buildUserDailyModelDataFromArtifacts,
   DailyBucketsArtifacts,
@@ -16,6 +17,7 @@ import {
 import { hasAicFields } from '@/utils/aicFields';
 import { generateModelColors } from '@/utils/modelColors';
 import { calculateEnterpriseUpgradeSavings } from '@/utils/analytics/costOptimization';
+import { getBillingCostLabels } from '@/utils/billingLabels';
 import { formatCurrency } from '@/utils/formatters';
 import { aggregateProductCosts } from '@/utils/productCosts';
 import {
@@ -164,6 +166,21 @@ export function UserDetailsView({
   }, [processedData, user, usageArtifacts, dailyBucketsArtifacts]);
 
   const userData = useMemo(() => getUserData(processedData, user), [processedData, user]);
+  const hasUserAiCreditUsage = useMemo(() => userData.some((row) => row.usageUnit === 'ai_credit'), [userData]);
+  const hasUserRequestUsage = useMemo(
+    () => userData.some((row) => row.usageUnit === 'request' && row.requestsUsed > 0),
+    [userData]
+  );
+  const isUserUsageBasedBilling = hasUserAiCreditUsage && !hasUserRequestUsage;
+  const userQuantityColumnLabel = isUserUsageBasedBilling ? 'AI Credits' : 'Requests';
+  const userCostLabels = useMemo(
+    () => getBillingCostLabels(isUserUsageBasedBilling),
+    [isUserUsageBasedBilling]
+  );
+  const userBillingQuantity = useMemo(
+    () => userData.reduce((total, row) => total + (row.billingQuantity ?? row.requestsUsed), 0),
+    [userData]
+  );
 
   const { organization, costCenter } = useMemo(
     () => getUserOrgMetadata(processedData, user),
@@ -184,7 +201,10 @@ export function UserDetailsView({
     return calculateUserTotalRequests(processedData, user);
   }, [processedData, user, usageArtifacts]);
 
-  const effectiveQuota = effectiveUserQuotaValue === 'unknown' ? Infinity : effectiveUserQuotaValue;
+  const requestQuotaValue = isLegacyPremiumRequestQuotaValue(effectiveUserQuotaValue)
+    ? effectiveUserQuotaValue
+    : 'unknown';
+  const effectiveQuota = requestQuotaValue === 'unknown' ? Infinity : requestQuotaValue;
   const billedOverage = useMemo(() => calculateBilledOverageFromRows(userData), [userData]);
   const estimatedOverageRequests = useMemo(
     () => calculateOverageRequests(userTotalRequests, effectiveQuota),
@@ -227,6 +247,7 @@ export function UserDetailsView({
   };
 
   const hasAicGross = useMemo(() => hasAicFields(userData), [userData]);
+  const showAicGross = hasAicGross && !isUserUsageBasedBilling;
 
   const dailyBreakdownRows = useMemo((): DailyModelRow[] => {
     const hasBillingData = userData.some(
@@ -243,9 +264,10 @@ export function UserDetailsView({
     const agg = new Map<Key, { date: string; model: string; requests: number; gross: number; discount: number; net: number; aicGrossAmount: number }>();
     for (const row of userData) {
       const key = `${row.dateKey}||${row.model}`;
+      const quantity = isUserUsageBasedBilling ? row.billingQuantity ?? row.requestsUsed : row.requestsUsed;
       const existing = agg.get(key);
       if (existing) {
-        existing.requests += row.requestsUsed;
+        existing.requests += quantity;
         existing.gross += row.grossAmount ?? 0;
         existing.discount += row.discountAmount ?? 0;
         existing.net += row.netAmount ?? 0;
@@ -254,7 +276,7 @@ export function UserDetailsView({
         agg.set(key, {
           date: row.dateKey,
           model: row.model,
-          requests: row.requestsUsed,
+          requests: quantity,
           gross: row.grossAmount ?? 0,
           discount: row.discountAmount ?? 0,
           net: row.netAmount ?? 0,
@@ -278,7 +300,7 @@ export function UserDetailsView({
       if (isFirst) seenDates.add(r.date);
       return { ...r, isFirstInDate: isFirst, rowSpan: dateSpan.get(r.date) ?? 1 };
     });
-  }, [userData]);
+  }, [isUserUsageBasedBilling, userData]);
 
   const productCosts = useMemo(() => {
     const hasBillingData = userData.some(
@@ -301,10 +323,11 @@ export function UserDetailsView({
     if (effectiveUserQuotaValue === 'unknown') {
       return 'unknown';
     }
-    if (effectiveUserQuotaValue === PRICING.BUSINESS_QUOTA) {
+    const tier = getQuotaTier(effectiveUserQuotaValue);
+    if (tier === 'business') {
       return 'business';
     }
-    if (effectiveUserQuotaValue === PRICING.ENTERPRISE_QUOTA) {
+    if (tier === 'enterprise') {
       return 'enterprise';
     }
 
@@ -369,9 +392,11 @@ export function UserDetailsView({
             {organization ? ` • ${organization}` : ''}
             {costCenter ? ` • ${costCenter}` : ''}
             {' • '}
-            {userTotalRequests.toFixed(1)} / {effectiveUserQuotaValue === 'unknown' ? 'Unknown' : effectiveUserQuotaValue} PRUs consumed
+            {hasUserAiCreditUsage && !hasUserRequestUsage
+              ? `${userBillingQuantity.toFixed(1)} AI Credits consumed`
+              : `${userTotalRequests.toFixed(1)} / ${requestQuotaValue === 'unknown' ? 'Unknown' : requestQuotaValue} PRUs consumed`}
           </p>
-          {overageRequests > 0 && effectiveUserQuotaValue !== 'unknown' && (
+          {overageRequests > 0 && requestQuotaValue !== 'unknown' && (
             <p className="text-sm text-red-600 font-medium" role="alert">
               Overage: {overageRequests.toFixed(1)} PRUs · {formatCurrency(overageCost)}
             </p>
@@ -407,13 +432,13 @@ export function UserDetailsView({
               <thead>
                 <tr className="border-b border-[#d1d9e0]">
                   <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Product</th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Requests</th>
-                  {hasAicGross && (
+                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{userQuantityColumnLabel}</th>
+                  {showAicGross && (
                     <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">AI Credits Gross</th>
                   )}
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Gross</th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Discount</th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Net</th>
+                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{userCostLabels.gross}</th>
+                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{userCostLabels.discount}</th>
+                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{userCostLabels.net}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#d1d9e0]">
@@ -421,7 +446,7 @@ export function UserDetailsView({
                   <tr key={product.label} className="hover:bg-[#fcfdff] transition-colors">
                     <td className="px-5 py-3 text-sm font-medium text-[#1f2328]">{product.label}</td>
                     <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono">{product.requests.toFixed(2)}</td>
-                    {hasAicGross && (
+                    {showAicGross && (
                       <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono">{formatCurrency(product.aicGrossAmount)}</td>
                     )}
                     <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono">{formatCurrency(product.gross)}</td>
@@ -449,7 +474,7 @@ export function UserDetailsView({
                 data={userDailyData}
                 models={userModels}
                 modelColors={modelColors}
-                quotaValue={effectiveUserQuotaValue}
+                quotaValue={requestQuotaValue}
                 tooltip={<UserDailyUsageTooltip />}
               />
             </div>
@@ -495,13 +520,13 @@ export function UserDetailsView({
                 <tr className="border-b border-[#d1d9e0]">
                   <th className="px-5 py-3 w-28 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">Date</th>
                   <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Model</th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">Requests</th>
-                  {hasAicGross && (
+                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">{userQuantityColumnLabel}</th>
+                  {showAicGross && (
                     <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">AI Credits Gross</th>
                   )}
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">Gross Cost</th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">Discounts</th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">Net Cost</th>
+                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">{userCostLabels.gross}</th>
+                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">{userCostLabels.discountSummary}</th>
+                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">{userCostLabels.netSummary}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#d1d9e0]">
@@ -517,7 +542,7 @@ export function UserDetailsView({
                     ) : null}
                     <td className="px-5 py-3 text-sm text-[#636c76]">- {row.model}</td>
                     <td className="px-5 py-3 text-sm font-mono text-[#1f2328] text-right">{row.requests.toFixed(2)}</td>
-                    {hasAicGross && (
+                    {showAicGross && (
                       <td className="px-5 py-3 text-sm font-mono text-[#636c76] text-right">{formatCurrency(row.aicGrossAmount)}</td>
                     )}
                     <td className="px-5 py-3 text-sm font-mono text-[#636c76] text-right">{formatCurrency(row.gross)}</td>

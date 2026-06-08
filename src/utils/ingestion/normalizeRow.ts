@@ -6,7 +6,7 @@
 import { parseQuotaValue } from '@/utils/analytics/quota';
 import type { CSVData } from '@/types/csv';
 import { isCodeReviewModel } from '@/utils/productClassification';
-import { isRequestUnitType } from '@/utils/unitType';
+import { getUsageUnitKind } from '@/utils/unitType';
 
 import { normalizeDateToIso, type DateNormalizer } from './dateNormalization';
 import {
@@ -73,21 +73,26 @@ export function normalizeRow(
     return null;
   }
   
-  const unitType = typeof unit_type === 'string' ? unit_type.trim() : undefined;
-  const shouldUseRequestValues = isRequestUnitType(unitType);
+  const unitType = typeof unit_type === 'string' && unit_type.trim() !== '' ? unit_type.trim() : undefined;
+  const skuValue = typeof sku === 'string' ? sku : undefined;
+  const usageUnit = getUsageUnitKind(unitType, skuValue);
+  const shouldUseRequestValues = usageUnit === 'request';
+  const shouldUseAiCreditValues = usageUnit === 'ai_credit';
+  const shouldUseUsageValues = usageUnit !== 'unknown';
 
   // Parse quantity
   const parsedQty = typeof quantity === 'number' ? quantity : parseFloat(String(quantity));
-  if (shouldUseRequestValues && Number.isNaN(parsedQty) && !options.allowInvalidQuantity) {
+  if (shouldUseUsageValues && Number.isNaN(parsedQty) && !options.allowInvalidQuantity) {
     warnings.push(`Invalid quantity for user=${username} date=${date}`);
     return null;
   }
   const qty = shouldUseRequestValues ? parsedQty : 0;
+  const billingQty = shouldUseUsageValues ? parsedQty : 0;
   
   // Parse quota if present
   const quotaValue = isNonCopilotCodeReviewUsage
     ? 0
-    : shouldUseRequestValues && total_monthly_quota && typeof total_monthly_quota === 'string'
+    : shouldUseUsageValues && total_monthly_quota && typeof total_monthly_quota === 'string'
       ? parseQuotaValue(total_monthly_quota)
       : undefined;
   
@@ -103,11 +108,12 @@ export function normalizeRow(
     return Number.isNaN(n) ? undefined : n;
   };
   const parseRequestBillingAmount = (fieldName: string, v: unknown): number | undefined => {
-    if (shouldUseRequestValues) {
+    if (shouldUseUsageValues) {
       return parseNum(v);
     }
     return Object.prototype.hasOwnProperty.call(rawRecord, fieldName) ? 0 : undefined;
   };
+  const grossAmountValue = parseRequestBillingAmount('gross_amount', gross_amount);
 
   return {
     date: isoDate,
@@ -115,24 +121,26 @@ export function normalizeRow(
     user: trimmedUsername,
     model,
     quantity: qty,
+    billingQuantity: billingQty,
     quotaRaw: isNonCopilotCodeReviewUsage
       ? '0'
-      : shouldUseRequestValues && typeof total_monthly_quota === 'string'
+      : shouldUseUsageValues && typeof total_monthly_quota === 'string'
         ? total_monthly_quota
         : undefined,
     quotaValue,
     exceedsQuota,
     product: typeof product === 'string' ? product : undefined,
-    sku: typeof sku === 'string' ? sku : undefined,
+    sku: skuValue,
     unitType,
+    usageUnit,
     organization: typeof organization === 'string' ? organization : undefined,
     costCenter: typeof cost_center_name === 'string' ? cost_center_name : undefined,
     appliedCostPerQuantity: parseNum(applied_cost_per_quantity),
-    grossAmount: parseRequestBillingAmount('gross_amount', gross_amount),
+    grossAmount: grossAmountValue,
     discountAmount: parseRequestBillingAmount('discount_amount', discount_amount),
     netAmount: parseRequestBillingAmount('net_amount', net_amount),
-    aicQuantity: parseNum(aic_quantity),
-    aicGrossAmount: parseNum(aic_gross_amount),
+    aicQuantity: shouldUseAiCreditValues ? billingQty : parseNum(aic_quantity),
+    aicGrossAmount: shouldUseAiCreditValues ? grossAmountValue : parseNum(aic_gross_amount),
     isNonCopilotUsage: isNonCopilotCodeReviewUsage,
     usageBucket: isNonCopilotCodeReviewUsage ? NON_COPILOT_CODE_REVIEW_BUCKET : undefined,
   };

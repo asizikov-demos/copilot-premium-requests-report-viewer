@@ -3,6 +3,7 @@
  */
 
 import { PRICING } from '@/constants/pricing';
+import type { UsageUnitKind } from '@/utils/unitType';
 
 export const NON_COPILOT_CODE_REVIEW_BUCKET = 'non_copilot_code_review' as const;
 export const NON_COPILOT_CODE_REVIEW_LABEL = 'Non-Copilot Users' as const;
@@ -48,6 +49,8 @@ export interface NormalizedRow {
   product?: string;
   sku?: string;
   unitType?: string;
+  usageUnit?: UsageUnitKind;
+  billingQuantity?: number;
   organization?: string;
   costCenter?: string; // normalized from cost_center_name
   appliedCostPerQuantity?: number;

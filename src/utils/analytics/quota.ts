@@ -1,6 +1,6 @@
-import { KNOWN_QUOTA_VALUES, PRICING } from '@/constants/pricing';
+import { BUSINESS_QUOTA_VALUES, ENTERPRISE_QUOTA_VALUES, KNOWN_QUOTA_VALUES, PRICING } from '@/constants/pricing';
 import { ProcessedData } from '@/types/csv';
-import { isRequestUnitType } from '@/utils/unitType';
+import { isRequestUnitType, isSupportedUsageUnitType } from '@/utils/unitType';
 
 export interface QuotaBreakdownResult {
   unknown: string[];
@@ -8,6 +8,51 @@ export interface QuotaBreakdownResult {
   enterprise: string[];
   mixed: boolean;
   suggestedPlan: 'business' | 'enterprise' | null;
+}
+
+export type QuotaTier = 'business' | 'enterprise';
+
+export function getQuotaTier(quotaValue: number | 'unknown' | undefined): QuotaTier | null {
+  if (typeof quotaValue !== 'number') {
+    return null;
+  }
+
+  if (BUSINESS_QUOTA_VALUES.includes(quotaValue)) {
+    return 'business';
+  }
+
+  if (ENTERPRISE_QUOTA_VALUES.includes(quotaValue)) {
+    return 'enterprise';
+  }
+
+  return null;
+}
+
+export function isBusinessQuotaValue(quotaValue: number | 'unknown' | undefined): boolean {
+  return getQuotaTier(quotaValue) === 'business';
+}
+
+export function isEnterpriseQuotaValue(quotaValue: number | 'unknown' | undefined): boolean {
+  return getQuotaTier(quotaValue) === 'enterprise';
+}
+
+export function isKnownQuotaValue(quotaValue: number | 'unknown' | undefined): quotaValue is number {
+  return getQuotaTier(quotaValue) !== null;
+}
+
+export function isLegacyPremiumRequestQuotaValue(quotaValue: number | 'unknown' | undefined): quotaValue is number {
+  return quotaValue === PRICING.BUSINESS_QUOTA || quotaValue === PRICING.ENTERPRISE_QUOTA;
+}
+
+function getQuotaTierRank(quotaValue: number | 'unknown' | undefined): number {
+  const tier = getQuotaTier(quotaValue);
+  if (tier === 'enterprise') {
+    return 2;
+  }
+  if (tier === 'business') {
+    return 1;
+  }
+  return 0;
 }
 
 // Parse quota value from string. Only recognized quota tiers are kept as
@@ -29,22 +74,37 @@ export function shouldReplaceQuotaValue(
   existing: number | 'unknown' | undefined,
   incoming: number | 'unknown'
 ): boolean {
-  return (
-    existing === undefined
-    || (existing === 'unknown' && typeof incoming === 'number')
-    || (typeof incoming === 'number' && typeof existing === 'number' && incoming > existing)
-  );
+  if (existing === undefined) {
+    return true;
+  }
+
+  if (incoming === 'unknown') {
+    return false;
+  }
+
+  if (existing === 'unknown') {
+    return true;
+  }
+
+  const existingRank = getQuotaTierRank(existing);
+  const incomingRank = getQuotaTierRank(incoming);
+
+  if (incomingRank !== existingRank) {
+    return incomingRank > existingRank;
+  }
+
+  return incoming > existing;
 }
 
-/**
- * Build per-user quotas from processed rows using the canonical policy:
- * numeric quotas win over unknown values, and the highest numeric quota wins.
- */
-export function buildUserQuotaMapFromRows(data: ProcessedData[]): Map<string, number | 'unknown'> {
+function buildUserQuotaMap(data: ProcessedData[], includeAiCreditUsage: boolean): Map<string, number | 'unknown'> {
   const userQuotas = new Map<string, number | 'unknown'>();
 
   for (const row of data) {
-    if (row.isNonCopilotUsage || !isRequestUnitType(row.unitType)) {
+    const shouldUseQuota = includeAiCreditUsage
+      ? isSupportedUsageUnitType(row.unitType, row.sku)
+      : isRequestUnitType(row.unitType);
+
+    if (row.isNonCopilotUsage || !shouldUseQuota) {
       continue;
     }
 
@@ -57,6 +117,18 @@ export function buildUserQuotaMapFromRows(data: ProcessedData[]): Map<string, nu
   }
 
   return userQuotas;
+}
+
+/**
+ * Build per-user premium request quotas from processed rows using the canonical
+ * policy: numeric quotas win over unknown values, and the highest tier wins.
+ */
+export function buildUserQuotaMapFromRows(data: ProcessedData[]): Map<string, number | 'unknown'> {
+  return buildUserQuotaMap(data, false);
+}
+
+export function buildUsageQuotaMapFromRows(data: ProcessedData[]): Map<string, number | 'unknown'> {
+  return buildUserQuotaMap(data, true);
 }
 
 /**
@@ -75,9 +147,9 @@ export function classifyQuotaMap(
   for (const [user, quota] of quotaByUser) {
     if (quota === 'unknown') {
       unknown.push(user);
-    } else if (quota === PRICING.BUSINESS_QUOTA) {
+    } else if (isBusinessQuotaValue(quota)) {
       business.push(user);
-    } else if (quota === PRICING.ENTERPRISE_QUOTA) {
+    } else if (isEnterpriseQuotaValue(quota)) {
       enterprise.push(user);
     }
   }
@@ -102,5 +174,5 @@ export function classifyQuotaMap(
 }
 
 export function buildQuotaBreakdown(data: ProcessedData[]): QuotaBreakdownResult {
-  return classifyQuotaMap(buildUserQuotaMapFromRows(data));
+  return classifyQuotaMap(buildUsageQuotaMapFromRows(data));
 }

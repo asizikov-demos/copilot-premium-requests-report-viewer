@@ -3,6 +3,8 @@
 import { useState, useMemo, useCallback } from 'react';
 
 import { PRICING } from '@/constants/pricing';
+import { getQuotaTier, isLegacyPremiumRequestQuotaValue } from '@/utils/analytics/quota';
+import { getBillingCostLabels } from '@/utils/billingLabels';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useSortableTable } from '@/hooks/useSortableTable';
 import { ProcessedData } from '@/types/csv';
@@ -21,6 +23,13 @@ import { UserDetailsView } from './UserDetailsView';
 
 type DailyCumulativeData = { date: string; [user: string]: string | number };
 const ALL_FILTERS_VALUE = '__all__';
+
+function getPlanDisplayName(quotaValue: number | 'unknown' | undefined): string {
+  const tier = getQuotaTier(quotaValue);
+  if (tier === 'business') return 'Business';
+  if (tier === 'enterprise') return 'Enterprise';
+  return 'Unknown';
+}
 
 function formatUserCount(count: number): string {
   return `${count} ${count === 1 ? 'user' : 'users'}`;
@@ -66,13 +75,21 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
   }, [userCosts]);
 
   const hasAicGross = effectiveBillingArtifacts.hasAnyAicData;
+  const isUsageBasedBilling = useMemo(() => {
+    const hasAiCreditUsage = processedData.some((row) => row.usageUnit === 'ai_credit');
+    const hasRequestUsage = processedData.some((row) => row.usageUnit === 'request' && row.requestsUsed > 0);
+    return hasAiCreditUsage && !hasRequestUsage;
+  }, [processedData]);
+  const showRequestMetrics = !isUsageBasedBilling;
+  const showAicGross = hasAicGross && !isUsageBasedBilling;
+  const costLabels = useMemo(() => getBillingCostLabels(isUsageBasedBilling), [isUsageBasedBilling]);
 
   const columns = useMemo<ColumnKey[]>(() => [
     'quota',
-    'totalRequests',
-    ...(hasAicGross ? ['aicGrossAmount'] as ColumnKey[] : []),
+    ...(showRequestMetrics ? ['totalRequests'] as ColumnKey[] : []),
+    ...(showAicGross ? ['aicGrossAmount'] as ColumnKey[] : []),
     ...(hasCosts ? ['gross', 'discount', 'net'] as ColumnKey[] : [])
-  ], [hasAicGross, hasCosts]);
+  ], [hasCosts, showAicGross, showRequestMetrics]);
 
   const getSortableValue = useCallback((row: UserSummary, column: ColumnKey) => {
     if (column === 'quota') {
@@ -105,10 +122,15 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
 
   const getUserPlanLabel = useCallback((user: string): string | null => {
     const q = getUserQuota(quotaArtifacts, user);
-    if (q === PRICING.ENTERPRISE_QUOTA) return 'Copilot Enterprise';
-    if (q === PRICING.BUSINESS_QUOTA) return 'Copilot Business';
+    const tier = getQuotaTier(q);
+    if (tier === 'enterprise') return 'Copilot Enterprise';
+    if (tier === 'business') return 'Copilot Business';
     return null;
   }, [quotaArtifacts]);
+
+  const getUserPlanDisplayName = useCallback((user: string): string => (
+    getPlanDisplayName(getUserQuota(quotaArtifacts, user))
+  ), [quotaArtifacts]);
 
   const planOptions = useMemo(() => {
     const plans = new Set<string>();
@@ -125,9 +147,10 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
 
     for (const user of userData) {
       const quota = getUserQuota(quotaArtifacts, user.user);
-      if (quota === PRICING.BUSINESS_QUOTA) {
+      const tier = getQuotaTier(quota);
+      if (tier === 'business') {
         businessUsers += 1;
-      } else if (quota === PRICING.ENTERPRISE_QUOTA) {
+      } else if (tier === 'enterprise') {
         enterpriseUsers += 1;
       }
     }
@@ -173,7 +196,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
     data: filteredUserData,
     columns,
     getSortableValue,
-    defaultSort: { column: 'totalRequests', direction: 'desc' }
+    defaultSort: { column: showRequestMetrics ? 'totalRequests' : hasCosts ? 'gross' : 'quota', direction: 'desc' }
   });
   
   const filteredUsageArtifacts = useMemo(() => {
@@ -191,7 +214,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
     const quotaTypes = new Set<number>();
     filteredUserData.forEach(user => {
       const userQuota = getUserQuota(quotaArtifacts, user.user);
-      if (userQuota !== 'unknown') {
+      if (isLegacyPremiumRequestQuotaValue(userQuota)) {
         quotaTypes.add(userQuota);
       }
     });
@@ -403,6 +426,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                 currentQuota={currentQuota}
                 quotaTypes={quotaTypes}
                 hasMixedQuotas={hasMixedQuotas}
+                showQuotaReference={quotaTypes.size > 0}
               />
             </div>
           </div>
@@ -424,9 +448,10 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
             <div className="p-4 space-y-2 sm:hidden">
               {paginatedUserData.map((user) => {
                 const userQuota = getUserQuota(quotaArtifacts, user.user);
-                const isOverQuota = userQuota !== 'unknown' && user.totalRequests > userQuota;
+                const isOverQuota = isLegacyPremiumRequestQuotaValue(userQuota) && user.totalRequests > userQuota;
                 const quotaDisplay = userQuota === 'unknown' ? 'Unknown' : `${userQuota}`;
                 const costs = userCosts.get(user.user);
+                const planDisplay = getUserPlanDisplayName(user.user);
 
                 return (
                 <button
@@ -438,18 +463,26 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                     <span className="font-medium text-[#1f2328] truncate flex-1 mr-2">
                       {user.user}
                     </span>
-                    <span className={`text-sm font-mono ${isOverQuota ? 'text-red-600' : 'text-[#1f2328]'}`}>
-                      {user.totalRequests.toFixed(1)}
-                    </span>
-                  </div>
-                  <div className="text-xs text-[#636c76]">
-                    Quota: {quotaDisplay}
-                    {isOverQuota && (
-                      <span className="text-red-500 ml-2">
-                        +{(user.totalRequests - (userQuota as number)).toFixed(1)} over
+                    {showRequestMetrics ? (
+                      <span className={`text-sm font-mono ${isOverQuota ? 'text-red-600' : 'text-[#1f2328]'}`}>
+                        {user.totalRequests.toFixed(1)}
+                      </span>
+                    ) : (
+                      <span className="text-sm font-medium text-[#636c76]">
+                        {planDisplay}
                       </span>
                     )}
                   </div>
+                  {showRequestMetrics && (
+                    <div className="text-xs text-[#636c76]">
+                      Quota: {quotaDisplay}
+                      {isOverQuota && (
+                        <span className="text-red-500 ml-2">
+                          +{(user.totalRequests - (userQuota as number)).toFixed(1)} over
+                        </span>
+                      )}
+                    </div>
+                  )}
                   {hasCosts && ((costs?.gross ?? 0) > 0 || (costs?.discount ?? 0) > 0 || (costs?.net ?? 0) > 0) && (
                     <div className="flex items-center gap-3 mt-1.5 text-xs font-mono tabular-nums">
                       <span className="text-[#636c76]">{formatCurrency(costs?.gross ?? 0)}</span>
@@ -457,7 +490,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                       <span className="font-semibold text-[#1f2328]">{formatCurrency(costs?.net ?? 0)}</span>
                     </div>
                   )}
-                  {hasAicGross && (
+                  {showAicGross && (
                     <div className="mt-1.5 text-xs font-mono tabular-nums text-[#636c76]">
                       AI Credits Gross: {formatCurrency(costs?.aicGrossAmount ?? 0)}
                     </div>
@@ -505,26 +538,28 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                   onClick={() => handleSortWithReset('quota')}
                 >
                   <div className="flex items-center gap-1 justify-end">
-                    Quota
+                    {isUsageBasedBilling ? 'Plan' : 'Quota'}
                     <span className="text-[#636c76]">
                       {sortBy === 'quota' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
                     </span>
                   </div>
                 </th>
-                <th
-                  className={`px-4 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-[0.05em] min-w-32 cursor-pointer hover:bg-[#f6f8fa] select-none transition-colors duration-150 ${
-                    sortBy === 'totalRequests' ? 'bg-[#f6f8fa]' : 'bg-[#f6f8fa]'
-                  }`}
-                  onClick={() => handleSortWithReset('totalRequests')}
-                >
-                  <div className="flex items-center gap-1 justify-end">
-                    Total Requests
-                    <span className="text-[#636c76]">
-                      {sortBy === 'totalRequests' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
-                    </span>
-                  </div>
-                </th>
-                {hasAicGross && (
+                {showRequestMetrics && (
+                  <th
+                    className={`px-4 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-[0.05em] min-w-32 cursor-pointer hover:bg-[#f6f8fa] select-none transition-colors duration-150 ${
+                      sortBy === 'totalRequests' ? 'bg-[#f6f8fa]' : 'bg-[#f6f8fa]'
+                    }`}
+                    onClick={() => handleSortWithReset('totalRequests')}
+                  >
+                    <div className="flex items-center gap-1 justify-end">
+                      Total Requests
+                      <span className="text-[#636c76]">
+                        {sortBy === 'totalRequests' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
+                      </span>
+                    </div>
+                  </th>
+                )}
+                {showAicGross && (
                   <th
                     className={`px-4 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-[0.05em] min-w-36 cursor-pointer hover:bg-[#f6f8fa] select-none transition-colors duration-150 ${
                       sortBy === 'aicGrossAmount' ? 'bg-[#eef1f4]' : 'bg-[#f6f8fa]'
@@ -548,7 +583,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                       onClick={() => handleSortWithReset('gross')}
                     >
                       <div className="flex items-center gap-1 justify-end">
-                        Gross
+                        {costLabels.gross}
                         <span className="text-[#636c76]">
                           {sortBy === 'gross' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
                         </span>
@@ -561,7 +596,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                       onClick={() => handleSortWithReset('discount')}
                     >
                       <div className="flex items-center gap-1 justify-end">
-                        Discount
+                        {costLabels.discount}
                         <span className="text-[#636c76]">
                           {sortBy === 'discount' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
                         </span>
@@ -574,7 +609,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                       onClick={() => handleSortWithReset('net')}
                     >
                       <div className="flex items-center gap-1 justify-end">
-                        Net
+                        {costLabels.net}
                         <span className="text-[#636c76]">
                           {sortBy === 'net' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
                         </span>
@@ -587,8 +622,9 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
             <tbody className="divide-y divide-[#f6f8fa]">
               {paginatedUserData.map((user) => {
                 const userQuota = getUserQuota(quotaArtifacts, user.user);
-                const isOverQuota = userQuota !== 'unknown' && user.totalRequests > userQuota;
+                const isOverQuota = isLegacyPremiumRequestQuotaValue(userQuota) && user.totalRequests > userQuota;
                 const quotaDisplay = userQuota === 'unknown' ? 'Unknown' : userQuota.toString();
+                const planDisplay = getUserPlanDisplayName(user.user);
 
                 return (
                 <tr key={user.user} className="hover:bg-[#fcfdff] transition-colors duration-150">
@@ -601,24 +637,26 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                       {user.user}
                     </button>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-[#636c76] font-mono tabular-nums text-right">
-                    {quotaDisplay}
+                  <td className={`px-4 py-3 whitespace-nowrap text-sm text-[#636c76] text-right ${isUsageBasedBilling ? 'font-medium' : 'font-mono tabular-nums'}`}>
+                    {isUsageBasedBilling ? planDisplay : quotaDisplay}
                   </td>
-                  <td className={`px-4 py-3 whitespace-nowrap text-sm font-mono font-medium tabular-nums text-right ${
-                    isOverQuota ? 'text-red-600' : 'text-[#1f2328]'
-                  }`}>
-                    {user.totalRequests.toFixed(2)}
-                    {isOverQuota && (
-                      <span className="ml-1.5 text-xs text-red-500 font-normal">
-                        (+{(user.totalRequests - (userQuota as number)).toFixed(1)})
-                      </span>
-                    )}
-                  </td>
+                  {showRequestMetrics && (
+                    <td className={`px-4 py-3 whitespace-nowrap text-sm font-mono font-medium tabular-nums text-right ${
+                      isOverQuota ? 'text-red-600' : 'text-[#1f2328]'
+                    }`}>
+                      {user.totalRequests.toFixed(2)}
+                      {isOverQuota && (
+                        <span className="ml-1.5 text-xs text-red-500 font-normal">
+                          (+{(user.totalRequests - (userQuota as number)).toFixed(1)})
+                        </span>
+                      )}
+                    </td>
+                  )}
                   {(() => {
                     const costs = userCosts.get(user.user);
                     return (
                       <>
-                        {hasAicGross && (
+                        {showAicGross && (
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-[#636c76] font-mono tabular-nums text-right">
                             {formatCurrency(costs?.aicGrossAmount ?? 0)}
                           </td>

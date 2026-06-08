@@ -82,4 +82,28 @@ describe('BillingGroupTable', () => {
     expect(screen.queryByRole('columnheader', { name: 'Discount' })).not.toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: 'Net' })).not.toBeInTheDocument();
   });
+
+  it('renders usage-based cost labels when supplied', () => {
+    render(
+      <BillingGroupTable
+        title="Cost Centers"
+        singularLabel="cost center"
+        nameColumnLabel="Cost Center"
+        rows={[billingRow]}
+        hasCosts={true}
+        hasAicGross={false}
+        detailIdPrefix="cost-center-details"
+        grossColumnLabel="Gross Amount"
+        discountColumnLabel="Included Credits"
+        netColumnLabel="Additional usage"
+      />
+    );
+
+    expect(screen.getByRole('columnheader', { name: 'Gross Amount' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Included Credits' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Additional usage' })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Gross' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Discount' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Net' })).not.toBeInTheDocument();
+  });
 });

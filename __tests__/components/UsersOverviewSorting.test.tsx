@@ -204,6 +204,66 @@ describe('UsersOverview - sorting', () => {
     expect(within(table).getByText('$0.00')).toBeInTheDocument();
   });
 
+  it('shows usage-based billing columns and hides request-only columns', () => {
+    const userData: UserSummary[] = [
+      { user: 'test-user-one', totalRequests: 0, modelBreakdown: {} },
+      { user: 'test-user-two', totalRequests: 0, modelBreakdown: {} },
+      { user: 'test-user-three', totalRequests: 0, modelBreakdown: {} },
+    ];
+    const quotaArtifacts = makeQuota([
+      { user: 'test-user-one', quota: PRICING.BUSINESS_AI_CREDIT_QUOTA },
+      { user: 'test-user-two', quota: PRICING.ENTERPRISE_AI_CREDIT_QUOTA },
+      { user: 'test-user-three', quota: 'unknown' },
+    ]);
+    const timestamp = new Date('2026-06-01T00:00:00Z');
+    const makeUsageRow = (user: string, quotaValue: number | 'unknown', grossAmount: number): ProcessedData => ({
+      timestamp,
+      user,
+      model: 'Auto: Claude Haiku 4.5',
+      requestsUsed: 0,
+      exceedsQuota: false,
+      totalQuota: quotaValue === 'unknown' ? 'Unknown' : quotaValue.toString(),
+      quotaValue,
+      iso: timestamp.toISOString(),
+      dateKey: '2026-06-01',
+      monthKey: '2026-06',
+      epoch: timestamp.getTime(),
+      sku: 'copilot_ai_credit',
+      unitType: 'ai-credits',
+      usageUnit: 'ai_credit',
+      billingQuantity: grossAmount / PRICING.AI_CREDIT_USD_VALUE,
+      grossAmount,
+      discountAmount: grossAmount,
+      netAmount: 0,
+      aicGrossAmount: grossAmount,
+    });
+
+    render(
+      <UsersOverview
+        userData={userData}
+        processedData={[
+          makeUsageRow('test-user-one', PRICING.BUSINESS_AI_CREDIT_QUOTA, 0.1),
+          makeUsageRow('test-user-two', PRICING.ENTERPRISE_AI_CREDIT_QUOTA, 0.2),
+          makeUsageRow('test-user-three', 'unknown', 0.3),
+        ]}
+        dailyCumulativeData={[{ date: '2026-06-01T00:00:00Z' }]}
+        quotaArtifacts={quotaArtifacts}
+        usageArtifacts={makeUsage(userData)}
+      />
+    );
+
+    const table = screen.getByRole('table', { name: 'Users' });
+    expect(within(table).getByRole('columnheader', { name: /Plan/ })).toBeInTheDocument();
+    expect(within(table).getByRole('columnheader', { name: /Gross Amount/ })).toBeInTheDocument();
+    expect(within(table).queryByRole('columnheader', { name: /Quota/ })).not.toBeInTheDocument();
+    expect(within(table).queryByRole('columnheader', { name: /Total Requests/ })).not.toBeInTheDocument();
+    expect(within(table).queryByRole('columnheader', { name: 'AI Credits Gross' })).not.toBeInTheDocument();
+    expect(within(table).queryByRole('columnheader', { name: 'Gross' })).not.toBeInTheDocument();
+    expect(within(table).getByText('Business')).toBeInTheDocument();
+    expect(within(table).getByText('Enterprise')).toBeInTheDocument();
+    expect(within(table).getByText('Unknown')).toBeInTheDocument();
+  });
+
   it('sorts by quota (including Unknown) when clicking Quota header', () => {
     const userData: UserSummary[] = [
       { user: 'Alice', totalRequests: 10, modelBreakdown: { 'gpt-4': 10 } },

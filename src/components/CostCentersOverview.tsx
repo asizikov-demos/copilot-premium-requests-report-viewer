@@ -2,6 +2,7 @@
 
 import { BillingGroupTable, useBillingGroupRows } from '@/components/BillingGroupTable';
 import { useAnalysisContext } from '@/context/AnalysisContext';
+import { getBillingCostLabels } from '@/utils/billingLabels';
 import { UNASSIGNED_BILLING_GROUP } from '@/utils/ingestion';
 
 export function CostCentersOverview() {
@@ -15,6 +16,11 @@ export function CostCentersOverview() {
 
   const hasCosts = costCenterRows.some(r => r.gross > 0 || r.net > 0);
   const hasAicGross = billingArtifacts?.hasAnyAicData === true;
+  const hasAiCreditUsage = aggregateProcessedData.some((row) => row.usageUnit === 'ai_credit');
+  const hasRequestUsage = aggregateProcessedData.some((row) => row.usageUnit === 'request' && row.requestsUsed > 0);
+  const isUsageBasedBilling = hasAiCreditUsage && !hasRequestUsage;
+  const quantityColumnLabel = isUsageBasedBilling ? 'AI Credits' : 'Requests';
+  const costLabels = getBillingCostLabels(isUsageBasedBilling);
 
   return (
     <BillingGroupTable
@@ -23,8 +29,12 @@ export function CostCentersOverview() {
       nameColumnLabel="Cost Center"
       rows={costCenterRows}
       hasCosts={hasCosts}
-      hasAicGross={hasAicGross}
+      hasAicGross={hasAicGross && !isUsageBasedBilling}
       detailIdPrefix="cost-center-details"
+      quantityColumnLabel={quantityColumnLabel}
+      grossColumnLabel={costLabels.gross}
+      discountColumnLabel={costLabels.discount}
+      netColumnLabel={costLabels.net}
     />
   );
 }

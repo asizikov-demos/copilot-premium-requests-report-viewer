@@ -16,7 +16,7 @@ import { CodingAgentAnalysis, UserDailyData } from '@/types/csv';
 import { buildAdvisoriesFromCategories, getEarlyExhausterCount, type Advisory } from '@/utils/analytics/advisory';
 import { CONSUMPTION_THRESHOLDS, UserConsumptionCategory, InsightsOverviewData } from '@/utils/analytics/insights';
 import type { FeatureUtilizationStats } from '@/utils/analytics/insights';
-import { buildUserQuotaMapFromRows, classifyQuotaMap } from '@/utils/analytics/quota';
+import { buildUserQuotaMapFromRows, classifyQuotaMap, isLegacyPremiumRequestQuotaValue } from '@/utils/analytics/quota';
 import { dayOfMonthToWeekBucket, enumerateDatesInclusive, monthKeyToLabel } from '@/utils/dateKeys';
 import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
 import { calculateBilledOverageFromRows, calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
@@ -79,6 +79,8 @@ function buildNormalizedRowFromProcessedData(row: ProcessedData): NormalizedRow 
     product: row.product,
     sku: row.sku,
     unitType: row.unitType,
+    usageUnit: row.usageUnit,
+    billingQuantity: row.billingQuantity,
     organization: row.organization,
     costCenter: row.costCenter,
     appliedCostPerQuantity: row.appliedCostPerQuantity,
@@ -133,7 +135,7 @@ export function buildUsersExceedingQuota(usage: UsageArtifacts, quota: QuotaArti
   let count = 0;
   for (const u of usage.users) {
     const q = quota.quotaByUser.get(u.user);
-    if (q && q !== 'unknown' && u.totalRequests > q) count++;
+    if (isLegacyPremiumRequestQuotaValue(q) && u.totalRequests > q) count++;
   }
   return count;
 }
@@ -214,7 +216,10 @@ export function computeOverageSummaryFromArtifacts(usage: UsageArtifacts, quota:
   let totalOverageRequests = 0;
   for (const u of usage.users) {
     const q = quota.quotaByUser.get(u.user) ?? 'unknown';
-    totalOverageRequests += calculateOverageRequests(u.totalRequests, q);
+    totalOverageRequests += calculateOverageRequests(
+      u.totalRequests,
+      isLegacyPremiumRequestQuotaValue(q) ? q : 'unknown'
+    );
   }
   return { totalOverageRequests, totalOverageCost: calculateOverageCost(totalOverageRequests) };
 }
@@ -277,7 +282,7 @@ export function computeWeeklyQuotaExhaustionFromArtifacts(
       // Skip if already exhausted
       if (records.some(r => r.user === user)) continue;
       const quotaVal = quota.quotaByUser.get(user);
-      if (!quotaVal || quotaVal === 'unknown') continue;
+      if (!isLegacyPremiumRequestQuotaValue(quotaVal)) continue;
       const newTotal = (cumulative.get(user) || 0) + val;
       cumulative.set(user, newTotal);
       if (newTotal >= quotaVal) {

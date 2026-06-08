@@ -3,8 +3,8 @@
  * Eliminates O(U*R) repeated lookups by maintaining O(1) map.
  */
 
-import { shouldReplaceQuotaValue } from '@/utils/analytics/quota';
-import { isRequestUnitType } from '@/utils/unitType';
+import { getQuotaTier, shouldReplaceQuotaValue } from '@/utils/analytics/quota';
+import { isSupportedUsageUnitType } from '@/utils/unitType';
 
 import {
   Aggregator,
@@ -38,7 +38,7 @@ export class QuotaAggregator implements Aggregator<QuotaArtifacts> {
       return;
     }
 
-    if (row.quotaValue === undefined || !isRequestUnitType(row.unitType)) return;
+    if (row.quotaValue === undefined || !isSupportedUsageUnitType(row.unitType, row.sku)) return;
     
     const existing = this.quotaByUser.get(row.user);
     const current = row.quotaValue;
@@ -62,12 +62,15 @@ export class QuotaAggregator implements Aggregator<QuotaArtifacts> {
   }
   
   finalize(ctx: AggregatorContext): QuotaArtifacts {
-    const hasMixedLicenses = this.distinctQuotas.has(ctx.pricing.BUSINESS_QUOTA)
-      && this.distinctQuotas.has(ctx.pricing.ENTERPRISE_QUOTA);
+    const distinctTiers = new Set(
+      Array.from(this.distinctQuotas)
+        .map((quota) => getQuotaTier(quota))
+        .filter((tier): tier is 'business' | 'enterprise' => tier !== null)
+    );
+    const hasMixedLicenses = distinctTiers.has('business') && distinctTiers.has('enterprise');
     
     const hasUnknown = Array.from(this.quotaByUser.values()).includes('unknown');
-    const hasMixedQuotas = this.distinctQuotas.size > 1 
-      || (this.distinctQuotas.size >= 1 && hasUnknown);
+    const hasMixedQuotas = distinctTiers.size > 1 || (distinctTiers.size >= 1 && hasUnknown);
     
     return {
       quotaByUser: this.quotaByUser,

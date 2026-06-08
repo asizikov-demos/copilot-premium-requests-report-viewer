@@ -5,6 +5,7 @@ import React, { useEffect, useMemo } from 'react';
 import { PRICING } from '@/constants/pricing';
 import { AnalysisProvider, useAnalysisContext } from '@/context/AnalysisContext';
 import { aggregateAutoModeSavings } from '@/utils/autoModeSavings';
+import { getBillingCostLabels } from '@/utils/billingLabels';
 import { formatCurrency } from '@/utils/formatters';
 import { getModelColor } from '@/utils/modelColors';
 import { aggregateProductCosts } from '@/utils/productCosts';
@@ -137,7 +138,6 @@ function DataAnalysisInner() {
     setSelectedMonths,
     planInfo,
     selectedPlan,
-    chartData,
     filename,
     quotaArtifacts,
     usageArtifacts,
@@ -154,6 +154,33 @@ function DataAnalysisInner() {
   }, [baseProcessed]);
 
   const aicMetricsAvailable = billingArtifacts?.hasAnyAicData === true;
+  const hasAiCreditUsage = useMemo(
+    () => aggregateProcessedData.some((row) => row.usageUnit === 'ai_credit'),
+    [aggregateProcessedData]
+  );
+  const hasRequestUsage = useMemo(
+    () => aggregateProcessedData.some((row) => row.usageUnit === 'request' && row.requestsUsed > 0),
+    [aggregateProcessedData]
+  );
+  const isUsageBasedBilling = hasAiCreditUsage && !hasRequestUsage;
+  const quantityColumnLabel = isUsageBasedBilling ? 'AI Credits' : 'Requests';
+  const billingQuantityLabel = isUsageBasedBilling ? 'AI Credits' : 'PRUs';
+  const costLabels = getBillingCostLabels(isUsageBasedBilling);
+  const unitCostLabel = isUsageBasedBilling
+    ? `1 AI Credit = ${formatCurrency(PRICING.AI_CREDIT_USD_VALUE)}`
+    : `1 PRU = ${formatCurrency(PRICING.OVERAGE_RATE_PER_REQUEST)}`;
+  const monthlyQuotaDisplay = useMemo(() => {
+    if (analysis.quotaBreakdown.mixed) {
+      return 'Mixed';
+    }
+
+    const distinctQuotas = Array.from(quotaArtifacts.distinctQuotas);
+    if (distinctQuotas.length === 1) {
+      return distinctQuotas[0].toLocaleString();
+    }
+
+    return planInfo[selectedPlan].monthlyQuota.toLocaleString();
+  }, [analysis.quotaBreakdown.mixed, planInfo, quotaArtifacts.distinctQuotas, selectedPlan]);
 
   const navItems = useMemo(() => {
     const items = [...NAV_ITEMS];
@@ -224,7 +251,22 @@ function DataAnalysisInner() {
   const hasModelCosts = modelRows.some(
     (row) => row.gross > 0 || row.discount > 0 || row.net > 0
   );
-  const hasModelAic = aicMetricsAvailable;
+  const showModelQuantity = true;
+  const hasModelAic = aicMetricsAvailable && !isUsageBasedBilling;
+  const modelChartData = useMemo(() => (
+    modelRows.map((item) => ({
+      model: item.model.length > 20 ? `${item.model.substring(0, 20)}...` : item.model,
+      fullModel: item.model,
+      requests: Math.round(item.requests * 100) / 100,
+    }))
+  ), [modelRows]);
+  const modelChartTotal = modelRows.reduce((sum, model) => sum + model.requests, 0);
+  const modelChartTitle = isUsageBasedBilling ? 'AI Credits by Model' : 'Requests by Model';
+  const modelChartValueLabel = isUsageBasedBilling ? 'AI Credits' : 'Total Requests';
+  const modelChartUnitLabel = isUsageBasedBilling ? 'AI Credits' : 'requests';
+  const modelChartTotalDisplay = isUsageBasedBilling
+    ? modelChartTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : modelChartTotal.toFixed(0);
 
   const productCosts = useMemo(() => aggregateProductCosts(aggregateProcessedData), [aggregateProcessedData]);
   const showProductAicGross = aicMetricsAvailable;
@@ -409,10 +451,10 @@ function DataAnalysisInner() {
                       {formatCurrency(aggregatedCosts.net)}
                     </p>
                     <p className="text-sm text-[#636c76] text-center mt-1">
-                      {aggregateProcessedData.reduce((sum, r) => sum + r.requestsUsed, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PRUs
+                      {aggregateProcessedData.reduce((sum, r) => sum + (r.billingQuantity ?? r.requestsUsed), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {billingQuantityLabel}
                     </p>
                     <p className="text-xs text-[#636c76] text-center mt-0.5">
-                      1 PRU = {formatCurrency(PRICING.OVERAGE_RATE_PER_REQUEST)}
+                      {unitCostLabel}
                     </p>
                     <div className="mt-4 pt-4 border-t border-[#d1d9e0] space-y-2 text-sm" aria-label="billing-summary">
                       <div className="flex justify-between">
@@ -422,13 +464,13 @@ function DataAnalysisInner() {
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-[#636c76]">Discounts</span>
+                        <span className="text-[#636c76]">{costLabels.discountSummary}</span>
                         <span className="font-mono font-medium text-[#1f2328]">
                           &minus;{formatCurrency(aggregatedCosts.discount)}
                         </span>
                       </div>
                       <div className="flex justify-between pt-2 mt-2 border-t-2 border-[#d1d9e0]">
-                        <span className="text-[#1f2328] font-bold">Net cost</span>
+                        <span className="text-[#1f2328] font-bold">{costLabels.netSummary}</span>
                         <span className="font-mono font-bold text-[#1f2328]">
                           {formatCurrency(aggregatedCosts.net)}
                         </span>
@@ -495,7 +537,7 @@ function DataAnalysisInner() {
                           </span>
                         </div>
                         <p className="text-xs text-[#636c76]">
-                          Estimated values. Gross cost excludes any discounts applied to the final bill.
+                          Estimated values. Gross cost excludes any included credits applied to the final bill.
                         </p>
                       </div>
                     </div>
@@ -514,15 +556,15 @@ function DataAnalysisInner() {
                       <thead>
                         <tr className="border-b border-[#d1d9e0]">
                           <th className="px-6 py-3 text-left text-xs font-bold text-[#636c76] uppercase tracking-wider">Product</th>
-                          <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Requests</th>
+                          <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{quantityColumnLabel}</th>
                           {showProductAicGross && (
                             <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">AI Credits Gross</th>
                           )}
                           {showProductCosts && (
                             <>
                               <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Gross</th>
-                              <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Discount</th>
-                              <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Net</th>
+                              <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{costLabels.discount}</th>
+                              <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{costLabels.net}</th>
                             </>
                           )}
                         </tr>
@@ -568,7 +610,7 @@ function DataAnalysisInner() {
                       <thead>
                         <tr className="border-b border-[#d1d9e0]">
                           <th className="px-6 py-3 text-left text-xs font-bold text-[#636c76] uppercase tracking-wider">Model</th>
-                          <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Requests</th>
+                          <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{quantityColumnLabel}</th>
                           <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Cost Before Auto</th>
                           <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Savings</th>
                         </tr>
@@ -598,11 +640,15 @@ function DataAnalysisInner() {
 
               <div className="bg-white border border-[#d1d9e0] rounded-md p-6 opacity-0 animate-scale-in" style={{ animationDelay: '200ms' }}>
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-semibold text-[#1f2328]">Requests by Model</h3>
-                  <span className="text-xs text-[#636c76] font-medium">Total: {analysis.requestsByModel.reduce((sum, m) => sum + m.totalRequests, 0).toFixed(0)} requests</span>
+                  <h3 className="text-lg font-semibold text-[#1f2328]">{modelChartTitle}</h3>
+                  <span className="text-xs text-[#636c76] font-medium">Total: {modelChartTotalDisplay} {modelChartUnitLabel}</span>
                 </div>
                 <div className="h-72 xl:h-80 2xl:h-96">
-                  <ModelRequestsBarChart data={chartData} />
+                  <ModelRequestsBarChart
+                    data={modelChartData}
+                    valueLabel={modelChartValueLabel}
+                    valueUnitLabel={modelChartUnitLabel}
+                  />
                 </div>
               </div>
 
@@ -615,15 +661,17 @@ function DataAnalysisInner() {
                     <thead>
                       <tr className="border-b border-[#d1d9e0]">
                         <th className="px-6 py-3 text-left text-xs font-bold text-[#636c76] uppercase tracking-wider">Model</th>
-                        <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Requests</th>
+                        {showModelQuantity && (
+                          <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{quantityColumnLabel}</th>
+                        )}
                         {hasModelAic && (
                           <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">AI Credits Gross</th>
                         )}
                         {hasModelCosts && (
                           <>
-                            <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Gross</th>
-                            <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Discount</th>
-                            <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Net</th>
+                            <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{costLabels.gross}</th>
+                            <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{costLabels.discount}</th>
+                            <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{costLabels.net}</th>
                           </>
                         )}
                       </tr>
@@ -638,9 +686,11 @@ function DataAnalysisInner() {
                                 {item.model}
                               </div>
                             </td>
-                            <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
-                              {item.requests.toFixed(2)}
-                            </td>
+                            {showModelQuantity && (
+                              <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
+                                {item.requests.toFixed(2)}
+                              </td>
+                            )}
                             {hasModelAic && (
                               <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
                                 {formatCurrency(item.aicGrossAmount)}
@@ -679,10 +729,7 @@ function DataAnalysisInner() {
               <div className="flex items-center justify-between p-3 bg-[#f6f8fa] rounded-md border border-[#d1d9e0]">
                 <span className="text-xs font-medium text-[#636c76]">Monthly Quota</span>
                 <span className="text-sm font-bold text-[#1f2328]">
-                  {analysis.quotaBreakdown.mixed
-                    ? 'Mixed'
-                    : planInfo[selectedPlan].monthlyQuota
-                  }
+                  {monthlyQuotaDisplay}
                 </span>
               </div>
 

@@ -55,6 +55,8 @@ export function buildProcessedDataFromRows(
       product: row.product,
       sku: row.sku,
       unitType: row.unitType,
+      usageUnit: row.usageUnit,
+      billingQuantity: row.billingQuantity,
       organization: row.organization,
       costCenter: row.costCenter,
       appliedCostPerQuantity: row.appliedCostPerQuantity,

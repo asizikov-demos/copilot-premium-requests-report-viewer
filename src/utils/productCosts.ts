@@ -42,7 +42,7 @@ export function createEmptyProductCostMap(): Map<ProductCategory, ProductCost> {
 
 export function accumulateProductCost(
   buckets: Map<ProductCategory, ProductCost>,
-  row: Pick<ProcessedData, 'model' | 'product' | 'sku' | 'requestsUsed' | 'grossAmount' | 'discountAmount' | 'netAmount' | 'aicQuantity' | 'aicGrossAmount' | 'isNonCopilotUsage' | 'usageBucket'>
+  row: Pick<ProcessedData, 'model' | 'product' | 'sku' | 'requestsUsed' | 'billingQuantity' | 'grossAmount' | 'discountAmount' | 'netAmount' | 'aicQuantity' | 'aicGrossAmount' | 'isNonCopilotUsage' | 'usageBucket'>
 ): void {
   const category = classifyProductCategory(row.model, row.product, row.sku, {
     isNonCopilotUsage: row.isNonCopilotUsage,
@@ -54,7 +54,7 @@ export function accumulateProductCost(
     return;
   }
 
-  bucket.requests += row.requestsUsed;
+  bucket.requests += row.billingQuantity ?? row.requestsUsed;
   bucket.gross += row.grossAmount ?? 0;
   bucket.discount += row.discountAmount ?? 0;
   bucket.net += row.netAmount ?? 0;

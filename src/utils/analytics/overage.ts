@@ -1,7 +1,7 @@
 import type { ProcessedData } from '@/types/csv';
 import { calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
 
-import { buildUserQuotaMapFromRows } from './quota';
+import { buildUserQuotaMapFromRows, isLegacyPremiumRequestQuotaValue } from './quota';
 import type { UserSummary } from './types';
 
 export interface OverageSummary {
@@ -18,7 +18,10 @@ export function computeOverageSummary(userData: UserSummary[], processedData: Pr
   const quotaMap = buildUserQuotaMapFromRows(processedData);
   const totalOverageRequests = userData.reduce((total, user) => {
     const userQuota = quotaMap.get(user.user) ?? 'unknown';
-    const overage = calculateOverageRequests(user.totalRequests, userQuota);
+    const overage = calculateOverageRequests(
+      user.totalRequests,
+      isLegacyPremiumRequestQuotaValue(userQuota) ? userQuota : 'unknown'
+    );
     return total + overage;
   }, 0);
   const totalOverageCost = calculateOverageCost(totalOverageRequests);

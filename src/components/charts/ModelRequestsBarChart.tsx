@@ -17,10 +17,17 @@ type ResponsiveHeight = number | `${number}%`;
 interface ModelRequestsBarChartProps {
   data: ModelRequestsBarChartDatum[];
   height?: ResponsiveHeight;
+  valueLabel?: string;
+  valueUnitLabel?: string;
 }
 
 // Extracted from DataAnalysis overview section to standardize chart usage
-export function ModelRequestsBarChart({ data, height = '100%' as ResponsiveHeight }: ModelRequestsBarChartProps) {
+export function ModelRequestsBarChart({
+  data,
+  height = '100%' as ResponsiveHeight,
+  valueLabel = 'Total Requests',
+  valueUnitLabel = 'requests',
+}: ModelRequestsBarChartProps) {
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart
@@ -44,8 +51,8 @@ export function ModelRequestsBarChart({ data, height = '100%' as ResponsiveHeigh
         />
         <Tooltip 
           formatter={(value) => [
-            `${Number(value).toLocaleString()} requests`,
-            'Total Requests'
+            `${Number(value).toLocaleString()} ${valueUnitLabel}`,
+            valueLabel
           ]}
           labelFormatter={(label, payload) => {
             const item = payload?.[0]?.payload as ModelRequestsBarChartDatum | undefined;

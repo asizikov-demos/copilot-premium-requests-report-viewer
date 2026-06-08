@@ -15,6 +15,7 @@ export interface UsersQuotaConsumptionChartProps {
   quotaTypes: Set<number>;
   hasMixedQuotas: boolean;
   hasMixedLicenses: boolean;
+  showQuotaReference?: boolean;
 }
 
 export function UsersQuotaConsumptionChart({
@@ -24,7 +25,8 @@ export function UsersQuotaConsumptionChart({
   currentQuota,
   quotaTypes,
   hasMixedQuotas,
-  hasMixedLicenses
+  hasMixedLicenses,
+  showQuotaReference = true
 }: UsersQuotaConsumptionChartProps) {
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -53,7 +55,7 @@ export function UsersQuotaConsumptionChart({
           wrapperStyle={{ zIndex: 1000 }}
         />
         {/* Quota reference lines */}
-        {hasMixedQuotas ? (
+        {showQuotaReference && (hasMixedQuotas ? (
           <>
             {quotaTypes.has(PRICING.BUSINESS_QUOTA) && (
               <ReferenceLine 
@@ -82,7 +84,7 @@ export function UsersQuotaConsumptionChart({
             strokeDasharray="5 5"
             label={{ value: `${currentQuota} quota limit`, position: "insideTopRight" }}
           />
-        )}
+        ))}
         {/* User lines */}
         {users.map((user) => (
           <Line

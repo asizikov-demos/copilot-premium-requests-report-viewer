@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 import { UserDetailsView } from '@/components/UserDetailsView';
+import { PRICING } from '@/constants/pricing';
 import type { ProcessedData } from '@/types/csv';
 
 jest.mock('recharts', () => ({
@@ -245,5 +246,58 @@ describe('UserDetailsView', () => {
     const opusDailyCells = within(opusDailyRow as HTMLElement).getAllByRole('cell');
     expect(opusDailyCells[3]).toHaveTextContent('$0.00');
     expect(opusDailyCells[4]).toHaveTextContent('$0.96');
+  });
+
+  it('uses usage-based billing columns in product and daily model breakdown tables', async () => {
+    const timestamp = new Date('2026-06-01T00:00:00Z');
+    const iso = timestamp.toISOString();
+    const processedData: ProcessedData[] = [{
+      timestamp,
+      user: 'test-user-one',
+      model: 'Auto: Claude Haiku 4.5',
+      requestsUsed: 0,
+      exceedsQuota: false,
+      totalQuota: PRICING.BUSINESS_AI_CREDIT_QUOTA.toString(),
+      quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA,
+      iso,
+      dateKey: iso.slice(0, 10),
+      monthKey: iso.slice(0, 7),
+      epoch: timestamp.getTime(),
+      product: 'copilot',
+      sku: 'copilot_ai_credit',
+      unitType: 'ai-credits',
+      usageUnit: 'ai_credit',
+      billingQuantity: 42.5,
+      grossAmount: 0.425,
+      discountAmount: 0.425,
+      netAmount: 0,
+      aicGrossAmount: 0.425,
+    }];
+
+    render(
+      <UserDetailsView
+        user="test-user-one"
+        processedData={processedData}
+        userQuotaValue={PRICING.BUSINESS_AI_CREDIT_QUOTA}
+        onBack={mockOnBack}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Cost per Product')).toBeInTheDocument();
+      expect(screen.getByText('Daily Model Usage Breakdown')).toBeInTheDocument();
+      expect(screen.getAllByRole('columnheader', { name: 'AI Credits' })).toHaveLength(2);
+      expect(screen.getAllByRole('columnheader', { name: 'Gross Amount' })).toHaveLength(2);
+      expect(screen.queryByRole('columnheader', { name: 'AI Credits Gross' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('columnheader', { name: 'Requests' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('columnheader', { name: 'Gross' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('columnheader', { name: 'Gross Cost' })).not.toBeInTheDocument();
+    });
+
+    const dailyRow = screen.getByText('- Auto: Claude Haiku 4.5').closest('tr');
+    expect(dailyRow).not.toBeNull();
+    const dailyCells = within(dailyRow as HTMLElement).getAllByRole('cell');
+    expect(dailyCells[2]).toHaveTextContent('42.50');
+    expect(dailyCells[3]).toHaveTextContent('$0.43');
   });
 });

@@ -67,7 +67,7 @@ export function useBillingGroupRows<TExtra extends object>(
       }
 
       updateEntry?.(entry, row);
-      entry.requests += row.requestsUsed;
+      entry.requests += row.billingQuantity ?? row.requestsUsed;
       accumulateProductCost(entry.productBuckets, row);
     }
 
@@ -107,6 +107,10 @@ interface BillingGroupTableProps<T extends BillingGroupRow> {
   hasCosts: boolean;
   hasAicGross: boolean;
   detailIdPrefix: string;
+  quantityColumnLabel?: string;
+  grossColumnLabel?: string;
+  discountColumnLabel?: string;
+  netColumnLabel?: string;
   extraColumns?: Array<BillingGroupExtraColumn<T>>;
 }
 
@@ -122,6 +126,10 @@ export function BillingGroupTable<T extends BillingGroupRow>({
   hasCosts,
   hasAicGross,
   detailIdPrefix,
+  quantityColumnLabel = 'Requests',
+  grossColumnLabel = 'Gross',
+  discountColumnLabel = 'Discount',
+  netColumnLabel = 'Net',
   extraColumns = [],
 }: BillingGroupTableProps<T>) {
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
@@ -144,15 +152,15 @@ export function BillingGroupTable<T extends BillingGroupRow>({
                     {column.header}
                   </th>
                 ))}
-                <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Requests</th>
+                <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{quantityColumnLabel}</th>
                 {hasAicGross && (
                   <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">AI Credits Gross</th>
                 )}
                 {hasCosts && (
                   <>
-                    <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Gross</th>
-                    <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Discount</th>
-                    <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Net</th>
+                    <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{grossColumnLabel}</th>
+                    <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{discountColumnLabel}</th>
+                    <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{netColumnLabel}</th>
                   </>
                 )}
               </tr>
@@ -221,15 +229,15 @@ export function BillingGroupTable<T extends BillingGroupRow>({
                               <thead>
                                 <tr className="border-b border-[#d1d9e0]">
                                   <th className="px-10 py-2 text-left text-xs font-bold text-[#636c76] uppercase tracking-wider">Product</th>
-                                  <th className="px-6 py-2 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Requests</th>
+                                  <th className="px-6 py-2 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{quantityColumnLabel}</th>
                                   {hasAicGross && (
                                     <th className="px-6 py-2 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">AI Credits Gross</th>
                                   )}
                                   {hasCosts && (
                                     <>
-                                      <th className="px-6 py-2 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Gross</th>
-                                      <th className="px-6 py-2 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Discount</th>
-                                      <th className="px-6 py-2 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Net</th>
+                                      <th className="px-6 py-2 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{grossColumnLabel}</th>
+                                      <th className="px-6 py-2 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{discountColumnLabel}</th>
+                                      <th className="px-6 py-2 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{netColumnLabel}</th>
                                     </>
                                   )}
                                 </tr>
