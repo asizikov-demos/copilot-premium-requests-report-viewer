@@ -410,37 +410,6 @@ function DataAnalysisInner() {
           ) : (
             /* Overview — chart + model table */
             <div className="space-y-6">
-              {aicMetricsAvailable && aggregatedAic && (
-                <div className="bg-[#eef2ff] border border-[#c7d2fe] rounded-md p-4 opacity-0 animate-fade-in-up" style={{ animationDelay: '25ms' }}>
-                  <h3 className="text-sm font-semibold text-[#1f2328]">Usage-based billing preview</h3>
-                  <p className="text-sm text-[#6366f1] mt-1">
-                    GitHub Copilot is transitioning to usage-based billing with AI Credits based on token consumption.
-                  </p>
-                  <p className="text-sm text-[#6366f1] mt-2">
-                    Learn more about usage-based billing &rarr;{' '}
-                    <a
-                      href="https://gh.io/copilot-billing-blog"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-semibold text-[#0969da] hover:underline"
-                    >
-                      gh.io/copilot-billing-blog
-                    </a>
-                  </p>
-                  <p className="text-sm text-[#6366f1] mt-1">
-                    Use the billing preview app to understand the new bill format &rarr;{' '}
-                    <a
-                      href="https://gh.io/billing-preview"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-semibold text-[#0969da] hover:underline"
-                    >
-                      gh.io/billing-preview
-                    </a>
-                  </p>
-                </div>
-              )}
-
               {/* Current Billing + Licenses row */}
               {costMetricsAvailable && aggregatedCosts && (
                 <div className={`grid grid-cols-1 ${aggregatedAic ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6 opacity-0 animate-fade-in-up`} style={{ animationDelay: '50ms' }}>

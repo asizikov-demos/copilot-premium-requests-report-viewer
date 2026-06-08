@@ -171,10 +171,10 @@ describe('DataAnalysis billing summary', () => {
     render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Usage-based billing preview')).toBeInTheDocument();
-      expect(screen.getByText(/Learn more about usage-based billing/)).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'gh.io/copilot-billing-blog' })).toHaveAttribute('href', 'https://gh.io/copilot-billing-blog');
-      expect(screen.getByRole('link', { name: 'gh.io/billing-preview' })).toHaveAttribute('href', 'https://gh.io/billing-preview');
+      expect(screen.queryByText('Usage-based billing preview')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Learn more about usage-based billing/)).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'gh.io/copilot-billing-blog' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'gh.io/billing-preview' })).not.toBeInTheDocument();
       expect(screen.getAllByText('AI Credits').length).toBeGreaterThan(0);
       expect(screen.getByLabelText('ai-credits-summary')).toHaveTextContent('$0.39');
       expect(screen.getByLabelText('ai-credits-summary')).toHaveTextContent('AI Credits included');
@@ -345,7 +345,7 @@ describe('DataAnalysis billing summary', () => {
     render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Usage-based billing preview')).toBeInTheDocument();
+      expect(screen.queryByText('Usage-based billing preview')).not.toBeInTheDocument();
       expect(screen.getByLabelText('ai-credits-summary')).toHaveTextContent('$0.00');
       expect(screen.getAllByRole('columnheader', { name: 'AI Credits Gross' })).toHaveLength(2);
     });
