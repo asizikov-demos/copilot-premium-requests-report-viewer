@@ -155,7 +155,7 @@ export function UsersAicClustersChart({ users }: UsersAicClustersChartProps) {
             <XAxis
               type="number"
               dataKey="averageRequests"
-              name="Avg premium requests"
+              name="Avg usage quantity"
               tick={{ fontSize: 12, fill: '#636c76' }}
               axisLine={{ stroke: '#d1d9e0' }}
               tickLine={{ stroke: '#d1d9e0' }}
@@ -177,7 +177,7 @@ export function UsersAicClustersChart({ users }: UsersAicClustersChartProps) {
               labelStyle={chartTooltipLabelStyle}
               formatter={(value, name) => {
                 if (name === 'Avg AI Credits gross') return [formatCurrency(Number(value)), name];
-                if (name === 'Avg premium requests') return [Number(value).toFixed(1), name];
+                if (name === 'Avg usage quantity') return [Number(value).toFixed(1), name];
                 return [Number(value).toLocaleString(), name];
               }}
             />
@@ -208,7 +208,7 @@ export function UsersAicClustersChart({ users }: UsersAicClustersChartProps) {
                 Total AIC Gross
               </th>
               <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
-                Avg Requests
+                Avg Usage Quantity
               </th>
               <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
                 AIC Share

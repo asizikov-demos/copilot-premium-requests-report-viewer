@@ -9,6 +9,7 @@ export interface UsersConsumptionHeatmapProps {
   currentQuota: number;
   quotaTypes: Set<number>;
   hasMixedQuotas: boolean;
+  showQuotaReference?: boolean;
 }
 
 interface HeatmapCell {
@@ -73,7 +74,8 @@ export function UsersConsumptionHeatmap({
   users,
   currentQuota,
   quotaTypes,
-  hasMixedQuotas
+  hasMixedQuotas,
+  showQuotaReference = true
 }: UsersConsumptionHeatmapProps) {
   const { heatmapData, maxConsumption, binSize } = useMemo(() => {
     let maxValue = currentQuota * 1.2;
@@ -154,6 +156,10 @@ export function UsersConsumptionHeatmap({
   const quotaLineYPositions = useMemo(() => {
     const lines: Array<{ y: number; label: string; color: string }> = [];
     
+    if (!showQuotaReference) {
+      return lines;
+    }
+
     if (hasMixedQuotas) {
       if (quotaTypes.has(PRICING.BUSINESS_QUOTA)) {
         const binIndex = (PRICING.BUSINESS_QUOTA / maxConsumption) * CONSUMPTION_BINS;
@@ -181,7 +187,7 @@ export function UsersConsumptionHeatmap({
     }
     
     return lines;
-  }, [hasMixedQuotas, quotaTypes, currentQuota, maxConsumption, chartHeight]);
+  }, [hasMixedQuotas, quotaTypes, currentQuota, maxConsumption, chartHeight, showQuotaReference]);
 
   return (
     <div className="w-full h-full">
