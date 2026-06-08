@@ -50,6 +50,7 @@ interface AnalysisContextValue {
   userData: ReturnType<typeof useAnalyzedData>['userData'];
   allModels: string[];
   dailyCumulativeData: ReturnType<typeof useAnalyzedData>['dailyCumulativeData'];
+  dailyAicCumulativeData: ReturnType<typeof useAnalyzedData>['dailyAicCumulativeData'];
   codingAgentAnalysis: ReturnType<typeof useAnalyzedData>['codingAgentAnalysis'];
   codeReviewAnalysis: ReturnType<typeof useAnalyzedData>['codeReviewAnalysis'];
   weeklyExhaustion: ReturnType<typeof useAnalyzedData>['weeklyExhaustion'];
@@ -161,6 +162,7 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
     userData,
     allModels,
     dailyCumulativeData,
+    dailyAicCumulativeData,
     codingAgentAnalysis,
     codeReviewAnalysis,
     processedData,
@@ -219,6 +221,7 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
     userData,
     allModels,
     dailyCumulativeData,
+    dailyAicCumulativeData,
     codingAgentAnalysis,
     codeReviewAnalysis,
     weeklyExhaustion,

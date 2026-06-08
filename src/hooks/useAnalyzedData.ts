@@ -4,6 +4,7 @@ import type { UserSummary } from '@/utils/analytics';
 import { buildQuotaBreakdown } from '@/utils/analytics/quota';
 import {
   deriveAnalysisFromArtifacts,
+  buildDailyAicCumulativeDataFromArtifacts,
   buildDailyCumulativeDataFromArtifacts,
   analyzeCodingAgentAdoptionFromArtifacts,
   analyzeCodeReviewAdoptionFromArtifacts,
@@ -33,6 +34,7 @@ interface UseAnalyzedDataReturn {
   userData: UserSummary[];
   allModels: string[];
   dailyCumulativeData: { date: string; [user: string]: string | number; }[];
+  dailyAicCumulativeData: { date: string; [user: string]: string | number; }[];
   codingAgentAnalysis: CodingAgentAnalysis;
   codeReviewAnalysis: CodeReviewAnalysis;
   weeklyExhaustion: WeeklyQuotaExhaustionBreakdown;
@@ -78,6 +80,7 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
         userData: [],
         allModels: Array.from(new Set(filtered.map(r=> r.model))).sort(),
         dailyCumulativeData: [],
+        dailyAicCumulativeData: [],
         codingAgentAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodingAgentRequests: 0, adoptionRate: 0, users: [] },
         codeReviewAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodeReviewRequests: 0, adoptionRate: 0, users: [] },
         weeklyExhaustion: { totalUsersExhausted: 0, weeks: [] }
@@ -87,6 +90,7 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
     const filtered = filteredUserRows;
     const analysis = deriveAnalysisFromArtifacts(usageArtifacts!, quotaArtifacts!, dailyBucketsArtifacts!);
     const dailyCumulativeData = buildDailyCumulativeDataFromArtifacts(dailyBucketsArtifacts!);
+    const dailyAicCumulativeData = buildDailyAicCumulativeDataFromArtifacts(dailyBucketsArtifacts!);
     // When billing period filter is active, derive agent/review analyses from month-sliced data
     const effectiveUsage = selectedMonths.length > 0
       ? buildUsageArtifactsFromProcessedData(filteredAllRows)
@@ -109,6 +113,7 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
       userData,
       allModels,
       dailyCumulativeData,
+      dailyAicCumulativeData,
       codingAgentAnalysis,
       codeReviewAnalysis,
       weeklyExhaustion

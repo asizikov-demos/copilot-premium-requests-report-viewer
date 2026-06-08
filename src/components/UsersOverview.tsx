@@ -24,6 +24,16 @@ import { UserDetailsView } from './UserDetailsView';
 type DailyCumulativeData = { date: string; [user: string]: string | number };
 const ALL_FILTERS_VALUE = '__all__';
 
+function formatHeatmapInteger(value: number): string {
+  return Math.round(value).toLocaleString();
+}
+
+function formatHeatmapAiCredits(value: number): string {
+  return value.toLocaleString(undefined, {
+    maximumFractionDigits: value >= 10 ? 1 : 2,
+  });
+}
+
 function getPlanDisplayName(quotaValue: number | 'unknown' | undefined): string {
   const tier = getQuotaTier(quotaValue);
   if (tier === 'business') return 'Business';
@@ -39,12 +49,13 @@ interface UsersOverviewProps {
   userData: UserSummary[];
   processedData: ProcessedData[];
   dailyCumulativeData: DailyCumulativeData[];
+  dailyAicCumulativeData?: DailyCumulativeData[];
   quotaArtifacts: QuotaArtifacts;
   usageArtifacts: UsageArtifacts;
   billingArtifacts?: BillingArtifacts;
 }
 
-export function UsersOverview({ userData, processedData, dailyCumulativeData, quotaArtifacts, usageArtifacts, billingArtifacts }: UsersOverviewProps) {
+export function UsersOverview({ userData, processedData, dailyCumulativeData, dailyAicCumulativeData = [], quotaArtifacts, usageArtifacts, billingArtifacts }: UsersOverviewProps) {
   const [showChart, setShowChart] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedOrganization, setSelectedOrganization] = useState(ALL_FILTERS_VALUE);
@@ -214,13 +225,17 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
     const quotaTypes = new Set<number>();
     filteredUserData.forEach(user => {
       const userQuota = getUserQuota(quotaArtifacts, user.user);
-      if (isLegacyPremiumRequestQuotaValue(userQuota)) {
+      const shouldIncludeQuota = isUsageBasedBilling
+        ? getQuotaTier(userQuota) !== null
+        : isLegacyPremiumRequestQuotaValue(userQuota);
+
+      if (typeof userQuota === 'number' && shouldIncludeQuota) {
         quotaTypes.add(userQuota);
       }
     });
     const hasMixedQuotas = quotaTypes.size > 1;
     return { quotaTypes, hasMixedQuotas };
-  }, [filteredUserData, quotaArtifacts]);
+  }, [filteredUserData, isUsageBasedBilling, quotaArtifacts]);
 
   const { quotaTypes, hasMixedQuotas } = quotaInfo;
   
@@ -228,7 +243,17 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
   // Use first detected quota type, fallback to BUSINESS_QUOTA as default
   const currentQuota = quotaTypes.size > 0 
     ? Array.from(quotaTypes)[0] 
-    : PRICING.BUSINESS_QUOTA;
+    : isUsageBasedBilling ? PRICING.BUSINESS_AI_CREDIT_QUOTA : PRICING.BUSINESS_QUOTA;
+
+  const chartUsers = useMemo(() => {
+    return filteredUserData.map((user) => user.user);
+  }, [filteredUserData]);
+
+  const heatmapData = isUsageBasedBilling ? dailyAicCumulativeData : dailyCumulativeData;
+  const heatmapTitle = `User Consumption Density Over Time (${chartUsers.length} users)`;
+  const heatmapValueAxisLabel = isUsageBasedBilling ? 'AI Credits Used' : 'Premium Requests Used';
+  const heatmapValueUnitLabel = isUsageBasedBilling ? 'AI Credits' : 'requests';
+  const heatmapFormatValue = isUsageBasedBilling ? formatHeatmapAiCredits : formatHeatmapInteger;
   
   // Pagination calculations
   const totalPages = Math.max(1, Math.ceil(sortedUserData.length / ROWS_PER_PAGE));
@@ -244,10 +269,6 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
     setCurrentPage(0);
   };
   
-  const chartUsers = useMemo(() => {
-    return filteredUserData.map((user) => user.user);
-  }, [filteredUserData]);
-
   if (selectedUser) {
     return (
       <UserDetailsView
@@ -404,8 +425,12 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
           <div className="px-5 py-4 border-b border-[#d1d9e0]">
             <div className="flex justify-between items-center">
               <div>
-                <h3 className="text-sm font-medium text-[#1f2328]">Quota Consumption</h3>
-                <p className="text-xs text-[#636c76] mt-0.5">Daily cumulative premium request usage</p>
+                <h3 className="text-sm font-medium text-[#1f2328]">
+                  {isUsageBasedBilling ? 'AI Credits Consumption' : 'Quota Consumption'}
+                </h3>
+                <p className="text-xs text-[#636c76] mt-0.5">
+                  {isUsageBasedBilling ? 'Daily cumulative AI Credits usage' : 'Daily cumulative premium request usage'}
+                </p>
               </div>
               {isMobile && (
                 <button
@@ -421,12 +446,16 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
           <div className="p-5">
             <div className="h-72 sm:h-96 2xl:h-[28rem] relative z-30">
               <UsersConsumptionHeatmap
-                dailyCumulativeData={dailyCumulativeData}
+                dailyCumulativeData={heatmapData}
                 users={chartUsers}
                 currentQuota={currentQuota}
                 quotaTypes={quotaTypes}
                 hasMixedQuotas={hasMixedQuotas}
                 showQuotaReference={quotaTypes.size > 0}
+                title={heatmapTitle}
+                valueAxisLabel={heatmapValueAxisLabel}
+                valueUnitLabel={heatmapValueUnitLabel}
+                formatValue={heatmapFormatValue}
               />
             </div>
           </div>

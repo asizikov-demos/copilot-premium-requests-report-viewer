@@ -6,14 +6,22 @@ import type { ProcessedData } from '@/types/csv';
 
 jest.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div data-testid="chart-container">{children}</div>,
-  ComposedChart: ({ children }: { children: React.ReactNode }) => <div data-testid="composed-chart">{children}</div>,
+  ComposedChart: ({ children, data }: { children: React.ReactNode; data?: unknown }) => (
+    <div data-testid="composed-chart" data-chart={JSON.stringify(data)}>
+      {children}
+    </div>
+  ),
   Bar: () => <div data-testid="bar" />,
   Line: () => <div data-testid="line" />,
   XAxis: () => <div data-testid="x-axis" />,
   YAxis: () => <div data-testid="y-axis" />,
   CartesianGrid: () => <div data-testid="cartesian-grid" />,
   Tooltip: () => <div data-testid="tooltip" />,
-  ReferenceLine: () => <div data-testid="reference-line" />,
+  ReferenceLine: ({ y, label }: { y?: number | string; label?: { value?: string } }) => (
+    <div data-testid="reference-line" data-y={String(y ?? '')}>
+      {label?.value}
+    </div>
+  ),
 }));
 
 describe('UserDetailsView', () => {
@@ -268,6 +276,7 @@ describe('UserDetailsView', () => {
       unitType: 'ai-credits',
       usageUnit: 'ai_credit',
       billingQuantity: 42.5,
+      aicQuantity: 42.5,
       grossAmount: 0.425,
       discountAmount: 0.425,
       netAmount: 0,
@@ -285,6 +294,7 @@ describe('UserDetailsView', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Cost per Product')).toBeInTheDocument();
+      expect(screen.getByText('Bars: daily AI Credits by model · Black line: cumulative · Red line: quota')).toBeInTheDocument();
       expect(screen.getByText('Daily Model Usage Breakdown')).toBeInTheDocument();
       expect(screen.getAllByRole('columnheader', { name: 'AI Credits' })).toHaveLength(2);
       expect(screen.getAllByRole('columnheader', { name: 'Gross Amount' })).toHaveLength(2);
@@ -299,5 +309,13 @@ describe('UserDetailsView', () => {
     const dailyCells = within(dailyRow as HTMLElement).getAllByRole('cell');
     expect(dailyCells[2]).toHaveTextContent('42.50');
     expect(dailyCells[3]).toHaveTextContent('$0.43');
+
+    const chartData = screen.getByTestId('composed-chart').getAttribute('data-chart') ?? '';
+    expect(chartData).toContain('"Auto: Claude Haiku 4.5":42.5');
+    expect(chartData).toContain('"totalCumulative":42.5');
+    expect(screen.getByTestId('reference-line')).toHaveAttribute(
+      'data-y',
+      PRICING.BUSINESS_AI_CREDIT_QUOTA.toString()
+    );
   });
 });

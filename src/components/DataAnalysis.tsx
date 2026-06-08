@@ -126,6 +126,7 @@ function DataAnalysisInner() {
     analysis,
     userData,
     dailyCumulativeData,
+    dailyAicCumulativeData,
     codingAgentAnalysis,
     codeReviewAnalysis,
     processedData,
@@ -380,6 +381,7 @@ function DataAnalysisInner() {
               userData={userData}
               processedData={processedData}
               dailyCumulativeData={dailyCumulativeData}
+              dailyAicCumulativeData={dailyAicCumulativeData}
               quotaArtifacts={quotaArtifacts}
               usageArtifacts={usageArtifacts}
               billingArtifacts={billingArtifacts}

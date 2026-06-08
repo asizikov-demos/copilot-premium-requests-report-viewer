@@ -15,8 +15,10 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
   readonly id = 'dailyBuckets';
   
   private dailyUserTotals = new Map<string, Map<string, number>>();
+  private dailyUserAicTotals = new Map<string, Map<string, number>>();
   // New: nested map for per-model breakdown (day -> user -> model -> quantity)
   private dailyUserModelTotals = new Map<string, Map<string, Map<string, number>>>();
+  private dailyUserAicModelTotals = new Map<string, Map<string, Map<string, number>>>();
   private dailyBucketTotals = new Map<string, Map<SpecialUsageBucketKey, number>>();
   private dailyBucketModelTotals = new Map<string, Map<SpecialUsageBucketKey, Map<string, number>>>();
   private minDate: string | null = null;
@@ -27,7 +29,9 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
     void _ctx;
     // Reset state
     this.dailyUserTotals.clear();
+    this.dailyUserAicTotals.clear();
     this.dailyUserModelTotals.clear();
+    this.dailyUserAicModelTotals.clear();
     this.dailyBucketTotals.clear();
     this.dailyBucketModelTotals.clear();
     this.minDate = null;
@@ -70,6 +74,30 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
       modelMap.set(model, (modelMap.get(model) || 0) + quantity);
       return;
     }
+
+    if (row.usageUnit === 'ai_credit') {
+      const aiCredits = row.aicQuantity ?? row.billingQuantity ?? 0;
+      if (aiCredits > 0) {
+        let dayAicMap = this.dailyUserAicTotals.get(day);
+        if (!dayAicMap) {
+          dayAicMap = new Map();
+          this.dailyUserAicTotals.set(day, dayAicMap);
+        }
+        dayAicMap.set(user, (dayAicMap.get(user) || 0) + aiCredits);
+
+        let dayAicUserMap = this.dailyUserAicModelTotals.get(day);
+        if (!dayAicUserMap) {
+          dayAicUserMap = new Map();
+          this.dailyUserAicModelTotals.set(day, dayAicUserMap);
+        }
+        let userAicModelMap = dayAicUserMap.get(user);
+        if (!userAicModelMap) {
+          userAicModelMap = new Map();
+          dayAicUserMap.set(user, userAicModelMap);
+        }
+        userAicModelMap.set(model, (userAicModelMap.get(model) || 0) + aiCredits);
+      }
+    }
     
     // Accumulate daily totals
     let dayMap = this.dailyUserTotals.get(day);
@@ -97,7 +125,9 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
     void _ctx;
     return {
       dailyUserTotals: this.dailyUserTotals,
+      dailyUserAicTotals: this.dailyUserAicTotals,
       dailyUserModelTotals: this.dailyUserModelTotals,
+      dailyUserAicModelTotals: this.dailyUserAicModelTotals,
       dailyBucketTotals: this.dailyBucketTotals,
       dailyBucketModelTotals: this.dailyBucketModelTotals,
       dateRange: this.minDate && this.maxDate 

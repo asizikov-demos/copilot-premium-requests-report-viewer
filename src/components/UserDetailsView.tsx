@@ -8,6 +8,7 @@ import { UserDailyStackedChart } from '@/components/charts/UserDailyStackedChart
 import type { ProcessedData, UserDailyData } from '@/types/csv';
 import { getQuotaTier, isLegacyPremiumRequestQuotaValue } from '@/utils/analytics/quota';
 import {
+  buildUserDailyAicModelDataFromArtifacts,
   buildUserDailyModelDataFromArtifacts,
   DailyBucketsArtifacts,
   getUserQuota,
@@ -39,6 +40,7 @@ interface TooltipProps {
   active?: boolean;
   payload?: TooltipEntry[];
   label?: string;
+  valueUnitLabel?: string;
 }
 
 export interface UserDetailsViewProps {
@@ -48,7 +50,7 @@ export interface UserDetailsViewProps {
   onBack: () => void;
 }
 
-function UserDailyUsageTooltip({ active, payload, label }: TooltipProps) {
+function UserDailyUsageTooltip({ active, payload, label, valueUnitLabel = 'requests' }: TooltipProps) {
   if (active && payload && payload.length && label) {
     const date = new Date(label);
     const formattedDate = date.toLocaleDateString('en-US', { timeZone: 'UTC' });
@@ -68,20 +70,20 @@ function UserDailyUsageTooltip({ active, payload, label }: TooltipProps) {
             <p className="text-xs font-medium text-[#636c76] mb-1">Daily Usage</p>
             {modelData.map((entry: TooltipEntry, entryIndex: number) => (
               <p key={entryIndex} className="text-xs ml-2" style={{ color: entry.color }}>
-                {entry.dataKey}: {entry.value.toFixed(1)}
+                {entry.dataKey}: {entry.value.toFixed(1)} {valueUnitLabel}
               </p>
             ))}
             <p className="text-xs font-semibold text-[#1f2328] ml-2 mt-1">
-              Total: {dailyTotal.toFixed(1)}
+              Total: {dailyTotal.toFixed(1)} {valueUnitLabel}
             </p>
           </div>
         ) : (
-          <p className="text-xs text-[#636c76] mb-2">No requests</p>
+          <p className="text-xs text-[#636c76] mb-2">No {valueUnitLabel}</p>
         )}
 
         {cumulativeData && (
           <p className="text-xs text-indigo-600 font-medium border-t border-[#d1d9e0] pt-2">
-            Cumulative: {cumulativeData.value.toFixed(1)}
+            Cumulative: {cumulativeData.value.toFixed(1)} {valueUnitLabel}
           </p>
         )}
       </div>
@@ -106,8 +108,30 @@ export function UserDetailsView({
   const artifactUserQuota = quotaArtifacts ? getUserQuota(quotaArtifacts, user) : undefined;
   const effectiveUserQuotaValue = artifactUserQuota !== undefined ? artifactUserQuota : userQuotaValue;
 
+  const userData = useMemo(() => getUserData(processedData, user), [processedData, user]);
+  const hasUserAiCreditUsage = useMemo(() => userData.some((row) => row.usageUnit === 'ai_credit'), [userData]);
+  const hasUserRequestUsage = useMemo(
+    () => userData.some((row) => row.usageUnit === 'request' && row.requestsUsed > 0),
+    [userData]
+  );
+  const isUserUsageBasedBilling = hasUserAiCreditUsage && !hasUserRequestUsage;
+  const userQuantityColumnLabel = isUserUsageBasedBilling ? 'AI Credits' : 'Requests';
+  const chartValueUnitLabel = isUserUsageBasedBilling ? 'AI Credits' : 'requests';
+  const userCostLabels = useMemo(
+    () => getBillingCostLabels(isUserUsageBasedBilling),
+    [isUserUsageBasedBilling]
+  );
+  const userBillingQuantity = useMemo(
+    () => userData.reduce((total, row) => total + (row.billingQuantity ?? row.requestsUsed), 0),
+    [userData]
+  );
+
   const userDailyData = useMemo(() => {
-    if (usageArtifacts && dailyBucketsArtifacts?.dailyUserModelTotals) {
+    if (isUserUsageBasedBilling && usageArtifacts && dailyBucketsArtifacts?.dailyUserAicModelTotals) {
+      return buildUserDailyAicModelDataFromArtifacts(dailyBucketsArtifacts, usageArtifacts, user);
+    }
+
+    if (!isUserUsageBasedBilling && usageArtifacts && dailyBucketsArtifacts?.dailyUserModelTotals) {
       return buildUserDailyModelDataFromArtifacts(dailyBucketsArtifacts, usageArtifacts, user);
     }
 
@@ -153,8 +177,11 @@ export function UserDetailsView({
       });
 
       for (const record of day) {
-        row[record.model] = (row[record.model] as number) + record.requestsUsed;
-        dailyTotal += record.requestsUsed;
+        const quantity = isUserUsageBasedBilling
+          ? record.aicQuantity ?? record.billingQuantity ?? record.requestsUsed
+          : record.requestsUsed;
+        row[record.model] = (row[record.model] as number) + quantity;
+        dailyTotal += quantity;
       }
 
       cumulative += dailyTotal;
@@ -163,24 +190,7 @@ export function UserDetailsView({
     }
 
     return result;
-  }, [processedData, user, usageArtifacts, dailyBucketsArtifacts]);
-
-  const userData = useMemo(() => getUserData(processedData, user), [processedData, user]);
-  const hasUserAiCreditUsage = useMemo(() => userData.some((row) => row.usageUnit === 'ai_credit'), [userData]);
-  const hasUserRequestUsage = useMemo(
-    () => userData.some((row) => row.usageUnit === 'request' && row.requestsUsed > 0),
-    [userData]
-  );
-  const isUserUsageBasedBilling = hasUserAiCreditUsage && !hasUserRequestUsage;
-  const userQuantityColumnLabel = isUserUsageBasedBilling ? 'AI Credits' : 'Requests';
-  const userCostLabels = useMemo(
-    () => getBillingCostLabels(isUserUsageBasedBilling),
-    [isUserUsageBasedBilling]
-  );
-  const userBillingQuantity = useMemo(
-    () => userData.reduce((total, row) => total + (row.billingQuantity ?? row.requestsUsed), 0),
-    [userData]
-  );
+  }, [processedData, user, usageArtifacts, dailyBucketsArtifacts, isUserUsageBasedBilling]);
 
   const { organization, costCenter } = useMemo(
     () => getUserOrgMetadata(processedData, user),
@@ -204,6 +214,9 @@ export function UserDetailsView({
   const requestQuotaValue = isLegacyPremiumRequestQuotaValue(effectiveUserQuotaValue)
     ? effectiveUserQuotaValue
     : 'unknown';
+  const chartQuotaValue = isUserUsageBasedBilling && typeof effectiveUserQuotaValue === 'number'
+    ? effectiveUserQuotaValue
+    : requestQuotaValue;
   const effectiveQuota = requestQuotaValue === 'unknown' ? Infinity : requestQuotaValue;
   const billedOverage = useMemo(() => calculateBilledOverageFromRows(userData), [userData]);
   const estimatedOverageRequests = useMemo(
@@ -464,7 +477,7 @@ export function UserDetailsView({
       <div className="bg-white border border-[#d1d9e0] rounded-md p-5">
         <h3 className="text-sm font-medium text-[#1f2328] mb-1">Daily Model Usage</h3>
         <p className="text-xs text-[#636c76] mb-4">
-          Bars: daily by model · Black line: cumulative · Red line: quota
+          Bars: daily {userQuantityColumnLabel} by model · Black line: cumulative · Red line: quota
         </p>
 
         {userDailyData.length > 0 ? (
@@ -474,8 +487,8 @@ export function UserDetailsView({
                 data={userDailyData}
                 models={userModels}
                 modelColors={modelColors}
-                quotaValue={requestQuotaValue}
-                tooltip={<UserDailyUsageTooltip />}
+                quotaValue={chartQuotaValue}
+                tooltip={<UserDailyUsageTooltip valueUnitLabel={chartValueUnitLabel} />}
               />
             </div>
 
