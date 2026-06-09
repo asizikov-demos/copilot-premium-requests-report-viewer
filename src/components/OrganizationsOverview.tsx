@@ -1,9 +1,11 @@
 'use client';
 
+import { useMemo } from 'react';
+
 import { BillingGroupEntry, BillingGroupRow, BillingGroupTable, useBillingGroupRows } from '@/components/BillingGroupTable';
 import { useAnalysisContext } from '@/context/AnalysisContext';
 import { getBillingCostLabels } from '@/utils/billingLabels';
-import { UNASSIGNED_BILLING_GROUP } from '@/utils/ingestion';
+import { buildBillingArtifactsFromProcessedData, UNASSIGNED_BILLING_GROUP } from '@/utils/ingestion';
 
 interface OrganizationRow extends BillingGroupRow {
   users: number;
@@ -11,11 +13,24 @@ interface OrganizationRow extends BillingGroupRow {
 
 export function OrganizationsOverview() {
   const { aggregateProcessedData, billingArtifacts } = useAnalysisContext();
+  const isUsageBasedBilling = aggregateProcessedData.some((row) => row.usageUnit === 'ai_credit');
+  const billingRows = useMemo(
+    () => isUsageBasedBilling
+      ? aggregateProcessedData.filter((row) => row.usageUnit === 'ai_credit')
+      : aggregateProcessedData,
+    [aggregateProcessedData, isUsageBasedBilling]
+  );
+  const scopedBillingArtifacts = useMemo(
+    () => billingArtifacts && isUsageBasedBilling
+      ? buildBillingArtifactsFromProcessedData(billingRows)
+      : billingArtifacts,
+    [billingArtifacts, billingRows, isUsageBasedBilling]
+  );
 
   const orgRows = useBillingGroupRows<{ users: number }>({
-    sourceRows: aggregateProcessedData,
+    sourceRows: billingRows,
     getGroupName: (row) => row.organization || UNASSIGNED_BILLING_GROUP,
-    getTotals: (name) => billingArtifacts?.orgTotals.get(name),
+    getTotals: (name) => scopedBillingArtifacts?.orgTotals.get(name),
     updateEntry: (entry: BillingGroupEntry, row) => {
       if (!row.isNonCopilotUsage) {
         entry.users ??= new Set<string>();
@@ -26,11 +41,8 @@ export function OrganizationsOverview() {
   });
 
   const hasCosts = orgRows.some(r => r.gross > 0 || r.net > 0);
-  const hasAicGross = billingArtifacts?.hasAnyAicData === true;
-  const hasAiCreditUsage = aggregateProcessedData.some((row) => row.usageUnit === 'ai_credit');
-  const hasRequestUsage = aggregateProcessedData.some((row) => row.usageUnit === 'request' && row.requestsUsed > 0);
-  const isUsageBasedBilling = hasAiCreditUsage && !hasRequestUsage;
-  const quantityColumnLabel = isUsageBasedBilling ? 'AI Credits' : 'Requests';
+  const hasAicGross = scopedBillingArtifacts?.hasAnyAicData === true;
+  const quantityColumnLabel = isUsageBasedBilling ? 'Total AI Credits' : 'Requests';
   const costLabels = getBillingCostLabels(isUsageBasedBilling);
 
   return (

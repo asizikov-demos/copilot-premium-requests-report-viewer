@@ -417,6 +417,22 @@ describe('DataAnalysis billing summary', () => {
         organization: 'test-org-one',
         cost_center_name: 'test-cost-center-one',
       },
+      {
+        date: '2026-06-01',
+        username: 'test-user-two',
+        product: 'copilot',
+        sku: 'copilot_premium_request',
+        model: 'Auto: Claude Haiku 4.5',
+        quantity: '3',
+        unit_type: 'requests',
+        applied_cost_per_quantity: '0.04',
+        gross_amount: '0.12',
+        discount_amount: '0',
+        net_amount: '0.12',
+        total_monthly_quota: '300',
+        organization: 'test-org-one',
+        cost_center_name: 'test-cost-center-one',
+      },
     ];
 
     const ingestionResult = createIngestionResultFromRawRows(usageBasedRows);
@@ -443,17 +459,35 @@ describe('DataAnalysis billing summary', () => {
       expect(screen.queryAllByRole('button', { name: 'Cost Optimization' })).toHaveLength(0);
     });
 
+    const productHeader = screen.getByRole('columnheader', { name: 'Product' });
+    const productTable = productHeader.closest('table');
+    expect(productTable).not.toBeNull();
+    expect(within(productTable!).getByRole('columnheader', { name: 'Total AI Credits' })).toBeInTheDocument();
+    expect(within(productTable!).queryByRole('columnheader', { name: 'Requests' })).not.toBeInTheDocument();
+    expect(within(productTable!).queryByRole('columnheader', { name: 'AI Credits Gross' })).not.toBeInTheDocument();
+
+    const autoModeSavingsHeading = screen.getByRole('heading', { name: 'Auto Mode Savings' });
+    const autoModeSavingsCard = autoModeSavingsHeading.closest('.bg-white');
+    expect(autoModeSavingsCard).not.toBeNull();
+    const autoModeSavingsTable = within(autoModeSavingsCard as HTMLElement).getByRole('table');
+    expect(within(autoModeSavingsTable).getByRole('columnheader', { name: 'Total AI Credits' })).toBeInTheDocument();
+    expect(within(autoModeSavingsTable).queryByRole('columnheader', { name: 'Requests' })).not.toBeInTheDocument();
+    expect(within(autoModeSavingsTable).getAllByText('42.50').length).toBeGreaterThan(0);
+    expect(within(autoModeSavingsTable).queryByText('45.50')).not.toBeInTheDocument();
+
     const modelDetailsHeading = screen.getByRole('heading', { name: 'Model Details' });
     const modelDetailsCard = modelDetailsHeading.closest('.bg-white');
     expect(modelDetailsCard).not.toBeNull();
     const modelDetailsTable = within(modelDetailsCard as HTMLElement).getByRole('table');
-    expect(within(modelDetailsTable).getByRole('columnheader', { name: 'AI Credits' })).toBeInTheDocument();
+    expect(within(modelDetailsTable).getByRole('columnheader', { name: 'Total AI Credits' })).toBeInTheDocument();
     expect(within(modelDetailsTable).getByRole('columnheader', { name: 'Gross Amount' })).toBeInTheDocument();
     expect(within(modelDetailsTable).getByRole('columnheader', { name: 'Included Credits' })).toBeInTheDocument();
     expect(within(modelDetailsTable).getByRole('columnheader', { name: 'Additional usage' })).toBeInTheDocument();
     expect(within(modelDetailsTable).queryByRole('columnheader', { name: 'Requests' })).not.toBeInTheDocument();
     expect(within(modelDetailsTable).queryByRole('columnheader', { name: 'AI Credits Gross' })).not.toBeInTheDocument();
     expect(within(modelDetailsTable).queryByRole('columnheader', { name: 'Gross' })).not.toBeInTheDocument();
+    expect(within(modelDetailsTable).getByText('42.50')).toBeInTheDocument();
+    expect(within(modelDetailsTable).queryByText('45.50')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Models' })[0]);
 

@@ -87,9 +87,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, da
 
   const hasAicGross = effectiveBillingArtifacts.hasAnyAicData;
   const isUsageBasedBilling = useMemo(() => {
-    const hasAiCreditUsage = processedData.some((row) => row.usageUnit === 'ai_credit');
-    const hasRequestUsage = processedData.some((row) => row.usageUnit === 'request' && row.requestsUsed > 0);
-    return hasAiCreditUsage && !hasRequestUsage;
+    return processedData.some((row) => row.usageUnit === 'ai_credit');
   }, [processedData]);
   const showRequestMetrics = !isUsageBasedBilling;
   const showAicGross = hasAicGross && !isUsageBasedBilling;

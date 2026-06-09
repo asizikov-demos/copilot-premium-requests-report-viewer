@@ -118,11 +118,7 @@ export function CodingAgentOverview({
     () => aggregateProcessedData.some((row) => row.usageUnit === 'ai_credit'),
     [aggregateProcessedData]
   );
-  const hasRequestUsage = useMemo(
-    () => aggregateProcessedData.some((row) => row.usageUnit === 'request' && row.requestsUsed > 0),
-    [aggregateProcessedData]
-  );
-  const isUsageBasedBilling = hasAiCreditUsage && !hasRequestUsage;
+  const isUsageBasedBilling = hasAiCreditUsage;
   const quantityColumnLabel = isUsageBasedBilling ? 'AI Credits' : 'Premium Requests';
   const valueUnitLabel = isUsageBasedBilling ? 'AI Credits' : 'requests';
   const costLabels = useMemo(() => getBillingCostLabels(isUsageBasedBilling), [isUsageBasedBilling]);

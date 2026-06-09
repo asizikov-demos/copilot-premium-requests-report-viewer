@@ -7,6 +7,7 @@ import { AnalysisProvider, useAnalysisContext } from '@/context/AnalysisContext'
 import { aggregateAutoModeSavings } from '@/utils/autoModeSavings';
 import { getBillingCostLabels } from '@/utils/billingLabels';
 import { formatCurrency } from '@/utils/formatters';
+import { buildBillingArtifactsFromProcessedData } from '@/utils/ingestion';
 import { getModelColor } from '@/utils/modelColors';
 import { aggregateProductCosts } from '@/utils/productCosts';
 
@@ -164,12 +165,20 @@ function DataAnalysisInner() {
     () => aggregateProcessedData.some((row) => row.usageUnit === 'ai_credit'),
     [aggregateProcessedData]
   );
-  const hasRequestUsage = useMemo(
-    () => aggregateProcessedData.some((row) => row.usageUnit === 'request' && row.requestsUsed > 0),
-    [aggregateProcessedData]
+  const isUsageBasedBilling = hasAiCreditUsage;
+  const usageBasedRows = useMemo(
+    () => isUsageBasedBilling
+      ? aggregateProcessedData.filter((row) => row.usageUnit === 'ai_credit')
+      : aggregateProcessedData,
+    [aggregateProcessedData, isUsageBasedBilling]
   );
-  const isUsageBasedBilling = hasAiCreditUsage && !hasRequestUsage;
-  const quantityColumnLabel = isUsageBasedBilling ? 'AI Credits' : 'Requests';
+  const usageBasedBillingArtifacts = useMemo(
+    () => billingArtifacts && isUsageBasedBilling
+      ? buildBillingArtifactsFromProcessedData(usageBasedRows)
+      : billingArtifacts,
+    [billingArtifacts, isUsageBasedBilling, usageBasedRows]
+  );
+  const quantityColumnLabel = isUsageBasedBilling ? 'Total AI Credits' : 'Requests';
   const billingQuantityLabel = isUsageBasedBilling ? 'AI Credits' : 'PRUs';
   const costLabels = getBillingCostLabels(isUsageBasedBilling);
   const unitCostLabel = isUsageBasedBilling
@@ -236,11 +245,11 @@ function DataAnalysisInner() {
   );
 
   const modelRows = useMemo(() => {
-    if (billingArtifacts) {
-      return Array.from(billingArtifacts.billingByModel.entries())
+    if (usageBasedBillingArtifacts) {
+      return Array.from(usageBasedBillingArtifacts.billingByModel.entries())
         .map(([model, totals]) => ({
           model,
-          requests: totals.quantity,
+          requests: isUsageBasedBilling ? totals.aicQuantity : totals.quantity,
           gross: totals.gross,
           discount: totals.discount,
           net: totals.net,
@@ -257,7 +266,7 @@ function DataAnalysisInner() {
       net: 0,
       aicGrossAmount: 0,
     }));
-  }, [analysis.requestsByModel, billingArtifacts]);
+  }, [analysis.requestsByModel, isUsageBasedBilling, usageBasedBillingArtifacts]);
 
   const hasModelCosts = modelRows.some(
     (row) => row.gross > 0 || row.discount > 0 || row.net > 0
@@ -279,12 +288,12 @@ function DataAnalysisInner() {
     ? modelChartTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : modelChartTotal.toFixed(0);
 
-  const productCosts = useMemo(() => aggregateProductCosts(aggregateProcessedData), [aggregateProcessedData]);
-  const showProductAicGross = aicMetricsAvailable;
+  const productCosts = useMemo(() => aggregateProductCosts(usageBasedRows), [usageBasedRows]);
+  const showProductAicGross = aicMetricsAvailable && !isUsageBasedBilling;
   const showProductCosts = costMetricsAvailable;
   const autoModeSavingsRows = useMemo(
-    () => aggregateAutoModeSavings(aggregateProcessedData),
-    [aggregateProcessedData]
+    () => aggregateAutoModeSavings(usageBasedRows),
+    [usageBasedRows]
   );
   const autoModeSavingsTotal = useMemo(() => {
     return autoModeSavingsRows.reduce(
@@ -554,7 +563,9 @@ function DataAnalysisInner() {
                         {productCosts.map((product) => (
                           <tr key={product.label} className="table-row-hover transition-colors duration-150">
                             <td className="px-6 py-3.5 text-sm font-medium text-[#1f2328]">{product.label}</td>
-                            <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">{product.requests.toFixed(2)}</td>
+                            <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
+                              {(isUsageBasedBilling ? product.aicQuantity : product.requests).toFixed(2)}
+                            </td>
                             {showProductAicGross && (
                               <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">{formatCurrency(product.aicGrossAmount)}</td>
                             )}
