@@ -13,7 +13,8 @@ import { validCSVData, powerUserCSVData } from '../fixtures/validCSVData';
 import {
   buildMinimalDailyBucketsArtifact,
   createMockCSVData,
-  createMockCSVDataArray
+  createMockCSVDataArray,
+  makeProcessedData
 } from '../helpers/testUtils';
 
 // Explicit model requests interface to remove implicit any usage
@@ -385,23 +386,13 @@ describe('CSV Data Processing', () => {
   describe('computeWeeklyQuotaExhaustion (artifact-based)', () => {
 
     const makeProcessed = (entries: Array<{ ts: string; user: string; used: number; quota: number | 'unknown'; model?: string }>): ProcessedData[] => {
-      return entries.map(e => {
-        const timestamp = new Date(e.ts);
-        const iso = timestamp.toISOString();
-        return {
-          timestamp,
-          user: e.user,
-          model: e.model || 'test-model',
-          requestsUsed: e.used,
-          exceedsQuota: false,
-          totalQuota: e.quota === 'unknown' ? 'Unknown' : String(e.quota),
-          quotaValue: e.quota,
-          iso,
-          dateKey: iso.substring(0, 10),
-          monthKey: iso.substring(0, 7),
-          epoch: timestamp.getTime()
-        };
-      });
+      return entries.map(e => makeProcessedData({
+        timestamp: new Date(e.ts),
+        user: e.user,
+        model: e.model || 'test-model',
+        requestsUsed: e.used,
+        quotaValue: e.quota,
+      }));
     };
 
     // Helpers to build artifacts for weekly exhaustion tests

@@ -4,6 +4,8 @@ import { BillingAggregator } from '@/utils/ingestion/BillingAggregator';
 import { AggregatorContext, NormalizedRow } from '@/utils/ingestion/types';
 import { PRICING } from '@/constants/pricing';
 
+import { makeProcessedData } from '../helpers/testUtils';
+
 describe('BillingAggregator', () => {
   const ctx: AggregatorContext = { pricing: PRICING };
 
@@ -19,22 +21,13 @@ describe('BillingAggregator', () => {
   }
 
   function buildProcessedRow(partial: Partial<ProcessedData>): ProcessedData {
-    const timestamp = new Date('2025-07-01T00:00:00Z');
-
-    return {
-      timestamp,
-      user: 'test-user-one',
+    return makeProcessedData({
+      timestamp: new Date('2025-07-01T00:00:00Z'),
       model: 'Code Review',
       requestsUsed: 1,
-      exceedsQuota: false,
-      totalQuota: '1000',
       quotaValue: PRICING.ENTERPRISE_QUOTA,
-      iso: timestamp.toISOString(),
-      dateKey: '2025-07-01',
-      monthKey: '2025-07',
-      epoch: timestamp.getTime(),
       ...partial,
-    };
+    });
   }
 
   it('aggregates global billing totals', () => {
