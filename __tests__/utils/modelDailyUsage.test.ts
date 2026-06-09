@@ -1,39 +1,26 @@
 import { buildDailyModelUsageFromArtifacts } from '@/utils/ingestion/analytics';
 import type { DailyBucketsArtifacts, UsageArtifacts } from '@/utils/ingestion';
+import { makeUsageArtifacts, makeDailyBucketsArtifacts } from '../helpers/makeArtifacts';
 
-function makeUsageArtifacts(modelTotals: Record<string, number>): UsageArtifacts {
-  return {
-    users: [],
-    userCount: 0,
-    modelTotals,
-    totalRequests: Object.values(modelTotals).reduce((a, b) => a + b, 0)
-  } as unknown as UsageArtifacts;
+function makeUsageFromModelTotals(modelTotals: Record<string, number>): UsageArtifacts {
+  const total = Object.values(modelTotals).reduce((a, b) => a + b, 0);
+  const users = Object.keys(modelTotals).length
+    ? [{ user: 'test-user-one', totalRequests: total, modelBreakdown: modelTotals }]
+    : [];
+  return makeUsageArtifacts(users);
 }
 
-function makeDailyBucketsArtifacts(dates: string[], data: Array<Record<string, Record<string, number>>>): DailyBucketsArtifacts {
-  const dailyUserModelTotals = new Map<string, Map<string, Map<string, number>>>();
+function makeDailyBucketsFromNested(dates: string[], data: Array<Record<string, Record<string, number>>>): DailyBucketsArtifacts {
+  const entries: Array<{ date: string; user: string; used: number; model: string }> = [];
   dates.forEach((date, idx) => {
-    const usersForDay = data[idx];
-    const userMap = new Map<string, Map<string, number>>();
+    const usersForDay = data[idx] || {};
     Object.entries(usersForDay).forEach(([user, models]) => {
-      const modelMap = new Map<string, number>();
       Object.entries(models).forEach(([model, qty]) => {
-        modelMap.set(model, qty);
+        entries.push({ date, user, used: qty, model });
       });
-      userMap.set(user, modelMap);
     });
-    dailyUserModelTotals.set(date, userMap);
   });
-
-  return {
-    dateRange: {
-      min: dates[0],
-      max: dates[dates.length - 1]
-    },
-    dailyUserTotals: new Map(),
-    dailyUserModelTotals,
-    months: Array.from(new Set(dates.map(d => d.slice(0, 7))))
-  } as unknown as DailyBucketsArtifacts;
+  return makeDailyBucketsArtifacts(entries);
 }
 
 describe('buildDailyModelUsageFromArtifacts', () => {
@@ -43,8 +30,8 @@ describe('buildDailyModelUsageFromArtifacts', () => {
       { alice: { 'gpt-4.1': 2 }, bob: { 'gpt-4.1': 1, 'gpt-4.1-mini': 3 } },
       { alice: { 'gpt-4.1': 1 }, bob: { 'gpt-4.1': 0, 'gpt-4.1-mini': 2 } }
     ];
-    const usageArtifacts = makeUsageArtifacts({ 'gpt-4.1': 3, 'gpt-4.1-mini': 5 });
-    const dailyBucketsArtifacts = makeDailyBucketsArtifacts(dates, dailyData);
+    const usageArtifacts = makeUsageFromModelTotals({ 'gpt-4.1': 3, 'gpt-4.1-mini': 5 });
+    const dailyBucketsArtifacts = makeDailyBucketsFromNested(dates, dailyData);
 
     const result = buildDailyModelUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
 
@@ -61,7 +48,7 @@ describe('buildDailyModelUsageFromArtifacts', () => {
   });
 
   it('returns empty array when artifacts incomplete', () => {
-    const usageArtifacts = makeUsageArtifacts({});
+    const usageArtifacts = makeUsageFromModelTotals({});
     const dailyBucketsArtifacts = {
       dateRange: undefined,
       dailyUserTotals: new Map(),
@@ -80,8 +67,8 @@ describe('buildDailyModelUsageFromArtifacts', () => {
       {},
       { alice: { 'gpt-4.1': 1 } }
     ];
-    const usageArtifacts = makeUsageArtifacts({ 'gpt-4.1': 3 });
-    const dailyBucketsArtifacts = makeDailyBucketsArtifacts(dates, dailyData);
+    const usageArtifacts = makeUsageFromModelTotals({ 'gpt-4.1': 3 });
+    const dailyBucketsArtifacts = makeDailyBucketsFromNested(dates, dailyData);
 
     const result = buildDailyModelUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
 

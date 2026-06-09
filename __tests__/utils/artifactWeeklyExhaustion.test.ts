@@ -1,30 +1,5 @@
 import { computeWeeklyQuotaExhaustionFromArtifacts } from '@/utils/ingestion/analytics';
-import type { DailyBucketsArtifacts, QuotaArtifacts } from '@/utils/ingestion';
-
-// Helper to build DailyBucketsArtifacts with daily user totals
-function makeDailyBuckets(entries: Array<{ date: string; user: string; used: number }>): DailyBucketsArtifacts {
-  const dailyUserTotals = new Map<string, Map<string, number>>();
-  let min: string | null = null;
-  let max: string | null = null;
-  for (const e of entries) {
-    if (!dailyUserTotals.has(e.date)) dailyUserTotals.set(e.date, new Map());
-    const userMap = dailyUserTotals.get(e.date)!;
-    userMap.set(e.user, (userMap.get(e.user) || 0) + e.used);
-    if (!min || e.date < min) min = e.date;
-    if (!max || e.date > max) max = e.date;
-  }
-  return {
-    dailyUserTotals,
-    dateRange: min && max ? { min, max } : null,
-    months: Array.from(new Set(Array.from(dailyUserTotals.keys()).map(d => d.slice(0,7)))).sort()
-  } as DailyBucketsArtifacts;
-}
-
-function makeQuota(quotaEntries: Array<{ user: string; quota: number | 'unknown' }>): QuotaArtifacts {
-  const quotaByUser = new Map<string, number | 'unknown'>();
-  for (const q of quotaEntries) quotaByUser.set(q.user, q.quota);
-  return { quotaByUser } as QuotaArtifacts;
-}
+import { makeDailyBucketsArtifacts as makeDailyBuckets, makeQuotaArtifacts as makeQuota } from '../helpers/makeArtifacts';
 
 describe('computeWeeklyQuotaExhaustionFromArtifacts', () => {
   it('returns empty structure for no daily data', () => {

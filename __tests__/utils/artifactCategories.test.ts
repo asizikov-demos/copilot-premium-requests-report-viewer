@@ -1,28 +1,11 @@
 import { buildConsumptionCategoriesFromArtifacts } from '@/utils/ingestion/analytics';
-import { UsageArtifacts, QuotaArtifacts } from '@/utils/ingestion/types';
+import { makeUsageArtifacts, makeQuotaArtifacts } from '../helpers/makeArtifacts';
 
-function makeArtifacts(users: Array<{ user: string; total: number; quota: number | 'unknown'; models?: Record<string, number> }>): { usage: UsageArtifacts; quota: QuotaArtifacts } {
-  const usage: UsageArtifacts = {
-    users: users.map(u => ({
-      user: u.user,
-      totalRequests: u.total,
-      modelBreakdown: u.models || { 'model-a': u.total },
-      topModel: 'model-a',
-      topModelValue: u.total
-    })),
-    modelTotals: { 'model-a': users.reduce((s,u)=> s+u.total,0) },
-    userCount: users.length,
-    modelCount: 1
-  };
-  const quotaByUser = new Map<string, number | 'unknown'>();
-  users.forEach(u => quotaByUser.set(u.user, u.quota));
-  const quota: QuotaArtifacts = {
-    quotaByUser,
-    conflicts: new Map(),
-    distinctQuotas: new Set(users.filter(u=> typeof u.quota === 'number').map(u=> u.quota as number)),
-    hasMixedQuotas: true,
-    hasMixedLicenses: false
-  };
+function makeArtifacts(users: Array<{ user: string; total: number; quota: number | 'unknown'; models?: Record<string, number> }>) {
+  const usage = makeUsageArtifacts(
+    users.map(u => ({ user: u.user, totalRequests: u.total, modelBreakdown: u.models }))
+  );
+  const quota = makeQuotaArtifacts(users.map(u => ({ user: u.user, quota: u.quota })));
   return { usage, quota };
 }
 

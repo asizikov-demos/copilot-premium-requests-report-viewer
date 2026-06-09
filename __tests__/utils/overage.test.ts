@@ -1,28 +1,11 @@
 import { computeOverageSummary as computeOverageSummaryShim } from '@/utils/analytics/artifactShims';
 import { computeOverageSummary } from '@/utils/analytics/overage';
 import { computeOverageSummaryFromArtifacts, computeOverageSummaryFromProcessedData } from '@/utils/ingestion/analytics';
-import type { UsageArtifacts, QuotaArtifacts } from '@/utils/ingestion';
 import { PRICING } from '@/constants/pricing';
 import type { UserSummary } from '@/utils/analytics';
 
+import { makeUsageArtifacts as makeUsage, makeQuotaArtifacts as makeQuota } from '../helpers/makeArtifacts';
 import { makeProcessedData } from '../helpers/testUtils';
-
-function makeUsage(users: Array<{ user: string; totalRequests: number }>): UsageArtifacts {
-  const modelTotals: Record<string, number> = {};
-  users.forEach(u => { modelTotals['m'] = (modelTotals['m'] || 0) + u.totalRequests; });
-  return {
-    users: users.map(u => ({ user: u.user, totalRequests: u.totalRequests, modelBreakdown: { m: u.totalRequests } })),
-    modelTotals,
-    userCount: users.length,
-    modelCount: Object.keys(modelTotals).length
-  } as UsageArtifacts;
-}
-
-function makeQuota(entries: Array<{ user: string; quota: number | 'unknown' }>): QuotaArtifacts {
-  const quotaByUser = new Map<string, number | 'unknown'>();
-  for (const e of entries) quotaByUser.set(e.user, e.quota);
-  return { quotaByUser, conflicts: new Map(), distinctQuotas: new Set(), hasMixedQuotas: false, hasMixedLicenses: false } as QuotaArtifacts;
-}
 
 describe('computeOverageSummary', () => {
   it('returns zero overage when all users under quota', () => {
