@@ -1,7 +1,9 @@
+import { getQuotaTier, shouldReplaceQuotaValue } from '@/utils/analytics/quota';
 import type {
-  UsageArtifacts,
-  QuotaArtifacts,
   DailyBucketsArtifacts,
+  QuotaArtifacts,
+  SpecialUsageBucketKey,
+  UsageArtifacts,
   UserAggregate,
 } from '@/utils/ingestion/types';
 
@@ -30,8 +32,12 @@ export interface MakeUsageUser {
  */
 export function makeUsageArtifacts(users: MakeUsageUser[]): UsageArtifacts {
   const modelTotals: Record<string, number> = {};
+  const organizations = new Set<string>();
+  const costCenters = new Set<string>();
   const userAggregates: UserAggregate[] = users.map((u) => {
-    const modelBreakdown = u.modelBreakdown ?? { 'model-a': u.totalRequests };
+    const modelBreakdown = u.modelBreakdown && Object.keys(u.modelBreakdown).length > 0
+      ? u.modelBreakdown
+      : { 'model-a': u.totalRequests };
 
     let topModel: string | undefined;
     let topModelValue = -Infinity;
@@ -47,13 +53,15 @@ export function makeUsageArtifacts(users: MakeUsageUser[]): UsageArtifacts {
       user: u.user,
       totalRequests: u.totalRequests,
       modelBreakdown,
+      organization: u.organization || undefined,
+      costCenter: u.costCenter || undefined,
     };
     if (topModel !== undefined) {
       aggregate.topModel = topModel;
       aggregate.topModelValue = topModelValue;
     }
-    if (u.organization !== undefined) aggregate.organization = u.organization;
-    if (u.costCenter !== undefined) aggregate.costCenter = u.costCenter;
+    if (u.organization) organizations.add(u.organization);
+    if (u.costCenter) costCenters.add(u.costCenter);
     return aggregate;
   });
 
@@ -62,6 +70,9 @@ export function makeUsageArtifacts(users: MakeUsageUser[]): UsageArtifacts {
     modelTotals,
     userCount: users.length,
     modelCount: Object.keys(modelTotals).length,
+    organizations: Array.from(organizations).sort((left, right) => left.localeCompare(right)),
+    costCenters: Array.from(costCenters).sort((left, right) => left.localeCompare(right)),
+    specialBuckets: [],
   };
 }
 
@@ -79,20 +90,44 @@ export interface MakeQuotaEntry {
  */
 export function makeQuotaArtifacts(entries: MakeQuotaEntry[]): QuotaArtifacts {
   const quotaByUser = new Map<string, number | 'unknown'>();
+  const conflicts = new Map<string, Set<number | 'unknown'>>();
+  const distinctQuotas = new Set<number>();
+
   for (const e of entries) {
-    quotaByUser.set(e.user, e.quota);
+    const existing = quotaByUser.get(e.user);
+    const current = e.quota;
+
+    if (existing !== undefined && existing !== current) {
+      let conflictSet = conflicts.get(e.user);
+      if (!conflictSet) {
+        conflictSet = new Set([existing]);
+        conflicts.set(e.user, conflictSet);
+      }
+      conflictSet.add(current);
+    }
+
+    if (shouldReplaceQuotaValue(existing, current)) {
+      quotaByUser.set(e.user, current);
+      if (typeof current === 'number') {
+        distinctQuotas.add(current);
+      }
+    }
   }
-  const distinctQuotas = new Set<number>(
-    entries
-      .map((e) => e.quota)
-      .filter((q): q is number => typeof q === 'number')
+
+  const distinctTiers = new Set(
+    Array.from(distinctQuotas)
+      .map((quota) => getQuotaTier(quota))
+      .filter((tier): tier is 'business' | 'enterprise' => tier !== null)
   );
+  const hasUnknown = Array.from(quotaByUser.values()).includes('unknown');
+
   return {
     quotaByUser,
-    conflicts: new Map(),
+    conflicts,
     distinctQuotas,
-    hasMixedQuotas: distinctQuotas.size > 1,
-    hasMixedLicenses: false,
+    hasMixedQuotas: distinctTiers.size > 1 || (distinctTiers.size >= 1 && hasUnknown),
+    hasMixedLicenses: distinctTiers.has('business') && distinctTiers.has('enterprise'),
+    specialBucketQuotas: new Map<SpecialUsageBucketKey, 0>(),
   };
 }
 
@@ -145,7 +180,11 @@ export function makeDailyBucketsArtifacts(entries: MakeDailyBucketEntry[]): Dail
 
   return {
     dailyUserTotals,
+    dailyUserAicTotals: new Map(),
     dailyUserModelTotals,
+    dailyUserAicModelTotals: new Map(),
+    dailyBucketTotals: new Map(),
+    dailyBucketModelTotals: new Map(),
     dateRange: min && max ? { min, max } : null,
     months: Array.from(
       new Set(Array.from(dailyUserTotals.keys()).map((d) => d.slice(0, 7)))
