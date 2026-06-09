@@ -84,9 +84,7 @@ export function ModelUsageTrendsOverview() {
     aggregateProcessedData,
   } = useAnalysisContext();
   const isUsageBasedBilling = useMemo(() => {
-    const hasAiCreditUsage = aggregateProcessedData.some((row) => row.usageUnit === 'ai_credit');
-    const hasRequestUsage = aggregateProcessedData.some((row) => row.usageUnit === 'request' && row.requestsUsed > 0);
-    return hasAiCreditUsage && !hasRequestUsage;
+    return aggregateProcessedData.some((row) => row.usageUnit === 'ai_credit');
   }, [aggregateProcessedData]);
 
   const { data, models } = useMemo(() => {
