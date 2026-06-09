@@ -24,3 +24,12 @@ export function utcDateTickFormatter(value: string): string {
   const date = new Date(value);
   return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
 }
+
+export function utcDateLabelFormatter(value: unknown): string {
+  if (typeof value !== 'string' && typeof value !== 'number' && !(value instanceof Date)) {
+    throw new TypeError('Expected UTC date formatter value to be a string, number, or Date.');
+  }
+
+  const date = new Date(value);
+  return `${date.getUTCMonth() + 1}/${date.getUTCDate()}/${date.getUTCFullYear()}`;
+}

@@ -5,7 +5,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 import { PRICING } from '@/constants/pricing';
 
-import { chartTooltipContentStyle, chartTooltipLabelStyle, utcDateTickFormatter } from './chartTooltipStyles';
+import { chartTooltipContentStyle, chartTooltipLabelStyle, utcDateLabelFormatter, utcDateTickFormatter } from './chartTooltipStyles';
 
 export interface UsersQuotaConsumptionChartProps {
   dailyCumulativeData: { date: string; [user: string]: string | number }[]; // dynamic user cumulative values
@@ -42,10 +42,7 @@ export function UsersQuotaConsumptionChart({
           domain={[0, (dataMax: number) => Math.max(currentQuota, dataMax)]}
         />
         <Tooltip 
-          labelFormatter={(label) => {
-            const date = new Date(label);
-            return date.toLocaleDateString('en-US', { timeZone: 'UTC' });
-          }}
+          labelFormatter={utcDateLabelFormatter}
           formatter={(value, name) => [
             `${Number(value).toFixed(1)} requests`,
             String(name)

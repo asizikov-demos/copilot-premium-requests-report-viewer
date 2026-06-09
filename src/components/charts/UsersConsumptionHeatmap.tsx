@@ -4,6 +4,8 @@ import React, { useMemo } from 'react';
 
 import { getQuotaTier } from '@/utils/analytics/quota';
 
+import { utcDateTickFormatter } from './chartTooltipStyles';
+
 export interface UsersConsumptionHeatmapProps {
   dailyCumulativeData: { date: string; [user: string]: string | number }[];
   users: string[];
@@ -129,13 +131,6 @@ export function UsersConsumptionHeatmap({
   
   const totalHeight = chartHeight + topMargin + bottomMargin;
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const month = date.getUTCMonth() + 1;
-    const day = date.getUTCDate();
-    return `${month}/${day}`;
-  };
-
   const formatBinLabel = (binIndex: number) => {
     const binStart = binIndex * binSize;
     const binEnd = (binIndex + 1) * binSize;
@@ -241,7 +236,7 @@ export function UsersConsumptionHeatmap({
                     strokeWidth={0.5}
                   />
                   <title>
-                    {formatDate(cell.date)}: {formatBinLabel(cell.bin)} {valueUnitLabel}
+                    {utcDateTickFormatter(cell.date)}: {formatBinLabel(cell.bin)} {valueUnitLabel}
                     {'\n'}{cell.count} users ({cell.percentage.toFixed(1)}%)
                   </title>
                 </g>
@@ -334,7 +329,7 @@ export function UsersConsumptionHeatmap({
                     fill="#636c76"
                     transform={`rotate(-45, ${x}, ${chartHeight + 20})`}
                   >
-                    {formatDate(dates[dateIndex])}
+                    {utcDateTickFormatter(dates[dateIndex])}
                   </text>
                 </g>
               );

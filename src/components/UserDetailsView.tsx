@@ -5,6 +5,7 @@ import React, { useContext, useMemo } from 'react';
 import { COST_OPTIMIZATION_THRESHOLDS, PRICING } from '@/constants/pricing';
 import { AnalysisContext } from '@/context/AnalysisContext';
 import { UserDailyStackedChart } from '@/components/charts/UserDailyStackedChart';
+import { utcDateLabelFormatter } from '@/components/charts/chartTooltipStyles';
 import type { ProcessedData, UserDailyData } from '@/types/csv';
 import { getQuotaTier, isLegacyPremiumRequestQuotaValue } from '@/utils/analytics/quota';
 import {
@@ -52,8 +53,7 @@ export interface UserDetailsViewProps {
 
 function UserDailyUsageTooltip({ active, payload, label, valueUnitLabel = 'requests' }: TooltipProps) {
   if (active && payload && payload.length && label) {
-    const date = new Date(label);
-    const formattedDate = date.toLocaleDateString('en-US', { timeZone: 'UTC' });
+    const formattedDate = utcDateLabelFormatter(label);
 
     const cumulativeData = payload.find((entry: TooltipEntry) => entry.dataKey === 'totalCumulative');
     const modelData = payload.filter(
