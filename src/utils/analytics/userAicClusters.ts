@@ -34,9 +34,24 @@ function summarizeCluster(
   points: UserAicPoint[],
   totalAicGrossAmount: number
 ): UserAicCluster {
-  const totalRequests = points.reduce((sum, point) => sum + point.totalRequests, 0);
-  const clusterAicGrossAmount = points.reduce((sum, point) => sum + point.aicGrossAmount, 0);
-  const sortedSpend = points.map((point) => point.aicGrossAmount).sort((a, b) => a - b);
+  let totalRequests = 0;
+  let clusterAicGrossAmount = 0;
+  let minAicGrossAmount = 0;
+  let maxAicGrossAmount = 0;
+
+  points.forEach((point, index) => {
+    totalRequests += point.totalRequests;
+    clusterAicGrossAmount += point.aicGrossAmount;
+
+    if (index === 0) {
+      minAicGrossAmount = point.aicGrossAmount;
+      maxAicGrossAmount = point.aicGrossAmount;
+      return;
+    }
+
+    minAicGrossAmount = Math.min(minAicGrossAmount, point.aicGrossAmount);
+    maxAicGrossAmount = Math.max(maxAicGrossAmount, point.aicGrossAmount);
+  });
 
   return {
     key,
@@ -46,8 +61,8 @@ function summarizeCluster(
     averageAicGrossAmount: clusterAicGrossAmount / points.length,
     totalRequests,
     totalAicGrossAmount: clusterAicGrossAmount,
-    minAicGrossAmount: sortedSpend[0] ?? 0,
-    maxAicGrossAmount: sortedSpend[sortedSpend.length - 1] ?? 0,
+    minAicGrossAmount,
+    maxAicGrossAmount,
     shareOfAicGrossAmount: totalAicGrossAmount > 0 ? (clusterAicGrossAmount / totalAicGrossAmount) * 100 : 0,
   };
 }
