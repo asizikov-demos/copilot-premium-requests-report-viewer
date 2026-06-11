@@ -2,9 +2,9 @@
 
 import { useMemo } from 'react';
 
-import { PRICING } from '@/constants/pricing';
 import { useAnalysisContext } from '@/context/AnalysisContext';
 import type { BillingUserTotals } from '@/utils/ingestion';
+import { getEffectiveAicQuantity } from '@/utils/aicFields';
 
 import { UsersAicClustersChart } from './charts/UsersAicClustersChart';
 
@@ -29,22 +29,12 @@ function formatAiCredits(value: number): string {
   return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function getConsumedAiCredits(user: BillingUserTotals): number {
-  if (typeof user.aicQuantity === 'number') {
-    return user.aicQuantity;
-  }
-
-  return typeof user.aicGrossAmount === 'number'
-    ? user.aicGrossAmount / PRICING.AI_CREDIT_USD_VALUE
-    : 0;
-}
-
 function buildRankedAicUsers(users: BillingUserTotals[]): RankedAicUser[] {
-  const totalAiCredits = users.reduce((sum, user) => sum + getConsumedAiCredits(user), 0);
+  const totalAiCredits = users.reduce((sum, user) => sum + getEffectiveAicQuantity(user), 0);
 
   return users
     .map((user) => {
-      const aiCredits = getConsumedAiCredits(user);
+      const aiCredits = getEffectiveAicQuantity(user);
 
       return {
         user: user.user,

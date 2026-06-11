@@ -2,12 +2,12 @@
 
 import React, { useMemo } from 'react';
 
-import { PRICING } from '@/constants/pricing';
 import { useAnalysisContext } from '@/context/AnalysisContext';
 import { ModelDailyStackedChart } from '@/components/charts/ModelDailyStackedChart';
 import type { ModelDailyDatum } from '@/components/charts/ModelDailyStackedChart';
 import type { ProcessedData } from '@/types/csv';
 import { filterDailySeriesByMonths } from '@/utils/analytics/filters';
+import { getEffectiveAicQuantity } from '@/utils/aicFields';
 import { formatCurrency } from '@/utils/formatters';
 import { buildDailyModelUsageFromArtifacts } from '@/utils/ingestion/analytics';
 import { generateModelColors } from '@/utils/modelColors';
@@ -18,12 +18,6 @@ interface TopAicModelRow {
   aicQuantity: number;
   aicGrossAmount: number;
   share: number;
-}
-
-function getEffectiveAicQuantity(aicQuantity: number, aicGrossAmount: number): number {
-  const quantityDerivedFromGross = aicGrossAmount / PRICING.AI_CREDIT_USD_VALUE;
-
-  return Math.max(aicQuantity, quantityDerivedFromGross);
 }
 
 function enumerateDateKeys(start: string, end: string): string[] {
@@ -122,7 +116,7 @@ export function ModelUsageTrendsOverview() {
       .map(([model, totals]) => ({
         model,
         requests: totals.quantity,
-        aicQuantity: getEffectiveAicQuantity(totals.aicQuantity, totals.aicGrossAmount),
+        aicQuantity: getEffectiveAicQuantity(totals),
         aicGrossAmount: totals.aicGrossAmount,
       }))
       .filter((row) => row.aicQuantity > 0 || row.aicGrossAmount > 0);
