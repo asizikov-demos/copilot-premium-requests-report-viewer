@@ -15,6 +15,8 @@ import {
 } from 'recharts';
 
 import type { BillingUserTotals } from '@/utils/ingestion';
+import { buildUserAicClusters } from '@/utils/analytics/userAicClusters';
+import type { UserAicClusterKey } from '@/utils/analytics/userAicClusters';
 import { formatCurrency } from '@/utils/formatters';
 
 import { chartTooltipContentStyle, chartTooltipLabelStyle } from './chartTooltipStyles';
@@ -23,109 +25,18 @@ interface UsersAicClustersChartProps {
   users: BillingUserTotals[];
 }
 
-interface UserAicPoint {
-  user: string;
-  totalRequests: number;
-  aicGrossAmount: number;
-}
-
-interface UserAicCluster {
-  cluster: string;
-  users: number;
-  averageRequests: number;
-  averageAicGrossAmount: number;
-  totalRequests: number;
-  totalAicGrossAmount: number;
-  minAicGrossAmount: number;
-  maxAicGrossAmount: number;
-  shareOfAicGrossAmount: number;
+interface ClusterStyle {
   fill: string;
   dotClassName: string;
 }
 
-const CLUSTER_COLORS = ['#8c959f', '#60a5fa', '#6366f1', '#8b5cf6'];
-const CLUSTER_DOT_CLASSES = ['bg-[#8c959f]', 'bg-[#60a5fa]', 'bg-indigo-500', 'bg-[#8b5cf6]'];
-
-function summarizeCluster(
-  cluster: string,
-  points: UserAicPoint[],
-  totalAicGrossAmount: number,
-  fill: string,
-  dotClassName: string
-): UserAicCluster {
-  const totalRequests = points.reduce((sum, point) => sum + point.totalRequests, 0);
-  const clusterAicGrossAmount = points.reduce((sum, point) => sum + point.aicGrossAmount, 0);
-  const sortedSpend = points.map((point) => point.aicGrossAmount).sort((a, b) => a - b);
-
-  return {
-    cluster,
-    users: points.length,
-    averageRequests: totalRequests / points.length,
-    averageAicGrossAmount: clusterAicGrossAmount / points.length,
-    totalRequests,
-    totalAicGrossAmount: clusterAicGrossAmount,
-    minAicGrossAmount: sortedSpend[0] ?? 0,
-    maxAicGrossAmount: sortedSpend[sortedSpend.length - 1] ?? 0,
-    shareOfAicGrossAmount: totalAicGrossAmount > 0 ? (clusterAicGrossAmount / totalAicGrossAmount) * 100 : 0,
-    fill,
-    dotClassName,
-  };
-}
-
-function buildUserAicClusters(users: BillingUserTotals[]): UserAicCluster[] {
-  const points = users.map((user) => ({
-    user: user.user,
-    totalRequests: user.quantity,
-    aicGrossAmount: user.aicGrossAmount ?? 0,
-  }));
-
-  const totalAicGrossAmount = points.reduce((sum, point) => sum + point.aicGrossAmount, 0);
-  const noSpendUsers = points.filter((point) => point.aicGrossAmount <= 0);
-  const spendingUsers = points
-    .filter((point) => point.aicGrossAmount > 0)
-    .sort((a, b) => a.aicGrossAmount - b.aicGrossAmount);
-
-  const clusters: UserAicCluster[] = [];
-
-  if (noSpendUsers.length > 0) {
-    clusters.push(summarizeCluster(
-      'No AIC spend',
-      noSpendUsers,
-      totalAicGrossAmount,
-      CLUSTER_COLORS[0],
-      CLUSTER_DOT_CLASSES[0]
-    ));
-  }
-
-  const bucketCount = Math.min(3, spendingUsers.length);
-  if (bucketCount === 0) {
-    return clusters;
-  }
-
-  const bucketNames = bucketCount === 1
-    ? ['AIC users']
-    : bucketCount === 2
-      ? ['Light AIC users', 'Heavy AIC users']
-      : ['Light AIC users', 'Typical AIC users', 'Heavy AIC users'];
-
-  for (let bucketIndex = 0; bucketIndex < bucketCount; bucketIndex += 1) {
-    const start = Math.floor((bucketIndex * spendingUsers.length) / bucketCount);
-    const end = Math.floor(((bucketIndex + 1) * spendingUsers.length) / bucketCount);
-    const bucketUsers = spendingUsers.slice(start, end);
-
-    if (bucketUsers.length > 0) {
-      clusters.push(summarizeCluster(
-        bucketNames[bucketIndex],
-        bucketUsers,
-        totalAicGrossAmount,
-        CLUSTER_COLORS[Math.min(bucketIndex + 1, CLUSTER_COLORS.length - 1)],
-        CLUSTER_DOT_CLASSES[Math.min(bucketIndex + 1, CLUSTER_DOT_CLASSES.length - 1)]
-      ));
-    }
-  }
-
-  return clusters;
-}
+const CLUSTER_STYLES: Record<UserAicClusterKey, ClusterStyle> = {
+  power: { fill: '#8b5cf6', dotClassName: 'bg-[#8b5cf6]' },
+  heavy: { fill: '#6366f1', dotClassName: 'bg-indigo-500' },
+  typical: { fill: '#60a5fa', dotClassName: 'bg-[#60a5fa]' },
+  light: { fill: '#8c959f', dotClassName: 'bg-[#8c959f]' },
+  nearZero: { fill: '#d1d9e0', dotClassName: 'bg-[#d1d9e0]' },
+};
 
 export function UsersAicClustersChart({ users }: UsersAicClustersChartProps) {
   const clusters = useMemo(() => buildUserAicClusters(users), [users]);
@@ -183,7 +94,7 @@ export function UsersAicClustersChart({ users }: UsersAicClustersChartProps) {
             />
             <Scatter name="User clusters" data={clusters} fill="#6366f1">
               {clusters.map((cluster) => (
-                <Cell key={cluster.cluster} fill={cluster.fill} />
+                <Cell key={cluster.cluster} fill={CLUSTER_STYLES[cluster.key].fill} />
               ))}
               <LabelList dataKey="cluster" position="top" fill="#1f2328" fontSize={12} />
             </Scatter>
@@ -221,7 +132,7 @@ export function UsersAicClustersChart({ users }: UsersAicClustersChartProps) {
                 <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-[#1f2328]">
                   <span className="inline-flex items-center gap-2">
                     <span
-                      className={`w-2.5 h-2.5 rounded-full ${cluster.dotClassName}`}
+                      className={`w-2.5 h-2.5 rounded-full ${CLUSTER_STYLES[cluster.key].dotClassName}`}
                       aria-hidden="true"
                     />
                     {cluster.cluster}

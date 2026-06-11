@@ -195,7 +195,7 @@ describe('DataAnalysis billing summary', () => {
       expect(screen.getByRole('heading', { name: 'AI Usage' })).toBeInTheDocument();
       expect(screen.getByText('AI Credits User Clusters')).toBeInTheDocument();
       expect(screen.getByRole('table', { name: 'AI Credits user clusters' })).toBeInTheDocument();
-      expect(screen.getByText('Heavy AIC users')).toBeInTheDocument();
+      expect(screen.getByText('Near-zero users')).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Cost Centers' })[0]);
