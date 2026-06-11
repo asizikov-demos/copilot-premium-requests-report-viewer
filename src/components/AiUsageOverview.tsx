@@ -118,7 +118,7 @@ export function AiUsageOverview() {
         <div className="px-5 py-4 border-b border-[#d1d9e0]">
           <h3 className="text-sm font-medium text-[#1f2328]">AI Credits User Clusters</h3>
           <p className="text-xs text-[#636c76] mt-0.5">
-            Typical user groups by AI Credits gross consumption in USD
+            User groups by AI Credits gross spend, including near-zero users under $1
           </p>
         </div>
         <div className="p-5">
