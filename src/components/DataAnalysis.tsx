@@ -243,6 +243,7 @@ function DataAnalysisInner() {
       }
       : null
   );
+  const showAicOverviewCard = aggregatedAic !== null && !isUsageBasedBilling;
 
   const modelRows = useMemo(() => {
     if (usageBasedBillingArtifacts) {
@@ -433,7 +434,7 @@ function DataAnalysisInner() {
             <div className="space-y-6">
               {/* Current Billing + Licenses row */}
               {costMetricsAvailable && aggregatedCosts && (
-                <div className={`grid grid-cols-1 ${aggregatedAic ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6 opacity-0 animate-fade-in-up`} style={{ animationDelay: '50ms' }}>
+                <div className={`grid grid-cols-1 ${showAicOverviewCard ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6 opacity-0 animate-fade-in-up`} style={{ animationDelay: '50ms' }}>
                   {/* Current Billing */}
                   <div className="bg-white border border-[#d1d9e0] rounded-md p-5">
                     <p className="text-xs font-bold text-[#636c76] uppercase tracking-wider text-center mb-3">Current Billing</p>
@@ -497,7 +498,7 @@ function DataAnalysisInner() {
                     </div>
                   </div>
 
-                  {aggregatedAic && (
+                  {showAicOverviewCard && (
                     <div className="bg-white border border-[#d1d9e0] rounded-md p-5">
                       <p className="text-xs font-bold text-[#636c76] uppercase tracking-wider text-center mb-3">AI Credits</p>
                       <p className="text-3xl font-bold text-[#1f2328] text-center">
