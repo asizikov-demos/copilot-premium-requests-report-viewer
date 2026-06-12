@@ -444,6 +444,9 @@ describe('DataAnalysis billing summary', () => {
       expect(billing).toHaveTextContent('Additional usage');
       expect(billing).not.toHaveTextContent('Discounts');
       expect(billing).not.toHaveTextContent('Net cost');
+      expect(screen.getByText('Current Billing')).toBeInTheDocument();
+      expect(screen.getByText('Licenses')).toBeInTheDocument();
+      expect(screen.queryByLabelText('ai-credits-summary')).not.toBeInTheDocument();
       expect(screen.getByRole('heading', { name: 'AI Credits by Model' })).toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: 'Requests by Model' })).not.toBeInTheDocument();
       expect(screen.getByText('Total: 42.50 AI Credits')).toBeInTheDocument();
