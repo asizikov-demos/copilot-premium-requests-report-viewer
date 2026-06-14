@@ -8,6 +8,7 @@ import type { ModelDailyDatum } from '@/components/charts/ModelDailyStackedChart
 import type { ProcessedData } from '@/types/csv';
 import { filterDailySeriesByMonths } from '@/utils/analytics/filters';
 import { getEffectiveAicQuantity } from '@/utils/aicFields';
+import { enumerateDatesInclusive } from '@/utils/dateKeys';
 import { formatCurrency } from '@/utils/formatters';
 import { buildDailyModelUsageFromArtifacts } from '@/utils/ingestion/analytics';
 import { generateModelColors } from '@/utils/modelColors';
@@ -20,19 +21,6 @@ interface TopAicModelRow {
   share: number;
 }
 
-function enumerateDateKeys(start: string, end: string): string[] {
-  const dates: string[] = [];
-  const current = new Date(`${start}T00:00:00Z`);
-  const last = new Date(`${end}T00:00:00Z`);
-
-  while (current.getTime() <= last.getTime()) {
-    dates.push(current.toISOString().slice(0, 10));
-    current.setUTCDate(current.getUTCDate() + 1);
-  }
-
-  return dates;
-}
-
 function buildDailyModelBillingQuantity(rows: ProcessedData[]): { data: ModelDailyDatum[]; models: string[] } {
   const usageRows = rows.filter((row) => !row.isNonCopilotUsage && row.usageUnit === 'ai_credit');
   if (usageRows.length === 0) {
@@ -41,7 +29,7 @@ function buildDailyModelBillingQuantity(rows: ProcessedData[]): { data: ModelDai
 
   const models = Array.from(new Set(usageRows.map((row) => row.model))).sort();
   const sortedDates = usageRows.map((row) => row.dateKey).sort();
-  const dates = enumerateDateKeys(sortedDates[0], sortedDates[sortedDates.length - 1]);
+  const dates = enumerateDatesInclusive(sortedDates[0], sortedDates[sortedDates.length - 1]);
   const byDateModel = new Map<string, Map<string, number>>();
 
   for (const row of usageRows) {
