@@ -2,5 +2,5 @@
 export * from './quota';
 export * from './insights';
 export * from './advisory';
-export * from './userAicClusters';
+export * from './userAicDistribution';
 export * from './types';
