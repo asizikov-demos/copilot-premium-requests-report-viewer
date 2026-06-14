@@ -6,7 +6,6 @@ import { useAnalysisContext } from '@/context/AnalysisContext';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import type { CodeReviewAnalysis, CodingAgentUser, ProcessedData } from '@/types/csv';
 import { getBillingCostLabels } from '@/utils/billingLabels';
-import { formatCurrency } from '@/utils/formatters';
 import {
   buildDailyCodeReviewAicUsageFromArtifacts,
   buildDailyCodeReviewUsageFromArtifacts,
@@ -18,6 +17,7 @@ import {
 import { filterDailySeriesByMonths } from '@/utils/analytics/filters';
 import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
 
+import { AgentUsersTable, type AgentUsageTableRow } from './charts/AgentUsersTable';
 import { CodingAgentUsageChart } from './charts/CodingAgentUsageChart';
 
 interface CodingAgentOverviewProps {
@@ -25,28 +25,6 @@ interface CodingAgentOverviewProps {
   totalUniqueUsers: number;
   adoptionRate: number;
   codeReviewAnalysis: CodeReviewAnalysis;
-}
-
-interface AgentUsageTableRow {
-  user: string;
-  quantity: number;
-  gross: number;
-  included: number;
-  additional: number;
-  quota: number | 'unknown';
-  isSyntheticNonCopilotRow?: boolean;
-}
-
-function formatUsageQuantity(value: number, isUsageBasedBilling: boolean): string {
-  if (isUsageBasedBilling) {
-    return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
-
-  return value.toFixed(1);
-}
-
-function formatQuotaValue(quota: number | 'unknown'): string {
-  return quota === 'unknown' ? 'Unknown' : quota.toLocaleString();
 }
 
 function buildUsageBasedAgentRows(
@@ -81,25 +59,6 @@ function buildUsageBasedAgentRows(
   return Array.from(rowsByUser.values())
     .filter((row) => row.quantity > 0 || row.gross > 0 || row.included > 0 || row.additional > 0)
     .sort((left, right) => right.quantity - left.quantity);
-}
-
-function getVisibleRows<T extends { isSyntheticNonCopilotRow?: boolean }>(
-  rows: T[],
-  showAllRows: boolean,
-  previewCount: number
-): T[] {
-  if (showAllRows) {
-    return rows;
-  }
-
-  const preview = rows.slice(0, previewCount);
-  const syntheticRow = rows.find((row) => row.isSyntheticNonCopilotRow);
-
-  if (!syntheticRow || preview.some((row) => row.isSyntheticNonCopilotRow)) {
-    return preview;
-  }
-
-  return [...preview.slice(0, Math.max(0, previewCount - 1)), syntheticRow];
 }
 
 export function CodingAgentOverview({ 
@@ -176,14 +135,6 @@ export function CodingAgentOverview({
     }));
   }, [aggregateProcessedData, codeReviewAnalysis.users, isUsageBasedBilling]);
 
-  const visibleUsers = showAllUsers ? codingAgentTableRows : codingAgentTableRows.slice(0, TABLE_PREVIEW_COUNT);
-  const hasMore = codingAgentTableRows.length > TABLE_PREVIEW_COUNT;
-
-  const visibleReviewUsers = useMemo(() => (
-    getVisibleRows(codeReviewTableRows, showAllReviewUsers, TABLE_PREVIEW_COUNT)
-  ), [codeReviewTableRows, showAllReviewUsers]);
-  const hasMoreReviewUsers = codeReviewTableRows.length > TABLE_PREVIEW_COUNT;
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -220,81 +171,16 @@ export function CodingAgentOverview({
 
       {/* Users Table */}
       {(!isMobile || !showChart) && (
-        <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
-          <div className="px-5 py-4 border-b border-[#d1d9e0]">
-            <h3 className="text-sm font-medium text-[#1f2328]">Agent Users</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr className="border-b border-[#d1d9e0]">
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
-                    User
-                  </th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
-                    {quantityColumnLabel}
-                  </th>
-                  {isUsageBasedBilling ? (
-                    <>
-                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
-                        {costLabels.gross}
-                      </th>
-                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
-                        {costLabels.discount}
-                      </th>
-                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
-                        {costLabels.net}
-                      </th>
-                    </>
-                  ) : (
-                    <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
-                      Quota
-                    </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#d1d9e0]">
-                {visibleUsers.map((user) => (
-                  <tr key={user.user} className="hover:bg-[#fcfdff] transition-colors">
-                    <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-[#1f2328]">
-                      {user.user}
-                    </td>
-                    <td className="px-5 py-3 whitespace-nowrap text-sm font-mono text-[#1f2328] text-right">
-                      {formatUsageQuantity(user.quantity, isUsageBasedBilling)}
-                    </td>
-                    {isUsageBasedBilling ? (
-                      <>
-                        <td className="px-5 py-3 whitespace-nowrap text-sm font-mono text-[#636c76] text-right">
-                          {formatCurrency(user.gross)}
-                        </td>
-                        <td className="px-5 py-3 whitespace-nowrap text-sm font-mono text-emerald-600 text-right">
-                          -{formatCurrency(user.included)}
-                        </td>
-                        <td className="px-5 py-3 whitespace-nowrap text-sm font-mono font-semibold text-[#1f2328] text-right">
-                          {formatCurrency(user.additional)}
-                        </td>
-                      </>
-                    ) : (
-                      <td className="px-5 py-3 whitespace-nowrap text-sm text-[#636c76] text-right">
-                        {formatQuotaValue(user.quota)}
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {hasMore && (
-            <div className="px-5 py-3 border-t border-[#d1d9e0]">
-              <button
-                onClick={() => setShowAllUsers(!showAllUsers)}
-                className="text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
-              >
-                {showAllUsers ? `Show top ${TABLE_PREVIEW_COUNT}` : `Show all ${codingAgentTableRows.length} users`}
-              </button>
-            </div>
-          )}
-        </div>
+        <AgentUsersTable
+          tableTitle="Agent Users"
+          rows={codingAgentTableRows}
+          isUsageBasedBilling={isUsageBasedBilling}
+          quantityColumnLabel={quantityColumnLabel}
+          costLabels={costLabels}
+          showAll={showAllUsers}
+          onToggleShowAll={() => setShowAllUsers(!showAllUsers)}
+          previewCount={TABLE_PREVIEW_COUNT}
+        />
       )}
 
       {/* Code Review Section */}
@@ -322,57 +208,16 @@ export function CodingAgentOverview({
 
           {/* Code Review Users Table */}
           {(!isMobile || !showChart) && (
-            <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
-              <div className="px-5 py-4 border-b border-[#d1d9e0]">
-                <h3 className="text-sm font-medium text-[#1f2328]">Code Review Users</h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full">
-                  <thead>
-                    <tr className="border-b border-[#d1d9e0]">
-                      <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">User</th>
-                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{quantityColumnLabel}</th>
-                      {isUsageBasedBilling ? (
-                        <>
-                          <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{costLabels.gross}</th>
-                          <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{costLabels.discount}</th>
-                          <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{costLabels.net}</th>
-                        </>
-                      ) : (
-                        <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Quota</th>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#d1d9e0]">
-                    {visibleReviewUsers.map((user) => (
-                      <tr key={user.user} className="hover:bg-[#fcfdff] transition-colors">
-                        <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-[#1f2328]">{user.user}</td>
-                        <td className="px-5 py-3 whitespace-nowrap text-sm font-mono text-[#1f2328] text-right">{formatUsageQuantity(user.quantity, isUsageBasedBilling)}</td>
-                        {isUsageBasedBilling ? (
-                          <>
-                            <td className="px-5 py-3 whitespace-nowrap text-sm font-mono text-[#636c76] text-right">{formatCurrency(user.gross)}</td>
-                            <td className="px-5 py-3 whitespace-nowrap text-sm font-mono text-emerald-600 text-right">-{formatCurrency(user.included)}</td>
-                            <td className="px-5 py-3 whitespace-nowrap text-sm font-mono font-semibold text-[#1f2328] text-right">{formatCurrency(user.additional)}</td>
-                          </>
-                        ) : (
-                          <td className="px-5 py-3 whitespace-nowrap text-sm text-[#636c76] text-right">{formatQuotaValue(user.quota)}</td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {hasMoreReviewUsers && (
-                <div className="px-5 py-3 border-t border-[#d1d9e0]">
-                  <button
-                    onClick={() => setShowAllReviewUsers(!showAllReviewUsers)}
-                    className="text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
-                  >
-                    {showAllReviewUsers ? `Show top ${TABLE_PREVIEW_COUNT}` : `Show all ${codeReviewTableRows.length} users`}
-                  </button>
-                </div>
-              )}
-            </div>
+            <AgentUsersTable
+              tableTitle="Code Review Users"
+              rows={codeReviewTableRows}
+              isUsageBasedBilling={isUsageBasedBilling}
+              quantityColumnLabel={quantityColumnLabel}
+              costLabels={costLabels}
+              showAll={showAllReviewUsers}
+              onToggleShowAll={() => setShowAllReviewUsers(!showAllReviewUsers)}
+              previewCount={TABLE_PREVIEW_COUNT}
+            />
           )}
         </>
       )}
