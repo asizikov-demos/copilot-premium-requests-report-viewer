@@ -1,4 +1,5 @@
 import type { BillingUserTotals } from '@/utils/ingestion';
+import { PRICING } from '@/constants/pricing';
 import { buildUserAicDistribution, NEAR_ZERO_AIC_QUANTITY } from '@/utils/analytics/userAicDistribution';
 
 function makeBillingUser(user: string, aiCredits: number): BillingUserTotals {
@@ -6,7 +7,7 @@ function makeBillingUser(user: string, aiCredits: number): BillingUserTotals {
     user,
     quantity: aiCredits,
     aicQuantity: aiCredits,
-    aicGrossAmount: aiCredits * 0.01,
+    aicGrossAmount: aiCredits * PRICING.AI_CREDIT_USD_VALUE,
   };
 }
 
@@ -32,7 +33,7 @@ describe('user AI Credits distribution', () => {
     expect(byName.get('Heavy')?.maxAiCredits).toBe(19);
     expect(byName.get('Power')?.users).toBe(1);
     expect(byName.get('Power')?.minAiCredits).toBe(20);
-    expect(byName.get('Power')?.totalGrossCost).toBe(0.2);
+    expect(byName.get('Power')?.totalGrossCost).toBe(20 * PRICING.AI_CREDIT_USD_VALUE);
   });
 
   test('treats one AI Credit as active usage, not near-zero usage', () => {
@@ -48,6 +49,7 @@ describe('user AI Credits distribution', () => {
       ['Light', 0],
       ['Near-zero', 1],
     ]);
+    expect(distribution.activeUsers).toBe(1);
   });
 
   test('derives AI Credits from gross amount when quantity is unavailable', () => {

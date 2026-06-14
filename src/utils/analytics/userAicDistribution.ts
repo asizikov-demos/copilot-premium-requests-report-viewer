@@ -54,22 +54,22 @@ const GROUP_DEFINITIONS: Record<UserAicGroupKey, GroupDefinition> = {
   light: {
     key: 'light',
     label: 'Light',
-    description: 'Bottom 25% of active users',
+    description: 'Lower active usage band',
   },
   typical: {
     key: 'typical',
     label: 'Typical',
-    description: 'Middle 55% of active users',
+    description: 'Middle active usage band',
   },
   heavy: {
     key: 'heavy',
     label: 'Heavy',
-    description: 'Next 15% of active users',
+    description: 'Higher active usage band',
   },
   power: {
     key: 'power',
     label: 'Power',
-    description: 'Top 5% of active users',
+    description: 'Highest active usage band',
   },
 };
 
@@ -118,9 +118,24 @@ function summarizeGroup(
   totalAiCredits: number,
   totalGrossCost: number
 ): UserAicGroup {
-  const groupAiCredits = group.points.reduce((sum, point) => sum + point.aiCredits, 0);
-  const groupGrossCost = group.points.reduce((sum, point) => sum + point.grossCost, 0);
-  const aiCreditValues = group.points.map((point) => point.aiCredits);
+  let groupAiCredits = 0;
+  let groupGrossCost = 0;
+  let minAiCredits = 0;
+  let maxAiCredits = 0;
+
+  group.points.forEach((point, index) => {
+    groupAiCredits += point.aiCredits;
+    groupGrossCost += point.grossCost;
+
+    if (index === 0) {
+      minAiCredits = point.aiCredits;
+      maxAiCredits = point.aiCredits;
+      return;
+    }
+
+    minAiCredits = Math.min(minAiCredits, point.aiCredits);
+    maxAiCredits = Math.max(maxAiCredits, point.aiCredits);
+  });
 
   return {
     key: group.key,
@@ -131,8 +146,8 @@ function summarizeGroup(
     averageAiCredits: group.points.length > 0 ? groupAiCredits / group.points.length : 0,
     totalGrossCost: groupGrossCost,
     averageGrossCost: group.points.length > 0 ? groupGrossCost / group.points.length : 0,
-    minAiCredits: aiCreditValues.length > 0 ? Math.min(...aiCreditValues) : 0,
-    maxAiCredits: aiCreditValues.length > 0 ? Math.max(...aiCreditValues) : 0,
+    minAiCredits,
+    maxAiCredits,
     shareOfUsers: totalUsers > 0 ? (group.points.length / totalUsers) * 100 : 0,
     shareOfAiCredits: totalAiCredits > 0 ? (groupAiCredits / totalAiCredits) * 100 : 0,
     shareOfGrossCost: totalGrossCost > 0 ? (groupGrossCost / totalGrossCost) * 100 : 0,
@@ -154,14 +169,14 @@ export function buildUserAicDistribution(users: BillingUserTotals[]): UserAicDis
   const totalAiCredits = points.reduce((sum, point) => sum + point.aiCredits, 0);
   const totalGrossCost = points.reduce((sum, point) => sum + point.grossCost, 0);
   const nearZeroUsers = points.filter((point) => point.aiCredits < NEAR_ZERO_AIC_QUANTITY);
-  const activeUsers = points
+  const activeBandUsers = points
     .filter((point) => point.aiCredits >= NEAR_ZERO_AIC_QUANTITY)
     .sort((a, b) => a.aiCredits - b.aiCredits);
   const nearZeroGroup: GroupBucket = {
     ...GROUP_DEFINITIONS.nearZero,
     points: nearZeroUsers,
   };
-  const groups = [nearZeroGroup, ...buildActiveUserGroups(activeUsers)];
+  const groups = [nearZeroGroup, ...buildActiveUserGroups(activeBandUsers)];
   const groupsByKey = new Map(
     groups.map((group) => [
       group.key,
@@ -173,7 +188,7 @@ export function buildUserAicDistribution(users: BillingUserTotals[]): UserAicDis
   return {
     groups: orderedGroupKeys.map((key) => groupsByKey.get(key)).filter((group): group is UserAicGroup => group !== undefined),
     totalUsers,
-    activeUsers: points.filter((point) => point.aiCredits > 0).length,
+    activeUsers: activeBandUsers.length,
     totalAiCredits,
     totalGrossCost,
   };
