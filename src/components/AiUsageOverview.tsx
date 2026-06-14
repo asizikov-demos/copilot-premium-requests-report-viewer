@@ -6,7 +6,7 @@ import { useAnalysisContext } from '@/context/AnalysisContext';
 import type { BillingUserTotals } from '@/utils/ingestion';
 import { getEffectiveAicQuantity } from '@/utils/aicFields';
 
-import { UsersAicClustersChart } from './charts/UsersAicClustersChart';
+import { UsersAicDistributionChart } from './charts/UsersAicDistributionChart';
 
 interface RankedAicUser {
   user: string;
@@ -116,13 +116,13 @@ export function AiUsageOverview() {
 
       <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
         <div className="px-5 py-4 border-b border-[#d1d9e0]">
-          <h3 className="text-sm font-medium text-[#1f2328]">AI Credits User Clusters</h3>
+          <h3 className="text-sm font-medium text-[#1f2328]">AI Credits Group Heatmap</h3>
           <p className="text-xs text-[#636c76] mt-0.5">
-            User groups by AI Credits gross spend, including near-zero users under $1
+            Consumption groups compared by user population and AI Credits concentration
           </p>
         </div>
         <div className="p-5">
-          <UsersAicClustersChart users={billingArtifacts.users} />
+          <UsersAicDistributionChart users={billingArtifacts.users} />
         </div>
       </div>
 

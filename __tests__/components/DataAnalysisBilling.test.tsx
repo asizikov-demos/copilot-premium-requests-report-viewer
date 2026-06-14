@@ -193,9 +193,9 @@ describe('DataAnalysis billing summary', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'AI Usage' })).toBeInTheDocument();
-      expect(screen.getByText('AI Credits User Clusters')).toBeInTheDocument();
-      expect(screen.getByRole('table', { name: 'AI Credits user clusters' })).toBeInTheDocument();
-      expect(screen.getByText('Near-zero users')).toBeInTheDocument();
+      expect(screen.getByText('AI Credits Group Heatmap')).toBeInTheDocument();
+      expect(screen.getByRole('table', { name: 'AI Credits user group heatmap' })).toBeInTheDocument();
+      expect(screen.getByText('Users by group')).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Cost Centers' })[0]);
