@@ -56,49 +56,33 @@ function createBillingGroupTotals(): BillingGroupTotals {
   };
 }
 
-function addBillingFields(target: BillingFieldTotals, row: BillingAccumulatorRow): AccumulationSignals {
+type BillingFieldTarget = BillingFieldTotals | BillingUserTotals | SpecialBillingBucketTotals;
+
+function addBillingFields(target: BillingFieldTarget, row: BillingAccumulatorRow): AccumulationSignals {
   let sawBilling = false;
   let sawAicGross = false;
 
   if (typeof row.grossAmount === 'number') {
-    target.gross += row.grossAmount;
-    sawBilling = true;
-  }
-  if (typeof row.discountAmount === 'number') {
-    target.discount += row.discountAmount;
-    sawBilling = true;
-  }
-  if (typeof row.netAmount === 'number') {
-    target.net += row.netAmount;
-    sawBilling = true;
-  }
-  if (typeof row.aicQuantity === 'number') {
-    target.aicQuantity += row.aicQuantity;
-  }
-  if (typeof row.aicGrossAmount === 'number') {
-    target.aicGrossAmount += row.aicGrossAmount;
-    sawAicGross = true;
-  }
-
-  return { sawBilling, sawAicGross };
-}
-
-function addOptionalBillingFields(target: BillingUserTotals | SpecialBillingBucketTotals, row: BillingAccumulatorRow): void {
-  if (typeof row.grossAmount === 'number') {
     target.gross = (target.gross || 0) + row.grossAmount;
+    sawBilling = true;
   }
   if (typeof row.discountAmount === 'number') {
     target.discount = (target.discount || 0) + row.discountAmount;
+    sawBilling = true;
   }
   if (typeof row.netAmount === 'number') {
     target.net = (target.net || 0) + row.netAmount;
+    sawBilling = true;
   }
   if (typeof row.aicQuantity === 'number') {
     target.aicQuantity = (target.aicQuantity || 0) + row.aicQuantity;
   }
   if (typeof row.aicGrossAmount === 'number') {
     target.aicGrossAmount = (target.aicGrossAmount || 0) + row.aicGrossAmount;
+    sawAicGross = true;
   }
+
+  return { sawBilling, sawAicGross };
 }
 
 function addGroupRow(groups: Map<string, BillingGroupTotals>, key: string, row: BillingAccumulatorRow): void {
@@ -152,7 +136,7 @@ export class BillingAccumulator {
     }
 
     entry.quantity += billingRow.quantity;
-    addOptionalBillingFields(entry, billingRow);
+    addBillingFields(entry, billingRow);
 
     addGroupRow(this.orgTotals, billingRow.organization || UNASSIGNED_BILLING_GROUP, billingRow);
     addGroupRow(this.costCenterTotals, billingRow.costCenter || UNASSIGNED_BILLING_GROUP, billingRow);
