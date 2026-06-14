@@ -1,11 +1,14 @@
-import { getQuotaTier, shouldReplaceQuotaValue } from '@/utils/analytics/quota';
+import { PRICING } from '@/constants/pricing';
+import { QuotaAggregator } from '@/utils/ingestion/QuotaAggregator';
 import type {
+  AggregatorContext,
   DailyBucketsArtifacts,
   QuotaArtifacts,
-  SpecialUsageBucketKey,
   UsageArtifacts,
   UserAggregate,
 } from '@/utils/ingestion/types';
+
+import { makeNormalizedRow } from './makeNormalizedRow';
 
 /**
  * Shared test factories for ingestion artifacts.
@@ -84,51 +87,26 @@ export interface MakeQuotaEntry {
 /**
  * Build a {@link QuotaArtifacts} object from a list of user/quota entries.
  *
- * All required fields are populated so callers can spread/override the result
- * without type errors. `distinctQuotas`/`hasMixedQuotas` are derived from the
- * provided numeric quotas.
+ * Delegates to {@link QuotaAggregator} so the accumulation policy and tier logic
+ * have a single source of truth. Each entry is fed through the aggregator as a
+ * synthetic `requests` row so the aggregator's own logic computes the result.
  */
 export function makeQuotaArtifacts(entries: MakeQuotaEntry[]): QuotaArtifacts {
-  const quotaByUser = new Map<string, number | 'unknown'>();
-  const conflicts = new Map<string, Set<number | 'unknown'>>();
-  const distinctQuotas = new Set<number>();
-
+  const aggregator = new QuotaAggregator();
+  const ctx: AggregatorContext = { pricing: PRICING };
+  aggregator.init?.(ctx);
   for (const e of entries) {
-    const existing = quotaByUser.get(e.user);
-    const current = e.quota;
-
-    if (existing !== undefined && existing !== current) {
-      let conflictSet = conflicts.get(e.user);
-      if (!conflictSet) {
-        conflictSet = new Set([existing]);
-        conflicts.set(e.user, conflictSet);
-      }
-      conflictSet.add(current);
-    }
-
-    if (shouldReplaceQuotaValue(existing, current)) {
-      quotaByUser.set(e.user, current);
-      if (typeof current === 'number') {
-        distinctQuotas.add(current);
-      }
-    }
+    aggregator.onRow(
+      makeNormalizedRow({
+        user: e.user,
+        quotaValue: e.quota,
+        unitType: 'requests',
+        sku: undefined,
+      }),
+      ctx
+    );
   }
-
-  const distinctTiers = new Set(
-    Array.from(distinctQuotas)
-      .map((quota) => getQuotaTier(quota))
-      .filter((tier): tier is 'business' | 'enterprise' => tier !== null)
-  );
-  const hasUnknown = Array.from(quotaByUser.values()).includes('unknown');
-
-  return {
-    quotaByUser,
-    conflicts,
-    distinctQuotas,
-    hasMixedQuotas: distinctTiers.size > 1 || (distinctTiers.size >= 1 && hasUnknown),
-    hasMixedLicenses: distinctTiers.has('business') && distinctTiers.has('enterprise'),
-    specialBucketQuotas: new Map<SpecialUsageBucketKey, 0>(),
-  };
+  return aggregator.finalize(ctx);
 }
 
 export interface MakeDailyBucketEntry {
