@@ -7,7 +7,10 @@ on:
   workflow_dispatch:
   schedule: weekly on friday around 9am
 
-permissions: read-all
+permissions:
+  contents: read
+  issues: read
+  copilot-requests: write
 
 network: defaults
 
