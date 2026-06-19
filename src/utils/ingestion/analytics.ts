@@ -104,6 +104,10 @@ export function buildNormalizedRowFromProcessedData(row: ProcessedData): Normali
   };
 }
 
+/**
+ * Runs an aggregator over legacy ProcessedData rows using the shared normalized
+ * row adapter and standard pricing context, then returns the finalized artifact.
+ */
 function runAggregatorOverProcessedData<T>(aggregator: Aggregator<T>, processed: ProcessedData[]): T {
   const ctx = { pricing: PRICING };
   aggregator.init?.(ctx);

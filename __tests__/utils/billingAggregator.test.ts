@@ -240,7 +240,7 @@ describe('BillingAggregator', () => {
     expect(out.totals.aicAdditionalUsageGrossAmount).toBe(0);
   });
 
-  it('uses processed billing quantity override through the shared normalized-row adapter', () => {
+  it('preserves billingQuantity override when requestsUsed is zero', () => {
     const out = buildBillingArtifactsFromProcessedData([
       buildProcessedRow({
         user: 'test-user-one',
