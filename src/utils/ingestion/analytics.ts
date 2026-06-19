@@ -16,6 +16,7 @@ import { CodingAgentAnalysis, UserDailyData } from '@/types/csv';
 import { buildAdvisoriesFromCategories, getEarlyExhausterCount, type Advisory } from '@/utils/analytics/advisory';
 import { CONSUMPTION_THRESHOLDS, UserConsumptionCategory, InsightsOverviewData } from '@/utils/analytics/insights';
 import type { FeatureUtilizationStats } from '@/utils/analytics/insights';
+import type { OverageSummary } from '@/utils/analytics/overage';
 import { buildUserQuotaMapFromRows, classifyQuotaMap, isLegacyPremiumRequestQuotaValue } from '@/utils/analytics/quota';
 import { dayOfMonthToWeekBucket, enumerateDatesInclusive, monthKeyToLabel } from '@/utils/dateKeys';
 import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
@@ -33,6 +34,7 @@ import { QuotaAggregator } from './QuotaAggregator';
 import { UsageAccumulator } from './UsageAccumulator';
 
 export type { DailyBucketsArtifacts } from './types';
+export type { OverageSummary } from '@/utils/analytics/overage';
 
 // Legacy DailyCodingAgentUsageDatum type recreated locally (originally from codingAgent.ts)
 export interface DailyCodingAgentUsageDatum { date: string; dailyRequests: number; cumulativeRequests: number; }
@@ -221,8 +223,12 @@ export function buildDailyAicCumulativeDataFromArtifacts(daily: DailyBucketsArti
 // -----------------------------
 // Overage Summary From Artifacts
 // -----------------------------
-export interface OverageSummary { totalOverageRequests: number; totalOverageCost: number; }
 
+/**
+ * Preferred overage summary for new code that already uses ingestion artifacts.
+ * This supersedes ProcessedData and legacy UserSummary variants when UsageArtifacts
+ * and QuotaArtifacts are available from the streaming ingestion path.
+ */
 export function computeOverageSummaryFromArtifacts(usage: UsageArtifacts, quota: QuotaArtifacts): OverageSummary {
   let totalOverageRequests = 0;
   for (const u of usage.users) {
@@ -235,6 +241,11 @@ export function computeOverageSummaryFromArtifacts(usage: UsageArtifacts, quota:
   return { totalOverageRequests, totalOverageCost: calculateOverageCost(totalOverageRequests) };
 }
 
+/**
+ * Compatibility overage summary for callers that still operate on ProcessedData.
+ * Prefer computeOverageSummaryFromArtifacts for new code; this variant preserves
+ * legacy billed-row behavior before falling back to estimated overage totals.
+ */
 export function computeOverageSummaryFromProcessedData(processedData: ProcessedData[]): OverageSummary {
   const billed = calculateBilledOverageFromRows(processedData);
   if (billed.hasBilledOverageData) {

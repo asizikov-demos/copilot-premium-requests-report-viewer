@@ -2,7 +2,9 @@ import { computeOverageSummary as computeOverageSummaryShim } from '@/utils/anal
 import { computeOverageSummary } from '@/utils/analytics/overage';
 import { computeOverageSummaryFromArtifacts, computeOverageSummaryFromProcessedData } from '@/utils/ingestion/analytics';
 import { PRICING } from '@/constants/pricing';
+import type { OverageSummary as CanonicalOverageSummary } from '@/utils/analytics/overage';
 import type { UserSummary } from '@/utils/analytics';
+import type { OverageSummary as IngestionOverageSummary } from '@/utils/ingestion/analytics';
 
 import { makeUsageArtifacts as makeUsage, makeQuotaArtifacts as makeQuota } from '../helpers/makeArtifacts';
 import { makeProcessedData } from '../helpers/testUtils';
@@ -104,5 +106,16 @@ describe('computeOverageSummary', () => {
     ];
 
     expect(computeOverageSummaryShim(users, processed)).toEqual(computeOverageSummary(users, processed));
+  });
+
+  it('keeps the ingestion OverageSummary export aligned with the canonical type', () => {
+    const summary: CanonicalOverageSummary = {
+      totalOverageRequests: 0,
+      totalOverageCost: 0,
+    };
+
+    const ingestionSummary: IngestionOverageSummary = summary;
+
+    expect(ingestionSummary).toEqual(summary);
   });
 });

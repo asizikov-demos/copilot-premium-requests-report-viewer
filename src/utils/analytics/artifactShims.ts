@@ -48,7 +48,11 @@ export function computeWeeklyQuotaExhaustion(processedData: ProcessedData[]): We
   return computeWeeklyQuotaExhaustionFromArtifacts(daily, quota);
 }
 
-// Convenience wrapper for tests migrating to artifact version directly
+/**
+ * Shim for legacy ProcessedData callers migrating toward artifact analytics.
+ * Prefer computeOverageSummaryFromArtifacts for new code; this wrapper exists to
+ * adapt processed rows into UsageArtifacts and QuotaArtifacts at the call site.
+ */
 export function computeOverageSummaryArtifacts(processedData: ProcessedData[]): OverageSummary {
   const usage = buildUsageArtifactsFromProcessedData(processedData);
   const quota = buildQuotaArtifactsFromProcessedData(processedData);

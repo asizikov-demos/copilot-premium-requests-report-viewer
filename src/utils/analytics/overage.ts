@@ -10,9 +10,9 @@ export interface OverageSummary {
 }
 
 /**
- * Compute aggregate overage requests & cost across all users taking into account
- * per-user quota values (including 'unknown').
- * Pure + deterministic for unit testing.
+ * Legacy overage summary for callers that already have UserSummary rows.
+ * Prefer computeOverageSummaryFromArtifacts for new ingestion pipelines because
+ * the artifact-based path avoids rebuilding usage totals from processed rows.
  */
 export function computeOverageSummary(userData: UserSummary[], processedData: ProcessedData[]): OverageSummary {
   const quotaMap = buildUserQuotaMapFromRows(processedData);
