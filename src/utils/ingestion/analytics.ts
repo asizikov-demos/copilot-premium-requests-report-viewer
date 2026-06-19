@@ -74,7 +74,9 @@ export function buildUsageArtifactsFromProcessedData(filtered: ProcessedData[]):
  * ProcessedData keeps cached date fields and legacy usage names for downstream
  * compatibility, while NormalizedRow is the streaming aggregator contract:
  * row.iso is the source date/timestamp, row.dateKey is the UTC-preserved day,
- * row.requestsUsed is the row quantity, and row.totalQuota is the raw quota.
+ * row.requestsUsed is the row quantity, row.totalQuota is the raw quota, and
+ * row.billingQuantity is preserved separately so billing aggregation can apply
+ * it as an override without changing request-based aggregators.
  */
 export function buildNormalizedRowFromProcessedData(row: ProcessedData): NormalizedRow {
   return {
