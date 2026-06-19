@@ -3,6 +3,7 @@ import { shouldReplaceQuotaValue } from '@/utils/analytics/quota';
 import { calculateAicPoolEstimate, calculateIncludedAicCreditsForUsers } from '@/utils/aicPool';
 import { isSupportedUsageUnitType, type UsageUnitKind } from '@/utils/unitType';
 
+import { buildNormalizedRowFromProcessedData } from './analytics';
 import {
   BillingArtifacts,
   BillingFieldTotals,
@@ -225,12 +226,7 @@ export function buildBillingArtifactsFromProcessedData(rows: ProcessedData[]): B
   const accumulator = new BillingAccumulator();
 
   for (const row of rows) {
-    accumulator.addRow({
-      ...row,
-      quantity: row.requestsUsed,
-      billingQuantity: row.billingQuantity,
-      quotaValue: isSupportedUsageUnitType(row.unitType, row.sku) ? row.quotaValue : undefined,
-    });
+    accumulator.addRow(buildNormalizedRowFromProcessedData(row));
   }
 
   return accumulator.finalize();

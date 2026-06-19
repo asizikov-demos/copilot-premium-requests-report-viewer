@@ -1,4 +1,5 @@
 import type { ProcessedData } from '@/types/csv';
+import { buildNormalizedRowFromProcessedData } from '@/utils/ingestion/analytics';
 import { buildBillingArtifactsFromProcessedData } from '@/utils/ingestion/billingAccumulator';
 import { BillingAggregator } from '@/utils/ingestion/BillingAggregator';
 import { AggregatorContext, NormalizedRow } from '@/utils/ingestion/types';
@@ -29,6 +30,34 @@ describe('BillingAggregator', () => {
       ...partial,
     });
   }
+
+  it('maps processed data to normalized rows with UTC-safe cached date fields', () => {
+    const row = buildProcessedRow({
+      timestamp: new Date('2025-06-30T23:59:59Z'),
+      requestsUsed: 7,
+      totalQuota: String(PRICING.ENTERPRISE_QUOTA),
+      quotaValue: PRICING.ENTERPRISE_QUOTA,
+      grossAmount: 1.23,
+      netAmount: 1.23,
+      organization: 'test-org-one',
+      costCenter: 'test-cost-center-one',
+    });
+
+    const normalized = buildNormalizedRowFromProcessedData(row);
+
+    expect(normalized).toMatchObject({
+      date: row.iso,
+      day: row.dateKey,
+      quantity: 7,
+      quotaRaw: String(PRICING.ENTERPRISE_QUOTA),
+      quotaValue: PRICING.ENTERPRISE_QUOTA,
+      grossAmount: 1.23,
+      netAmount: 1.23,
+      organization: 'test-org-one',
+      costCenter: 'test-cost-center-one',
+    });
+    expect(normalized.day).toBe('2025-06-30');
+  });
 
   it('aggregates global billing totals', () => {
     const agg = new BillingAggregator();
@@ -209,6 +238,29 @@ describe('BillingAggregator', () => {
     expect(out.totals.aicGrossAmount).toBeCloseTo(0.42726213);
     expect(out.totals.aicIncludedCredits).toBe(PRICING.ENTERPRISE_AI_CREDIT_QUOTA);
     expect(out.totals.aicAdditionalUsageGrossAmount).toBe(0);
+  });
+
+  it('uses processed billing quantity override through the shared normalized-row adapter', () => {
+    const out = buildBillingArtifactsFromProcessedData([
+      buildProcessedRow({
+        user: 'test-user-one',
+        sku: 'copilot_ai_credit',
+        unitType: 'ai-credits',
+        usageUnit: 'ai_credit',
+        requestsUsed: 0,
+        billingQuantity: 42.726213,
+        quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
+        grossAmount: 0.42726213,
+        discountAmount: 0.42726213,
+        netAmount: 0,
+        aicQuantity: 42.726213,
+        aicGrossAmount: 0.42726213,
+      }),
+    ]);
+
+    expect(out.userMap.get('test-user-one')?.quantity).toBeCloseTo(42.726213);
+    expect(out.userMap.get('test-user-one')?.quotaValue).toBe(PRICING.ENTERPRISE_AI_CREDIT_QUOTA);
+    expect(out.totals.aicIncludedCredits).toBe(PRICING.ENTERPRISE_AI_CREDIT_QUOTA);
   });
 
   it('estimates included AI Credits and additional usage gross by user quota', () => {

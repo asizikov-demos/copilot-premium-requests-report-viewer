@@ -24,6 +24,7 @@ import {
   type BillingArtifacts,
   NON_COPILOT_CODE_REVIEW_BUCKET,
   type DailyBucketsArtifacts,
+  type Aggregator,
   type FeatureUsageArtifacts,
   type NormalizedRow,
   type QuotaArtifacts,
@@ -67,7 +68,15 @@ export function buildUsageArtifactsFromProcessedData(filtered: ProcessedData[]):
   return accumulator.finalize();
 }
 
-function buildNormalizedRowFromProcessedData(row: ProcessedData): NormalizedRow {
+/**
+ * Builds the normalized aggregator input shape from legacy ProcessedData rows.
+ *
+ * ProcessedData keeps cached date fields and legacy usage names for downstream
+ * compatibility, while NormalizedRow is the streaming aggregator contract:
+ * row.iso is the source date/timestamp, row.dateKey is the UTC-preserved day,
+ * row.requestsUsed is the row quantity, and row.totalQuota is the raw quota.
+ */
+export function buildNormalizedRowFromProcessedData(row: ProcessedData): NormalizedRow {
   return {
     date: row.iso,
     day: row.dateKey,
@@ -95,8 +104,7 @@ function buildNormalizedRowFromProcessedData(row: ProcessedData): NormalizedRow 
   };
 }
 
-export function buildQuotaArtifactsFromProcessedData(processed: ProcessedData[]): QuotaArtifacts {
-  const aggregator = new QuotaAggregator();
+function runAggregatorOverProcessedData<T>(aggregator: Aggregator<T>, processed: ProcessedData[]): T {
   const ctx = { pricing: PRICING };
   aggregator.init?.(ctx);
   for (const row of processed) {
@@ -105,14 +113,12 @@ export function buildQuotaArtifactsFromProcessedData(processed: ProcessedData[])
   return aggregator.finalize(ctx);
 }
 
+export function buildQuotaArtifactsFromProcessedData(processed: ProcessedData[]): QuotaArtifacts {
+  return runAggregatorOverProcessedData(new QuotaAggregator(), processed);
+}
+
 export function buildDailyBucketsArtifactsFromProcessedData(processed: ProcessedData[]): DailyBucketsArtifacts {
-  const aggregator = new DailyBucketsAggregator();
-  const ctx = { pricing: PRICING };
-  aggregator.init?.(ctx);
-  for (const row of processed) {
-    aggregator.onRow(buildNormalizedRowFromProcessedData(row), ctx);
-  }
-  return aggregator.finalize(ctx);
+  return runAggregatorOverProcessedData(new DailyBucketsAggregator(), processed);
 }
 
 /**
