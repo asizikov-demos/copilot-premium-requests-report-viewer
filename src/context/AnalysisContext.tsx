@@ -121,6 +121,7 @@ function withBillingArtifactDefaults(value: BillingArtifacts | undefined): Billi
     orgTotals: value.orgTotals ?? new Map(),
     costCenterTotals: value.costCenterTotals ?? new Map(),
     billingByModel: value.billingByModel ?? new Map(),
+    overage: value.overage ?? { requests: 0, cost: 0, hasBilledOverageData: false },
     specialBuckets: value.specialBuckets ?? [],
   };
 }

@@ -7,6 +7,7 @@ import {
   BillingArtifacts,
   BillingFieldTotals,
   BillingGroupTotals,
+  BillingOverageTotals,
   BillingUserTotals,
   NON_COPILOT_CODE_REVIEW_LABEL,
   SpecialBillingBucketTotals,
@@ -28,6 +29,7 @@ interface BillingAccumulatorRow {
   grossAmount?: number;
   discountAmount?: number;
   netAmount?: number;
+  exceedsQuota?: boolean;
   aicQuantity?: number;
   aicGrossAmount?: number;
   isNonCopilotUsage?: boolean;
@@ -56,7 +58,48 @@ function createBillingGroupTotals(): BillingGroupTotals {
   };
 }
 
+function createBillingOverageTotals(): BillingOverageTotals {
+  return {
+    requests: 0,
+    cost: 0,
+    hasBilledOverageData: false,
+  };
+}
+
 type BillingFieldTarget = BillingFieldTotals | BillingUserTotals | SpecialBillingBucketTotals;
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function hasBillingAmountData(row: BillingAccumulatorRow): boolean {
+  return isFiniteNumber(row.netAmount) || isFiniteNumber(row.grossAmount);
+}
+
+function getBilledOverageCost(row: BillingAccumulatorRow): number {
+  if (isFiniteNumber(row.netAmount)) {
+    return row.netAmount;
+  }
+
+  if (isFiniteNumber(row.grossAmount)) {
+    return row.grossAmount - (isFiniteNumber(row.discountAmount) ? row.discountAmount : 0);
+  }
+
+  return 0;
+}
+
+function addBilledOverage(target: BillingOverageTotals, row: BillingAccumulatorRow): void {
+  if (!row.exceedsQuota) {
+    return;
+  }
+
+  target.requests += row.quantity;
+
+  if (hasBillingAmountData(row)) {
+    target.hasBilledOverageData = true;
+    target.cost += getBilledOverageCost(row);
+  }
+}
 
 function addBillingFields(target: BillingFieldTarget, row: BillingAccumulatorRow): AccumulationSignals {
   let sawBilling = false;
@@ -99,6 +142,7 @@ export class BillingAccumulator {
   private orgTotals = new Map<string, BillingGroupTotals>();
   private costCenterTotals = new Map<string, BillingGroupTotals>();
   private billingByModel = new Map<string, BillingGroupTotals>();
+  private overage = createBillingOverageTotals();
   private hasAnyBillingData = false;
   private hasAnyAicData = false;
 
@@ -115,6 +159,7 @@ export class BillingAccumulator {
           key: billingRow.usageBucket,
           label: NON_COPILOT_CODE_REVIEW_LABEL,
           quantity: 0,
+          overage: createBillingOverageTotals(),
           quotaValue: 0,
         };
         this.specialBucketMap.set(billingRow.usageBucket, entry);
@@ -122,7 +167,7 @@ export class BillingAccumulator {
     } else {
       entry = this.userMap.get(billingRow.user);
       if (!entry) {
-        entry = { user: billingRow.user, quantity: 0 };
+        entry = { user: billingRow.user, quantity: 0, overage: createBillingOverageTotals() };
         this.userMap.set(billingRow.user, entry);
       }
       const incomingQuota = billingRow.quotaValue;
@@ -136,6 +181,8 @@ export class BillingAccumulator {
     }
 
     entry.quantity += billingRow.quantity;
+    addBilledOverage(entry.overage, row);
+    addBilledOverage(this.overage, row);
     addBillingFields(entry, billingRow);
 
     addGroupRow(this.orgTotals, billingRow.organization || UNASSIGNED_BILLING_GROUP, billingRow);
@@ -161,6 +208,7 @@ export class BillingAccumulator {
         aicIncludedCredits: poolEstimate.includedCredits,
         aicAdditionalUsageGrossAmount: poolEstimate.additionalUsageGrossAmount,
       },
+      overage: this.overage,
       users: Array.from(this.userMap.values()),
       userMap: this.userMap,
       orgTotals: this.orgTotals,
