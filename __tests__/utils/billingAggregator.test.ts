@@ -43,6 +43,48 @@ describe('BillingAggregator', () => {
     expect(out.hasAnyAicData).toBe(false);
   });
 
+  it('aggregates billed overage from exceeded quota request rows', () => {
+    const agg = new BillingAggregator();
+    agg.init?.(ctx);
+    agg.onRow(buildRow({
+      user: 'test-user-one',
+      quantity: 999,
+      exceedsQuota: false,
+      grossAmount: 999,
+      discountAmount: 999,
+      netAmount: 0,
+    }), ctx);
+    agg.onRow(buildRow({
+      user: 'test-user-one',
+      quantity: 94,
+      exceedsQuota: true,
+      grossAmount: 999,
+      discountAmount: 998,
+      netAmount: 94 * PRICING.OVERAGE_RATE_PER_REQUEST,
+    }), ctx);
+    agg.onRow(buildRow({
+      user: 'test-user-one',
+      quantity: 10,
+      exceedsQuota: true,
+      grossAmount: 10 * PRICING.OVERAGE_RATE_PER_REQUEST,
+      discountAmount: 2 * PRICING.OVERAGE_RATE_PER_REQUEST,
+    }), ctx);
+    agg.onRow(buildRow({
+      user: 'test-user-one',
+      quantity: 5,
+      exceedsQuota: true,
+    }), ctx);
+
+    const out = agg.finalize(ctx);
+
+    expect(out.overage).toEqual({
+      requests: 109,
+      cost: 102 * PRICING.OVERAGE_RATE_PER_REQUEST,
+      hasBilledOverageData: true,
+    });
+    expect(out.userMap.get('test-user-one')?.overage).toEqual(out.overage);
+  });
+
   it('tracks per-user totals and quantity', () => {
     const agg = new BillingAggregator();
     agg.init?.(ctx);
@@ -112,6 +154,7 @@ describe('BillingAggregator', () => {
     const out = agg.finalize(ctx);
     expect(out.hasAnyBillingData).toBe(false);
     expect(out.hasAnyAicData).toBe(false);
+    expect(out.overage).toEqual({ requests: 0, cost: 0, hasBilledOverageData: false });
     expect(out.totals.gross).toBe(0);
     expect(out.totals.aicQuantity).toBe(0);
     expect(out.totals.aicGrossAmount).toBe(0);

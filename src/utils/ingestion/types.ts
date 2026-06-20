@@ -23,6 +23,7 @@ export interface SpecialBillingBucketTotals {
   key: SpecialUsageBucketKey;
   label: typeof NON_COPILOT_CODE_REVIEW_LABEL;
   quantity: number;
+  overage: BillingOverageTotals;
   gross?: number;
   discount?: number;
   net?: number;
@@ -233,6 +234,7 @@ export interface FeatureUsageArtifacts {
 export interface BillingUserTotals {
   user: string;
   quantity: number; // total request quantity (duplicate of usageArtifacts but convenient for billing view)
+  overage: BillingOverageTotals;
   quotaValue?: number | 'unknown';
   gross?: number;
   discount?: number;
@@ -253,8 +255,15 @@ export interface BillingGroupTotals extends BillingFieldTotals {
   quantity: number;
 }
 
+export interface BillingOverageTotals {
+  requests: number;
+  cost: number;
+  hasBilledOverageData: boolean;
+}
+
 export interface BillingArtifacts {
   totals: BillingFieldTotals & { aicIncludedCredits: number; aicAdditionalUsageGrossAmount: number };
+  overage: BillingOverageTotals;
   users: BillingUserTotals[]; // unsorted list; consumer may sort
   userMap: Map<string, BillingUserTotals>; // internal convenience map (exposed for advanced consumers)
   orgTotals: Map<string, BillingGroupTotals>;

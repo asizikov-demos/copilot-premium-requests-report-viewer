@@ -97,6 +97,11 @@ describe('DataAnalysis billing summary', () => {
       billingByModel: new Map(),
       hasAnyBillingData: true,
       hasAnyAicData: true,
+      overage: {
+        requests: 0,
+        cost: 0,
+        hasBilledOverageData: false,
+      },
       specialBuckets: [],
     };
     const ingestionResult = createIngestionResultWithBillingArtifacts(billingArtifacts);
