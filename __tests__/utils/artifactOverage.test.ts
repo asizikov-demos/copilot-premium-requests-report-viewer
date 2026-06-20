@@ -224,7 +224,7 @@ describe('computeOverageSummaryFromArtifacts', () => {
       return files.flatMap((file) => {
         const content = readFileSync(file, 'utf8');
         const matches = content.matchAll(/export\s+(?:interface|type)\s+OverageSummary\b/g);
-        return Array.from(matches, () => path.relative(process.cwd(), file));
+        return Array.from(matches, () => path.relative(process.cwd(), file).replaceAll(path.sep, '/'));
       });
     });
 
