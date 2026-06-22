@@ -1,8 +1,9 @@
 import type { ProcessedData } from '@/types/csv';
 import { shouldReplaceQuotaValue } from '@/utils/analytics/quota';
 import { calculateAicPoolEstimate, calculateIncludedAicCreditsForUsers } from '@/utils/aicPool';
-import { isSupportedUsageUnitType, type UsageUnitKind } from '@/utils/unitType';
+import { isSupportedUsageUnitType } from '@/utils/unitType';
 
+import { buildNormalizedRowFromProcessedData } from './analytics';
 import {
   BillingArtifacts,
   BillingFieldTotals,
@@ -13,28 +14,30 @@ import {
   SpecialBillingBucketTotals,
   SpecialUsageBucketKey,
   UNASSIGNED_BILLING_GROUP,
+  type NormalizedRow,
 } from './types';
 
-interface BillingAccumulatorRow {
-  user: string;
-  model: string;
-  quantity: number;
-  billingQuantity?: number;
-  unitType?: string;
-  usageUnit?: UsageUnitKind;
-  sku?: string;
-  quotaValue?: number | 'unknown';
-  organization?: string;
-  costCenter?: string;
-  grossAmount?: number;
-  discountAmount?: number;
-  netAmount?: number;
-  exceedsQuota?: boolean;
-  aicQuantity?: number;
-  aicGrossAmount?: number;
-  isNonCopilotUsage?: boolean;
-  usageBucket?: SpecialUsageBucketKey;
-}
+type BillingAccumulatorRow = Pick<
+  NormalizedRow,
+  | 'user'
+  | 'model'
+  | 'quantity'
+  | 'billingQuantity'
+  | 'unitType'
+  | 'usageUnit'
+  | 'sku'
+  | 'quotaValue'
+  | 'organization'
+  | 'costCenter'
+  | 'grossAmount'
+  | 'discountAmount'
+  | 'netAmount'
+  | 'exceedsQuota'
+  | 'aicQuantity'
+  | 'aicGrossAmount'
+  | 'isNonCopilotUsage'
+  | 'usageBucket'
+>;
 
 interface AccumulationSignals {
   sawBilling: boolean;
@@ -225,12 +228,7 @@ export function buildBillingArtifactsFromProcessedData(rows: ProcessedData[]): B
   const accumulator = new BillingAccumulator();
 
   for (const row of rows) {
-    accumulator.addRow({
-      ...row,
-      quantity: row.requestsUsed,
-      billingQuantity: row.billingQuantity,
-      quotaValue: isSupportedUsageUnitType(row.unitType, row.sku) ? row.quotaValue : undefined,
-    });
+    accumulator.addRow(buildNormalizedRowFromProcessedData(row));
   }
 
   return accumulator.finalize();
