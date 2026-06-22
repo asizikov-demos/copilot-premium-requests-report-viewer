@@ -6,6 +6,7 @@ function makeBillingUser(user: string, aiCredits: number): BillingUserTotals {
   return {
     user,
     quantity: aiCredits,
+    overage: { requests: 0, cost: 0, hasBilledOverageData: false },
     aicQuantity: aiCredits,
     aicGrossAmount: aiCredits * PRICING.AI_CREDIT_USD_VALUE,
   };
@@ -57,6 +58,7 @@ describe('user AI Credits distribution', () => {
       {
         user: 'test-user-derived',
         quantity: 0,
+        overage: { requests: 0, cost: 0, hasBilledOverageData: false },
         aicGrossAmount: 2,
       },
     ]);

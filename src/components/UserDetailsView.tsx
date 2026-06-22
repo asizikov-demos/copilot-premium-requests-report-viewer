@@ -11,6 +11,7 @@ import { getQuotaTier, isLegacyPremiumRequestQuotaValue } from '@/utils/analytic
 import {
   buildUserDailyAicModelDataFromArtifacts,
   buildUserDailyModelDataFromArtifacts,
+  type BillingArtifacts,
   DailyBucketsArtifacts,
   getUserQuota,
   QuotaArtifacts,
@@ -23,7 +24,6 @@ import { getBillingCostLabels } from '@/utils/billingLabels';
 import { formatCurrency } from '@/utils/formatters';
 import { aggregateProductCosts } from '@/utils/productCosts';
 import {
-  calculateBilledOverageFromRows,
   calculateOverageCost,
   calculateOverageRequests,
   calculateUserTotalRequests,
@@ -104,6 +104,7 @@ export function UserDetailsView({
   const usageArtifacts = analysisCtx?.usageArtifacts as UsageArtifacts | undefined;
   const dailyBucketsArtifacts = analysisCtx?.dailyBucketsArtifacts as DailyBucketsArtifacts | undefined;
   const quotaArtifacts = analysisCtx?.quotaArtifacts as QuotaArtifacts | undefined;
+  const billingArtifacts = analysisCtx?.billingArtifacts as BillingArtifacts | undefined;
 
   const artifactUserQuota = quotaArtifacts ? getUserQuota(quotaArtifacts, user) : undefined;
   const effectiveUserQuotaValue = artifactUserQuota !== undefined ? artifactUserQuota : userQuotaValue;
@@ -218,14 +219,14 @@ export function UserDetailsView({
     ? effectiveUserQuotaValue
     : requestQuotaValue;
   const effectiveQuota = requestQuotaValue === 'unknown' ? Infinity : requestQuotaValue;
-  const billedOverage = useMemo(() => calculateBilledOverageFromRows(userData), [userData]);
+  const billedOverage = billingArtifacts?.userMap.get(user)?.overage;
   const estimatedOverageRequests = useMemo(
     () => calculateOverageRequests(userTotalRequests, effectiveQuota),
     [userTotalRequests, effectiveQuota]
   );
   const estimatedOverageCost = useMemo(() => calculateOverageCost(estimatedOverageRequests), [estimatedOverageRequests]);
-  const overageRequests = billedOverage.hasBilledOverageData ? billedOverage.overageRequests : estimatedOverageRequests;
-  const overageCost = billedOverage.hasBilledOverageData ? billedOverage.overageCost : estimatedOverageCost;
+  const overageRequests = billedOverage?.hasBilledOverageData ? billedOverage.requests : estimatedOverageRequests;
+  const overageCost = billedOverage?.hasBilledOverageData ? billedOverage.cost : estimatedOverageCost;
 
   const modelUsageTotals = useMemo(() => {
     const totals: Record<string, number> = {};

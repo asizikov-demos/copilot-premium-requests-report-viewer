@@ -2,17 +2,10 @@ import { ProcessedData } from '@/types/csv';
 import {
   buildDailyBucketsArtifactsFromProcessedData,
   buildQuotaArtifactsFromProcessedData,
-  buildUsageArtifactsFromProcessedData,
-  computeOverageSummaryFromArtifacts,
   computeWeeklyQuotaExhaustionFromArtifacts,
   WeeklyQuotaExhaustionBreakdown
 } from '@/utils/ingestion/analytics';
 import { isCodeReviewModel, isCodingAgentModel, isSparkProduct } from '@/utils/productClassification';
-
-import type { OverageSummary } from './overage';
-
-export { computeOverageSummary } from './overage';
-export type { OverageSummary } from './overage';
 
 const CODE_REVIEW_SPECIAL_FEATURE_SCORE = 8;
 const CODING_AGENT_SPECIAL_FEATURE_SCORE = 8;
@@ -37,24 +30,9 @@ export function calculateSpecialFeaturesScore(models: string[]): number {
   return Math.min(totalScore, MAX_SPECIAL_FEATURES_SCORE);
 }
 
-// -----------------------------
-// Shim Functions (legacy signatures delegating to artifact implementations)
-// -----------------------------
-
 export function computeWeeklyQuotaExhaustion(processedData: ProcessedData[]): WeeklyQuotaExhaustionBreakdown {
   if (processedData.length === 0) return { totalUsersExhausted: 0, weeks: [] };
   const quota = buildQuotaArtifactsFromProcessedData(processedData);
   const daily = buildDailyBucketsArtifactsFromProcessedData(processedData);
   return computeWeeklyQuotaExhaustionFromArtifacts(daily, quota);
-}
-
-/**
- * Shim for legacy ProcessedData callers migrating toward artifact analytics.
- * Prefer computeOverageSummaryFromArtifacts for new code; this wrapper exists to
- * adapt processed rows into UsageArtifacts and QuotaArtifacts at the call site.
- */
-export function computeOverageSummaryArtifacts(processedData: ProcessedData[]): OverageSummary {
-  const usage = buildUsageArtifactsFromProcessedData(processedData);
-  const quota = buildQuotaArtifactsFromProcessedData(processedData);
-  return computeOverageSummaryFromArtifacts(usage, quota);
 }

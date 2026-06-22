@@ -16,12 +16,12 @@ import { CodingAgentAnalysis, UserDailyData } from '@/types/csv';
 import { buildAdvisoriesFromCategories, getEarlyExhausterCount, type Advisory } from '@/utils/analytics/advisory';
 import { CONSUMPTION_THRESHOLDS, UserConsumptionCategory, InsightsOverviewData } from '@/utils/analytics/insights';
 import type { FeatureUtilizationStats } from '@/utils/analytics/insights';
-import type { OverageSummary } from '@/utils/analytics/overage';
-import { buildUserQuotaMapFromRows, classifyQuotaMap, isLegacyPremiumRequestQuotaValue } from '@/utils/analytics/quota';
+import { classifyQuotaMap, isLegacyPremiumRequestQuotaValue } from '@/utils/analytics/quota';
 import { dayOfMonthToWeekBucket, enumerateDatesInclusive, monthKeyToLabel } from '@/utils/dateKeys';
 import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
-import { calculateBilledOverageFromRows, calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
+import { calculateOverageRequests, calculateOverageCost } from '@/utils/userCalculations';
 import {
+  type BillingArtifacts,
   NON_COPILOT_CODE_REVIEW_BUCKET,
   type DailyBucketsArtifacts,
   type FeatureUsageArtifacts,
@@ -34,7 +34,6 @@ import { QuotaAggregator } from './QuotaAggregator';
 import { UsageAccumulator } from './UsageAccumulator';
 
 export type { DailyBucketsArtifacts } from './types';
-export type { OverageSummary } from '@/utils/analytics/overage';
 
 // Legacy DailyCodingAgentUsageDatum type recreated locally (originally from codingAgent.ts)
 export interface DailyCodingAgentUsageDatum { date: string; dailyRequests: number; cumulativeRequests: number; }
@@ -223,13 +222,23 @@ export function buildDailyAicCumulativeDataFromArtifacts(daily: DailyBucketsArti
 // -----------------------------
 // Overage Summary From Artifacts
 // -----------------------------
+export interface OverageSummary {
+  totalOverageRequests: number;
+  totalOverageCost: number;
+}
 
-/**
- * Preferred overage summary for new code that already uses ingestion artifacts.
- * This supersedes ProcessedData and legacy UserSummary variants when UsageArtifacts
- * and QuotaArtifacts are available from the streaming ingestion path.
- */
-export function computeOverageSummaryFromArtifacts(usage: UsageArtifacts, quota: QuotaArtifacts): OverageSummary {
+export function computeOverageSummaryFromArtifacts(
+  usage: UsageArtifacts,
+  quota: QuotaArtifacts,
+  billing?: Pick<BillingArtifacts, 'overage'>
+): OverageSummary {
+  if (billing?.overage.hasBilledOverageData) {
+    return {
+      totalOverageRequests: billing.overage.requests,
+      totalOverageCost: billing.overage.cost,
+    };
+  }
+
   let totalOverageRequests = 0;
   for (const u of usage.users) {
     const q = quota.quotaByUser.get(u.user) ?? 'unknown';
@@ -238,35 +247,6 @@ export function computeOverageSummaryFromArtifacts(usage: UsageArtifacts, quota:
       isLegacyPremiumRequestQuotaValue(q) ? q : 'unknown'
     );
   }
-  return { totalOverageRequests, totalOverageCost: calculateOverageCost(totalOverageRequests) };
-}
-
-/**
- * Compatibility overage summary for callers that still operate on ProcessedData.
- * Prefer computeOverageSummaryFromArtifacts for new code; this variant preserves
- * legacy billed-row behavior before falling back to estimated overage totals.
- */
-export function computeOverageSummaryFromProcessedData(processedData: ProcessedData[]): OverageSummary {
-  const billed = calculateBilledOverageFromRows(processedData);
-  if (billed.hasBilledOverageData) {
-    return {
-      totalOverageRequests: billed.overageRequests,
-      totalOverageCost: billed.overageCost,
-    };
-  }
-
-  const totalsByUser = new Map<string, number>();
-  const quotaByUser = buildUserQuotaMapFromRows(processedData);
-
-  for (const row of processedData) {
-    totalsByUser.set(row.user, (totalsByUser.get(row.user) ?? 0) + row.requestsUsed);
-  }
-
-  let totalOverageRequests = 0;
-  for (const [user, totalRequests] of totalsByUser) {
-    totalOverageRequests += calculateOverageRequests(totalRequests, quotaByUser.get(user) ?? 'unknown');
-  }
-
   return { totalOverageRequests, totalOverageCost: calculateOverageCost(totalOverageRequests) };
 }
 
