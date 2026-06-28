@@ -13,7 +13,7 @@ import {
   UsageAggregator,
   normalizeRow,
 } from '@/utils/ingestion';
-import type { AggregatorContext, BillingArtifacts, FeatureUsageArtifacts, IngestionResult, NormalizedRow } from '@/utils/ingestion/types';
+import type { AggregatorContext, BillingArtifacts, IngestionResult, NormalizedRow } from '@/utils/ingestion/types';
 
 import { newFormatRows } from '../fixtures/newFormatCSVData';
 
