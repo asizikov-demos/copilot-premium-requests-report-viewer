@@ -27,16 +27,6 @@ export function calculateOverageRequests(
 }
 
 /**
- * Calculate overage requests for a user (legacy - maintains backward compatibility)
- */
-export function calculateOverageRequestsLegacy(
-  totalRequests: number, 
-  quota: number
-): number {
-  return Math.max(0, totalRequests - quota);
-}
-
-/**
  * Calculate overage cost based on overage requests
  */
 export function calculateOverageCost(overageRequests: number): number {
