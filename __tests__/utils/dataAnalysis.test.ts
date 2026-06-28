@@ -1,13 +1,13 @@
 import {
   computeWeeklyQuotaExhaustionFromArtifacts
 } from '@/utils/ingestion/analytics';
-import type { UsageArtifacts, QuotaArtifacts } from '@/utils/ingestion';
+import type { UsageArtifacts } from '@/utils/ingestion';
 import { buildMonthListFromArtifacts } from '@/utils/ingestion/analytics';
-import type { DailyBucketsArtifacts } from '@/utils/ingestion';
 import { filterBySelectedMonths } from '@/utils/analytics/filters';
 import { PRICING } from '@/constants/pricing';
 import { CSVData, ProcessedData } from '@/types/csv';
 
+import { makeDailyBucketsArtifacts, makeQuotaArtifacts } from '../helpers/makeArtifacts';
 import { processCSVData, analyzeData } from '../helpers/processCSVData';
 import { validCSVData, powerUserCSVData } from '../fixtures/validCSVData';
 import {
@@ -269,20 +269,14 @@ describe('CSV Data Processing', () => {
   describe('Date Filtering Functions', () => {
     const createTestDataForDate = (dateString: string): ProcessedData => {
       const timestamp = new Date(dateString);
-      const iso = timestamp.toISOString();
-      return {
+      return makeProcessedData({
         timestamp,
         user: 'test-user',
         model: 'test-model',
         requestsUsed: 1.0,
         exceedsQuota: false,
-        totalQuota: '100',
         quotaValue: 100,
-        iso,
-        dateKey: iso.substring(0, 10),
-        monthKey: iso.substring(0, 7),
-        epoch: timestamp.getTime()
-      };
+      });
     };
 
     describe('getAvailableMonths (artifact-based)', () => {
@@ -395,42 +389,9 @@ describe('CSV Data Processing', () => {
       }));
     };
 
-    // Helpers to build artifacts for weekly exhaustion tests
-    function buildDailyArtifacts(entries: ProcessedData[]): DailyBucketsArtifacts {
-      const dailyUserTotals = new Map<string, Map<string, number>>();
-      let min: string | null = null; let max: string | null = null;
-      for (const row of entries) {
-        const day = row.dateKey;
-        if (!dailyUserTotals.has(day)) dailyUserTotals.set(day, new Map());
-        const userMap = dailyUserTotals.get(day)!;
-        userMap.set(row.user, (userMap.get(row.user) || 0) + row.requestsUsed);
-        if (!min || day < min) min = day;
-        if (!max || day > max) max = day;
-      }
-      return { dailyUserTotals, dateRange: min && max ? { min, max } : null, months: Array.from(new Set(Array.from(dailyUserTotals.keys()).map(d => d.slice(0,7)))).sort() } as DailyBucketsArtifacts;
-    }
-    function buildQuotaArtifacts(entries: ProcessedData[]): QuotaArtifacts {
-      const quotaByUser = new Map<string, number | 'unknown'>();
-      const conflicts = new Map<string, Set<number | 'unknown'>>();
-      const distinctQuotas = new Set<number>();
-      for (const row of entries) {
-        if (!quotaByUser.has(row.user)) quotaByUser.set(row.user, row.quotaValue);
-        else {
-          const existing = quotaByUser.get(row.user);
-          if (existing !== row.quotaValue) {
-            if (!conflicts.has(row.user)) conflicts.set(row.user, new Set());
-            conflicts.get(row.user)!.add(existing!);
-            conflicts.get(row.user)!.add(row.quotaValue!);
-          }
-        }
-        if (typeof row.quotaValue === 'number') distinctQuotas.add(row.quotaValue);
-      }
-      return { quotaByUser, conflicts, distinctQuotas, hasMixedQuotas: distinctQuotas.size > 1, hasMixedLicenses: false } as QuotaArtifacts;
-    }
-
     it('should return empty structure for no data', () => {
-      const daily = buildDailyArtifacts([]);
-      const quota = buildQuotaArtifacts([]);
+      const daily = makeDailyBucketsArtifacts([]);
+      const quota = makeQuotaArtifacts([]);
       const result = computeWeeklyQuotaExhaustionFromArtifacts(daily, quota);
       expect(result).toEqual({ totalUsersExhausted: 0, weeks: [] });
     });
@@ -450,8 +411,13 @@ describe('CSV Data Processing', () => {
         { ts: '2025-06-22T10:00:00Z', user: 'UserD', used: 200, quota: 300 },
         { ts: '2025-06-29T10:00:00Z', user: 'UserD', used: 110, quota: 300 }, // UserD exhausts week5 (day29)
       ]);
-      const daily = buildDailyArtifacts(data);
-      const quota = buildQuotaArtifacts(data);
+      const daily = makeDailyBucketsArtifacts(data.map(row => ({
+        date: row.dateKey,
+        user: row.user,
+        used: row.requestsUsed,
+        model: row.model,
+      })));
+      const quota = makeQuotaArtifacts(data.map(row => ({ user: row.user, quota: row.quotaValue })));
       const result = computeWeeklyQuotaExhaustionFromArtifacts(daily, quota);
       expect(result.totalUsersExhausted).toBe(3);
       // Expect weeks 1,2,5 to have counts 1 each
@@ -471,8 +437,13 @@ describe('CSV Data Processing', () => {
         { ts: '2025-06-18T10:00:00Z', user: 'UserA', used: 120, quota: 300 }, // cumulative 320 -> week3
         { ts: '2025-06-25T10:00:00Z', user: 'UserA', used: 50, quota: 300 }  // extra
       ]);
-      const daily = buildDailyArtifacts(data);
-      const quota = buildQuotaArtifacts(data);
+      const daily = makeDailyBucketsArtifacts(data.map(row => ({
+        date: row.dateKey,
+        user: row.user,
+        used: row.requestsUsed,
+        model: row.model,
+      })));
+      const quota = makeQuotaArtifacts(data.map(row => ({ user: row.user, quota: row.quotaValue })));
       const result = computeWeeklyQuotaExhaustionFromArtifacts(daily, quota);
       expect(result.totalUsersExhausted).toBe(1);
       const w3 = (result.weeks as WeekExhaustion[]).find(w => w.weekNumber === 3);
@@ -485,8 +456,13 @@ describe('CSV Data Processing', () => {
         { ts: '2025-06-05T10:00:00Z', user: 'UserJ', used: 400, quota: 300 }, // June week1
         { ts: '2025-07-09T10:00:00Z', user: 'UserK', used: 500, quota: 300 }  // July week2
       ]);
-      const daily = buildDailyArtifacts(data);
-      const quota = buildQuotaArtifacts(data);
+      const daily = makeDailyBucketsArtifacts(data.map(row => ({
+        date: row.dateKey,
+        user: row.user,
+        used: row.requestsUsed,
+        model: row.model,
+      })));
+      const quota = makeQuotaArtifacts(data.map(row => ({ user: row.user, quota: row.quotaValue })));
       const result = computeWeeklyQuotaExhaustionFromArtifacts(daily, quota);
       expect(result.totalUsersExhausted).toBe(2);
       // Weeks should contain week1 then week2 (from next month)

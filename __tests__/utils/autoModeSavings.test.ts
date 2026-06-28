@@ -1,28 +1,17 @@
 import type { ProcessedData } from '@/types/csv';
 import { aggregateAutoModeSavings, getAutoModeBaseModel } from '@/utils/autoModeSavings';
 
-function createRow(overrides: Partial<ProcessedData>): ProcessedData {
-  const timestamp = new Date('2026-04-01T00:00:00Z');
+import { makeProcessedData } from '../helpers/testUtils';
 
-  return {
-    timestamp,
-    user: 'user-1',
-    model: 'Auto: GPT-5.3-Codex',
-    requestsUsed: 0.9,
-    exceedsQuota: false,
-    totalQuota: '300',
-    quotaValue: 300,
-    iso: timestamp.toISOString(),
-    dateKey: '2026-04-01',
-    monthKey: '2026-04',
-    epoch: timestamp.getTime(),
-    appliedCostPerQuantity: 0.04,
-    grossAmount: 0.036,
-    discountAmount: 0,
-    netAmount: 0.036,
-    ...overrides,
-  };
-}
+const AUTO_MODE_ROW_DEFAULTS = {
+  timestamp: new Date('2026-04-01T00:00:00Z'),
+  model: 'Auto: GPT-5.3-Codex',
+  requestsUsed: 0.9,
+  appliedCostPerQuantity: 0.04,
+  grossAmount: 0.036,
+  discountAmount: 0,
+  netAmount: 0.036,
+} satisfies Partial<ProcessedData>;
 
 describe('Auto Mode savings', () => {
   it('strips the Auto label from model names', () => {
@@ -33,9 +22,9 @@ describe('Auto Mode savings', () => {
 
   it('aggregates Auto rows using undiscounted requests and savings', () => {
     const rows: ProcessedData[] = [
-      createRow({ requestsUsed: 0.9, grossAmount: 0.036, netAmount: 0.036 }),
-      createRow({ requestsUsed: 1.8, grossAmount: 0.072, netAmount: 0.072 }),
-      createRow({ model: 'Claude Sonnet 4', requestsUsed: 5, grossAmount: 0.2, netAmount: 0.2 }),
+      makeProcessedData({ ...AUTO_MODE_ROW_DEFAULTS, requestsUsed: 0.9, grossAmount: 0.036, netAmount: 0.036 }),
+      makeProcessedData({ ...AUTO_MODE_ROW_DEFAULTS, requestsUsed: 1.8, grossAmount: 0.072, netAmount: 0.072 }),
+      makeProcessedData({ ...AUTO_MODE_ROW_DEFAULTS, model: 'Claude Sonnet 4', requestsUsed: 5, grossAmount: 0.2, netAmount: 0.2 }),
     ];
 
     const [result] = aggregateAutoModeSavings(rows);
@@ -48,7 +37,8 @@ describe('Auto Mode savings', () => {
 
   it('falls back to standard pricing when billing cost fields are absent', () => {
     const rows: ProcessedData[] = [
-      createRow({
+      makeProcessedData({
+        ...AUTO_MODE_ROW_DEFAULTS,
         requestsUsed: 0.9,
         appliedCostPerQuantity: undefined,
         grossAmount: undefined,
@@ -66,7 +56,8 @@ describe('Auto Mode savings', () => {
 
   it('does not treat unrelated billing discounts as Auto Mode savings', () => {
     const rows: ProcessedData[] = [
-      createRow({
+      makeProcessedData({
+        ...AUTO_MODE_ROW_DEFAULTS,
         requestsUsed: 553.5,
         grossAmount: 22.14,
         netAmount: 3.32,
@@ -82,7 +73,8 @@ describe('Auto Mode savings', () => {
 
   it('aggregates usage-based Auto rows in AI Credits', () => {
     const rows: ProcessedData[] = [
-      createRow({
+      makeProcessedData({
+        ...AUTO_MODE_ROW_DEFAULTS,
         requestsUsed: 0,
         usageUnit: 'ai_credit',
         billingQuantity: 100,
@@ -104,7 +96,8 @@ describe('Auto Mode savings', () => {
 
   it('uses row-specific AI Credit unit cost when gross amount is absent', () => {
     const rows: ProcessedData[] = [
-      createRow({
+      makeProcessedData({
+        ...AUTO_MODE_ROW_DEFAULTS,
         requestsUsed: 0,
         usageUnit: 'ai_credit',
         billingQuantity: 100,
@@ -124,7 +117,8 @@ describe('Auto Mode savings', () => {
 
   it('keeps consumed AI Credits separate from the 10% higher before-Auto cost', () => {
     const rows: ProcessedData[] = [
-      createRow({
+      makeProcessedData({
+        ...AUTO_MODE_ROW_DEFAULTS,
         requestsUsed: 0,
         usageUnit: 'ai_credit',
         billingQuantity: 21404.23,
