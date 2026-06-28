@@ -421,17 +421,12 @@ export interface DailyModelUsageDatum {
   [model: string]: string | number;
 }
 
-/**
- * Build per-day per-model stacked dataset for all users combined.
- * Shape mirrors UserDailyData but aggregated across users, without cumulative line.
- * Returns a dense series across the full date range; days with no activity are
- * present with zero totals to keep the X-axis continuous.
- */
-export function buildDailyModelUsageFromArtifacts(
+function buildDailyModelUsageFromTotals(
   daily: DailyBucketsArtifacts,
-  usage: UsageArtifacts
+  usage: UsageArtifacts,
+  dailyUserModelTotalsMap: Map<string, Map<string, Map<string, number>>> | undefined
 ): DailyModelUsageDatum[] {
-  if (!daily.dateRange || !daily.dailyUserModelTotals) return [];
+  if (!daily.dateRange || !dailyUserModelTotalsMap) return [];
 
   const { min, max } = daily.dateRange;
   const dates = enumerateDatesInclusive(min, max);
@@ -441,7 +436,7 @@ export function buildDailyModelUsageFromArtifacts(
 
   const result: DailyModelUsageDatum[] = [];
   for (const date of dates) {
-    const dayUserMap = daily.dailyUserModelTotals.get(date);
+    const dayUserMap = dailyUserModelTotalsMap.get(date);
     const row: DailyModelUsageDatum = { date, totalRequests: 0 };
     let dayTotal = 0;
 
@@ -461,6 +456,31 @@ export function buildDailyModelUsageFromArtifacts(
   }
 
   return result;
+}
+
+/**
+ * Build per-day per-model stacked dataset for all users combined.
+ * Shape mirrors UserDailyData but aggregated across users, without cumulative line.
+ * Returns a dense series across the full date range; days with no activity are
+ * present with zero totals to keep the X-axis continuous.
+ */
+export function buildDailyModelUsageFromArtifacts(
+  daily: DailyBucketsArtifacts,
+  usage: UsageArtifacts
+): DailyModelUsageDatum[] {
+  return buildDailyModelUsageFromTotals(daily, usage, daily.dailyUserModelTotals);
+}
+
+/**
+ * Build per-day per-model AI Credits usage for all users combined.
+ * Uses the DailyBucketsAggregator AI Credits model totals instead of request
+ * totals while preserving the same dense date range and stable model ordering.
+ */
+export function buildDailyModelAicUsageFromArtifacts(
+  daily: DailyBucketsArtifacts,
+  usage: UsageArtifacts
+): DailyModelUsageDatum[] {
+  return buildDailyModelUsageFromTotals(daily, usage, daily.dailyUserAicModelTotals);
 }
 
 // -----------------------------
