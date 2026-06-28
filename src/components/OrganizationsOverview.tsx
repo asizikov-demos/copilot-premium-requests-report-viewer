@@ -1,11 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
-
 import { BillingGroupEntry, BillingGroupRow, BillingGroupTable, useBillingGroupRows } from '@/components/BillingGroupTable';
 import { useAnalysisContext } from '@/context/AnalysisContext';
-import { getBillingCostLabels } from '@/utils/billingLabels';
-import { buildBillingArtifactsFromProcessedData, UNASSIGNED_BILLING_GROUP } from '@/utils/ingestion';
+import { useUsageBasedBillingScope } from '@/hooks/useUsageBasedBillingScope';
+import { UNASSIGNED_BILLING_GROUP } from '@/utils/ingestion';
 
 interface OrganizationRow extends BillingGroupRow {
   users: number;
@@ -13,19 +11,8 @@ interface OrganizationRow extends BillingGroupRow {
 
 export function OrganizationsOverview() {
   const { aggregateProcessedData, billingArtifacts } = useAnalysisContext();
-  const isUsageBasedBilling = aggregateProcessedData.some((row) => row.usageUnit === 'ai_credit');
-  const billingRows = useMemo(
-    () => isUsageBasedBilling
-      ? aggregateProcessedData.filter((row) => row.usageUnit === 'ai_credit')
-      : aggregateProcessedData,
-    [aggregateProcessedData, isUsageBasedBilling]
-  );
-  const scopedBillingArtifacts = useMemo(
-    () => billingArtifacts && isUsageBasedBilling
-      ? buildBillingArtifactsFromProcessedData(billingRows)
-      : billingArtifacts,
-    [billingArtifacts, billingRows, isUsageBasedBilling]
-  );
+  const { isUsageBasedBilling, billingRows, scopedBillingArtifacts, quantityColumnLabel, costLabels } =
+    useUsageBasedBillingScope(aggregateProcessedData, billingArtifacts);
 
   const orgRows = useBillingGroupRows<{ users: number }>({
     sourceRows: billingRows,
@@ -42,8 +29,6 @@ export function OrganizationsOverview() {
 
   const hasCosts = orgRows.some(r => r.gross > 0 || r.net > 0);
   const hasAicGross = scopedBillingArtifacts?.hasAnyAicData === true;
-  const quantityColumnLabel = isUsageBasedBilling ? 'Total AI Credits' : 'Requests';
-  const costLabels = getBillingCostLabels(isUsageBasedBilling);
 
   return (
     <BillingGroupTable<OrganizationRow>

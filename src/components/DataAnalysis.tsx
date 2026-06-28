@@ -4,10 +4,9 @@ import React, { useEffect, useMemo } from 'react';
 
 import { PRICING } from '@/constants/pricing';
 import { AnalysisProvider, useAnalysisContext } from '@/context/AnalysisContext';
+import { useUsageBasedBillingScope } from '@/hooks/useUsageBasedBillingScope';
 import { aggregateAutoModeSavings } from '@/utils/autoModeSavings';
-import { getBillingCostLabels } from '@/utils/billingLabels';
 import { formatCurrency } from '@/utils/formatters';
-import { buildBillingArtifactsFromProcessedData } from '@/utils/ingestion';
 import { getModelColor } from '@/utils/modelColors';
 import { aggregateProductCosts } from '@/utils/productCosts';
 
@@ -161,26 +160,9 @@ function DataAnalysisInner() {
   }, [baseProcessed]);
 
   const aicMetricsAvailable = billingArtifacts?.hasAnyAicData === true;
-  const hasAiCreditUsage = useMemo(
-    () => aggregateProcessedData.some((row) => row.usageUnit === 'ai_credit'),
-    [aggregateProcessedData]
-  );
-  const isUsageBasedBilling = hasAiCreditUsage;
-  const usageBasedRows = useMemo(
-    () => isUsageBasedBilling
-      ? aggregateProcessedData.filter((row) => row.usageUnit === 'ai_credit')
-      : aggregateProcessedData,
-    [aggregateProcessedData, isUsageBasedBilling]
-  );
-  const usageBasedBillingArtifacts = useMemo(
-    () => billingArtifacts && isUsageBasedBilling
-      ? buildBillingArtifactsFromProcessedData(usageBasedRows)
-      : billingArtifacts,
-    [billingArtifacts, isUsageBasedBilling, usageBasedRows]
-  );
-  const quantityColumnLabel = isUsageBasedBilling ? 'Total AI Credits' : 'Requests';
+  const { isUsageBasedBilling, billingRows, scopedBillingArtifacts, quantityColumnLabel, costLabels } =
+    useUsageBasedBillingScope(aggregateProcessedData, billingArtifacts);
   const billingQuantityLabel = isUsageBasedBilling ? 'AI Credits' : 'PRUs';
-  const costLabels = getBillingCostLabels(isUsageBasedBilling);
   const unitCostLabel = isUsageBasedBilling
     ? `1 AI Credit = ${formatCurrency(PRICING.AI_CREDIT_USD_VALUE)}`
     : `1 PRU = ${formatCurrency(PRICING.OVERAGE_RATE_PER_REQUEST)}`;
@@ -246,8 +228,8 @@ function DataAnalysisInner() {
   const showAicOverviewCard = aggregatedAic !== null && !isUsageBasedBilling;
 
   const modelRows = useMemo(() => {
-    if (usageBasedBillingArtifacts) {
-      return Array.from(usageBasedBillingArtifacts.billingByModel.entries())
+    if (scopedBillingArtifacts) {
+      return Array.from(scopedBillingArtifacts.billingByModel.entries())
         .map(([model, totals]) => ({
           model,
           requests: isUsageBasedBilling ? totals.aicQuantity : totals.quantity,
@@ -267,7 +249,7 @@ function DataAnalysisInner() {
       net: 0,
       aicGrossAmount: 0,
     }));
-  }, [analysis.requestsByModel, isUsageBasedBilling, usageBasedBillingArtifacts]);
+  }, [analysis.requestsByModel, isUsageBasedBilling, scopedBillingArtifacts]);
 
   const hasModelCosts = modelRows.some(
     (row) => row.gross > 0 || row.discount > 0 || row.net > 0
@@ -289,12 +271,12 @@ function DataAnalysisInner() {
     ? modelChartTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : modelChartTotal.toFixed(0);
 
-  const productCosts = useMemo(() => aggregateProductCosts(usageBasedRows), [usageBasedRows]);
+  const productCosts = useMemo(() => aggregateProductCosts(billingRows), [billingRows]);
   const showProductAicGross = aicMetricsAvailable && !isUsageBasedBilling;
   const showProductCosts = costMetricsAvailable;
   const autoModeSavingsRows = useMemo(
-    () => aggregateAutoModeSavings(usageBasedRows),
-    [usageBasedRows]
+    () => aggregateAutoModeSavings(billingRows),
+    [billingRows]
   );
   const autoModeSavingsTotal = useMemo(() => {
     return autoModeSavingsRows.reduce(
