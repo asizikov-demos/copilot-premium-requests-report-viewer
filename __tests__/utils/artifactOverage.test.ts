@@ -13,38 +13,9 @@ import {
 import { makeUsageArtifacts as makeUsage, makeQuotaArtifacts as makeQuota } from '../helpers/makeArtifacts';
 import { makeProcessedData } from '../helpers/testUtils';
 
-function makeRow({
-  user = 'test-user-one',
-  requestsUsed,
-  exceedsQuota,
-  netAmount,
-  grossAmount,
-  discountAmount,
-  quotaValue = PRICING.ENTERPRISE_QUOTA,
-  dateKey,
-}: {
-  user?: string;
-  requestsUsed: number;
-  exceedsQuota: boolean;
-  netAmount?: number;
-  grossAmount?: number;
-  discountAmount?: number;
-  quotaValue?: number | 'unknown';
-  dateKey: string;
-}): ProcessedData {
-  return makeProcessedData({
-    timestamp: new Date(`${dateKey}T00:00:00Z`),
-    user,
-    model: 'test-model',
-    requestsUsed,
-    exceedsQuota,
-    quotaValue,
-    totalQuota: quotaValue === 'unknown' ? 'Unknown' : quotaValue.toString(),
-    grossAmount,
-    discountAmount,
-    netAmount,
-  });
-}
+const ENTERPRISE_QUOTA_FIELDS = {
+  quotaValue: PRICING.ENTERPRISE_QUOTA,
+} satisfies Partial<ProcessedData>;
 
 function buildArtifactOverage(rows: ProcessedData[]) {
   const usage = buildUsageArtifactsFromProcessedData(rows);
@@ -125,28 +96,31 @@ describe('computeOverageSummaryFromArtifacts', () => {
 
   it('returns billed overage artifacts when billing overage data exists', () => {
     const result = buildArtifactOverage([
-      makeRow({
+      makeProcessedData({
+        ...ENTERPRISE_QUOTA_FIELDS,
+        timestamp: new Date('2025-10-17T00:00:00Z'),
         requestsUsed: 999,
         exceedsQuota: false,
         netAmount: 0,
         grossAmount: 999 * PRICING.OVERAGE_RATE_PER_REQUEST,
         discountAmount: 999 * PRICING.OVERAGE_RATE_PER_REQUEST,
-        dateKey: '2025-10-17',
       }),
-      makeRow({
+      makeProcessedData({
+        ...ENTERPRISE_QUOTA_FIELDS,
+        timestamp: new Date('2025-10-18T00:00:00Z'),
         requestsUsed: 94,
         exceedsQuota: true,
         netAmount: 94 * PRICING.OVERAGE_RATE_PER_REQUEST,
         grossAmount: 999,
         discountAmount: 998,
-        dateKey: '2025-10-18',
       }),
-      makeRow({
+      makeProcessedData({
+        ...ENTERPRISE_QUOTA_FIELDS,
+        timestamp: new Date('2025-10-19T00:00:00Z'),
         requestsUsed: 10,
         exceedsQuota: true,
         grossAmount: 10 * PRICING.OVERAGE_RATE_PER_REQUEST,
         discountAmount: 2 * PRICING.OVERAGE_RATE_PER_REQUEST,
-        dateKey: '2025-10-19',
       }),
     ]);
 
@@ -156,17 +130,19 @@ describe('computeOverageSummaryFromArtifacts', () => {
 
   it('falls back to estimated artifacts when billed rows have no billing amounts', () => {
     const result = buildArtifactOverage([
-      makeRow({
+      makeProcessedData({
+        ...ENTERPRISE_QUOTA_FIELDS,
+        timestamp: new Date('2025-10-17T00:00:00Z'),
         requestsUsed: 1000,
         exceedsQuota: false,
         quotaValue: PRICING.ENTERPRISE_QUOTA,
-        dateKey: '2025-10-17',
       }),
-      makeRow({
+      makeProcessedData({
+        ...ENTERPRISE_QUOTA_FIELDS,
+        timestamp: new Date('2025-10-18T00:00:00Z'),
         requestsUsed: 25,
         exceedsQuota: true,
         quotaValue: PRICING.ENTERPRISE_QUOTA,
-        dateKey: '2025-10-18',
       }),
     ]);
 
@@ -176,18 +152,20 @@ describe('computeOverageSummaryFromArtifacts', () => {
 
   it('does not treat discount-only billed rows as usable billing overage data', () => {
     const result = buildArtifactOverage([
-      makeRow({
+      makeProcessedData({
+        ...ENTERPRISE_QUOTA_FIELDS,
+        timestamp: new Date('2025-10-17T00:00:00Z'),
         requestsUsed: 1000,
         exceedsQuota: false,
         quotaValue: PRICING.ENTERPRISE_QUOTA,
-        dateKey: '2025-10-17',
       }),
-      makeRow({
+      makeProcessedData({
+        ...ENTERPRISE_QUOTA_FIELDS,
+        timestamp: new Date('2025-10-18T00:00:00Z'),
         requestsUsed: 25,
         exceedsQuota: true,
         discountAmount: 25 * PRICING.OVERAGE_RATE_PER_REQUEST,
         quotaValue: PRICING.ENTERPRISE_QUOTA,
-        dateKey: '2025-10-18',
       }),
     ]);
 
@@ -197,17 +175,18 @@ describe('computeOverageSummaryFromArtifacts', () => {
 
   it('resolves mixed quota rows using the higher effective quota', () => {
     const result = buildArtifactOverage([
-      makeRow({
+      makeProcessedData({
+        timestamp: new Date('2025-10-17T00:00:00Z'),
         requestsUsed: 800,
         exceedsQuota: false,
         quotaValue: PRICING.BUSINESS_QUOTA,
-        dateKey: '2025-10-17',
       }),
-      makeRow({
+      makeProcessedData({
+        ...ENTERPRISE_QUOTA_FIELDS,
+        timestamp: new Date('2025-10-18T00:00:00Z'),
         requestsUsed: 150,
         exceedsQuota: false,
         quotaValue: PRICING.ENTERPRISE_QUOTA,
-        dateKey: '2025-10-18',
       }),
     ]);
 

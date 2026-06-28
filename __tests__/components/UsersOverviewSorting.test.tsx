@@ -8,6 +8,8 @@ import type { ProcessedData } from '@/types/csv';
 import type { UserSummary } from '@/utils/analytics/powerUsers';
 import type { QuotaArtifacts, UsageArtifacts } from '@/utils/ingestion';
 
+import { makeProcessedData } from '../helpers/testUtils';
+
 // Mock recharts components used by UsersQuotaConsumptionChart.
 jest.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div data-testid="chart-container">{children}</div>,
@@ -111,42 +113,54 @@ describe('UsersOverview - sorting', () => {
 
   it('shows and sorts AI Credits Gross when AIC data is present', () => {
     const userData: UserSummary[] = [
-      { user: 'Alice', totalRequests: 10, modelBreakdown: { 'gpt-4': 10 } },
-      { user: 'Bob', totalRequests: 20, modelBreakdown: { 'gpt-4': 20 } },
-      { user: 'Charlie', totalRequests: 30, modelBreakdown: { 'gpt-4': 30 } },
+      { user: 'test-user-one', totalRequests: 10, modelBreakdown: { 'gpt-4': 10 } },
+      { user: 'test-user-two', totalRequests: 20, modelBreakdown: { 'gpt-4': 20 } },
+      { user: 'test-user-three', totalRequests: 30, modelBreakdown: { 'gpt-4': 30 } },
     ];
 
     const quotaArtifacts = makeQuota([
-      { user: 'Alice', quota: PRICING.BUSINESS_QUOTA },
-      { user: 'Bob', quota: PRICING.BUSINESS_QUOTA },
-      { user: 'Charlie', quota: PRICING.ENTERPRISE_QUOTA },
+      { user: 'test-user-one', quota: PRICING.BUSINESS_QUOTA },
+      { user: 'test-user-two', quota: PRICING.BUSINESS_QUOTA },
+      { user: 'test-user-three', quota: PRICING.ENTERPRISE_QUOTA },
     ]);
 
     const timestamp = new Date('2026-03-01T00:00:00Z');
-    const makeProcessedRow = (user: string, requestsUsed: number, aicGrossAmount: number): ProcessedData => ({
-      timestamp,
-      user,
-      model: 'Coding Agent model',
-      requestsUsed,
-      exceedsQuota: false,
-      totalQuota: '1000',
-      quotaValue: PRICING.ENTERPRISE_QUOTA,
-      iso: timestamp.toISOString(),
-      dateKey: '2026-03-01',
-      monthKey: '2026-03',
-      epoch: timestamp.getTime(),
-      aicGrossAmount,
-    });
 
     render(
       <UsersOverview
         userData={userData}
         processedData={[
-          makeProcessedRow('Alice', 10, 0.09),
-          makeProcessedRow('Bob', 20, 0.18),
-          makeProcessedRow('Charlie', 30, 0.12),
+          makeProcessedData({
+            timestamp,
+            user: 'test-user-one',
+            model: 'Coding Agent model',
+            requestsUsed: 10,
+            quotaValue: PRICING.ENTERPRISE_QUOTA,
+            aicGrossAmount: 0.09,
+          }),
+          makeProcessedData({
+            timestamp,
+            user: 'test-user-two',
+            model: 'Coding Agent model',
+            requestsUsed: 20,
+            quotaValue: PRICING.ENTERPRISE_QUOTA,
+            aicGrossAmount: 0.18,
+          }),
+          makeProcessedData({
+            timestamp,
+            user: 'test-user-three',
+            model: 'Coding Agent model',
+            requestsUsed: 30,
+            quotaValue: PRICING.ENTERPRISE_QUOTA,
+            aicGrossAmount: 0.12,
+          }),
         ]}
-        dailyCumulativeData={[{ date: '2026-03-01T00:00:00Z', Alice: 10, Bob: 20, Charlie: 30 }]}
+        dailyCumulativeData={[{
+          date: '2026-03-01T00:00:00Z',
+          'test-user-one': 10,
+          'test-user-two': 20,
+          'test-user-three': 30,
+        }]}
         quotaArtifacts={quotaArtifacts}
         usageArtifacts={makeUsage(userData)}
         onBack={() => {}}
@@ -164,35 +178,29 @@ describe('UsersOverview - sorting', () => {
 
     const aicGrossHeader = within(table).getByRole('columnheader', { name: /AI Credits Gross/ });
     fireEvent.click(aicGrossHeader);
-    expect(getRowUserOrder()).toEqual(['Bob', 'Charlie', 'Alice']);
+    expect(getRowUserOrder()).toEqual(['test-user-two', 'test-user-three', 'test-user-one']);
   });
 
   it('shows AI Credits Gross when the new report fields are present with zero spend', () => {
     const userData: UserSummary[] = [
-      { user: 'Alice', totalRequests: 10, modelBreakdown: { 'gpt-4': 10 } },
+      { user: 'test-user-one', totalRequests: 10, modelBreakdown: { 'gpt-4': 10 } },
     ];
-    const quotaArtifacts = makeQuota([{ user: 'Alice', quota: PRICING.BUSINESS_QUOTA }]);
+    const quotaArtifacts = makeQuota([{ user: 'test-user-one', quota: PRICING.BUSINESS_QUOTA }]);
     const timestamp = new Date('2026-03-01T00:00:00Z');
-    const processedData: ProcessedData[] = [{
+    const processedData: ProcessedData[] = [makeProcessedData({
       timestamp,
-      user: 'Alice',
+      user: 'test-user-one',
       model: 'gpt-4',
       requestsUsed: 10,
-      exceedsQuota: false,
-      totalQuota: '300',
       quotaValue: PRICING.BUSINESS_QUOTA,
-      iso: timestamp.toISOString(),
-      dateKey: '2026-03-01',
-      monthKey: '2026-03',
-      epoch: timestamp.getTime(),
       aicGrossAmount: 0,
-    }];
+    })];
 
     render(
       <UsersOverview
         userData={userData}
         processedData={processedData}
-        dailyCumulativeData={[{ date: '2026-03-01T00:00:00Z', Alice: 10 }]}
+        dailyCumulativeData={[{ date: '2026-03-01T00:00:00Z', 'test-user-one': 10 }]}
         quotaArtifacts={quotaArtifacts}
         usageArtifacts={makeUsage(userData)}
         onBack={() => {}}
@@ -216,35 +224,56 @@ describe('UsersOverview - sorting', () => {
       { user: 'test-user-three', quota: 'unknown' },
     ]);
     const timestamp = new Date('2026-06-01T00:00:00Z');
-    const makeUsageRow = (user: string, quotaValue: number | 'unknown', grossAmount: number): ProcessedData => ({
-      timestamp,
-      user,
-      model: 'Auto: Claude Haiku 4.5',
-      requestsUsed: 0,
-      exceedsQuota: false,
-      totalQuota: quotaValue === 'unknown' ? 'Unknown' : quotaValue.toString(),
-      quotaValue,
-      iso: timestamp.toISOString(),
-      dateKey: '2026-06-01',
-      monthKey: '2026-06',
-      epoch: timestamp.getTime(),
-      sku: 'copilot_ai_credit',
-      unitType: 'ai-credits',
-      usageUnit: 'ai_credit',
-      billingQuantity: grossAmount / PRICING.AI_CREDIT_USD_VALUE,
-      grossAmount,
-      discountAmount: grossAmount,
-      netAmount: 0,
-      aicGrossAmount: grossAmount,
-    });
 
     render(
       <UsersOverview
         userData={userData}
         processedData={[
-          makeUsageRow('test-user-one', PRICING.BUSINESS_AI_CREDIT_QUOTA, 0.1),
-          makeUsageRow('test-user-two', PRICING.ENTERPRISE_AI_CREDIT_QUOTA, 0.2),
-          makeUsageRow('test-user-three', 'unknown', 0.3),
+          makeProcessedData({
+            timestamp,
+            user: 'test-user-one',
+            model: 'Auto: Claude Haiku 4.5',
+            requestsUsed: 0,
+            quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA,
+            sku: 'copilot_ai_credit',
+            unitType: 'ai-credits',
+            usageUnit: 'ai_credit',
+            billingQuantity: 0.1 / PRICING.AI_CREDIT_USD_VALUE,
+            grossAmount: 0.1,
+            discountAmount: 0.1,
+            netAmount: 0,
+            aicGrossAmount: 0.1,
+          }),
+          makeProcessedData({
+            timestamp,
+            user: 'test-user-two',
+            model: 'Auto: Claude Haiku 4.5',
+            requestsUsed: 0,
+            quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
+            sku: 'copilot_ai_credit',
+            unitType: 'ai-credits',
+            usageUnit: 'ai_credit',
+            billingQuantity: 0.2 / PRICING.AI_CREDIT_USD_VALUE,
+            grossAmount: 0.2,
+            discountAmount: 0.2,
+            netAmount: 0,
+            aicGrossAmount: 0.2,
+          }),
+          makeProcessedData({
+            timestamp,
+            user: 'test-user-three',
+            model: 'Auto: Claude Haiku 4.5',
+            requestsUsed: 0,
+            quotaValue: 'unknown',
+            sku: 'copilot_ai_credit',
+            unitType: 'ai-credits',
+            usageUnit: 'ai_credit',
+            billingQuantity: 0.3 / PRICING.AI_CREDIT_USD_VALUE,
+            grossAmount: 0.3,
+            discountAmount: 0.3,
+            netAmount: 0,
+            aicGrossAmount: 0.3,
+          }),
         ]}
         dailyCumulativeData={[{ date: '2026-06-01T00:00:00Z' }]}
         dailyAicCumulativeData={[{
@@ -377,46 +406,39 @@ describe('UsersOverview - sorting', () => {
 
   it('opens inline user details and returns via breadcrumb', () => {
     const userData: UserSummary[] = [
-      { user: 'Alice', totalRequests: 10, modelBreakdown: { 'gpt-4': 10 }, organization: 'Org A', costCenter: 'Platform' },
-      { user: 'Bob', totalRequests: 20, modelBreakdown: { 'gpt-4': 20 }, organization: 'Org B', costCenter: 'Security' },
+      { user: 'test-user-one', totalRequests: 10, modelBreakdown: { 'gpt-4': 10 }, organization: 'test-org-one', costCenter: 'test-cost-center-one' },
+      { user: 'test-user-two', totalRequests: 20, modelBreakdown: { 'gpt-4': 20 }, organization: 'test-org-two', costCenter: 'test-cost-center-two' },
     ];
 
     const quotaArtifacts = makeQuota([
-      { user: 'Alice', quota: PRICING.BUSINESS_QUOTA },
-      { user: 'Bob', quota: PRICING.ENTERPRISE_QUOTA },
+      { user: 'test-user-one', quota: PRICING.BUSINESS_QUOTA },
+      { user: 'test-user-two', quota: PRICING.ENTERPRISE_QUOTA },
     ]);
 
     const timestamp = new Date('2025-01-01T00:00:00Z');
-    const iso = timestamp.toISOString();
     const processedData: ProcessedData[] = [
-      {
+      makeProcessedData({
         timestamp,
-        user: 'Alice',
+        user: 'test-user-one',
         model: 'gpt-4',
         requestsUsed: 10,
-        exceedsQuota: false,
-        totalQuota: '300',
         quotaValue: PRICING.BUSINESS_QUOTA,
-        iso,
-        dateKey: iso.slice(0, 10),
-        monthKey: iso.slice(0, 7),
-        epoch: timestamp.getTime(),
-        organization: 'Org A',
-        costCenter: 'Platform',
-      },
+        organization: 'test-org-one',
+        costCenter: 'test-cost-center-one',
+      }),
     ];
 
     render(
       <UsersOverview
         userData={userData}
         processedData={processedData}
-        dailyCumulativeData={[{ date: '2025-01-01T00:00:00Z', Alice: 10, Bob: 20 }]}
+        dailyCumulativeData={[{ date: '2025-01-01T00:00:00Z', 'test-user-one': 10, 'test-user-two': 20 }]}
         quotaArtifacts={quotaArtifacts}
         usageArtifacts={makeUsage(userData)}
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Alice' }));
+    fireEvent.click(screen.getByRole('button', { name: 'test-user-one' }));
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'users' })).toBeInTheDocument();
 
