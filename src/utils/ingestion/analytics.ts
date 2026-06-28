@@ -14,8 +14,8 @@ import type { AnalysisResults, ProcessedData } from '@/types/csv';
 import type { CodeReviewAnalysis } from '@/types/csv';
 import { CodingAgentAnalysis, UserDailyData } from '@/types/csv';
 import { buildAdvisoriesFromCategories, getEarlyExhausterCount, type Advisory } from '@/utils/analytics/advisory';
-import { CONSUMPTION_THRESHOLDS, UserConsumptionCategory, InsightsOverviewData } from '@/utils/analytics/insights';
-import type { FeatureUtilizationStats } from '@/utils/analytics/insights';
+import { classifyConsumptionUser } from '@/utils/analytics/insights';
+import type { FeatureUtilizationStats, InsightsOverviewData, UserConsumptionCategory } from '@/utils/analytics/insights';
 import { classifyQuotaMap, isLegacyPremiumRequestQuotaValue } from '@/utils/analytics/quota';
 import { dayOfMonthToWeekBucket, enumerateDatesInclusive, monthKeyToLabel } from '@/utils/dateKeys';
 import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
@@ -509,18 +509,11 @@ export function buildConsumptionCategoriesFromArtifacts(
 ): InsightsOverviewData {
   const categorized: UserConsumptionCategory[] = usage.users.map(u => {
     const quotaVal = quota.quotaByUser.get(u.user) ?? 'unknown';
-    const pct = (typeof quotaVal === 'number' && quotaVal > 0)
-      ? (u.totalRequests / quotaVal) * 100
-      : 0;
-    let category: UserConsumptionCategory['category'] = 'low';
-    if (pct >= CONSUMPTION_THRESHOLDS.powerMinPct) category = 'power';
-    else if (pct >= CONSUMPTION_THRESHOLDS.averageMinPct) category = 'average';
     return {
       user: u.user,
       totalRequests: u.totalRequests,
       quota: quotaVal,
-      consumptionPercentage: pct,
-      category
+      ...classifyConsumptionUser(u.totalRequests, quotaVal)
     };
   }).sort((a, b) => b.consumptionPercentage - a.consumptionPercentage);
   return {

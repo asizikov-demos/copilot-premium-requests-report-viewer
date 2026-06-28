@@ -1,7 +1,7 @@
 import { PRICING } from '@/constants/pricing';
 import type { ProcessedData } from '@/types/csv';
 import type { UserSummary } from '@/utils/analytics';
-import { categorizeUserConsumption, calculateUnusedValue, CONSUMPTION_THRESHOLDS } from '@/utils/analytics/insights';
+import { categorizeUserConsumption, calculateUnusedValue, classifyConsumptionUser, CONSUMPTION_THRESHOLDS } from '@/utils/analytics/insights';
 import type { UserConsumptionCategory } from '@/utils/analytics/insights';
 import { buildFeatureUtilizationFromArtifacts } from '@/utils/ingestion/analytics';
 import type { FeatureUsageArtifacts } from '@/utils/ingestion/types';
@@ -43,6 +43,25 @@ function makeFeatureUsageArtifacts({
 }
 
 describe('insights analytics', () => {
+  test('classifyConsumptionUser handles quota and threshold categories', () => {
+    const quota = 100;
+
+    expect(classifyConsumptionUser(50, 'unknown')).toEqual({ consumptionPercentage: 0, category: 'low' });
+    expect(classifyConsumptionUser(50, 0)).toEqual({ consumptionPercentage: 0, category: 'low' });
+    expect(classifyConsumptionUser(CONSUMPTION_THRESHOLDS.averageMinPct - 0.1, quota)).toEqual({
+      consumptionPercentage: CONSUMPTION_THRESHOLDS.averageMinPct - 0.1,
+      category: 'low'
+    });
+    expect(classifyConsumptionUser(CONSUMPTION_THRESHOLDS.averageMinPct, quota)).toEqual({
+      consumptionPercentage: CONSUMPTION_THRESHOLDS.averageMinPct,
+      category: 'average'
+    });
+    expect(classifyConsumptionUser(CONSUMPTION_THRESHOLDS.powerMinPct, quota)).toEqual({
+      consumptionPercentage: CONSUMPTION_THRESHOLDS.powerMinPct,
+      category: 'power'
+    });
+  });
+
   test('categorizeUserConsumption threshold boundaries', () => {
     const quota = 300;
     const users: UserSummary[] = [

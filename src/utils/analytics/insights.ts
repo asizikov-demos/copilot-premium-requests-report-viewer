@@ -30,15 +30,27 @@ export const CONSUMPTION_THRESHOLDS = Object.freeze({
   averageMinPct: 45
 });
 
+export function classifyConsumptionUser(
+  totalRequests: number,
+  quota: number | 'unknown'
+): { consumptionPercentage: number; category: UserConsumptionCategory['category'] } {
+  const consumptionPercentage = (typeof quota === 'number' && quota > 0) ? (totalRequests / quota) * 100 : 0;
+  let category: UserConsumptionCategory['category'] = 'low';
+  if (consumptionPercentage >= CONSUMPTION_THRESHOLDS.powerMinPct) category = 'power';
+  else if (consumptionPercentage >= CONSUMPTION_THRESHOLDS.averageMinPct) category = 'average';
+  return { consumptionPercentage, category };
+}
+
 export function categorizeUserConsumption(userData: UserSummary[], processedData: ProcessedData[]): InsightsOverviewData {
   const userQuotaMap = buildUserQuotaMapFromRows(processedData);
   const categorized = userData.map(u => {
     const quota = userQuotaMap.get(u.user) ?? 'unknown';
-    const pct = (typeof quota === 'number' && quota > 0) ? (u.totalRequests / quota) * 100 : 0;
-    let category: 'power' | 'average' | 'low' = 'low';
-    if (pct >= CONSUMPTION_THRESHOLDS.powerMinPct) category = 'power';
-    else if (pct >= CONSUMPTION_THRESHOLDS.averageMinPct) category = 'average';
-    return { user: u.user, totalRequests: u.totalRequests, quota, consumptionPercentage: pct, category };
+    return {
+      user: u.user,
+      totalRequests: u.totalRequests,
+      quota,
+      ...classifyConsumptionUser(u.totalRequests, quota)
+    };
   }).sort((a,b) => b.consumptionPercentage - a.consumptionPercentage);
   return {
     powerUsers: categorized.filter(c => c.category === 'power'),
