@@ -36,9 +36,9 @@ export function useUsageBasedBillingScope(
     [aggregateProcessedData, isUsageBasedBilling]
   );
   const scopedBillingArtifacts = useMemo(
-    () => billingArtifacts && isUsageBasedBilling
+    () => (isUsageBasedBilling
       ? buildBillingArtifactsFromProcessedData(billingRows)
-      : billingArtifacts,
+      : billingArtifacts),
     [billingArtifacts, billingRows, isUsageBasedBilling]
   );
   const quantityColumnLabel = isUsageBasedBilling ? 'Total AI Credits' : 'Requests';
