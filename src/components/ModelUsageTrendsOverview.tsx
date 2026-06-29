@@ -4,13 +4,10 @@ import React, { useMemo } from 'react';
 
 import { useAnalysisContext } from '@/context/AnalysisContext';
 import { ModelDailyStackedChart } from '@/components/charts/ModelDailyStackedChart';
-import type { ModelDailyDatum } from '@/components/charts/ModelDailyStackedChart';
-import type { ProcessedData } from '@/types/csv';
 import { filterDailySeriesByMonths } from '@/utils/analytics/filters';
 import { getEffectiveAicQuantity } from '@/utils/aicFields';
-import { enumerateDatesInclusive } from '@/utils/dateKeys';
 import { formatCurrency } from '@/utils/formatters';
-import { buildDailyModelUsageFromArtifacts } from '@/utils/ingestion/analytics';
+import { buildDailyModelAicUsageFromArtifacts, buildDailyModelUsageFromArtifacts } from '@/utils/ingestion/analytics';
 import { generateModelColors } from '@/utils/modelColors';
 
 interface TopAicModelRow {
@@ -19,42 +16,6 @@ interface TopAicModelRow {
   aicQuantity: number;
   aicGrossAmount: number;
   share: number;
-}
-
-function buildDailyModelBillingQuantity(rows: ProcessedData[]): { data: ModelDailyDatum[]; models: string[] } {
-  const usageRows = rows.filter((row) => !row.isNonCopilotUsage && row.usageUnit === 'ai_credit');
-  if (usageRows.length === 0) {
-    return { data: [], models: [] };
-  }
-
-  const models = Array.from(new Set(usageRows.map((row) => row.model))).sort();
-  const sortedDates = usageRows.map((row) => row.dateKey).sort();
-  const dates = enumerateDatesInclusive(sortedDates[0], sortedDates[sortedDates.length - 1]);
-  const byDateModel = new Map<string, Map<string, number>>();
-
-  for (const row of usageRows) {
-    const dayMap = byDateModel.get(row.dateKey) ?? new Map<string, number>();
-    dayMap.set(row.model, (dayMap.get(row.model) ?? 0) + (row.billingQuantity ?? row.requestsUsed));
-    byDateModel.set(row.dateKey, dayMap);
-  }
-
-  return {
-    models,
-    data: dates.map((date) => {
-      const dayMap = byDateModel.get(date);
-      const datum: ModelDailyDatum = { date, totalRequests: 0 };
-      let dayTotal = 0;
-
-      for (const model of models) {
-        const value = dayMap?.get(model) ?? 0;
-        datum[model] = value;
-        dayTotal += value;
-      }
-
-      datum.totalRequests = dayTotal;
-      return datum;
-    }),
-  };
 }
 
 export function ModelUsageTrendsOverview() {
@@ -70,26 +31,19 @@ export function ModelUsageTrendsOverview() {
   }, [aggregateProcessedData]);
 
   const { data, models } = useMemo(() => {
-    if (isUsageBasedBilling) {
-      return buildDailyModelBillingQuantity(aggregateProcessedData);
-    }
-
-    // For now, we ignore month filtering at the aggregation level and rely on
-    // the existing dateRange from dailyBucketsArtifacts, which is already
-    // derived in UTC from the ingested CSV. Future refinement could slice the
-    // series based on selectedMonths if artifact months are present.
     if (!usageArtifacts || !dailyBucketsArtifacts) {
       return { data: [], models: [] as string[] };
     }
 
-    const raw = buildDailyModelUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
+    const raw = isUsageBasedBilling
+      ? buildDailyModelAicUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts)
+      : buildDailyModelUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
 
-    // Optional: filter by selectedMonths if provided and artifact dateRange spans multiple months.
     const filtered = filterDailySeriesByMonths(raw, selectedMonths);
 
     const modelKeys = Object.keys(usageArtifacts.modelTotals).sort();
     return { data: filtered, models: modelKeys };
-  }, [aggregateProcessedData, dailyBucketsArtifacts, isUsageBasedBilling, selectedMonths, usageArtifacts]);
+  }, [dailyBucketsArtifacts, isUsageBasedBilling, selectedMonths, usageArtifacts]);
 
   const modelColors: Record<string, string> = useMemo(() => {
     return generateModelColors(models);

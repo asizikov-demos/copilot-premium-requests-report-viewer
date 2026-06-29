@@ -1,11 +1,21 @@
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+
 import { DataAnalysis } from '@/components/DataAnalysis';
-import { newFormatRows } from '../fixtures/newFormatCSVData';
+import { PRICING } from '@/constants/pricing';
 import type { CSVData } from '@/types/csv';
-import { normalizeRow } from '@/utils/ingestion/normalizeRow';
-import type { IngestionResult } from '@/utils/ingestion';
-import type { BillingArtifacts, FeatureUsageArtifacts, NormalizedRow } from '@/utils/ingestion/types';
+import {
+  BillingAggregator,
+  DailyBucketsAggregator,
+  FeatureUsageAggregator,
+  QuotaAggregator,
+  RawDataAggregator,
+  UsageAggregator,
+  normalizeRow,
+} from '@/utils/ingestion';
+import type { AggregatorContext, BillingArtifacts, IngestionResult, NormalizedRow } from '@/utils/ingestion/types';
+
+import { newFormatRows } from '../fixtures/newFormatCSVData';
 
 // Mock ResizeObserver for Recharts ResponsiveContainer in JSDOM
 beforeAll(() => {
@@ -22,20 +32,33 @@ function createIngestionResultFromRawRows(rows: CSVData[]): IngestionResult {
   const normalizedRows = rows
     .map(row => normalizeRow(row, warnings))
     .filter((row): row is NormalizedRow => row !== null);
-  const emptyFeatureUsage: FeatureUsageArtifacts = {
-    featureTotals: { codeReview: 0, codingAgent: 0, spark: 0 },
-    featureUsers: { codeReview: new Set(), codingAgent: new Set(), spark: new Set() },
-    specialTotals: { nonCopilotCodeReview: 0 }
-  };
+  const aggregators = [
+    new QuotaAggregator(),
+    new UsageAggregator(),
+    new DailyBucketsAggregator(),
+    new FeatureUsageAggregator(),
+    new BillingAggregator(),
+    new RawDataAggregator(),
+  ];
+  const ctx: AggregatorContext = { pricing: PRICING };
+
+  for (const aggregator of aggregators) {
+    aggregator.init?.(ctx);
+  }
+
+  for (const row of normalizedRows) {
+    for (const aggregator of aggregators) {
+      aggregator.onRow(row, ctx);
+    }
+  }
+
+  const outputs: Record<string, unknown> = {};
+  for (const aggregator of aggregators) {
+    outputs[aggregator.id] = aggregator.finalize(ctx);
+  }
 
   return {
-    outputs: {
-      'quota': { quotaByUser: new Map(), conflicts: new Map(), distinctQuotas: new Set(), hasMixedQuotas: false, hasMixedLicenses: false },
-      'usage': { users: [], userTotals: new Map(), modelBreakdown: new Map(), globalModelTotals: new Map(), topModelPerUser: new Map(), modelTotals: {}, userCount: 0, modelCount: 0 },
-      'dailyBuckets': { dailyUserTotals: new Map(), startDate: new Date(), endDate: new Date() },
-      'featureUsage': emptyFeatureUsage,
-      'rawData': normalizedRows
-    },
+    outputs,
     rowsProcessed: normalizedRows.length,
     durationMs: 100,
     warnings
