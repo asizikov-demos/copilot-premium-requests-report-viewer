@@ -115,35 +115,41 @@ export interface MakeDailyBucketEntry {
   used: number;
   /** Optional model name; defaults to `model-a`. Used to populate `dailyUserModelTotals`. */
   model?: string;
+  /** When true, populate AI Credits daily totals instead of request daily totals. */
+  isAic?: boolean;
 }
 
 /**
  * Build a {@link DailyBucketsArtifacts} object from flat daily usage entries.
  *
- * Produces both `dailyUserTotals` and `dailyUserModelTotals` matching
- * DailyBucketsAggregator output. Date handling is string-based (UTC-safe) and
- * does not use local timezone conversion.
+ * Produces daily totals and model totals matching DailyBucketsAggregator output.
+ * Date handling is string-based (UTC-safe) and does not use local timezone conversion.
  */
 export function makeDailyBucketsArtifacts(entries: MakeDailyBucketEntry[]): DailyBucketsArtifacts {
   const dailyUserTotals = new Map<string, Map<string, number>>();
+  const dailyUserAicTotals = new Map<string, Map<string, number>>();
   const dailyUserModelTotals = new Map<string, Map<string, Map<string, number>>>();
+  const dailyUserAicModelTotals = new Map<string, Map<string, Map<string, number>>>();
+  const months = new Set<string>();
   let min: string | null = null;
   let max: string | null = null;
 
   for (const e of entries) {
     const model = e.model ?? 'model-a';
+    const totals = e.isAic ? dailyUserAicTotals : dailyUserTotals;
+    const modelTotals = e.isAic ? dailyUserAicModelTotals : dailyUserModelTotals;
 
-    let userMap = dailyUserTotals.get(e.date);
+    let userMap = totals.get(e.date);
     if (!userMap) {
       userMap = new Map();
-      dailyUserTotals.set(e.date, userMap);
+      totals.set(e.date, userMap);
     }
     userMap.set(e.user, (userMap.get(e.user) || 0) + e.used);
 
-    let dayUserMap = dailyUserModelTotals.get(e.date);
+    let dayUserMap = modelTotals.get(e.date);
     if (!dayUserMap) {
       dayUserMap = new Map();
-      dailyUserModelTotals.set(e.date, dayUserMap);
+      modelTotals.set(e.date, dayUserMap);
     }
     let modelMap = dayUserMap.get(e.user);
     if (!modelMap) {
@@ -154,18 +160,17 @@ export function makeDailyBucketsArtifacts(entries: MakeDailyBucketEntry[]): Dail
 
     if (!min || e.date < min) min = e.date;
     if (!max || e.date > max) max = e.date;
+    months.add(e.date.slice(0, 7));
   }
 
   return {
     dailyUserTotals,
-    dailyUserAicTotals: new Map(),
+    dailyUserAicTotals,
     dailyUserModelTotals,
-    dailyUserAicModelTotals: new Map(),
+    dailyUserAicModelTotals,
     dailyBucketTotals: new Map(),
     dailyBucketModelTotals: new Map(),
     dateRange: min && max ? { min, max } : null,
-    months: Array.from(
-      new Set(Array.from(dailyUserTotals.keys()).map((d) => d.slice(0, 7)))
-    ).sort(),
+    months: Array.from(months).sort(),
   };
 }
