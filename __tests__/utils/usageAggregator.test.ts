@@ -228,4 +228,42 @@ describe('processed data artifact builders', () => {
     expect(output.dailyBucketTotals?.get('2025-06-02')?.get('non_copilot_code_review')).toBe(7);
     expect(output.dailyBucketModelTotals?.get('2025-06-02')?.get('non_copilot_code_review')?.get('Code Review')).toBe(7);
   });
+
+  test('daily aggregator accumulates repeated rows across user, AIC, and bucket maps', () => {
+    const ctx: AggregatorContext = { pricing: PRICING };
+    const rows: NormalizedRow[] = [
+      makeNormalizedRow({ user: 'test-user-one', model: 'model-one', quantity: 2 }),
+      makeNormalizedRow({ user: 'test-user-one', model: 'model-one', quantity: 3 }),
+      makeNormalizedRow({ user: 'test-user-two', model: 'model-two', quantity: 1, usageUnit: 'ai_credit', aicQuantity: 4 }),
+      makeNormalizedRow({ user: 'test-user-two', model: 'model-two', quantity: 1, usageUnit: 'ai_credit', aicQuantity: 6 }),
+      makeNormalizedRow({
+        user: '',
+        model: 'Code Review',
+        quantity: 7,
+        isNonCopilotUsage: true,
+        usageBucket: 'non_copilot_code_review',
+      }),
+      makeNormalizedRow({
+        user: '',
+        model: 'Code Review',
+        quantity: 11,
+        isNonCopilotUsage: true,
+        usageBucket: 'non_copilot_code_review',
+      }),
+    ];
+    const aggregator = new DailyBucketsAggregator();
+    aggregator.init?.(ctx);
+    for (const row of rows) {
+      aggregator.onRow(row, ctx);
+    }
+
+    const output = aggregator.finalize(ctx);
+
+    expect(output.dailyUserTotals.get('2025-06-01')?.get('test-user-one')).toBe(5);
+    expect(output.dailyUserModelTotals.get('2025-06-01')?.get('test-user-one')?.get('model-one')).toBe(5);
+    expect(output.dailyUserAicTotals.get('2025-06-01')?.get('test-user-two')).toBe(10);
+    expect(output.dailyUserAicModelTotals.get('2025-06-01')?.get('test-user-two')?.get('model-two')).toBe(10);
+    expect(output.dailyBucketTotals?.get('2025-06-01')?.get('non_copilot_code_review')).toBe(18);
+    expect(output.dailyBucketModelTotals?.get('2025-06-01')?.get('non_copilot_code_review')?.get('Code Review')).toBe(18);
+  });
 });
