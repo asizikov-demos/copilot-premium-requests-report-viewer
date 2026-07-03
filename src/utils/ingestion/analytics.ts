@@ -41,6 +41,42 @@ export interface DailyCodingAgentUsageDatum { date: string; dailyRequests: numbe
 
 const NON_COPILOT_CODE_REVIEW_ADOPTION_LABEL = 'Non-Copilot Users';
 
+interface FeatureUserEntry {
+  user: string;
+  totalRequests: number;
+  featureRequests: number;
+  featurePercentage: number;
+  quota: number | 'unknown';
+  models: string[];
+}
+
+function collectFeatureUsers(
+  usage: UsageArtifacts,
+  quota: QuotaArtifacts,
+  modelFilter: (model: string) => boolean
+): { users: FeatureUserEntry[]; totalFeatureRequests: number } {
+  const users: FeatureUserEntry[] = [];
+  let totalFeatureRequests = 0;
+
+  for (const u of usage.users) {
+    const models = Object.keys(u.modelBreakdown).filter(modelFilter);
+    if (models.length === 0) continue;
+
+    const featureRequests = models.reduce((sum, model) => sum + u.modelBreakdown[model], 0);
+    totalFeatureRequests += featureRequests;
+    users.push({
+      user: u.user,
+      totalRequests: u.totalRequests,
+      featureRequests,
+      featurePercentage: u.totalRequests > 0 ? (featureRequests / u.totalRequests) * 100 : 0,
+      quota: quota.quotaByUser.get(u.user) ?? 'unknown',
+      models,
+    });
+  }
+
+  return { users, totalFeatureRequests };
+}
+
 /** Build time frame (start/end) from daily bucket date range. */
 export function buildTimeFrame(daily: DailyBucketsArtifacts): { start: string; end: string } {
   if (!daily.dateRange) return { start: '', end: '' };
@@ -330,24 +366,15 @@ export function computeWeeklyQuotaExhaustionFromArtifacts(
 export function analyzeCodingAgentAdoptionFromArtifacts(usage: UsageArtifacts, quota: QuotaArtifacts): CodingAgentAnalysis {
   if (usage.users.length === 0) return { totalUsers: 0, totalUniqueUsers: 0, totalCodingAgentRequests: 0, adoptionRate: 0, users: [] };
   const totalUniqueUsers = usage.userCount;
-  const codingAgentUsers = [] as CodingAgentAnalysis['users'];
-  let totalCodingAgentRequests = 0;
-  for (const u of usage.users) {
-    // Identify coding agent models (keywords)
-    const models = Object.keys(u.modelBreakdown).filter(m => isCodingAgentModel(m));
-    if (models.length === 0) continue;
-    const caRequests = models.reduce((sum, m) => sum + u.modelBreakdown[m], 0);
-    totalCodingAgentRequests += caRequests;
-    const quotaVal = quota.quotaByUser.get(u.user) ?? 'unknown';
-    codingAgentUsers.push({
-      user: u.user,
-      totalRequests: u.totalRequests,
-      codingAgentRequests: caRequests,
-      codingAgentPercentage: u.totalRequests > 0 ? (caRequests / u.totalRequests) * 100 : 0,
-      quota: quotaVal,
-      models
-    });
-  }
+  const { users, totalFeatureRequests: totalCodingAgentRequests } = collectFeatureUsers(usage, quota, isCodingAgentModel);
+  const codingAgentUsers: CodingAgentAnalysis['users'] = users.map(user => ({
+    user: user.user,
+    totalRequests: user.totalRequests,
+    codingAgentRequests: user.featureRequests,
+    codingAgentPercentage: user.featurePercentage,
+    quota: user.quota,
+    models: user.models
+  }));
   codingAgentUsers.sort((a, b) => b.codingAgentRequests - a.codingAgentRequests);
   const adoptionRate = totalUniqueUsers > 0 ? (codingAgentUsers.length / totalUniqueUsers) * 100 : 0;
   return { totalUsers: codingAgentUsers.length, totalUniqueUsers, totalCodingAgentRequests, adoptionRate, users: codingAgentUsers };
@@ -635,25 +662,17 @@ export function analyzeCodeReviewAdoptionFromArtifacts(usage: UsageArtifacts, qu
   }
 
   const totalUniqueUsers = usage.userCount;
-  const codeReviewUsers: CodeReviewAnalysis['users'] = [];
-  let totalCodeReviewRequests = 0;
-  let totalReviewUsers = 0;
-  for (const u of usage.users) {
-    const models = Object.keys(u.modelBreakdown).filter(m => isCodeReviewModel(m));
-    if (models.length === 0) continue;
-    const crRequests = models.reduce((sum, m) => sum + u.modelBreakdown[m], 0);
-    totalCodeReviewRequests += crRequests;
-    totalReviewUsers += 1;
-    const quotaVal = quota.quotaByUser.get(u.user) ?? 'unknown';
-    codeReviewUsers.push({
-      user: u.user,
-      totalRequests: u.totalRequests,
-      codeReviewRequests: crRequests,
-      codeReviewPercentage: u.totalRequests > 0 ? (crRequests / u.totalRequests) * 100 : 0,
-      quota: quotaVal,
-      models
-    });
-  }
+  const { users, totalFeatureRequests } = collectFeatureUsers(usage, quota, isCodeReviewModel);
+  const totalReviewUsers = users.length;
+  let totalCodeReviewRequests = totalFeatureRequests;
+  const codeReviewUsers: CodeReviewAnalysis['users'] = users.map(user => ({
+    user: user.user,
+    totalRequests: user.totalRequests,
+    codeReviewRequests: user.featureRequests,
+    codeReviewPercentage: user.featurePercentage,
+    quota: user.quota,
+    models: user.models
+  }));
 
   if (nonCopilotBucket && hasNonCopilotReviewUsage) {
     const codeReviewRequests = nonCopilotModels.reduce((sum, model) => sum + nonCopilotBucket.modelBreakdown[model], 0);
