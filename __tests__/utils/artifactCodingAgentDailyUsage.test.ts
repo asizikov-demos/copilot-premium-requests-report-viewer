@@ -1,86 +1,62 @@
 import {
   buildDailyCodingAgentAicUsageFromArtifacts,
   buildDailyCodingAgentUsageFromArtifacts,
-  DailyBucketsArtifacts,
-  DailyCodingAgentUsageDatum,
+  type DailyCodingAgentUsageDatum,
 } from '@/utils/ingestion';
 
-describe('buildDailyCodingAgentUsageFromArtifacts', () => {
-  function makeArtifacts(): DailyBucketsArtifacts {
-    const dailyUserModelTotals = new Map<string, Map<string, Map<string, number>>>();
-    // 2025-06-01
-    const day1 = new Map<string, Map<string, number>>();
-    const u1Models = new Map<string, number>();
-    u1Models.set('coding agent v1', 2);
-    u1Models.set('o3-mini', 3); // non-coding agent should be ignored
-    day1.set('u1', u1Models);
-    const u2Models = new Map<string, number>();
-    u2Models.set('copilot coding agent beta', 3); // counts toward coding agent
-    day1.set('u2', u2Models);
-    dailyUserModelTotals.set('2025-06-01', day1);
-    // 2025-06-02
-    const day2 = new Map<string, Map<string, number>>();
-    const u1d2 = new Map<string, number>();
-    u1d2.set('coding agent v1', 5);
-    day2.set('u1', u1d2);
-    dailyUserModelTotals.set('2025-06-02', day2);
-    return {
-      dailyUserTotals: new Map(), // not needed for this helper
-      dailyUserModelTotals,
-      dateRange: { min: '2025-06-01', max: '2025-06-02' }
-    };
-  }
+import { makeDailyBucketsArtifacts } from '../helpers/makeArtifacts';
 
+describe('buildDailyCodingAgentUsageFromArtifacts', () => {
   test('aggregates per day and computes cumulative matching legacy semantics', () => {
-    const artifacts = makeArtifacts();
+    const artifacts = makeDailyBucketsArtifacts([
+      { date: '2025-06-01', user: 'test-user-one', used: 2, model: 'coding agent v1' },
+      { date: '2025-06-01', user: 'test-user-one', used: 3, model: 'o3-mini' },
+      { date: '2025-06-01', user: 'test-user-two', used: 3, model: 'copilot coding agent beta' },
+      { date: '2025-06-02', user: 'test-user-one', used: 5, model: 'coding agent v1' },
+    ]);
     const result = buildDailyCodingAgentUsageFromArtifacts(artifacts);
     const expected: DailyCodingAgentUsageDatum[] = [
-      { date: '2025-06-01', dailyRequests: 5, cumulativeRequests: 5 }, // 2 + 3 coding agent (ignores o3-mini)
-      { date: '2025-06-02', dailyRequests: 5, cumulativeRequests: 10 }
+      { date: '2025-06-01', dailyRequests: 5, cumulativeRequests: 5 },
+      { date: '2025-06-02', dailyRequests: 5, cumulativeRequests: 10 },
     ];
     expect(result).toEqual(expected);
   });
 
   test('returns empty array when no coding agent usage present', () => {
-    const dailyUserModelTotals = new Map<string, Map<string, Map<string, number>>>();
-    const day = new Map<string, Map<string, number>>();
-    const u1Models = new Map<string, number>();
-    u1Models.set('o3-mini', 4);
-    day.set('u1', u1Models);
-    dailyUserModelTotals.set('2025-06-01', day);
-    const artifacts: DailyBucketsArtifacts = {
-      dailyUserTotals: new Map(),
-      dailyUserModelTotals,
-      dateRange: { min: '2025-06-01', max: '2025-06-01' }
-    };
+    const artifacts = makeDailyBucketsArtifacts([
+      { date: '2025-06-01', user: 'test-user-one', used: 4, model: 'o3-mini' },
+    ]);
     expect(buildDailyCodingAgentUsageFromArtifacts(artifacts)).toEqual([]);
   });
 
   test('returns empty array if per-model breakdown missing', () => {
-    const artifacts: DailyBucketsArtifacts = {
-      dailyUserTotals: new Map(),
-      dateRange: { min: '2025-06-01', max: '2025-06-02' }
-    };
+    const artifacts = makeDailyBucketsArtifacts([
+      { date: '2025-06-01', user: 'test-user-one', used: 4, model: 'coding agent v1' },
+    ]);
+    delete artifacts.dailyUserModelTotals;
     expect(buildDailyCodingAgentUsageFromArtifacts(artifacts)).toEqual([]);
   });
 
   test('aggregates AI Credits from the AI Credits per-model breakdown', () => {
-    const dailyUserAicModelTotals = new Map<string, Map<string, Map<string, number>>>();
-    const day = new Map<string, Map<string, number>>();
-    const userModels = new Map<string, number>();
-    userModels.set('Coding Agent model', 12.5);
-    userModels.set('Code Review model', 4);
-    day.set('test-user-one', userModels);
-    dailyUserAicModelTotals.set('2026-03-01', day);
-
-    const artifacts: DailyBucketsArtifacts = {
-      dailyUserTotals: new Map(),
-      dailyUserAicModelTotals,
-      dateRange: { min: '2026-03-01', max: '2026-03-01' }
-    };
+    const artifacts = makeDailyBucketsArtifacts([
+      {
+        date: '2026-03-01',
+        user: 'test-user-one',
+        used: 12.5,
+        model: 'Coding Agent model',
+        isAic: true,
+      },
+      {
+        date: '2026-03-01',
+        user: 'test-user-one',
+        used: 4,
+        model: 'Code Review model',
+        isAic: true,
+      },
+    ]);
 
     expect(buildDailyCodingAgentAicUsageFromArtifacts(artifacts)).toEqual([
-      { date: '2026-03-01', dailyRequests: 12.5, cumulativeRequests: 12.5 }
+      { date: '2026-03-01', dailyRequests: 12.5, cumulativeRequests: 12.5 },
     ]);
   });
 });
