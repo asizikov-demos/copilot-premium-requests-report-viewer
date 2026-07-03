@@ -24,6 +24,41 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
   private minDate: string | null = null;
   private maxDate: string | null = null;
   private months = new Set<string>();
+
+  private static inc2Level<K1, K2>(
+    map: Map<K1, Map<K2, number>>,
+    k1: K1,
+    k2: K2,
+    delta: number
+  ): void {
+    let innerMap = map.get(k1);
+    if (!innerMap) {
+      innerMap = new Map<K2, number>();
+      map.set(k1, innerMap);
+    }
+    innerMap.set(k2, (innerMap.get(k2) || 0) + delta);
+  }
+
+  private static inc3Level<K1, K2, K3>(
+    map: Map<K1, Map<K2, Map<K3, number>>>,
+    k1: K1,
+    k2: K2,
+    k3: K3,
+    delta: number
+  ): void {
+    let middleMap = map.get(k1);
+    if (!middleMap) {
+      middleMap = new Map<K2, Map<K3, number>>();
+      map.set(k1, middleMap);
+    }
+
+    let innerMap = middleMap.get(k2);
+    if (!innerMap) {
+      innerMap = new Map<K3, number>();
+      middleMap.set(k2, innerMap);
+    }
+    innerMap.set(k3, (innerMap.get(k3) || 0) + delta);
+  }
   
   init(_ctx: AggregatorContext): void {
     void _ctx;
@@ -54,72 +89,25 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
     this.months.add(day.slice(0, 7));
 
     if (row.isNonCopilotUsage && row.usageBucket) {
-      let dayBucketTotals = this.dailyBucketTotals.get(day);
-      if (!dayBucketTotals) {
-        dayBucketTotals = new Map();
-        this.dailyBucketTotals.set(day, dayBucketTotals);
-      }
-      dayBucketTotals.set(row.usageBucket, (dayBucketTotals.get(row.usageBucket) || 0) + quantity);
-
-      let dayBucketModelMap = this.dailyBucketModelTotals.get(day);
-      if (!dayBucketModelMap) {
-        dayBucketModelMap = new Map();
-        this.dailyBucketModelTotals.set(day, dayBucketModelMap);
-      }
-      let modelMap = dayBucketModelMap.get(row.usageBucket);
-      if (!modelMap) {
-        modelMap = new Map();
-        dayBucketModelMap.set(row.usageBucket, modelMap);
-      }
-      modelMap.set(model, (modelMap.get(model) || 0) + quantity);
+      DailyBucketsAggregator.inc2Level(this.dailyBucketTotals, day, row.usageBucket, quantity);
+      DailyBucketsAggregator.inc3Level(this.dailyBucketModelTotals, day, row.usageBucket, model, quantity);
       return;
     }
 
     if (row.usageUnit === 'ai_credit') {
       const aiCredits = row.aicQuantity ?? row.billingQuantity ?? 0;
       if (aiCredits > 0) {
-        let dayAicMap = this.dailyUserAicTotals.get(day);
-        if (!dayAicMap) {
-          dayAicMap = new Map();
-          this.dailyUserAicTotals.set(day, dayAicMap);
-        }
-        dayAicMap.set(user, (dayAicMap.get(user) || 0) + aiCredits);
-
-        let dayAicUserMap = this.dailyUserAicModelTotals.get(day);
-        if (!dayAicUserMap) {
-          dayAicUserMap = new Map();
-          this.dailyUserAicModelTotals.set(day, dayAicUserMap);
-        }
-        let userAicModelMap = dayAicUserMap.get(user);
-        if (!userAicModelMap) {
-          userAicModelMap = new Map();
-          dayAicUserMap.set(user, userAicModelMap);
-        }
-        userAicModelMap.set(model, (userAicModelMap.get(model) || 0) + aiCredits);
+        DailyBucketsAggregator.inc2Level(this.dailyUserAicTotals, day, user, aiCredits);
+        DailyBucketsAggregator.inc3Level(this.dailyUserAicModelTotals, day, user, model, aiCredits);
       }
       return;
     }
     
     // Accumulate daily totals
-    let dayMap = this.dailyUserTotals.get(day);
-    if (!dayMap) {
-      dayMap = new Map();
-      this.dailyUserTotals.set(day, dayMap);
-    }
-    dayMap.set(user, (dayMap.get(user) || 0) + quantity);
+    DailyBucketsAggregator.inc2Level(this.dailyUserTotals, day, user, quantity);
 
     // Accumulate per-model nested totals
-    let dayUserMap = this.dailyUserModelTotals.get(day);
-    if (!dayUserMap) {
-      dayUserMap = new Map();
-      this.dailyUserModelTotals.set(day, dayUserMap);
-    }
-    let userModelMap = dayUserMap.get(user);
-    if (!userModelMap) {
-      userModelMap = new Map();
-      dayUserMap.set(user, userModelMap);
-    }
-    userModelMap.set(model, (userModelMap.get(model) || 0) + quantity);
+    DailyBucketsAggregator.inc3Level(this.dailyUserModelTotals, day, user, model, quantity);
   }
   
   finalize(_ctx: AggregatorContext): DailyBucketsArtifacts {
