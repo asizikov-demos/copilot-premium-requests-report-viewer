@@ -1,5 +1,6 @@
 import { PRICING } from '@/constants/pricing';
 import type { ProcessedData } from '@/types/csv';
+import { NON_COPILOT_CODE_REVIEW_PRODUCT_CATEGORY } from '@/utils/productClassification';
 import { aggregateProductCosts } from '@/utils/productCosts';
 
 import { makeProcessedData } from '../helpers/testUtils';
@@ -29,7 +30,7 @@ describe('aggregateProductCosts', () => {
       expect.objectContaining({ category: 'Spark', label: 'Spark', requests: 3 }),
       expect.objectContaining({ category: 'Coding Agent', label: 'Cloud Agent', requests: 4 }),
       expect.objectContaining({ category: 'Code Review', label: 'Code Review', requests: 5 }),
-      expect.objectContaining({ category: 'Code Review for Non-Copilot Users', label: 'Code Review for Non-Copilot Users', requests: 6 }),
+      expect.objectContaining({ category: NON_COPILOT_CODE_REVIEW_PRODUCT_CATEGORY, label: NON_COPILOT_CODE_REVIEW_PRODUCT_CATEGORY, requests: 6 }),
     ]);
   });
 });

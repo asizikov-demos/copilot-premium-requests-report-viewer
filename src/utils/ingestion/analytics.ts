@@ -23,6 +23,7 @@ import { calculateOverageRequests, calculateOverageCost } from '@/utils/userCalc
 import {
   type BillingArtifacts,
   NON_COPILOT_CODE_REVIEW_BUCKET,
+  NON_COPILOT_CODE_REVIEW_LABEL,
   type DailyBucketsArtifacts,
   type Aggregator,
   type FeatureUsageArtifacts,
@@ -38,8 +39,6 @@ export type { DailyBucketsArtifacts } from './types';
 
 // Legacy DailyCodingAgentUsageDatum type recreated locally (originally from codingAgent.ts)
 export interface DailyCodingAgentUsageDatum { date: string; dailyRequests: number; cumulativeRequests: number; }
-
-const NON_COPILOT_CODE_REVIEW_ADOPTION_LABEL = 'Non-Copilot Users';
 
 /** Build time frame (start/end) from daily bucket date range. */
 export function buildTimeFrame(daily: DailyBucketsArtifacts): { start: string; end: string } {
@@ -659,7 +658,7 @@ export function analyzeCodeReviewAdoptionFromArtifacts(usage: UsageArtifacts, qu
     const codeReviewRequests = nonCopilotModels.reduce((sum, model) => sum + nonCopilotBucket.modelBreakdown[model], 0);
     totalCodeReviewRequests += codeReviewRequests;
     codeReviewUsers.push({
-      user: NON_COPILOT_CODE_REVIEW_ADOPTION_LABEL,
+      user: NON_COPILOT_CODE_REVIEW_LABEL,
       totalRequests: nonCopilotBucket.totalRequests,
       codeReviewRequests,
       codeReviewPercentage: nonCopilotBucket.totalRequests > 0 ? (codeReviewRequests / nonCopilotBucket.totalRequests) * 100 : 0,

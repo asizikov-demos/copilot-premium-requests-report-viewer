@@ -1,6 +1,11 @@
 import type { ProcessedData } from '@/types/csv';
 
-import { classifyProductCategory, getProductDisplayLabel, ProductCategory } from '@/utils/productClassification';
+import {
+  classifyProductCategory,
+  getProductDisplayLabel,
+  NON_COPILOT_CODE_REVIEW_PRODUCT_CATEGORY,
+  type ProductCategory,
+} from '@/utils/productClassification';
 
 export interface ProductCost {
   category: ProductCategory;
@@ -18,7 +23,7 @@ export const PRODUCT_CATEGORY_ORDER: ProductCategory[] = [
   'Spark',
   'Coding Agent',
   'Code Review',
-  'Code Review for Non-Copilot Users',
+  NON_COPILOT_CODE_REVIEW_PRODUCT_CATEGORY,
 ];
 
 function createEmptyProductCost(category: ProductCategory): ProductCost {

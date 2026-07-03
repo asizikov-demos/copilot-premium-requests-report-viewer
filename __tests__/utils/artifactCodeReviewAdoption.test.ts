@@ -1,4 +1,6 @@
 import { analyzeCodeReviewAdoptionFromArtifacts } from '@/utils/ingestion';
+import { NON_COPILOT_CODE_REVIEW_LABEL } from '@/utils/ingestion/types';
+
 import { makeUsageArtifacts, makeQuotaArtifacts } from '../helpers/makeArtifacts';
 
 function makeQuota(entries: Array<[string, number | 'unknown']>) {
@@ -113,9 +115,9 @@ describe('analyzeCodeReviewAdoptionFromArtifacts', () => {
     expect(result.totalUniqueUsers).toBe(3);
     expect(result.adoptionRate).toBeCloseTo(66.67, 1);
     expect(result.totalCodeReviewRequests).toBe(17);
-    expect(result.users.map((user) => user.user)).toEqual(['bob', 'alice', 'Non-Copilot Users']);
+    expect(result.users.map((user) => user.user)).toEqual(['bob', 'alice', NON_COPILOT_CODE_REVIEW_LABEL]);
     expect(result.users[2]).toMatchObject({
-      user: 'Non-Copilot Users',
+      user: NON_COPILOT_CODE_REVIEW_LABEL,
       codeReviewRequests: 4,
       totalRequests: 4,
       quota: 0,
@@ -146,7 +148,7 @@ describe('analyzeCodeReviewAdoptionFromArtifacts', () => {
     expect(result.totalCodeReviewRequests).toBe(6);
     expect(result.users).toEqual([
       {
-        user: 'Non-Copilot Users',
+        user: NON_COPILOT_CODE_REVIEW_LABEL,
         totalRequests: 6,
         codeReviewRequests: 6,
         codeReviewPercentage: 100,
