@@ -664,7 +664,7 @@ export function analyzeCodeReviewAdoptionFromArtifacts(usage: UsageArtifacts, qu
   const totalUniqueUsers = usage.userCount;
   const { users, totalFeatureRequests } = collectFeatureUsers(usage, quota, isCodeReviewModel);
   const totalReviewUsers = users.length;
-  let totalCodeReviewRequests = totalFeatureRequests;
+  let nonCopilotCodeReviewRequests = 0;
   const codeReviewUsers: CodeReviewAnalysis['users'] = users.map(user => ({
     user: user.user,
     totalRequests: user.totalRequests,
@@ -676,7 +676,7 @@ export function analyzeCodeReviewAdoptionFromArtifacts(usage: UsageArtifacts, qu
 
   if (nonCopilotBucket && hasNonCopilotReviewUsage) {
     const codeReviewRequests = nonCopilotModels.reduce((sum, model) => sum + nonCopilotBucket.modelBreakdown[model], 0);
-    totalCodeReviewRequests += codeReviewRequests;
+    nonCopilotCodeReviewRequests = codeReviewRequests;
     codeReviewUsers.push({
       user: NON_COPILOT_CODE_REVIEW_ADOPTION_LABEL,
       totalRequests: nonCopilotBucket.totalRequests,
@@ -690,6 +690,7 @@ export function analyzeCodeReviewAdoptionFromArtifacts(usage: UsageArtifacts, qu
 
   codeReviewUsers.sort((a, b) => b.codeReviewRequests - a.codeReviewRequests);
   const adoptionRate = totalUniqueUsers > 0 ? (totalReviewUsers / totalUniqueUsers) * 100 : 0;
+  const totalCodeReviewRequests = totalFeatureRequests + nonCopilotCodeReviewRequests;
   return { totalUsers: totalReviewUsers, totalUniqueUsers, totalCodeReviewRequests, adoptionRate, users: codeReviewUsers };
 }
 
