@@ -33,7 +33,7 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
   ): void {
     let innerMap = map.get(k1);
     if (!innerMap) {
-      innerMap = new Map();
+      innerMap = new Map<K2, number>();
       map.set(k1, innerMap);
     }
     innerMap.set(k2, (innerMap.get(k2) || 0) + delta);
@@ -48,13 +48,13 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
   ): void {
     let middleMap = map.get(k1);
     if (!middleMap) {
-      middleMap = new Map();
+      middleMap = new Map<K2, Map<K3, number>>();
       map.set(k1, middleMap);
     }
 
     let innerMap = middleMap.get(k2);
     if (!innerMap) {
-      innerMap = new Map();
+      innerMap = new Map<K3, number>();
       middleMap.set(k2, innerMap);
     }
     innerMap.set(k3, (innerMap.get(k3) || 0) + delta);
