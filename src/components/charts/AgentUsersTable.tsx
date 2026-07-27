@@ -3,7 +3,7 @@
 import React from 'react';
 
 import type { BillingCostLabels } from '@/utils/billingLabels';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, formatDecimalQuantity } from '@/utils/formatters';
 
 export interface AgentUsageTableRow {
   user: string;
@@ -17,7 +17,7 @@ export interface AgentUsageTableRow {
 
 export function formatUsageQuantity(value: number, isUsageBasedBilling: boolean): string {
   if (isUsageBasedBilling) {
-    return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return formatDecimalQuantity(value);
   }
 
   return value.toFixed(1);

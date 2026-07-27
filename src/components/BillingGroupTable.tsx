@@ -4,7 +4,7 @@ import React, { useMemo, useState } from 'react';
 
 import type { ProcessedData } from '@/types/csv';
 import type { BillingGroupTotals } from '@/utils/ingestion';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, formatDecimalQuantity } from '@/utils/formatters';
 import {
   accumulateProductCost,
   createEmptyProductCostMap,
@@ -114,10 +114,6 @@ interface BillingGroupTableProps<T extends BillingGroupRow> {
   extraColumns?: Array<BillingGroupExtraColumn<T>>;
 }
 
-function formatQuantity(value: number): string {
-  return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
 export function BillingGroupTable<T extends BillingGroupRow>({
   title,
   singularLabel,
@@ -200,7 +196,7 @@ export function BillingGroupTable<T extends BillingGroupRow>({
                         </td>
                       ))}
                       <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
-                        {formatQuantity(row.requests)}
+                        {formatDecimalQuantity(row.requests)}
                       </td>
                       {hasAicGross && (
                         <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
@@ -247,7 +243,7 @@ export function BillingGroupTable<T extends BillingGroupRow>({
                                   <tr key={product.label}>
                                     <td className="px-10 py-2.5 text-sm text-[#636c76]">{product.label}</td>
                                     <td className="px-6 py-2.5 text-sm text-[#636c76] text-right font-mono">
-                                      {formatQuantity(product.requests)}
+                                      {formatDecimalQuantity(product.requests)}
                                     </td>
                                     {hasAicGross && (
                                       <td className="px-6 py-2.5 text-sm text-[#636c76] text-right font-mono">

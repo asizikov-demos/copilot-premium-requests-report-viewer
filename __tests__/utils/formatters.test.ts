@@ -1,4 +1,14 @@
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, formatDecimalQuantity } from '@/utils/formatters';
+
+describe('formatDecimalQuantity', () => {
+  it('formats quantities with locale separators and exactly two decimal places', () => {
+    expect(formatDecimalQuantity(1234.5)).toBe('1,234.50');
+    expect(formatDecimalQuantity(0)).toBe('0.00');
+    expect(formatDecimalQuantity(1000000.123)).toBe('1,000,000.12');
+    expect(formatDecimalQuantity(0.001)).toBe('0.00');
+    expect(formatDecimalQuantity(-100.99)).toBe('-100.99');
+  });
+});
 
 describe('formatCurrency', () => {
   it('formats dollar amounts with thousands separators and two decimal places', () => {
