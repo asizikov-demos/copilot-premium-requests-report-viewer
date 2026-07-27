@@ -1,16 +1,9 @@
-import { CSVData, ProcessedData, AnalysisResults } from '@/types/csv';
-
-import { buildProcessedDataFromRawRows } from '../ingestion/adapters';
+import { ProcessedData, AnalysisResults } from '@/types/csv';
 
 import { buildQuotaBreakdown, buildUserQuotaMapFromRows, isLegacyPremiumRequestQuotaValue } from './quota';
 
 // Re-export for backwards compatibility
 export type { UserSummary } from './types';
-
-// Convert raw CSV rows into strongly typed processed data (UTC-sensitive: timestamps used as-is)
-export function processCSVData(rawData: CSVData[]): ProcessedData[] {
-  return buildProcessedDataFromRawRows(rawData);
-}
 
 export function analyzeData(data: ProcessedData[]): AnalysisResults {
   if (data.length === 0) {
