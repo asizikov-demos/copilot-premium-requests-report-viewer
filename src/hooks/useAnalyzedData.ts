@@ -8,6 +8,7 @@ import {
   buildDailyCumulativeDataFromArtifacts,
   analyzeCodingAgentAdoptionFromArtifacts,
   analyzeCodeReviewAdoptionFromArtifacts,
+  buildRequestsByModel,
   buildUsageArtifactsFromProcessedData,
   computeWeeklyQuotaExhaustionFromArtifacts,
   UsageArtifacts,
@@ -66,11 +67,9 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
         const sorted = [...filteredAllRows].sort((a,b)=> a.epoch - b.epoch);
         const timeFrame = { start: sorted[0].dateKey, end: sorted[sorted.length-1].dateKey };
         const uniqueUsers = new Set(userFiltered.map(r=> r.user));
-        const requestsByModelMap = new Map<string, number>();
-        for (const r of filteredAllRows) {
-          requestsByModelMap.set(r.model, (requestsByModelMap.get(r.model) || 0) + r.requestsUsed);
-        }
-        const requestsByModel = Array.from(requestsByModelMap.entries()).map(([model,totalRequests])=>({ model, totalRequests })).sort((a,b)=> b.totalRequests - a.totalRequests);
+        const requestsByModel = buildRequestsByModel(
+          buildUsageArtifactsFromProcessedData(filteredAllRows)
+        );
         return { timeFrame, totalUniqueUsers: uniqueUsers.size, usersExceedingQuota: 0, requestsByModel, quotaBreakdown: buildQuotaBreakdown(userFiltered) };
       })();
       return {
