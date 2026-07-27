@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 
 import { UserDetailsView } from '@/components/UserDetailsView';
 import { PRICING } from '@/constants/pricing';
-import type { ProcessedData } from '@/types/csv';
+import type { ProcessedData, UserDailyData } from '@/types/csv';
 
 jest.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div data-testid="chart-container">{children}</div>,
@@ -317,5 +317,46 @@ describe('UserDetailsView', () => {
       'data-y',
       PRICING.BUSINESS_AI_CREDIT_QUOTA.toString()
     );
+  });
+
+  it('enumerates the full UTC date range inclusively in fallback chart data', () => {
+    const createRow = (iso: string, user: string, requestsUsed: number): ProcessedData => {
+      const timestamp = new Date(iso);
+      return {
+        timestamp,
+        user,
+        model: 'test-model-one',
+        requestsUsed,
+        exceedsQuota: false,
+        totalQuota: PRICING.BUSINESS_QUOTA.toString(),
+        quotaValue: PRICING.BUSINESS_QUOTA,
+        iso,
+        dateKey: iso.slice(0, 10),
+        monthKey: iso.slice(0, 7),
+        epoch: timestamp.getTime(),
+      } as ProcessedData;
+    };
+    const processedData = [
+      createRow('2025-06-30T23:59:59Z', 'test-user-one', 2),
+      createRow('2025-07-02T00:00:00Z', 'test-user-two', 1),
+    ];
+
+    render(
+      <UserDetailsView
+        user="test-user-one"
+        processedData={processedData}
+        userQuotaValue={PRICING.BUSINESS_QUOTA}
+        onBack={mockOnBack}
+      />
+    );
+
+    const chartData = JSON.parse(
+      screen.getByTestId('composed-chart').getAttribute('data-chart') ?? '[]'
+    ) as UserDailyData[];
+    expect(chartData).toEqual([
+      { date: '2025-06-30', totalCumulative: 2, 'test-model-one': 2 },
+      { date: '2025-07-01', totalCumulative: 2, 'test-model-one': 0 },
+      { date: '2025-07-02', totalCumulative: 2, 'test-model-one': 0 },
+    ]);
   });
 });

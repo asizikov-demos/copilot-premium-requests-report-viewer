@@ -21,6 +21,7 @@ import { hasAicFields } from '@/utils/aicFields';
 import { generateModelColors } from '@/utils/modelColors';
 import { calculateEnterpriseUpgradeSavings } from '@/utils/analytics/costOptimization';
 import { getBillingCostLabels } from '@/utils/billingLabels';
+import { enumerateDatesInclusive } from '@/utils/dateKeys';
 import { formatCurrency } from '@/utils/formatters';
 import { aggregateProductCosts } from '@/utils/productCosts';
 import {
@@ -166,9 +167,10 @@ export function UserDetailsView({
 
     let cumulative = 0;
     const result: UserDailyData[] = [];
+    const startDate = new Date(start).toISOString().slice(0, 10);
+    const endDate = new Date(end).toISOString().slice(0, 10);
 
-    for (let current = new Date(start); current.getTime() <= end; current.setUTCDate(current.getUTCDate() + 1)) {
-      const dateStr = current.toISOString().slice(0, 10);
+    for (const dateStr of enumerateDatesInclusive(startDate, endDate)) {
       const day = byDate.get(dateStr) || [];
       const row: UserDailyData = { date: dateStr, totalCumulative: 0 } as UserDailyData;
       let dailyTotal = 0;
