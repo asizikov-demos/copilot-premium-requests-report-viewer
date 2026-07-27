@@ -1,5 +1,6 @@
 import type { UsageArtifacts, QuotaArtifacts } from '@/utils/ingestion';
 import { PRICING, COST_OPTIMIZATION_THRESHOLDS } from '@/constants/pricing';
+import { calculateOverageCost, calculateOverageRequests } from '@/utils/userCalculations';
 
 export interface CostOptimizationCandidate {
   user: string;
@@ -36,8 +37,8 @@ export function calculateEnterpriseUpgradeSavings(overageRequests: number): Ente
   const enterpriseExtraCapacity = PRICING.ENTERPRISE_QUOTA - PRICING.BUSINESS_QUOTA;
   const avoidedOverageRequests = Math.min(Math.max(0, overageRequests), enterpriseExtraCapacity);
   const remainingOverageRequests = Math.max(0, overageRequests - enterpriseExtraCapacity);
-  const avoidedOverageCost = avoidedOverageRequests * PRICING.OVERAGE_RATE_PER_REQUEST;
-  const remainingOverageCost = remainingOverageRequests * PRICING.OVERAGE_RATE_PER_REQUEST;
+  const avoidedOverageCost = calculateOverageCost(avoidedOverageRequests);
+  const remainingOverageCost = calculateOverageCost(remainingOverageRequests);
   const enterpriseUpgradeCost = PRICING.ENTERPRISE_UPGRADE_DELTA;
 
   return {
@@ -66,11 +67,11 @@ export function computeCostOptimizationFromArtifacts(
     const q = quota.quotaByUser.get(u.user);
     if (q !== PRICING.BUSINESS_QUOTA) continue;
 
-    const overageRequests = Math.max(0, u.totalRequests - q);
+    const overageRequests = calculateOverageRequests(u.totalRequests, q);
     // Users with very low overage are not interesting for optimization scenarios.
     if (overageRequests < COST_OPTIMIZATION_THRESHOLDS.MIN_OVERAGE_THRESHOLD) continue;
 
-    const overageCost = overageRequests * PRICING.OVERAGE_RATE_PER_REQUEST;
+    const overageCost = calculateOverageCost(overageRequests);
     const enterpriseQuota = PRICING.ENTERPRISE_QUOTA;
     const savings = calculateEnterpriseUpgradeSavings(overageRequests);
 
