@@ -123,9 +123,14 @@ export interface MakeDailyBucketEntry {
  * Build a {@link DailyBucketsArtifacts} object from flat daily usage entries.
  *
  * Produces daily totals and model totals matching DailyBucketsAggregator output.
+ * Use `overrides` for empty fixtures that need an explicit range, month list, or
+ * intentionally missing optional artifact.
  * Date handling is string-based (UTC-safe) and does not use local timezone conversion.
  */
-export function makeDailyBucketsArtifacts(entries: MakeDailyBucketEntry[]): DailyBucketsArtifacts {
+export function makeDailyBucketsArtifacts(
+  entries: MakeDailyBucketEntry[] = [],
+  overrides: Partial<DailyBucketsArtifacts> = {}
+): DailyBucketsArtifacts {
   const dailyUserTotals = new Map<string, Map<string, number>>();
   const dailyUserAicTotals = new Map<string, Map<string, number>>();
   const dailyUserModelTotals = new Map<string, Map<string, Map<string, number>>>();
@@ -163,7 +168,7 @@ export function makeDailyBucketsArtifacts(entries: MakeDailyBucketEntry[]): Dail
     months.add(e.date.slice(0, 7));
   }
 
-  return {
+  const artifacts: DailyBucketsArtifacts = {
     dailyUserTotals,
     dailyUserAicTotals,
     dailyUserModelTotals,
@@ -173,4 +178,6 @@ export function makeDailyBucketsArtifacts(entries: MakeDailyBucketEntry[]): Dail
     dateRange: min && max ? { min, max } : null,
     months: Array.from(months).sort(),
   };
+
+  return { ...artifacts, ...overrides };
 }

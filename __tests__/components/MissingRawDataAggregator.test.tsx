@@ -3,6 +3,8 @@ import { render, screen } from '@testing-library/react';
 import { DataAnalysis } from '@/components/DataAnalysis';
 import type { IngestionResult } from '@/utils/ingestion';
 
+import { makeDailyBucketsArtifacts } from '../helpers/makeArtifacts';
+
 // Ensure ResponsiveContainer does not throw in test environment
 beforeAll(() => {
   // Typed minimal ResizeObserver stub for JSDOM test environment (no layout measurements required).
@@ -20,7 +22,7 @@ function createIngestionResultWithoutRawData(): IngestionResult {
     outputs: {
       quota: { quotaByUser: new Map(), conflicts: new Map(), distinctQuotas: new Set(), hasMixedQuotas: false, hasMixedLicenses: false },
       usage: { users: [], modelTotals: {}, userCount: 0, modelCount: 0 },
-      dailyBuckets: { dailyUserTotals: new Map(), dateRange: null, months: [] },
+      dailyBuckets: makeDailyBucketsArtifacts(),
       featureUsage: {
         featureTotals: { codeReview: 0, codingAgent: 0, spark: 0 },
         featureUsers: { codeReview: new Set(), codingAgent: new Set(), spark: new Set() },
@@ -39,7 +41,7 @@ function createIngestionResultWithoutFeatureUsage(): IngestionResult {
     outputs: {
       quota: { quotaByUser: new Map(), conflicts: new Map(), distinctQuotas: new Set(), hasMixedQuotas: false, hasMixedLicenses: false },
       usage: { users: [], modelTotals: {}, userCount: 0, modelCount: 0 },
-      dailyBuckets: { dailyUserTotals: new Map(), dateRange: null, months: [] },
+      dailyBuckets: makeDailyBucketsArtifacts(),
       rawData: []
     },
     rowsProcessed: 0,

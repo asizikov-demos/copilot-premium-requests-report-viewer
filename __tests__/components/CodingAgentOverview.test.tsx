@@ -6,11 +6,12 @@ import { PRICING } from '@/constants/pricing';
 import type { CodeReviewAnalysis, CodingAgentUser, ProcessedData } from '@/types/csv';
 import type {
   BillingArtifacts,
-  DailyBucketsArtifacts,
   FeatureUsageArtifacts,
   QuotaArtifacts,
   UsageArtifacts,
 } from '@/utils/ingestion';
+
+import { makeDailyBucketsArtifacts } from '../helpers/makeArtifacts';
 
 function buildProcessedRow(partial: Partial<ProcessedData>): ProcessedData {
   const timestamp = new Date('2026-03-01T00:00:00Z');
@@ -61,11 +62,9 @@ function createContextValue() {
       userCount: 0,
       modelCount: 0,
     } as UsageArtifacts,
-    dailyBucketsArtifacts: {
-      dailyUserTotals: new Map(),
-      dailyUserModelTotals: new Map(),
+    dailyBucketsArtifacts: makeDailyBucketsArtifacts([], {
       dateRange: { min: '2025-06-01', max: '2025-06-02' },
-    } as DailyBucketsArtifacts,
+    }),
     featureUsageArtifacts: {
       featureTotals: { codeReview: 0, codingAgent: 0, spark: 0 },
       featureUsers: { codeReview: new Set(), codingAgent: new Set(), spark: new Set() },
@@ -251,11 +250,10 @@ describe('CodingAgentOverview', () => {
         value={{
           ...createContextValue(),
           aggregateProcessedData,
-          dailyBucketsArtifacts: {
-            dailyUserTotals: new Map(),
+          dailyBucketsArtifacts: makeDailyBucketsArtifacts([], {
             dailyUserAicModelTotals,
             dateRange: { min: '2026-03-01', max: '2026-03-01' },
-          } as DailyBucketsArtifacts,
+          }),
         }}
       >
         <CodingAgentOverview
