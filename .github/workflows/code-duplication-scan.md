@@ -80,7 +80,12 @@ Pay special attention to billing date handling, pricing/quota constants, optiona
    - overage and pricing calculations
    - table/card/chart/filter UI primitives
    - test artifact and processed-data builders
-5. Search existing open issues with the `[duplication]` title prefix before creating a new issue. Do not create a duplicate if an open issue already covers the same root problem.
+5. Search existing open issues with the `[duplication]` title prefix before creating a new issue. Also inspect recently closed `[duplication]` issues and closing comments, and do not recreate rejected patterns or duplicate root problems.
+6. Before creating any issue, red-team the finding as a likely false positive:
+   - Trace the proposed helper, adapter, or abstraction through the fields and behavior actually consumed downstream. Structural type compatibility, wider projections, or extra fields alone are not evidence of behavior change.
+   - For correctness claims, identify a concrete reproducible input, the current output, the expected output, and a plausible regression test that would fail before and pass after. If you cannot demonstrate this, do not describe the finding as a bug.
+   - Check exact semantic equivalence across call sites: filtering, nullability, comparator/order, edge cases, and domain meaning. Do not consolidate similar syntax by silently standardizing behavior.
+   - Apply an abstraction-value test. Skip standard locally readable idioms such as `map`/`filter`/`Set`/`sort` unless they encode a shared domain policy. Skip helpers that mostly add imports, generic types, and tests without reducing conceptual complexity.
 
 ## Finding grouping rules
 
@@ -105,11 +110,14 @@ If multiple files duplicate the same logic, group them into one issue. If two fi
 Create an issue only when all of these are true:
 
 - The duplicated logic is present in two or more places.
-- The duplication has a plausible maintenance, correctness, or testability impact.
+- The duplicated code encodes the same domain rule or demonstrates concrete behavioral drift, not just similar syntax or structural shape.
+- The proposed change preserves each caller's existing semantics, including filtering, nullability, sorting, edge cases, and downstream consumer contracts.
+- The impact is demonstrable: correctness claims include a reproducible input, actual versus expected output, and a plausible failing-then-passing regression test.
+- The abstraction removes more conceptual complexity than it introduces through new helpers, imports, generic types, or tests.
 - The fix can be described as one bounded implementation task.
 - You can name specific files, functions, or components as evidence.
 
-Skip findings that are only repeated styling classes, normal React markup, or test assertions unless they hide duplicated behavior or create meaningful maintenance overhead.
+Prefer no issue when risk is hypothetical, duplication is trivial or incidental, or the abstraction is more complex than the existing code. Skip findings that are only repeated styling classes, normal React markup, ordinary local collection pipelines, or test assertions unless they hide duplicated domain behavior or create meaningful maintenance overhead.
 
 ## Issue template
 
