@@ -1,5 +1,4 @@
-import { buildProcessedDataLegacy } from '@/utils/ingestion/adapter';
-import { buildProcessedDataFromRows } from '@/utils/ingestion/adapters';
+import { buildProcessedDataFromRawRows, buildProcessedDataFromRows } from '@/utils/ingestion';
 import { normalizeRow } from '@/utils/ingestion/normalizeRow';
 import type { CSVData } from '@/types/csv';
 import type { NormalizedRow } from '@/utils/ingestion/types';
@@ -301,7 +300,7 @@ describe('processCSVData (CSV format)', () => {
     expect(warnings).toEqual([]);
     expect(rows[0].username).toBe(' test-user-one ');
     expect(processCSVData(rows)).toEqual(canonical);
-    expect(buildProcessedDataLegacy(rows)).toEqual(canonical);
+    expect(buildProcessedDataFromRawRows(rows)).toEqual(canonical);
     expect(canonical[0].user).toBe('test-user-one');
     expect(canonical[0]).toMatchObject({
       user: 'test-user-one',
