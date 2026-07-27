@@ -74,12 +74,10 @@ describe('buildDailyModelUsageFromArtifacts', () => {
 
   it('returns empty array when artifacts incomplete', () => {
     const usageArtifacts = makeUsageFromModelTotals({});
-    const dailyBucketsArtifacts = {
+    const dailyBucketsArtifacts = makeDailyBucketsArtifacts([], {
       dateRange: undefined,
-      dailyUserTotals: new Map(),
       dailyUserModelTotals: undefined,
-      months: []
-    } as unknown as DailyBucketsArtifacts;
+    });
 
     const result = buildDailyModelUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
     expect(result).toEqual([]);
@@ -116,13 +114,11 @@ describe('buildDailyModelAicUsageFromArtifacts', () => {
 
   it('returns empty array when AIC model artifacts are missing', () => {
     const usageArtifacts = makeUsageFromModelTotals({ 'test-model-one': 1 });
-    const dailyBucketsArtifacts = {
+    const dailyBucketsArtifacts = makeDailyBucketsArtifacts([], {
       dateRange: { min: '2025-06-01', max: '2025-06-01' },
-      dailyUserTotals: new Map(),
-      dailyUserModelTotals: new Map(),
       dailyUserAicModelTotals: undefined,
       months: ['2025-06'],
-    } as unknown as DailyBucketsArtifacts;
+    });
 
     const result = buildDailyModelAicUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
 
