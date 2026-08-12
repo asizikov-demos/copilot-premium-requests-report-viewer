@@ -137,6 +137,83 @@ describe('UserDetailsView', () => {
     });
   });
 
+  it('groups user spend by cost center and omits the table without cost centers', () => {
+    const makeRow = (
+      date: string,
+      costCenter: string | undefined,
+      requestsUsed: number,
+      grossAmount: number,
+      discountAmount: number,
+      netAmount: number
+    ): ProcessedData => {
+      const timestamp = new Date(`${date}T00:00:00Z`);
+      return {
+        timestamp,
+        user: 'test-user-one',
+        model: 'test-model-one',
+        requestsUsed,
+        exceedsQuota: false,
+        totalQuota: PRICING.BUSINESS_QUOTA.toString(),
+        quotaValue: PRICING.BUSINESS_QUOTA,
+        iso: timestamp.toISOString(),
+        dateKey: date,
+        monthKey: date.slice(0, 7),
+        epoch: timestamp.getTime(),
+        costCenter,
+        grossAmount,
+        discountAmount,
+        netAmount,
+      };
+    };
+    const processedData = [
+      makeRow('2026-03-01', 'test-cost-center-one', 10, 0.4, 0.1, 0.3),
+      makeRow('2026-03-02', 'test-cost-center-one', 5, 0.2, 0.05, 0.15),
+      makeRow('2026-03-03', 'test-cost-center-two', 20, 0.8, 0.2, 0.6),
+      makeRow('2026-03-04', undefined, 2, 0.08, 0, 0.08),
+    ];
+
+    const { rerender } = render(
+      <UserDetailsView
+        user="test-user-one"
+        processedData={processedData}
+        userQuotaValue={PRICING.BUSINESS_QUOTA}
+        onBack={mockOnBack}
+      />
+    );
+
+    const table = screen.getByRole('table', { name: 'Cost per Cost Center' });
+    const firstCostCenterRow = within(table).getByText('test-cost-center-one').closest('tr');
+    const secondCostCenterRow = within(table).getByText('test-cost-center-two').closest('tr');
+
+    expect(firstCostCenterRow).not.toBeNull();
+    expect(firstCostCenterRow).toHaveTextContent('15.00');
+    expect(firstCostCenterRow).toHaveTextContent('$0.60');
+    expect(firstCostCenterRow).toHaveTextContent('-$0.15');
+    expect(firstCostCenterRow).toHaveTextContent('$0.45');
+    expect(secondCostCenterRow).not.toBeNull();
+    expect(secondCostCenterRow).toHaveTextContent('20.00');
+    expect(secondCostCenterRow).toHaveTextContent('$0.60');
+    expect(within(table).queryByText('$0.08')).not.toBeInTheDocument();
+
+    const dailyTable = screen.getByRole('table', { name: 'Daily Model Usage Breakdown' });
+    expect(within(dailyTable).getByRole('columnheader', { name: 'Cost Center' })).toBeInTheDocument();
+    expect(within(dailyTable).getAllByText('test-cost-center-one')).toHaveLength(2);
+    expect(within(dailyTable).getByText('test-cost-center-two')).toBeInTheDocument();
+    expect(within(dailyTable).getByText('—')).toBeInTheDocument();
+
+    rerender(
+      <UserDetailsView
+        user="test-user-one"
+        processedData={[makeRow('2026-03-04', undefined, 2, 0.08, 0, 0.08)]}
+        userQuotaValue={PRICING.BUSINESS_QUOTA}
+        onBack={mockOnBack}
+      />
+    );
+
+    expect(screen.queryByRole('table', { name: 'Cost per Cost Center' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Cost Center' })).not.toBeInTheDocument();
+  });
+
   it('renders AI Credits Gross in product and daily model breakdown tables', async () => {
     const firstTimestamp = new Date('2026-03-01T00:00:00Z');
     const secondTimestamp = new Date('2026-03-02T00:00:00Z');

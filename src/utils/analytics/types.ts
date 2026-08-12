@@ -8,4 +8,5 @@ export interface UserSummary {
   modelBreakdown: Record<string, number>;
   organization?: string;
   costCenter?: string;
+  costCenters?: string[];
 }

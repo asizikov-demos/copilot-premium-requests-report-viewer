@@ -55,6 +55,7 @@ function makeUsage(users: UserSummary[]): UsageArtifacts {
     }
     if (u.organization) organizations.add(u.organization);
     if (u.costCenter) costCenters.add(u.costCenter);
+    for (const costCenter of u.costCenters ?? []) costCenters.add(costCenter);
   }
 
   return {
@@ -63,7 +64,8 @@ function makeUsage(users: UserSummary[]): UsageArtifacts {
       totalRequests: u.totalRequests,
       modelBreakdown: u.modelBreakdown,
       organization: u.organization,
-      costCenter: u.costCenter
+      costCenter: u.costCenter,
+      costCenters: u.costCenters,
     })),
     modelTotals,
     userCount: users.length,
@@ -370,22 +372,34 @@ describe('UsersOverview - sorting', () => {
 
   it('filters users by organization and cost center when metadata is available', () => {
     const userData: UserSummary[] = [
-      { user: 'Alice', totalRequests: 10, modelBreakdown: { 'gpt-4': 10 }, organization: 'Org A', costCenter: 'Platform' },
-      { user: 'Bob', totalRequests: 20, modelBreakdown: { 'gpt-4': 20 }, organization: 'Org B', costCenter: 'Security' },
-      { user: 'Charlie', totalRequests: 15, modelBreakdown: { 'gpt-4': 15 }, organization: 'Org A', costCenter: 'Security' },
+      {
+        user: 'test-user-one',
+        totalRequests: 10,
+        modelBreakdown: { 'model-one': 10 },
+        organization: 'test-org-one',
+        costCenter: 'test-cost-center-one',
+        costCenters: ['test-cost-center-one', 'test-cost-center-two'],
+      },
+      { user: 'test-user-two', totalRequests: 20, modelBreakdown: { 'model-one': 20 }, organization: 'test-org-two', costCenter: 'test-cost-center-two' },
+      { user: 'test-user-three', totalRequests: 15, modelBreakdown: { 'model-one': 15 }, organization: 'test-org-one', costCenter: 'test-cost-center-two' },
     ];
 
     const quotaArtifacts = makeQuota([
-      { user: 'Alice', quota: PRICING.BUSINESS_QUOTA },
-      { user: 'Bob', quota: PRICING.BUSINESS_QUOTA },
-      { user: 'Charlie', quota: PRICING.BUSINESS_QUOTA },
+      { user: 'test-user-one', quota: PRICING.BUSINESS_QUOTA },
+      { user: 'test-user-two', quota: PRICING.BUSINESS_QUOTA },
+      { user: 'test-user-three', quota: PRICING.BUSINESS_QUOTA },
     ]);
 
     render(
       <UsersOverview
         userData={userData}
         processedData={[]}
-        dailyCumulativeData={[{ date: '2025-01-01T00:00:00Z', Alice: 1, Bob: 1, Charlie: 1 }]}
+        dailyCumulativeData={[{
+          date: '2025-01-01T00:00:00Z',
+          'test-user-one': 1,
+          'test-user-two': 1,
+          'test-user-three': 1,
+        }]}
         quotaArtifacts={quotaArtifacts}
         usageArtifacts={makeUsage(userData)}
       />
@@ -397,11 +411,14 @@ describe('UsersOverview - sorting', () => {
       return rows.map(row => within(row).getByRole('button').textContent ?? '');
     };
 
-    fireEvent.change(screen.getByLabelText('Organization'), { target: { value: 'Org A' } });
-    expect(getRowUserOrder()).toEqual(['Charlie', 'Alice']);
+    fireEvent.change(screen.getByLabelText('Organization'), { target: { value: 'test-org-one' } });
+    expect(getRowUserOrder()).toEqual(['test-user-three', 'test-user-one']);
 
-    fireEvent.change(screen.getByLabelText('Cost center'), { target: { value: 'Security' } });
-    expect(getRowUserOrder()).toEqual(['Charlie']);
+    fireEvent.change(screen.getByLabelText('Cost center'), { target: { value: 'test-cost-center-one' } });
+    expect(getRowUserOrder()).toEqual(['test-user-one']);
+
+    fireEvent.change(screen.getByLabelText('Cost center'), { target: { value: 'test-cost-center-two' } });
+    expect(getRowUserOrder()).toEqual(['test-user-three', 'test-user-one']);
   });
 
   it('opens inline user details and returns via breadcrumb', () => {

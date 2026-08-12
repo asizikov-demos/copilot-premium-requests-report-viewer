@@ -102,7 +102,8 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
       totalRequests: u.totalRequests,
       modelBreakdown: u.modelBreakdown,
       organization: u.organization,
-      costCenter: u.costCenter
+      costCenter: u.costCenter,
+      costCenters: u.costCenters,
     })).sort((a, b) => b.totalRequests - a.totalRequests);
     const allModels = Object.keys(usageArtifacts!.modelTotals).sort();
     return {
