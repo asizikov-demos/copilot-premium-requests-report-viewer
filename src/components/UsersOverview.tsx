@@ -261,6 +261,10 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, da
     sortedUserData.slice(activePage * ROWS_PER_PAGE, (activePage + 1) * ROWS_PER_PAGE),
     [sortedUserData, activePage]
   );
+  const selectedUserAggregate = useMemo(
+    () => userData.find((entry) => entry.user === selectedUser),
+    [selectedUser, userData]
+  );
 
   // Reset to first page when sorting changes
   const handleSortWithReset = (column: ColumnKey) => {
@@ -274,6 +278,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, da
         user={selectedUser}
         processedData={processedData}
         userQuotaValue={getUserQuota(quotaArtifacts, selectedUser)}
+        userAggregate={selectedUserAggregate}
         onBack={() => setSelectedUser(null)}
       />
     );

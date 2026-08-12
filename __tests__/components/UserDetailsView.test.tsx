@@ -95,6 +95,36 @@ describe('UserDetailsView', () => {
     });
   });
 
+  it('uses the filtered user aggregate for organization and cost center metadata', () => {
+    const processedData = createMockProcessedData([PRICING.BUSINESS_QUOTA]).map((row) => ({
+      ...row,
+      user: 'test-user-one',
+      organization: 'test-org-row',
+      costCenter: 'test-cost-center-row',
+    }));
+
+    render(
+      <UserDetailsView
+        user="test-user-one"
+        processedData={processedData}
+        userQuotaValue={PRICING.BUSINESS_QUOTA}
+        userAggregate={{
+          user: 'test-user-one',
+          totalRequests: 1,
+          modelBreakdown: { 'test-model-one': 1 },
+          organization: 'test-org-artifact',
+          costCenter: 'test-cost-center-artifact',
+        }}
+        onBack={mockOnBack}
+      />
+    );
+
+    expect(screen.getByText(/test-org-artifact/)).toBeInTheDocument();
+    expect(screen.getByText(/test-cost-center-artifact/)).toBeInTheDocument();
+    expect(screen.queryByText(/test-org-row/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/test-cost-center-row/)).not.toBeInTheDocument();
+  });
+
   it('renders Spark as a separate billing product bucket', async () => {
     const timestamp = new Date('2025-06-10T10:00:00Z');
     const iso = timestamp.toISOString();
