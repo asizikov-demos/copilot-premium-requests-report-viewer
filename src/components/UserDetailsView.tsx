@@ -59,7 +59,7 @@ export interface UserDetailsViewProps {
   user: string;
   processedData: ProcessedData[];
   userQuotaValue: number | 'unknown';
-  userAggregate?: UserSummary;
+  userAggregate?: UserSummary | null;
   onBack: () => void;
 }
 
@@ -218,7 +218,9 @@ export function UserDetailsView({
   }, [processedData, user, usageArtifacts, dailyBucketsArtifacts, isUserUsageBasedBilling]);
 
   const effectiveUserAggregate = useMemo(
-    () => userAggregate ?? usageArtifacts?.users.find((entry) => entry.user === user),
+    () => userAggregate === undefined
+      ? usageArtifacts?.users.find((entry) => entry.user === user)
+      : userAggregate ?? undefined,
     [user, userAggregate, usageArtifacts]
   );
   const { organization, costCenter } = useMemo(() => {

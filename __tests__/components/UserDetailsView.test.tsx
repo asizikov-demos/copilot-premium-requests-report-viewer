@@ -2,7 +2,10 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 
 import { UserDetailsView } from '@/components/UserDetailsView';
 import { PRICING } from '@/constants/pricing';
+import { AnalysisContext } from '@/context/AnalysisContext';
 import type { ProcessedData, UserDailyData } from '@/types/csv';
+
+import { makeUsageArtifacts } from '../helpers/makeArtifacts';
 
 jest.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div data-testid="chart-container">{children}</div>,
@@ -123,6 +126,35 @@ describe('UserDetailsView', () => {
     expect(screen.getByText(/test-cost-center-artifact/)).toBeInTheDocument();
     expect(screen.queryByText(/test-org-row/)).not.toBeInTheDocument();
     expect(screen.queryByText(/test-cost-center-row/)).not.toBeInTheDocument();
+  });
+
+  it('does not use full-upload metadata when the filtered user is absent', () => {
+    const contextValue = {
+      usageArtifacts: makeUsageArtifacts([
+        {
+          user: 'test-user-one',
+          totalRequests: 50,
+          organization: 'test-org-full-upload',
+          costCenter: 'test-cost-center-full-upload',
+        },
+      ]),
+    } as React.ContextType<typeof AnalysisContext>;
+
+    render(
+      <AnalysisContext.Provider value={contextValue}>
+        <UserDetailsView
+          user="test-user-one"
+          processedData={[]}
+          userQuotaValue={PRICING.BUSINESS_QUOTA}
+          userAggregate={null}
+          onBack={mockOnBack}
+        />
+      </AnalysisContext.Provider>
+    );
+
+    expect(screen.queryByText(/test-org-full-upload/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/test-cost-center-full-upload/)).not.toBeInTheDocument();
+    expect(screen.getByText(/0\s*\/\s*300/)).toBeInTheDocument();
   });
 
   it('renders Spark as a separate billing product bucket', async () => {

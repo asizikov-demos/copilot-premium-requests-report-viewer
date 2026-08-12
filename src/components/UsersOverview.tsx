@@ -278,7 +278,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, da
         user={selectedUser}
         processedData={processedData}
         userQuotaValue={getUserQuota(quotaArtifacts, selectedUser)}
-        userAggregate={selectedUserAggregate}
+        userAggregate={selectedUserAggregate ?? null}
         onBack={() => setSelectedUser(null)}
       />
     );
