@@ -7,6 +7,7 @@ import { AnalysisContext } from '@/context/AnalysisContext';
 import { UserDailyStackedChart } from '@/components/charts/UserDailyStackedChart';
 import { utcDateLabelFormatter } from '@/components/charts/chartTooltipStyles';
 import type { ProcessedData, UserDailyData } from '@/types/csv';
+import type { UserSummary } from '@/utils/analytics';
 import { getQuotaTier, isLegacyPremiumRequestQuotaValue } from '@/utils/analytics/quota';
 import {
   buildUserDailyAicModelDataFromArtifacts,
@@ -58,6 +59,7 @@ export interface UserDetailsViewProps {
   user: string;
   processedData: ProcessedData[];
   userQuotaValue: number | 'unknown';
+  userAggregate?: UserSummary | null;
   onBack: () => void;
 }
 
@@ -107,6 +109,7 @@ export function UserDetailsView({
   user,
   processedData,
   userQuotaValue,
+  userAggregate,
   onBack,
 }: UserDetailsViewProps) {
   const analysisCtx = useContext(AnalysisContext);
@@ -214,24 +217,33 @@ export function UserDetailsView({
     return result;
   }, [processedData, user, usageArtifacts, dailyBucketsArtifacts, isUserUsageBasedBilling]);
 
-  const { organization, costCenter } = useMemo(
-    () => getUserOrgMetadata(processedData, user),
-    [processedData, user]
+  const effectiveUserAggregate = useMemo(
+    () => userAggregate === undefined
+      ? usageArtifacts?.users.find((entry) => entry.user === user)
+      : userAggregate ?? undefined,
+    [user, userAggregate, usageArtifacts]
   );
+  const { organization, costCenter } = useMemo(() => {
+    if (effectiveUserAggregate) {
+      return {
+        organization: effectiveUserAggregate.organization,
+        costCenter: effectiveUserAggregate.costCenter,
+      };
+    }
+
+    return getUserOrgMetadata(processedData, user);
+  }, [effectiveUserAggregate, processedData, user]);
 
   const userModels = useMemo(() => Array.from(new Set(userData.map((entry) => entry.model))).sort(), [userData]);
   const modelColors = useMemo(() => generateModelColors(userModels), [userModels]);
 
   const userTotalRequests = useMemo(() => {
-    if (usageArtifacts) {
-      const aggregate = usageArtifacts.users.find((entry) => entry.user === user);
-      if (aggregate) {
-        return aggregate.totalRequests;
-      }
+    if (effectiveUserAggregate) {
+      return effectiveUserAggregate.totalRequests;
     }
 
     return calculateUserTotalRequests(processedData, user);
-  }, [processedData, user, usageArtifacts]);
+  }, [effectiveUserAggregate, processedData, user]);
 
   const requestQuotaValue = isLegacyPremiumRequestQuotaValue(effectiveUserQuotaValue)
     ? effectiveUserQuotaValue
