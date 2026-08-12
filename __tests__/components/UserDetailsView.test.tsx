@@ -214,6 +214,72 @@ describe('UserDetailsView', () => {
     expect(screen.queryByRole('columnheader', { name: 'Cost Center' })).not.toBeInTheDocument();
   });
 
+  it('omits cost center spend when billing fields are unavailable', () => {
+    render(
+      <UserDetailsView
+        user="test-user-one"
+        processedData={createMockProcessedData([PRICING.BUSINESS_QUOTA]).map((row) => ({
+          ...row,
+          user: 'test-user-one',
+          costCenter: 'test-cost-center-one',
+        }))}
+        userQuotaValue={PRICING.BUSINESS_QUOTA}
+        onBack={mockOnBack}
+      />
+    );
+
+    expect(screen.queryByRole('table', { name: 'Cost per Cost Center' })).not.toBeInTheDocument();
+  });
+
+  it('does not count AI Credits as requests in mixed cost center usage', () => {
+    const requestTimestamp = new Date('2026-06-01T00:00:00Z');
+    const creditTimestamp = new Date('2026-06-02T00:00:00Z');
+    const makeRow = (
+      timestamp: Date,
+      usageUnit: 'request' | 'ai_credit',
+      requestsUsed: number,
+      billingQuantity: number
+    ): ProcessedData => ({
+      timestamp,
+      user: 'test-user-one',
+      model: 'test-model-one',
+      requestsUsed,
+      exceedsQuota: false,
+      totalQuota: PRICING.BUSINESS_QUOTA.toString(),
+      quotaValue: PRICING.BUSINESS_QUOTA,
+      iso: timestamp.toISOString(),
+      dateKey: timestamp.toISOString().slice(0, 10),
+      monthKey: timestamp.toISOString().slice(0, 7),
+      epoch: timestamp.getTime(),
+      costCenter: 'test-cost-center-one',
+      usageUnit,
+      billingQuantity,
+      grossAmount: 0.12,
+      discountAmount: 0,
+      netAmount: 0.12,
+    });
+
+    render(
+      <UserDetailsView
+        user="test-user-one"
+        processedData={[
+          makeRow(requestTimestamp, 'request', 3, 3),
+          makeRow(creditTimestamp, 'ai_credit', 0, 42.5),
+        ]}
+        userQuotaValue={PRICING.BUSINESS_QUOTA}
+        onBack={mockOnBack}
+      />
+    );
+
+    const table = screen.getByRole('table', { name: 'Cost per Cost Center' });
+    const costCenterRow = within(table).getByText('test-cost-center-one').closest('tr');
+
+    expect(within(table).getByRole('columnheader', { name: 'Requests' })).toBeInTheDocument();
+    expect(costCenterRow).not.toBeNull();
+    expect(costCenterRow).toHaveTextContent('3.00');
+    expect(costCenterRow).not.toHaveTextContent('45.50');
+  });
+
   it('renders AI Credits Gross in product and daily model breakdown tables', async () => {
     const firstTimestamp = new Date('2026-03-01T00:00:00Z');
     const secondTimestamp = new Date('2026-03-02T00:00:00Z');
