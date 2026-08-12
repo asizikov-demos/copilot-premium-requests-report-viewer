@@ -149,6 +149,7 @@ export interface UserAggregate {
   quotaValue?: number | 'unknown';
   organization?: string;
   costCenter?: string;
+  costCenters?: string[];
 }
 
 /**

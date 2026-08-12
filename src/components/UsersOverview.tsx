@@ -122,9 +122,9 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, da
   }, [userData]);
 
   const costCenterOptions = useMemo(() => {
-    const costCenters = userData
-      .map((user) => user.costCenter)
-      .filter((costCenter): costCenter is string => Boolean(costCenter));
+    const costCenters = userData.flatMap((user) => (
+      user.costCenters ?? (user.costCenter ? [user.costCenter] : [])
+    ));
 
     return Array.from(new Set(costCenters)).sort((a, b) => a.localeCompare(b));
   }, [userData]);
@@ -189,7 +189,8 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, da
     userData.filter((user) => {
       const matchesSearch = searchQuery === '' || user.user.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesOrganization = effectiveSelectedOrganization === ALL_FILTERS_VALUE || user.organization === effectiveSelectedOrganization;
-      const matchesCostCenter = effectiveSelectedCostCenter === ALL_FILTERS_VALUE || user.costCenter === effectiveSelectedCostCenter;
+      const userCostCenters = user.costCenters ?? (user.costCenter ? [user.costCenter] : []);
+      const matchesCostCenter = effectiveSelectedCostCenter === ALL_FILTERS_VALUE || userCostCenters.includes(effectiveSelectedCostCenter);
       const matchesPlan = effectiveSelectedPlan === ALL_FILTERS_VALUE || getUserPlanLabel(user.user) === effectiveSelectedPlan;
 
       return matchesSearch && matchesOrganization && matchesCostCenter && matchesPlan;

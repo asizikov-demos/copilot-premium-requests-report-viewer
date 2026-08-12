@@ -16,12 +16,18 @@ export interface UsageAccumulationRow {
   usageBucket?: SpecialUsageBucketKey;
 }
 
+interface UserMetadata {
+  organization?: string;
+  costCenter?: string;
+  costCenters: Set<string>;
+}
+
 export class UsageAccumulator {
   private userTotals = new Map<string, number>();
   private userModelTotals = new Map<string, Map<string, number>>();
   private modelTotals = new Map<string, number>();
   private topModelPerUser = new Map<string, { model: string; value: number }>();
-  private userMetadata = new Map<string, { organization?: string; costCenter?: string }>();
+  private userMetadata = new Map<string, UserMetadata>();
   private organizations = new Set<string>();
   private costCenters = new Set<string>();
   private specialBuckets = new Map<SpecialUsageBucketKey, SpecialUsageBucketAggregate>();
@@ -64,12 +70,15 @@ export class UsageAccumulator {
       this.costCenters.add(costCenter);
     }
 
-    const metadata = this.userMetadata.get(user) ?? {};
+    const metadata = this.userMetadata.get(user) ?? { costCenters: new Set<string>() };
     if (!metadata.organization && organization) {
       metadata.organization = organization;
     }
     if (!metadata.costCenter && costCenter) {
       metadata.costCenter = costCenter;
+    }
+    if (costCenter) {
+      metadata.costCenters.add(costCenter);
     }
     this.userMetadata.set(user, metadata);
 
@@ -106,6 +115,9 @@ export class UsageAccumulator {
         topModelValue: topEntry?.value,
         organization: metadata?.organization,
         costCenter: metadata?.costCenter,
+        costCenters: metadata
+          ? Array.from(metadata.costCenters).sort((left, right) => left.localeCompare(right))
+          : [],
       });
     }
 

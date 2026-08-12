@@ -21,7 +21,7 @@ describe('UsageAggregator', () => {
 
     const rows: NormalizedRow[] = [
       makeNormalizedRow({ user: 'test-user-one', organization: 'test-org-two', costCenter: 'test-cost-center-one', quantity: 2 }),
-      makeNormalizedRow({ user: 'test-user-one', model: 'gpt-4.1', quantity: 3 }),
+      makeNormalizedRow({ user: 'test-user-one', model: 'gpt-4.1', costCenter: 'test-cost-center-two', quantity: 3 }),
       makeNormalizedRow({ user: 'test-user-two', organization: 'test-org-one', costCenter: 'test-cost-center-two', quantity: 1 }),
       makeNormalizedRow({ user: 'test-user-three', costCenter: 'test-cost-center-two', quantity: 4 }),
     ];
@@ -35,7 +35,13 @@ describe('UsageAggregator', () => {
     expect(output.organizations).toEqual(['test-org-one', 'test-org-two']);
     expect(output.costCenters).toEqual(['test-cost-center-one', 'test-cost-center-two']);
     expect(output.users).toEqual(expect.arrayContaining([
-      expect.objectContaining({ user: 'test-user-one', organization: 'test-org-two', costCenter: 'test-cost-center-one', totalRequests: 5 }),
+      expect.objectContaining({
+        user: 'test-user-one',
+        organization: 'test-org-two',
+        costCenter: 'test-cost-center-one',
+        costCenters: ['test-cost-center-one', 'test-cost-center-two'],
+        totalRequests: 5,
+      }),
       expect.objectContaining({ user: 'test-user-two', organization: 'test-org-one', costCenter: 'test-cost-center-two', totalRequests: 1 }),
       expect.objectContaining({ user: 'test-user-three', organization: undefined, costCenter: 'test-cost-center-two', totalRequests: 4 }),
     ]));

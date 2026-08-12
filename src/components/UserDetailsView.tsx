@@ -45,6 +45,15 @@ interface TooltipProps {
   valueUnitLabel?: string;
 }
 
+interface UserCostCenterCost {
+  name: string;
+  quantity: number;
+  gross: number;
+  discount: number;
+  net: number;
+  aicGrossAmount: number;
+}
+
 export interface UserDetailsViewProps {
   user: string;
   processedData: ProcessedData[];
@@ -253,6 +262,7 @@ export function UserDetailsView({
   type DailyModelRow = {
     date: string;
     model: string;
+    costCenter?: string;
     requests: number;
     gross: number;
     discount: number;
@@ -275,11 +285,11 @@ export function UserDetailsView({
     );
     if (!hasBillingData) return [];
 
-    // Aggregate by date + model
+    // Aggregate by date + model + cost center so cost-center changes remain visible.
     type Key = string;
-    const agg = new Map<Key, { date: string; model: string; requests: number; gross: number; discount: number; net: number; aicGrossAmount: number }>();
+    const agg = new Map<Key, { date: string; model: string; costCenter?: string; requests: number; gross: number; discount: number; net: number; aicGrossAmount: number }>();
     for (const row of userData) {
-      const key = `${row.dateKey}||${row.model}`;
+      const key = `${row.dateKey}||${row.model}||${row.costCenter ?? ''}`;
       const quantity = isUserUsageBasedBilling ? row.billingQuantity ?? row.requestsUsed : row.requestsUsed;
       const existing = agg.get(key);
       if (existing) {
@@ -292,6 +302,7 @@ export function UserDetailsView({
         agg.set(key, {
           date: row.dateKey,
           model: row.model,
+          costCenter: row.costCenter,
           requests: quantity,
           gross: row.grossAmount ?? 0,
           discount: row.discountAmount ?? 0,
@@ -302,9 +313,11 @@ export function UserDetailsView({
     }
 
     // Sort by date asc, then model
-    const sorted = Array.from(agg.values()).sort((a, b) =>
-      a.date !== b.date ? a.date.localeCompare(b.date) : a.model.localeCompare(b.model)
-    );
+    const sorted = Array.from(agg.values()).sort((a, b) => {
+      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      if (a.model !== b.model) return a.model.localeCompare(b.model);
+      return (a.costCenter ?? '').localeCompare(b.costCenter ?? '');
+    });
 
     // Count rows per date for rowSpan
     const dateSpan = new Map<string, number>();
@@ -328,6 +341,35 @@ export function UserDetailsView({
     );
     if (!hasBillingData) return [];
     return aggregateProductCosts(userData);
+  }, [userData]);
+
+  const costCenterCosts = useMemo((): UserCostCenterCost[] => {
+    const totals = new Map<string, UserCostCenterCost>();
+
+    for (const row of userData) {
+      if (!row.costCenter) {
+        continue;
+      }
+
+      const entry = totals.get(row.costCenter) ?? {
+        name: row.costCenter,
+        quantity: 0,
+        gross: 0,
+        discount: 0,
+        net: 0,
+        aicGrossAmount: 0,
+      };
+      entry.quantity += row.billingQuantity ?? row.requestsUsed;
+      entry.gross += row.grossAmount ?? 0;
+      entry.discount += row.discountAmount ?? 0;
+      entry.net += row.netAmount ?? 0;
+      entry.aicGrossAmount += row.aicGrossAmount ?? 0;
+      totals.set(row.costCenter, entry);
+    }
+
+    return Array.from(totals.values()).sort(
+      (left, right) => right.net - left.net || left.name.localeCompare(right.name)
+    );
   }, [userData]);
 
   const planInfo = {
@@ -437,6 +479,45 @@ export function UserDetailsView({
           })()}
       </div>
 
+      {/* Cost per Cost Center — standalone card */}
+      {costCenterCosts.length > 0 && (
+        <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
+          <div className="px-5 py-4 border-b border-[#d1d9e0]">
+            <h3 className="text-sm font-medium text-[#1f2328]">Cost per Cost Center</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full" aria-label="Cost per Cost Center">
+              <thead>
+                <tr className="border-b border-[#d1d9e0]">
+                  <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Cost Center</th>
+                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{userQuantityColumnLabel}</th>
+                  {showAicGross && (
+                    <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">AI Credits Gross</th>
+                  )}
+                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{userCostLabels.gross}</th>
+                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{userCostLabels.discount}</th>
+                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{userCostLabels.net}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#d1d9e0]">
+                {costCenterCosts.map((costCenter) => (
+                  <tr key={costCenter.name} className="hover:bg-[#fcfdff] transition-colors">
+                    <td className="px-5 py-3 text-sm font-medium text-[#1f2328]">{costCenter.name}</td>
+                    <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono">{costCenter.quantity.toFixed(2)}</td>
+                    {showAicGross && (
+                      <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono">{formatCurrency(costCenter.aicGrossAmount)}</td>
+                    )}
+                    <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono">{formatCurrency(costCenter.gross)}</td>
+                    <td className="px-5 py-3 text-sm text-emerald-600 text-right font-mono">-{formatCurrency(costCenter.discount)}</td>
+                    <td className="px-5 py-3 text-sm font-semibold text-[#1f2328] text-right font-mono">{formatCurrency(costCenter.net)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Cost per Product — standalone card */}
       {productCosts.length > 0 && (
         <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
@@ -531,11 +612,14 @@ export function UserDetailsView({
             <h3 className="text-sm font-medium text-[#1f2328]">Daily Model Usage Breakdown</h3>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full">
+            <table className="min-w-full" aria-label="Daily Model Usage Breakdown">
               <thead>
                 <tr className="border-b border-[#d1d9e0]">
                   <th className="px-5 py-3 w-28 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">Date</th>
                   <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Model</th>
+                  {costCenterCosts.length > 0 && (
+                    <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">Cost Center</th>
+                  )}
                   <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">{userQuantityColumnLabel}</th>
                   {showAicGross && (
                     <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">AI Credits Gross</th>
@@ -557,6 +641,9 @@ export function UserDetailsView({
                       </td>
                     ) : null}
                     <td className="px-5 py-3 text-sm text-[#636c76]">- {row.model}</td>
+                    {costCenterCosts.length > 0 && (
+                      <td className="px-5 py-3 text-sm text-[#636c76] whitespace-nowrap">{row.costCenter ?? '—'}</td>
+                    )}
                     <td className="px-5 py-3 text-sm font-mono text-[#1f2328] text-right">{row.requests.toFixed(2)}</td>
                     {showAicGross && (
                       <td className="px-5 py-3 text-sm font-mono text-[#636c76] text-right">{formatCurrency(row.aicGrossAmount)}</td>
