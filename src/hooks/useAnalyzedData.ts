@@ -97,7 +97,7 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
     const codingAgentAnalysis = analyzeCodingAgentAdoptionFromArtifacts(effectiveUsage, quotaArtifacts!);
     const codeReviewAnalysis = analyzeCodeReviewAdoptionFromArtifacts(effectiveUsage, quotaArtifacts!);
     const weeklyExhaustion = computeWeeklyQuotaExhaustionFromArtifacts(dailyBucketsArtifacts!, quotaArtifacts!);
-    const userData = usageArtifacts!.users.map(u => ({
+    const userData = effectiveUsage.users.map(u => ({
       user: u.user,
       totalRequests: u.totalRequests,
       modelBreakdown: u.modelBreakdown,

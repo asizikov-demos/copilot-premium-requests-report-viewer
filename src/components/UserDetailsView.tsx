@@ -120,6 +120,16 @@ export function UserDetailsView({
   const effectiveUserQuotaValue = artifactUserQuota !== undefined ? artifactUserQuota : userQuotaValue;
 
   const userData = useMemo(() => getUserData(processedData, user), [processedData, user]);
+  const hasBillingData = useMemo(
+    () => userData.some(
+      (row) =>
+        row.grossAmount !== undefined ||
+        row.netAmount !== undefined ||
+        row.discountAmount !== undefined ||
+        row.aicGrossAmount !== undefined
+    ),
+    [userData]
+  );
   const hasUserAiCreditUsage = useMemo(() => userData.some((row) => row.usageUnit === 'ai_credit'), [userData]);
   const hasUserRequestUsage = useMemo(
     () => userData.some((row) => row.usageUnit === 'request' && row.requestsUsed > 0),
@@ -276,13 +286,6 @@ export function UserDetailsView({
   const showAicGross = hasAicGross && !isUserUsageBasedBilling;
 
   const dailyBreakdownRows = useMemo((): DailyModelRow[] => {
-    const hasBillingData = userData.some(
-      (row) =>
-        row.grossAmount !== undefined ||
-        row.netAmount !== undefined ||
-        row.discountAmount !== undefined ||
-        row.aicGrossAmount !== undefined
-    );
     if (!hasBillingData) return [];
 
     // Aggregate by date + model + cost center so cost-center changes remain visible.
@@ -329,21 +332,16 @@ export function UserDetailsView({
       if (isFirst) seenDates.add(r.date);
       return { ...r, isFirstInDate: isFirst, rowSpan: dateSpan.get(r.date) ?? 1 };
     });
-  }, [isUserUsageBasedBilling, userData]);
+  }, [hasBillingData, isUserUsageBasedBilling, userData]);
 
   const productCosts = useMemo(() => {
-    const hasBillingData = userData.some(
-      (row) =>
-        row.grossAmount !== undefined ||
-        row.netAmount !== undefined ||
-        row.discountAmount !== undefined ||
-        row.aicGrossAmount !== undefined
-    );
     if (!hasBillingData) return [];
     return aggregateProductCosts(userData);
-  }, [userData]);
+  }, [hasBillingData, userData]);
 
   const costCenterCosts = useMemo((): UserCostCenterCost[] => {
+    if (!hasBillingData) return [];
+
     const totals = new Map<string, UserCostCenterCost>();
 
     for (const row of userData) {
@@ -359,7 +357,9 @@ export function UserDetailsView({
         net: 0,
         aicGrossAmount: 0,
       };
-      entry.quantity += row.billingQuantity ?? row.requestsUsed;
+      entry.quantity += isUserUsageBasedBilling
+        ? row.aicQuantity ?? row.billingQuantity ?? row.requestsUsed
+        : row.requestsUsed;
       entry.gross += row.grossAmount ?? 0;
       entry.discount += row.discountAmount ?? 0;
       entry.net += row.netAmount ?? 0;
@@ -370,7 +370,7 @@ export function UserDetailsView({
     return Array.from(totals.values()).sort(
       (left, right) => right.net - left.net || left.name.localeCompare(right.name)
     );
-  }, [userData]);
+  }, [hasBillingData, isUserUsageBasedBilling, userData]);
 
   const planInfo = {
     business: { name: 'Copilot Business', monthlyQuota: PRICING.BUSINESS_QUOTA },
