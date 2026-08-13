@@ -42,6 +42,10 @@ function cloneDailyModelTotals(
 
 function makeDailyAicBucketsFromNested(dates: string[], data: Array<Record<string, Record<string, number>>>): DailyBucketsArtifacts {
   const artifacts = makeDailyBucketsFromNested(dates, data);
+  if (!artifacts.dailyUserModelTotals) {
+    throw new Error('Expected daily model totals from test artifact builder');
+  }
+
   return {
     ...artifacts,
     dailyUserAicModelTotals: cloneDailyModelTotals(artifacts.dailyUserModelTotals),

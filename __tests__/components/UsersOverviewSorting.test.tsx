@@ -5,7 +5,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { UsersOverview } from '@/components/UsersOverview';
 import { PRICING } from '@/constants/pricing';
 import type { ProcessedData } from '@/types/csv';
-import type { UserSummary } from '@/utils/analytics/powerUsers';
+import type { UserSummary } from '@/utils/analytics';
 import type { QuotaArtifacts, UsageArtifacts } from '@/utils/ingestion';
 
 import { makeProcessedData } from '../helpers/testUtils';
@@ -165,7 +165,6 @@ describe('UsersOverview - sorting', () => {
         }]}
         quotaArtifacts={quotaArtifacts}
         usageArtifacts={makeUsage(userData)}
-        onBack={() => {}}
       />
     );
 
@@ -205,7 +204,6 @@ describe('UsersOverview - sorting', () => {
         dailyCumulativeData={[{ date: '2026-03-01T00:00:00Z', 'test-user-one': 10 }]}
         quotaArtifacts={quotaArtifacts}
         usageArtifacts={makeUsage(userData)}
-        onBack={() => {}}
       />
     );
 

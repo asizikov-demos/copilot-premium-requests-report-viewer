@@ -98,7 +98,7 @@ describe('analyzeCodeReviewAdoptionFromArtifacts', () => {
     usage.specialBuckets = [
       {
         key: 'non_copilot_code_review',
-        label: 'Non-Copilot users',
+        label: 'Non-Copilot Users',
         totalRequests: 4,
         modelBreakdown: { 'Code Review beta': 4 },
         quotaValue: 0,
@@ -129,7 +129,7 @@ describe('analyzeCodeReviewAdoptionFromArtifacts', () => {
     usage.specialBuckets = [
       {
         key: 'non_copilot_code_review',
-        label: 'Non-Copilot users',
+        label: 'Non-Copilot Users',
         totalRequests: 6,
         modelBreakdown: { 'CODE REVIEW Ultra': 6 },
         quotaValue: 0,
