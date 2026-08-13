@@ -266,9 +266,9 @@ describe('processed data artifact builders', () => {
     const output = aggregator.finalize(ctx);
 
     expect(output.dailyUserTotals.get('2025-06-01')?.get('test-user-one')).toBe(5);
-    expect(output.dailyUserModelTotals.get('2025-06-01')?.get('test-user-one')?.get('model-one')).toBe(5);
-    expect(output.dailyUserAicTotals.get('2025-06-01')?.get('test-user-two')).toBe(10);
-    expect(output.dailyUserAicModelTotals.get('2025-06-01')?.get('test-user-two')?.get('model-two')).toBe(10);
+    expect(output.dailyUserModelTotals?.get('2025-06-01')?.get('test-user-one')?.get('model-one')).toBe(5);
+    expect(output.dailyUserAicTotals?.get('2025-06-01')?.get('test-user-two')).toBe(10);
+    expect(output.dailyUserAicModelTotals?.get('2025-06-01')?.get('test-user-two')?.get('model-two')).toBe(10);
     expect(output.dailyBucketTotals?.get('2025-06-01')?.get('non_copilot_code_review')).toBe(18);
     expect(output.dailyBucketModelTotals?.get('2025-06-01')?.get('non_copilot_code_review')?.get('Code Review')).toBe(18);
   });
