@@ -2,8 +2,9 @@
 
 import { useMemo } from 'react';
 
+import { TOKEN_TYPE_SERIES } from '@/components/charts/tokenUsageChartSeries';
 import { useAnalysisContext } from '@/context/AnalysisContext';
-import type { BillingUserTotals } from '@/utils/ingestion';
+import type { BillingUserTotals, TokenBreakdown, TokenUsageArtifacts } from '@/utils/ingestion';
 import { getEffectiveAicQuantity } from '@/utils/aicFields';
 
 import { UsersAicDistributionChart } from './charts/UsersAicDistributionChart';
@@ -12,6 +13,7 @@ interface RankedAicUser {
   user: string;
   aiCredits: number;
   shareOfTotal: number;
+  tokens?: TokenBreakdown;
 }
 
 interface AicConcentrationRow {
@@ -29,7 +31,14 @@ function formatAiCredits(value: number): string {
   return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function buildRankedAicUsers(users: BillingUserTotals[]): RankedAicUser[] {
+function formatTokenValue(value: number | undefined): string {
+  return value === undefined ? 'N/A' : value.toLocaleString();
+}
+
+function buildRankedAicUsers(
+  users: BillingUserTotals[],
+  tokenUsageArtifacts?: TokenUsageArtifacts
+): RankedAicUser[] {
   const totalAiCredits = users.reduce((sum, user) => sum + getEffectiveAicQuantity(user), 0);
 
   return users
@@ -40,6 +49,7 @@ function buildRankedAicUsers(users: BillingUserTotals[]): RankedAicUser[] {
         user: user.user,
         aiCredits,
         shareOfTotal: totalAiCredits > 0 ? (aiCredits / totalAiCredits) * 100 : 0,
+        tokens: tokenUsageArtifacts?.byUser.get(user.user),
       };
     })
     .filter((user) => user.aiCredits > 0)
@@ -78,10 +88,11 @@ function buildAicConcentrationRows(rankedUsers: RankedAicUser[]): AicConcentrati
 }
 
 export function AiUsageOverview() {
-  const { billingArtifacts } = useAnalysisContext();
+  const { billingArtifacts, tokenUsageArtifacts } = useAnalysisContext();
+  const hasTokenData = tokenUsageArtifacts?.hasTokenData === true;
   const rankedUsers = useMemo(
-    () => buildRankedAicUsers(billingArtifacts?.users ?? []),
-    [billingArtifacts?.users]
+    () => buildRankedAicUsers(billingArtifacts?.users ?? [], hasTokenData ? tokenUsageArtifacts : undefined),
+    [billingArtifacts?.users, hasTokenData, tokenUsageArtifacts]
   );
   const concentrationRows = useMemo(
     () => buildAicConcentrationRows(rankedUsers),
@@ -189,7 +200,10 @@ export function AiUsageOverview() {
           </p>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full" aria-label="Users ranked by AI Credits consumption">
+          <table
+            className={hasTokenData ? 'min-w-[58rem] w-full' : 'min-w-full'}
+            aria-label="Users ranked by AI Credits consumption"
+          >
             <thead>
               <tr className="border-b border-[#d1d9e0]">
                 <th className="w-16 px-4 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
@@ -204,6 +218,11 @@ export function AiUsageOverview() {
                 <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
                   Share
                 </th>
+                {hasTokenData && TOKEN_TYPE_SERIES.map((series) => (
+                  <th key={series.key} className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">
+                    {series.label}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-[#d1d9e0]">
@@ -222,11 +241,16 @@ export function AiUsageOverview() {
                     <td className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-[#636c76] text-right">
                       {formatPercentage(user.shareOfTotal)}
                     </td>
+                    {hasTokenData && TOKEN_TYPE_SERIES.map((series) => (
+                      <td key={series.key} className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-[#636c76] text-right">
+                        {formatTokenValue(user.tokens?.[series.key])}
+                      </td>
+                    ))}
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className="px-5 py-8 text-center text-sm text-[#636c76]">
+                  <td colSpan={hasTokenData ? 8 : 4} className="px-5 py-8 text-center text-sm text-[#636c76]">
                     No AI Credits consumption is available for the current users
                   </td>
                 </tr>

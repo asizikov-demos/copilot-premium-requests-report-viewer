@@ -13,9 +13,11 @@ import {
   DailyBucketsArtifacts,
   FeatureUsageArtifacts,
   BillingArtifacts,
+  TokenUsageArtifacts,
   NormalizedRow,
   buildBillingArtifactsFromProcessedData,
-  buildProcessedDataFromRows
+  buildProcessedDataFromRows,
+  buildTokenUsageArtifactsFromProcessedData
 } from '@/utils/ingestion';
 
 // Types
@@ -41,6 +43,7 @@ interface AnalysisContextValue {
   dailyBucketsArtifacts: DailyBucketsArtifacts;
   featureUsageArtifacts: FeatureUsageArtifacts;
   billingArtifacts?: BillingArtifacts; // new billing summary artifacts
+  tokenUsageArtifacts?: TokenUsageArtifacts;
   
   // Raw & processed (adapter bridge - to be phased out)
   baseProcessed: ProcessedData[];
@@ -135,13 +138,14 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
   const [view, setView] = useState<ViewType>('overview');
 
   // Extract aggregator outputs
-  const { quotaArtifacts, usageArtifacts, dailyBucketsArtifacts, featureUsageArtifacts, billingArtifacts } = useMemo(() => {
+  const { quotaArtifacts, usageArtifacts, dailyBucketsArtifacts, featureUsageArtifacts, billingArtifacts, tokenUsageArtifacts } = useMemo(() => {
     return {
       quotaArtifacts: ingestionResult.outputs.quota as QuotaArtifacts,
       usageArtifacts: ingestionResult.outputs.usage as UsageArtifacts,
       dailyBucketsArtifacts: ingestionResult.outputs.dailyBuckets as DailyBucketsArtifacts,
       featureUsageArtifacts: requireFeatureUsageArtifacts(ingestionResult.outputs.featureUsage),
-      billingArtifacts: withBillingArtifactDefaults(ingestionResult.outputs.billing as BillingArtifacts | undefined)
+      billingArtifacts: withBillingArtifactDefaults(ingestionResult.outputs.billing as BillingArtifacts | undefined),
+      tokenUsageArtifacts: ingestionResult.outputs.tokenUsage as TokenUsageArtifacts | undefined
     };
   }, [ingestionResult]);
 
@@ -183,6 +187,12 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
       : billingArtifacts
   ), [aggregateProcessedData, baseProcessed.length, billingArtifacts]);
 
+  const effectiveTokenUsageArtifacts = useMemo(() => (
+    baseProcessed.length > 0
+      ? buildTokenUsageArtifactsFromProcessedData(aggregateProcessedData)
+      : tokenUsageArtifacts
+  ), [aggregateProcessedData, baseProcessed.length, tokenUsageArtifacts]);
+
   // Use the suggested plan from data (auto-derived from report content)
   const selectedPlan = analysis.quotaBreakdown.suggestedPlan ?? 'business';
 
@@ -214,6 +224,7 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
     dailyBucketsArtifacts,
     featureUsageArtifacts,
     billingArtifacts: effectiveBillingArtifacts,
+    tokenUsageArtifacts: effectiveTokenUsageArtifacts,
     // Legacy adapter bridge
     baseProcessed,
     processedData,

@@ -60,6 +60,10 @@ export interface NormalizedRow {
   netAmount?: number;
   aicQuantity?: number;
   aicGrossAmount?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  cacheReadTokens?: number;
+  cacheWriteTokens?: number;
   isNonCopilotUsage?: boolean;
   usageBucket?: SpecialUsageBucketKey;
 }
@@ -224,6 +228,29 @@ export interface FeatureUsageArtifacts {
   specialTotals: {
     nonCopilotCodeReview: number;
   };
+}
+
+/**
+ * Source-reported token counts. A field remains undefined until a valid value
+ * for that token category is encountered.
+ */
+export interface TokenBreakdown {
+  inputTokens?: number;
+  outputTokens?: number;
+  cacheReadTokens?: number;
+  cacheWriteTokens?: number;
+}
+
+/**
+ * Token usage aggregation results from source report fields.
+ */
+export interface TokenUsageArtifacts {
+  overall: TokenBreakdown;
+  byModel: Map<string, TokenBreakdown>;
+  byUser: Map<string, TokenBreakdown>;
+  byDayAndModel: Map<string, Map<string, TokenBreakdown>>;
+  tokenRowCount: number;
+  hasTokenData: boolean;
 }
 
 /**

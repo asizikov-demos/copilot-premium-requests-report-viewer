@@ -7,6 +7,7 @@ import {
   UsageAggregator,
   DailyBucketsAggregator,
   FeatureUsageAggregator,
+  TokenUsageAggregator,
   BillingAggregator,
   RawDataAggregator,
   IngestionResult
@@ -99,13 +100,14 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
     const usageAggregator = new UsageAggregator();
     const dailyBucketsAggregator = new DailyBucketsAggregator();
     const featureUsageAggregator = new FeatureUsageAggregator();
+    const tokenUsageAggregator = new TokenUsageAggregator();
     const billingAggregator = new BillingAggregator();
     const rawDataAggregator = new RawDataAggregator();
 
     // Single-pass streaming ingestion with all aggregators
     ingestStream(
       file,
-      [quotaAggregator, usageAggregator, dailyBucketsAggregator, featureUsageAggregator, billingAggregator, rawDataAggregator],
+      [quotaAggregator, usageAggregator, dailyBucketsAggregator, featureUsageAggregator, tokenUsageAggregator, billingAggregator, rawDataAggregator],
       {
         chunkSize: 1024 * 1024, // 1MB chunks for smooth UI
         progressResolution: 1000,

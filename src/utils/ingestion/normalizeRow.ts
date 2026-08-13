@@ -49,7 +49,11 @@ export function normalizeRow(
     discount_amount,
     net_amount,
     aic_quantity,
-    aic_gross_amount
+    aic_gross_amount,
+    input,
+    output,
+    cache_read,
+    cache_write
   } = rawRecord;
   
   // Type guard and validate required fields
@@ -114,6 +118,34 @@ export function normalizeRow(
     return Object.prototype.hasOwnProperty.call(rawRecord, fieldName) ? 0 : undefined;
   };
   const grossAmountValue = parseRequestBillingAmount('gross_amount', gross_amount);
+  const parseTokenCount = (fieldName: string, value: unknown): number | undefined => {
+    if (value === undefined || value === null) {
+      return undefined;
+    }
+
+    if (typeof value !== 'string') {
+      warnings.push(`Invalid ${fieldName} token value for user=${username} date=${date}`);
+      return undefined;
+    }
+
+    const trimmed = value.trim();
+    if (trimmed === '') {
+      return undefined;
+    }
+
+    if (!/^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(trimmed)) {
+      warnings.push(`Invalid ${fieldName} token value for user=${username} date=${date}`);
+      return undefined;
+    }
+
+    const parsed = Number(trimmed);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      warnings.push(`Invalid ${fieldName} token value for user=${username} date=${date}`);
+      return undefined;
+    }
+
+    return parsed;
+  };
 
   return {
     date: isoDate,
@@ -141,6 +173,10 @@ export function normalizeRow(
     netAmount: parseRequestBillingAmount('net_amount', net_amount),
     aicQuantity: shouldUseAiCreditValues ? billingQty : parseNum(aic_quantity),
     aicGrossAmount: shouldUseAiCreditValues ? grossAmountValue : parseNum(aic_gross_amount),
+    inputTokens: parseTokenCount('input', input),
+    outputTokens: parseTokenCount('output', output),
+    cacheReadTokens: parseTokenCount('cache_read', cache_read),
+    cacheWriteTokens: parseTokenCount('cache_write', cache_write),
     isNonCopilotUsage: isNonCopilotCodeReviewUsage,
     usageBucket: isNonCopilotCodeReviewUsage ? NON_COPILOT_CODE_REVIEW_BUCKET : undefined,
   };

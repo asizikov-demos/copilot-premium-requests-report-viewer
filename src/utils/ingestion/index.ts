@@ -13,6 +13,7 @@ export * from './DailyBucketsAggregator';
 export * from './BillingAggregator';
 export * from './billingAccumulator';
 export * from './FeatureUsageAggregator';
+export * from './TokenUsageAggregator';
 export * from './RawDataAggregator';
 export * from './adapters';
 export * from './analytics';

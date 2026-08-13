@@ -44,6 +44,20 @@ date,username,product,sku,model,quantity,unit_type,applied_cost_per_quantity,gro
 - `applied_cost_per_quantity`, `gross_amount`, `discount_amount`, `net_amount`
 - `exceeds_quota`, `total_monthly_quota`
 - `product`, `sku`, `organization`, `cost_center_name`
+
+**Optional token columns** (auto-detected when present):
+- `input`, `output`, `cache_read`, `cache_write`
+
+All token fields are optional, so legacy reports remain fully operational. Blank or malformed token cells do not reject an otherwise valid row, and an unavailable value remains distinguishable from a reported `0`.
+
+### Token views
+
+When token fields are present, the **Models** dashboard shows a token summary with total tokens and the four fields: input tokens, output tokens, cache-read tokens, and cache-write tokens. Its per-model table is ordered by total tokens and shows each token type as a count with its share of that model's total in brackets.
+
+The **Models** dashboard also includes a UTC daily token chart with a local model selector. Dates remain in UTC and are never converted to local time. When token fields are present, the **AI Usage** dashboard adds them to the Top Spend Drivers table for per-user context.
+
+Token values are reported by the export. The total is the sum of the four reported fields and is used only to calculate each field's share for that model. Token values are not used to reconstruct or infer billing, cost, savings, or allocation.
+
 ## What You Get
 - Per-user request breakdown with quota status
 - Model usage distribution charts

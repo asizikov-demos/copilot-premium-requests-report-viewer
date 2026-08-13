@@ -10,6 +10,7 @@ import {
   FeatureUsageAggregator,
   QuotaAggregator,
   RawDataAggregator,
+  TokenUsageAggregator,
   UsageAggregator,
   normalizeRow,
 } from '@/utils/ingestion';
@@ -38,6 +39,7 @@ function createIngestionResultFromRawRows(rows: CSVData[]): IngestionResult {
     new DailyBucketsAggregator(),
     new FeatureUsageAggregator(),
     new BillingAggregator(),
+    new TokenUsageAggregator(),
     new RawDataAggregator(),
   ];
   const ctx: AggregatorContext = { pricing: PRICING };
@@ -137,6 +139,59 @@ describe('DataAnalysis billing summary', () => {
       expect(summary).toHaveTextContent('1,234');
       expect(summary).toHaveTextContent('AI Credits additional usage gross');
       expect(summary).toHaveTextContent('$4.56');
+    });
+
+  });
+
+  it('renders source token views on Models while legacy reports retain the empty token note', async () => {
+    const tokenRows: CSVData[] = [{
+      date: '2026-03-01',
+      username: 'test-user-one',
+      model: 'test-model-one',
+      quantity: '2',
+      total_monthly_quota: '1000',
+      input: '12',
+      output: '3',
+      cache_read: '2',
+      cache_write: '1',
+      aic_quantity: '4',
+    }];
+    const { unmount } = render(
+      <DataAnalysis
+        ingestionResult={createIngestionResultFromRawRows(tokenRows)}
+        filename="source-tokens.csv"
+        onReset={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Models' })[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('table', { name: 'Per-model token breakdown' })).toBeInTheDocument();
+      expect(screen.queryByText('Token details are not included in this report.')).not.toBeInTheDocument();
+    });
+
+    unmount();
+
+    render(
+      <DataAnalysis
+        ingestionResult={createIngestionResultFromRawRows([{
+          date: '2026-03-01',
+          username: 'test-user-two',
+          model: 'test-model-two',
+          quantity: '2',
+          total_monthly_quota: '1000',
+        }])}
+        filename="legacy.csv"
+        onReset={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Models' })[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Model Usage Trends' })).toBeInTheDocument();
+      expect(screen.getByText('Token details are not included in this report.')).toBeInTheDocument();
     });
   });
 
