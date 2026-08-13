@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 
 import { useAnalysisContext } from '@/context/AnalysisContext';
 import { ModelDailyStackedChart } from '@/components/charts/ModelDailyStackedChart';
+import { TokenUsageOverview } from '@/components/TokenUsageOverview';
 import { filterDailySeriesByMonths } from '@/utils/analytics/filters';
 import { getEffectiveAicQuantity } from '@/utils/aicFields';
 import { formatCurrency } from '@/utils/formatters';
@@ -24,6 +25,7 @@ export function ModelUsageTrendsOverview() {
     dailyBucketsArtifacts,
     selectedMonths,
     billingArtifacts,
+    tokenUsageArtifacts,
     aggregateProcessedData,
   } = useAnalysisContext();
   const isUsageBasedBilling = useMemo(() => {
@@ -151,6 +153,10 @@ export function ModelUsageTrendsOverview() {
           </div>
         )}
       </div>
+
+      <TokenUsageOverview
+        tokenUsageArtifacts={tokenUsageArtifacts}
+      />
     </div>
   );
 }

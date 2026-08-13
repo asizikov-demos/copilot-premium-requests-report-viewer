@@ -317,4 +317,74 @@ describe('processCSVData (CSV format)', () => {
     });
     expect(canonical[0].timestamp.toISOString()).toBe('2025-10-04T00:00:00.000Z');
   });
+
+  it('parses valid source token values, preserves zero, and ignores blank fields', () => {
+    const warnings: string[] = [];
+    const normalized = normalizeRow({
+      date: '2025-10-05',
+      username: 'test-user-one',
+      model: 'test-model-one',
+      quantity: '1',
+      input: '123.45',
+      output: '0',
+      cache_read: '  ',
+      cache_write: '2e2',
+    }, warnings);
+
+    expect(normalized).toMatchObject({
+      inputTokens: 123.45,
+      outputTokens: 0,
+      cacheWriteTokens: 200,
+    });
+    expect(normalized?.cacheReadTokens).toBeUndefined();
+    expect(warnings).toEqual([]);
+  });
+
+  it('keeps valid rows when token fields are malformed, negative, or non-finite', () => {
+    const warnings: string[] = [];
+    const normalized = normalizeRow({
+      date: '2025-10-05',
+      username: 'test-user-one',
+      model: 'test-model-one',
+      quantity: '1',
+      input: '12tokens',
+      output: '-1',
+      cache_read: 'Infinity',
+      cache_write: 'NaN',
+    }, warnings);
+
+    expect(normalized).not.toBeNull();
+    expect(normalized?.inputTokens).toBeUndefined();
+    expect(normalized?.outputTokens).toBeUndefined();
+    expect(normalized?.cacheReadTokens).toBeUndefined();
+    expect(normalized?.cacheWriteTokens).toBeUndefined();
+    expect(warnings).toEqual([
+      'Invalid input token value for user=test-user-one date=2025-10-05',
+      'Invalid output token value for user=test-user-one date=2025-10-05',
+      'Invalid cache_read token value for user=test-user-one date=2025-10-05',
+      'Invalid cache_write token value for user=test-user-one date=2025-10-05',
+    ]);
+  });
+
+  it('preserves source tokens when converting between normalized and processed rows', () => {
+    const normalizedRows: NormalizedRow[] = [{
+      date: '2025-10-06',
+      day: '2025-10-06',
+      user: 'test-user-one',
+      model: 'test-model-one',
+      quantity: 1,
+      inputTokens: 10,
+      outputTokens: 20,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 30,
+    }];
+
+    const processed = buildProcessedDataFromRows(normalizedRows);
+    expect(processed[0]).toMatchObject({
+      inputTokens: 10,
+      outputTokens: 20,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 30,
+    });
+  });
 });

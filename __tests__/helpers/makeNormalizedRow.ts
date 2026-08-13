@@ -23,6 +23,10 @@ export function makeNormalizedRow(partial: Partial<NormalizedRow> = {}): Normali
     netAmount: partial.netAmount,
     aicQuantity: partial.aicQuantity,
     aicGrossAmount: partial.aicGrossAmount,
+    inputTokens: partial.inputTokens,
+    outputTokens: partial.outputTokens,
+    cacheReadTokens: partial.cacheReadTokens,
+    cacheWriteTokens: partial.cacheWriteTokens,
     isNonCopilotUsage: partial.isNonCopilotUsage ?? false,
     usageBucket: partial.usageBucket,
   };

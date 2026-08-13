@@ -65,6 +65,10 @@ export function buildProcessedDataFromRows(
       netAmount: row.netAmount,
       aicQuantity: row.aicQuantity,
       aicGrossAmount: row.aicGrossAmount,
+      inputTokens: row.inputTokens,
+      outputTokens: row.outputTokens,
+      cacheReadTokens: row.cacheReadTokens,
+      cacheWriteTokens: row.cacheWriteTokens,
       isNonCopilotUsage: row.isNonCopilotUsage,
       usageBucket: row.usageBucket,
       ...keys

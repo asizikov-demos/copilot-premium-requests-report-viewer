@@ -18,6 +18,10 @@ export interface CSVData {
   cost_center_name?: string;
   aic_quantity?: string; // numeric string
   aic_gross_amount?: string; // numeric string
+  input?: string; // source token count
+  output?: string; // source token count
+  cache_read?: string; // source token count
+  cache_write?: string; // source token count
 }
 
 // Processed record produced from CSV row.
@@ -48,6 +52,10 @@ export interface ProcessedData {
   netAmount?: number;
   aicQuantity?: number;
   aicGrossAmount?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  cacheReadTokens?: number;
+  cacheWriteTokens?: number;
   isNonCopilotUsage?: boolean;
   usageBucket?: 'non_copilot_code_review';
 }
