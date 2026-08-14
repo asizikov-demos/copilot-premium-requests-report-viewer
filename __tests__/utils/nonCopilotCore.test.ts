@@ -13,7 +13,7 @@ import { PRICING } from '@/constants/pricing';
 describe('non-Copilot Code Review core support', () => {
   const ctx: AggregatorContext = { pricing: PRICING };
 
-  test('normalizeRow accepts blank username only for Code Review and forces zero quota', () => {
+  test('normalizeRow accepts blank usernames for special usage and rejects other rows', () => {
     const warnings: string[] = [];
 
     const special = normalizeRow({
@@ -42,7 +42,7 @@ describe('non-Copilot Code Review core support', () => {
       quotaRaw: '0'
     }));
     expect(invalid).toBeNull();
-    expect(warnings).toContain('Blank username is only allowed for Code Review usage date=2025-10-01');
+    expect(warnings).toContain('Blank username is only allowed for Code Review or AI Credits usage date=2025-10-01');
   });
 
   test('aggregators exclude non-Copilot rows from user analytics but retain aggregate totals', () => {
