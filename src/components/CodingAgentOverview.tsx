@@ -12,7 +12,7 @@ import {
   buildDailyCodingAgentAicUsageFromArtifacts,
   buildDailyCodingAgentUsageFromArtifacts,
   DailyBucketsArtifacts,
-  NON_COPILOT_CODE_REVIEW_LABEL,
+  getSpecialUsageBucketLabel,
 } from '@/utils/ingestion';
 import { filterDailySeriesByMonths } from '@/utils/analytics/filters';
 import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
@@ -38,15 +38,16 @@ function buildUsageBasedAgentRows(
       continue;
     }
 
-    const user = row.isNonCopilotUsage ? NON_COPILOT_CODE_REVIEW_LABEL : row.user;
+    const isSpecialUsage = Boolean(row.usageBucket);
+    const user = row.usageBucket ? getSpecialUsageBucketLabel(row.usageBucket) : row.user;
     const current = rowsByUser.get(user) ?? {
       user,
       quantity: 0,
       gross: 0,
       included: 0,
       additional: 0,
-      quota: row.isNonCopilotUsage ? 0 : row.quotaValue ?? 'unknown',
-      isSyntheticNonCopilotRow: row.isNonCopilotUsage,
+      quota: isSpecialUsage ? 0 : row.quotaValue ?? 'unknown',
+      isSyntheticNonCopilotRow: isSpecialUsage,
     };
 
     current.quantity += row.aicQuantity ?? row.billingQuantity ?? 0;

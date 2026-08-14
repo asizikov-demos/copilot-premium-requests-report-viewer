@@ -96,6 +96,8 @@ export function buildUsageArtifactsFromProcessedData(filtered: ProcessedData[]):
       user: r.user,
       model: r.model,
       quantity: r.requestsUsed,
+      billingQuantity: r.billingQuantity,
+      usageUnit: r.usageUnit,
       organization: r.organization,
       costCenter: r.costCenter,
       isNonCopilotUsage: r.isNonCopilotUsage,

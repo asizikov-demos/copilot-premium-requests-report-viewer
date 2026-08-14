@@ -166,6 +166,8 @@ describe('processed data artifact builders', () => {
       epoch: new Date(`${row.day}T00:00:00Z`).getTime(),
       product: row.product,
       sku: row.sku,
+      usageUnit: row.usageUnit,
+      billingQuantity: row.billingQuantity,
       organization: row.organization,
       costCenter: row.costCenter,
       appliedCostPerQuantity: row.appliedCostPerQuantity,
@@ -176,6 +178,31 @@ describe('processed data artifact builders', () => {
       usageBucket: row.usageBucket,
     }));
   }
+
+  test('usage processed-data builder preserves unattributed AI Credits', () => {
+    const rows = [
+      makeNormalizedRow({
+        user: '',
+        model: 'test-model-one',
+        quantity: 0,
+        billingQuantity: 18.5,
+        usageUnit: 'ai_credit',
+        isNonCopilotUsage: true,
+        usageBucket: 'unattributed_ai_credit',
+      }),
+    ];
+
+    const output = buildUsageArtifactsFromProcessedData(toProcessedData(rows));
+
+    expect(output.users).toHaveLength(0);
+    expect(output.specialBuckets).toEqual([
+      expect.objectContaining({
+        key: 'unattributed_ai_credit',
+        totalRequests: 18.5,
+        modelBreakdown: { 'test-model-one': 18.5 },
+      }),
+    ]);
+  });
 
   test('quota processed-data builder matches QuotaAggregator license semantics', () => {
     const ctx: AggregatorContext = { pricing: PRICING };

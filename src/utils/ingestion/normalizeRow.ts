@@ -70,8 +70,9 @@ export function normalizeRow(
   const unitType = typeof unit_type === 'string' && unit_type.trim() !== '' ? unit_type.trim() : undefined;
   const skuValue = typeof sku === 'string' ? sku : undefined;
   const usageUnit = getUsageUnitKind(unitType, skuValue);
-  const isNonCopilotCodeReviewUsage = trimmedUsername.length === 0 && isCodeReviewModel(model);
   const isUnattributedAiCreditUsage = trimmedUsername.length === 0 && usageUnit === 'ai_credit';
+  const isNonCopilotCodeReviewUsage =
+    trimmedUsername.length === 0 && !isUnattributedAiCreditUsage && isCodeReviewModel(model);
   const isSpecialUsage = isNonCopilotCodeReviewUsage || isUnattributedAiCreditUsage;
   const usageBucket = isNonCopilotCodeReviewUsage
     ? NON_COPILOT_CODE_REVIEW_BUCKET

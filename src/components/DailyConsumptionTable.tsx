@@ -78,6 +78,10 @@ function buildDailyConsumptionRows(
 
   if (isUsageBasedBilling) {
     for (const row of sourceRows) {
+      if (row.usageUnit !== 'ai_credit') {
+        continue;
+      }
+
       const dateModels = commercialByDateAndModel.get(row.dateKey) ?? new Map();
       const modelTotals = dateModels.get(row.model) ?? { grossAmount: 0, additionalUsage: 0 };
       const aicQuantity = getEffectiveAicQuantity(row);

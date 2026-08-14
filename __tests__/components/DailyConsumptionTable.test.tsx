@@ -40,6 +40,13 @@ describe('DailyConsumptionTable', () => {
         aicGrossAmount: 50 * PRICING.AI_CREDIT_USD_VALUE,
         netAmount: 0.2,
       }),
+      makeProcessedRow({
+        model: 'test-model-two',
+        usageUnit: 'request',
+        requestsUsed: 25,
+        grossAmount: 99,
+        netAmount: 99,
+      }),
     ];
 
     render(
@@ -67,6 +74,8 @@ describe('DailyConsumptionTable', () => {
     expect(within(details).getByText('test-model-one')).toBeInTheDocument();
     expect(within(details).getByText('test-model-two')).toBeInTheDocument();
     expect(within(details).getByText('$0.20')).toBeInTheDocument();
+    expect(within(details).getByText('$0.50')).toBeInTheDocument();
+    expect(within(details).queryByText('$99.00')).not.toBeInTheDocument();
   });
 
   it('uses request columns for legacy reports', () => {

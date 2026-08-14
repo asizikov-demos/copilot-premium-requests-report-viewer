@@ -199,6 +199,18 @@ describe('CodingAgentOverview', () => {
         isNonCopilotUsage: true,
         usageBucket: 'non_copilot_code_review',
       }),
+      buildProcessedRow({
+        user: '',
+        model: 'Coding Agent model',
+        billingQuantity: 4,
+        aicQuantity: 4,
+        grossAmount: 0.04,
+        discountAmount: 0.04,
+        netAmount: 0,
+        quotaValue: 0,
+        isNonCopilotUsage: true,
+        usageBucket: 'unattributed_ai_credit',
+      }),
     ];
 
     const dailyUserAicModelTotals = new Map<string, Map<string, Map<string, number>>>();
@@ -279,6 +291,9 @@ describe('CodingAgentOverview', () => {
     expect(within(agentRow as HTMLElement).getByText('$0.12')).toBeInTheDocument();
     expect(within(agentRow as HTMLElement).getByText('-$0.10')).toBeInTheDocument();
     expect(within(agentRow as HTMLElement).getByText('$0.02')).toBeInTheDocument();
+    const unattributedRow = within(agentTable).getByText('Unattributed AI Credits').closest('tr');
+    expect(unattributedRow).not.toBeNull();
+    expect(within(unattributedRow as HTMLElement).getByText('4.00')).toBeInTheDocument();
 
     const reviewHeading = screen.getByRole('heading', { name: 'Code Review Users' });
     const reviewTable = reviewHeading.parentElement?.nextElementSibling?.querySelector('table') as HTMLTableElement;

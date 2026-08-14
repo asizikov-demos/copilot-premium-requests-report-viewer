@@ -147,9 +147,22 @@ describe('processCSVData (CSV format)', () => {
         net_amount: '0',
         total_monthly_quota: '3900',
       },
+      {
+        date: '2026-07-01',
+        username: '',
+        product: 'copilot',
+        sku: 'copilot_ai_credit',
+        model: 'Code Review model',
+        quantity: '12.5',
+        unit_type: 'ai-credits',
+        gross_amount: '0.125',
+        discount_amount: '0.125',
+        net_amount: '0',
+        total_monthly_quota: '3900',
+      },
     ]);
 
-    expect(processed).toHaveLength(1);
+    expect(processed).toHaveLength(2);
     expect(processed[0]).toMatchObject({
       user: '',
       usageUnit: 'ai_credit',
@@ -157,6 +170,11 @@ describe('processCSVData (CSV format)', () => {
       isNonCopilotUsage: true,
       usageBucket: 'unattributed_ai_credit',
       quotaValue: 0,
+    });
+    expect(processed[1]).toMatchObject({
+      model: 'Code Review model',
+      aicQuantity: 12.5,
+      usageBucket: 'unattributed_ai_credit',
     });
   });
 
