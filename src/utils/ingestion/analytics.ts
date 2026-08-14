@@ -23,6 +23,7 @@ import { calculateOverageRequests, calculateOverageCost } from '@/utils/userCalc
 import {
   type BillingArtifacts,
   NON_COPILOT_CODE_REVIEW_BUCKET,
+  UNATTRIBUTED_AI_CREDIT_BUCKET,
   type DailyBucketsArtifacts,
   type Aggregator,
   type FeatureUsageArtifacts,
@@ -95,6 +96,8 @@ export function buildUsageArtifactsFromProcessedData(filtered: ProcessedData[]):
       user: r.user,
       model: r.model,
       quantity: r.requestsUsed,
+      billingQuantity: r.billingQuantity,
+      usageUnit: r.usageUnit,
       organization: r.organization,
       costCenter: r.costCenter,
       isNonCopilotUsage: r.isNonCopilotUsage,
@@ -451,7 +454,8 @@ export interface DailyModelUsageDatum {
 function buildDailyModelUsageFromTotals(
   daily: DailyBucketsArtifacts,
   usage: UsageArtifacts,
-  dailyUserModelTotalsMap: Map<string, Map<string, Map<string, number>>> | undefined
+  dailyUserModelTotalsMap: Map<string, Map<string, Map<string, number>>> | undefined,
+  specialBucketKey?: typeof UNATTRIBUTED_AI_CREDIT_BUCKET
 ): DailyModelUsageDatum[] {
   if (!daily.dateRange || !dailyUserModelTotalsMap) return [];
 
@@ -464,6 +468,9 @@ function buildDailyModelUsageFromTotals(
   const result: DailyModelUsageDatum[] = [];
   for (const date of dates) {
     const dayUserMap = dailyUserModelTotalsMap.get(date);
+    const specialModelMap = specialBucketKey
+      ? daily.dailyBucketModelTotals?.get(date)?.get(specialBucketKey)
+      : undefined;
     const row: DailyModelUsageDatum = { date, totalRequests: 0 };
     let dayTotal = 0;
 
@@ -474,6 +481,7 @@ function buildDailyModelUsageFromTotals(
           modelTotal += modelMap.get(model) || 0;
         }
       }
+      modelTotal += specialModelMap?.get(model) ?? 0;
       row[model] = modelTotal;
       dayTotal += modelTotal;
     }
@@ -507,7 +515,12 @@ export function buildDailyModelAicUsageFromArtifacts(
   daily: DailyBucketsArtifacts,
   usage: UsageArtifacts
 ): DailyModelUsageDatum[] {
-  return buildDailyModelUsageFromTotals(daily, usage, daily.dailyUserAicModelTotals);
+  return buildDailyModelUsageFromTotals(
+    daily,
+    usage,
+    daily.dailyUserAicModelTotals,
+    UNATTRIBUTED_AI_CREDIT_BUCKET
+  );
 }
 
 // -----------------------------

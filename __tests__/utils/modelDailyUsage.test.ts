@@ -145,6 +145,45 @@ describe('buildDailyModelAicUsageFromArtifacts', () => {
     expect(result[0].totalRequests).toBe(3.75);
   });
 
+  it('includes unattributed AI Credits in the daily model total', () => {
+    const date = '2026-07-01';
+    const model = 'Gemini 3.5 Flash';
+    const usageArtifacts = makeUsageFromModelTotals({ [model]: 9364.837755 });
+    const dailyBucketsArtifacts = makeDailyAicBucketsFromNested(
+      [date],
+      [{ 'test-user-one': { [model]: 9364.837755 } }]
+    );
+    dailyBucketsArtifacts.dailyBucketModelTotals = new Map([
+      [date, new Map([
+        ['unattributed_ai_credit', new Map([[model, 18021.665685]])],
+      ])],
+    ]);
+
+    const result = buildDailyModelAicUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
+
+    expect(result[0][model]).toBeCloseTo(27386.50344);
+    expect(result[0].totalRequests).toBeCloseTo(27386.50344);
+  });
+
+  it('includes a day containing only unattributed AI Credits', () => {
+    const date = '2026-07-01';
+    const model = 'Gemini 3.5 Flash';
+    const usageArtifacts = makeUsageFromModelTotals({ [model]: 0 });
+    const dailyBucketsArtifacts = makeDailyAicBucketsFromNested([date], [{}]);
+    dailyBucketsArtifacts.dateRange = { min: date, max: date };
+    dailyBucketsArtifacts.months = ['2026-07'];
+    dailyBucketsArtifacts.dailyBucketModelTotals = new Map([
+      [date, new Map([
+        ['unattributed_ai_credit', new Map([[model, 18021.665685]])],
+      ])],
+    ]);
+
+    const result = buildDailyModelAicUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
+
+    expect(result[0][model]).toBeCloseTo(18021.665685);
+    expect(result[0].totalRequests).toBeCloseTo(18021.665685);
+  });
+
   it('builds dense multi-day UTC date-keyed AIC model totals for multiple models', () => {
     const dates = ['2025-06-30', '2025-07-01', '2025-07-02'];
     const dailyData: Array<Record<string, Record<string, number>>> = [

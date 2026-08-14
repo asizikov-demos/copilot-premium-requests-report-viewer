@@ -49,7 +49,7 @@ export interface ProcessedData {
   aicQuantity?: number;
   aicGrossAmount?: number;
   isNonCopilotUsage?: boolean;
-  usageBucket?: 'non_copilot_code_review';
+  usageBucket?: 'non_copilot_code_review' | 'unattributed_ai_credit';
 }
 
 export interface AnalysisResults {

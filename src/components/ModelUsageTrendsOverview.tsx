@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 
+import { DailyConsumptionTable } from '@/components/DailyConsumptionTable';
 import { useAnalysisContext } from '@/context/AnalysisContext';
 import { ModelDailyStackedChart } from '@/components/charts/ModelDailyStackedChart';
 import { filterDailySeriesByMonths } from '@/utils/analytics/filters';
@@ -151,6 +152,15 @@ export function ModelUsageTrendsOverview() {
           </div>
         )}
       </div>
+
+      {data.length > 0 && models.length > 0 && (
+        <DailyConsumptionTable
+          data={data}
+          models={models}
+          isUsageBasedBilling={isUsageBasedBilling}
+          sourceRows={aggregateProcessedData}
+        />
+      )}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import {
-  NON_COPILOT_CODE_REVIEW_LABEL,
+  getSpecialUsageBucketLabel,
   type SpecialUsageBucketAggregate,
   type SpecialUsageBucketKey,
   type UsageArtifacts,
@@ -10,6 +10,8 @@ export interface UsageAccumulationRow {
   user: string;
   model: string;
   quantity: number;
+  billingQuantity?: number;
+  usageUnit?: 'request' | 'ai_credit' | 'unknown';
   organization?: string;
   costCenter?: string;
   isNonCopilotUsage?: boolean;
@@ -38,15 +40,18 @@ export class UsageAccumulator {
       if (!bucket) {
         bucket = {
           key: row.usageBucket,
-          label: NON_COPILOT_CODE_REVIEW_LABEL,
+          label: getSpecialUsageBucketLabel(row.usageBucket),
           totalRequests: 0,
           modelBreakdown: {},
           quotaValue: 0,
         };
         this.specialBuckets.set(row.usageBucket, bucket);
       }
-      bucket.totalRequests += row.quantity;
-      bucket.modelBreakdown[row.model] = (bucket.modelBreakdown[row.model] || 0) + row.quantity;
+      const bucketQuantity = row.usageUnit === 'ai_credit'
+        ? row.billingQuantity ?? 0
+        : row.quantity;
+      bucket.totalRequests += bucketQuantity;
+      bucket.modelBreakdown[row.model] = (bucket.modelBreakdown[row.model] || 0) + bucketQuantity;
       this.modelTotals.set(row.model, (this.modelTotals.get(row.model) || 0) + row.quantity);
       return;
     }

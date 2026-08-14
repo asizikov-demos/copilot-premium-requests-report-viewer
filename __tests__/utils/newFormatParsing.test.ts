@@ -131,6 +131,53 @@ describe('processCSVData (CSV format)', () => {
     expect(processed[1].aicGrossAmount).toBeCloseTo(0.05447169);
   });
 
+  it('retains unattributed AI Credits rows without creating a user', () => {
+    const processed = processCSVData([
+      {
+        date: '2026-07-01',
+        username: '',
+        product: 'copilot',
+        sku: 'copilot_ai_credit',
+        model: 'Gemini 3.5 Flash',
+        quantity: '18021.665685',
+        unit_type: 'ai-credits',
+        applied_cost_per_quantity: '0.01',
+        gross_amount: '180.21665685',
+        discount_amount: '180.21665685',
+        net_amount: '0',
+        total_monthly_quota: '3900',
+      },
+      {
+        date: '2026-07-01',
+        username: '',
+        product: 'copilot',
+        sku: 'copilot_ai_credit',
+        model: 'Code Review model',
+        quantity: '12.5',
+        unit_type: 'ai-credits',
+        gross_amount: '0.125',
+        discount_amount: '0.125',
+        net_amount: '0',
+        total_monthly_quota: '3900',
+      },
+    ]);
+
+    expect(processed).toHaveLength(2);
+    expect(processed[0]).toMatchObject({
+      user: '',
+      usageUnit: 'ai_credit',
+      aicQuantity: 18021.665685,
+      isNonCopilotUsage: true,
+      usageBucket: 'unattributed_ai_credit',
+      quotaValue: 0,
+    });
+    expect(processed[1]).toMatchObject({
+      model: 'Code Review model',
+      aicQuantity: 12.5,
+      usageBucket: 'unattributed_ai_credit',
+    });
+  });
+
   it('maps AI Credits fields from the billing report', () => {
     const rows: CSVData[] = [
       {
