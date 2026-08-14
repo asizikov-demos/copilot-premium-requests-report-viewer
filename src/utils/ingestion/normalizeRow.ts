@@ -12,6 +12,7 @@ import { normalizeDateToIso, type DateNormalizer } from './dateNormalization';
 import {
   NON_COPILOT_CODE_REVIEW_BUCKET,
   NormalizedRow,
+  UNATTRIBUTED_AI_CREDIT_BUCKET,
 } from './types';
 
 /**
@@ -66,16 +67,23 @@ export function normalizeRow(
   }
 
   const trimmedUsername = username.trim();
-  const isNonCopilotCodeReviewUsage = trimmedUsername.length === 0 && isCodeReviewModel(model);
-
-  if (trimmedUsername.length === 0 && !isNonCopilotCodeReviewUsage) {
-    warnings.push(`Blank username is only allowed for Code Review usage date=${date}`);
-    return null;
-  }
-  
   const unitType = typeof unit_type === 'string' && unit_type.trim() !== '' ? unit_type.trim() : undefined;
   const skuValue = typeof sku === 'string' ? sku : undefined;
   const usageUnit = getUsageUnitKind(unitType, skuValue);
+  const isNonCopilotCodeReviewUsage = trimmedUsername.length === 0 && isCodeReviewModel(model);
+  const isUnattributedAiCreditUsage = trimmedUsername.length === 0 && usageUnit === 'ai_credit';
+  const isSpecialUsage = isNonCopilotCodeReviewUsage || isUnattributedAiCreditUsage;
+  const usageBucket = isNonCopilotCodeReviewUsage
+    ? NON_COPILOT_CODE_REVIEW_BUCKET
+    : isUnattributedAiCreditUsage
+      ? UNATTRIBUTED_AI_CREDIT_BUCKET
+      : undefined;
+
+  if (trimmedUsername.length === 0 && !isSpecialUsage) {
+    warnings.push(`Blank username is only allowed for Code Review or AI Credits usage date=${date}`);
+    return null;
+  }
+
   const shouldUseRequestValues = usageUnit === 'request';
   const shouldUseAiCreditValues = usageUnit === 'ai_credit';
   const shouldUseUsageValues = usageUnit !== 'unknown';
@@ -90,7 +98,7 @@ export function normalizeRow(
   const billingQty = shouldUseUsageValues ? parsedQty : 0;
   
   // Parse quota if present
-  const quotaValue = isNonCopilotCodeReviewUsage
+  const quotaValue = isSpecialUsage
     ? 0
     : shouldUseUsageValues && total_monthly_quota && typeof total_monthly_quota === 'string'
       ? parseQuotaValue(total_monthly_quota)
@@ -122,7 +130,7 @@ export function normalizeRow(
     model,
     quantity: qty,
     billingQuantity: billingQty,
-    quotaRaw: isNonCopilotCodeReviewUsage
+    quotaRaw: isSpecialUsage
       ? '0'
       : shouldUseUsageValues && typeof total_monthly_quota === 'string'
         ? total_monthly_quota
@@ -141,7 +149,7 @@ export function normalizeRow(
     netAmount: parseRequestBillingAmount('net_amount', net_amount),
     aicQuantity: shouldUseAiCreditValues ? billingQty : parseNum(aic_quantity),
     aicGrossAmount: shouldUseAiCreditValues ? grossAmountValue : parseNum(aic_gross_amount),
-    isNonCopilotUsage: isNonCopilotCodeReviewUsage,
-    usageBucket: isNonCopilotCodeReviewUsage ? NON_COPILOT_CODE_REVIEW_BUCKET : undefined,
+    isNonCopilotUsage: isSpecialUsage,
+    usageBucket,
   };
 }

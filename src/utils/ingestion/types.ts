@@ -7,13 +7,23 @@ import type { UsageUnitKind } from '@/utils/unitType';
 
 export const NON_COPILOT_CODE_REVIEW_BUCKET = 'non_copilot_code_review' as const;
 export const NON_COPILOT_CODE_REVIEW_LABEL = 'Non-Copilot Users' as const;
+export const UNATTRIBUTED_AI_CREDIT_BUCKET = 'unattributed_ai_credit' as const;
+export const UNATTRIBUTED_AI_CREDIT_LABEL = 'Unattributed AI Credits' as const;
 export const UNASSIGNED_BILLING_GROUP = 'Unassigned' as const;
 
-export type SpecialUsageBucketKey = typeof NON_COPILOT_CODE_REVIEW_BUCKET;
+export type SpecialUsageBucketKey =
+  | typeof NON_COPILOT_CODE_REVIEW_BUCKET
+  | typeof UNATTRIBUTED_AI_CREDIT_BUCKET;
+
+export function getSpecialUsageBucketLabel(key: SpecialUsageBucketKey): string {
+  return key === NON_COPILOT_CODE_REVIEW_BUCKET
+    ? NON_COPILOT_CODE_REVIEW_LABEL
+    : UNATTRIBUTED_AI_CREDIT_LABEL;
+}
 
 export interface SpecialUsageBucketAggregate {
   key: SpecialUsageBucketKey;
-  label: typeof NON_COPILOT_CODE_REVIEW_LABEL;
+  label: string;
   totalRequests: number;
   modelBreakdown: Record<string, number>;
   quotaValue: 0;
@@ -21,7 +31,7 @@ export interface SpecialUsageBucketAggregate {
 
 export interface SpecialBillingBucketTotals {
   key: SpecialUsageBucketKey;
-  label: typeof NON_COPILOT_CODE_REVIEW_LABEL;
+  label: string;
   quantity: number;
   overage: BillingOverageTotals;
   gross?: number;

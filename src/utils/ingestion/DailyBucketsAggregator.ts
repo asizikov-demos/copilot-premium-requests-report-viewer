@@ -89,8 +89,11 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
     this.months.add(day.slice(0, 7));
 
     if (row.isNonCopilotUsage && row.usageBucket) {
-      DailyBucketsAggregator.inc2Level(this.dailyBucketTotals, day, row.usageBucket, quantity);
-      DailyBucketsAggregator.inc3Level(this.dailyBucketModelTotals, day, row.usageBucket, model, quantity);
+      const bucketQuantity = row.usageUnit === 'ai_credit'
+        ? row.aicQuantity ?? row.billingQuantity ?? 0
+        : quantity;
+      DailyBucketsAggregator.inc2Level(this.dailyBucketTotals, day, row.usageBucket, bucketQuantity);
+      DailyBucketsAggregator.inc3Level(this.dailyBucketModelTotals, day, row.usageBucket, model, bucketQuantity);
       return;
     }
 

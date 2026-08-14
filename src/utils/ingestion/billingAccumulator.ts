@@ -10,7 +10,7 @@ import {
   BillingGroupTotals,
   BillingOverageTotals,
   BillingUserTotals,
-  NON_COPILOT_CODE_REVIEW_LABEL,
+  getSpecialUsageBucketLabel,
   SpecialBillingBucketTotals,
   SpecialUsageBucketKey,
   UNASSIGNED_BILLING_GROUP,
@@ -160,7 +160,7 @@ export class BillingAccumulator {
       if (!entry) {
         entry = {
           key: billingRow.usageBucket,
-          label: NON_COPILOT_CODE_REVIEW_LABEL,
+          label: getSpecialUsageBucketLabel(billingRow.usageBucket),
           quantity: 0,
           overage: createBillingOverageTotals(),
           quotaValue: 0,
