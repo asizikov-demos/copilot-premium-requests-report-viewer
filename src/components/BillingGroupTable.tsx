@@ -99,6 +99,25 @@ interface BillingGroupExtraColumn<T extends BillingGroupRow> {
   cellClassName?: string;
 }
 
+/** Trailing "Details" column that links each group row to its drill-down view. */
+export function createDetailsColumn<T extends BillingGroupRow>(
+  onSelect: (name: string) => void
+): BillingGroupExtraColumn<T> {
+  return {
+    key: 'details',
+    header: 'Details',
+    render: (row) => (
+      <button
+        type="button"
+        onClick={() => onSelect(row.name)}
+        className="text-indigo-600 hover:text-indigo-800 hover:underline font-medium focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white rounded-sm"
+      >
+        View details
+      </button>
+    ),
+  };
+}
+
 interface BillingGroupTableProps<T extends BillingGroupRow> {
   title: string;
   singularLabel: string;
@@ -112,6 +131,7 @@ interface BillingGroupTableProps<T extends BillingGroupRow> {
   discountColumnLabel?: string;
   netColumnLabel?: string;
   extraColumns?: Array<BillingGroupExtraColumn<T>>;
+  endColumns?: Array<BillingGroupExtraColumn<T>>;
 }
 
 export function BillingGroupTable<T extends BillingGroupRow>({
@@ -127,9 +147,10 @@ export function BillingGroupTable<T extends BillingGroupRow>({
   discountColumnLabel = 'Discount',
   netColumnLabel = 'Net',
   extraColumns = [],
+  endColumns = [],
 }: BillingGroupTableProps<T>) {
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
-  const detailColSpan = 2 + extraColumns.length + (hasAicGross ? 1 : 0) + (hasCosts ? 3 : 0);
+  const detailColSpan = 2 + extraColumns.length + endColumns.length + (hasAicGross ? 1 : 0) + (hasCosts ? 3 : 0);
 
   return (
     <div className="space-y-6">
@@ -159,6 +180,11 @@ export function BillingGroupTable<T extends BillingGroupRow>({
                     <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{netColumnLabel}</th>
                   </>
                 )}
+                {endColumns.map((column) => (
+                  <th key={column.key} className={column.headerClassName ?? 'px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider'}>
+                    {column.header}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-[#d1d9e0]">
@@ -216,6 +242,11 @@ export function BillingGroupTable<T extends BillingGroupRow>({
                           </td>
                         </>
                       )}
+                      {endColumns.map((column) => (
+                        <td key={column.key} className={column.cellClassName ?? 'px-6 py-3.5 text-sm text-right'}>
+                          {column.render(row)}
+                        </td>
+                      ))}
                     </tr>
                     {isExpanded && row.products.length > 0 && (
                       <tr>

@@ -40,12 +40,15 @@ describe('BillingGroupTable', () => {
         hasAicGross={true}
         detailIdPrefix="organization-details"
         extraColumns={[{ key: 'users', header: 'Users', render: (row) => row.users.toLocaleString() }]}
+        endColumns={[{ key: 'details', header: 'Details', render: () => <button type="button">View details</button> }]}
       />
     );
 
     expect(screen.getByRole('heading', { name: 'Organizations' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Organization' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Users' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Details' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'View details' })).toBeInTheDocument();
     expect(screen.getAllByRole('columnheader', { name: 'AI Credits Gross' })).toHaveLength(1);
     expect(screen.getByRole('columnheader', { name: 'Gross' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Discount' })).toBeInTheDocument();
