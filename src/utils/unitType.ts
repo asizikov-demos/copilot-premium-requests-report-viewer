@@ -35,12 +35,16 @@ export function isSupportedUsageUnitType(unitType: string | undefined, sku?: str
   return getUsageUnitKind(unitType, sku) !== 'unknown';
 }
 
+export function isAiCreditUsageRow(row: { usageUnit?: UsageUnitKind }): boolean {
+  return row.usageUnit === 'ai_credit';
+}
+
 export function isUsageBasedBillingRow(row: {
   usageUnit?: UsageUnitKind;
   product?: string;
   sku?: string;
 }): boolean {
-  if (row.usageUnit !== 'ai_credit') {
+  if (!isAiCreditUsageRow(row)) {
     return false;
   }
 

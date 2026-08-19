@@ -117,4 +117,57 @@ describe('useUsageBasedBillingScope', () => {
     expect(result.current.scopedBillingArtifacts).toBe(billingArtifacts);
     expect(result.current.quantityColumnLabel).toBe('Requests');
   });
+
+  it('keeps Code Quality AI-credit rows when usage-based Copilot billing is active', () => {
+    const requestRow = makeProcessedData({
+      user: 'test-user-one',
+      model: 'Claude Sonnet 4',
+      product: 'copilot',
+      sku: 'copilot_premium_request',
+      requestsUsed: 1,
+      usageUnit: 'request',
+      billingQuantity: 1,
+      grossAmount: 0.04,
+      netAmount: 0.04,
+    });
+    const copilotAiCreditRow = makeProcessedData({
+      user: 'test-user-two',
+      model: 'Claude Sonnet 4.6',
+      product: 'copilot',
+      sku: 'copilot_ai_credit',
+      requestsUsed: 0,
+      usageUnit: 'ai_credit',
+      billingQuantity: 12.5,
+      grossAmount: 0.125,
+      netAmount: 0.125,
+      aicQuantity: 12.5,
+      aicGrossAmount: 0.125,
+    });
+    const codeQualityRow = makeProcessedData({
+      user: 'test-user-three',
+      model: 'Claude Sonnet 4.6',
+      product: 'code_quality',
+      sku: 'code_quality_ai_credit',
+      requestsUsed: 0,
+      usageUnit: 'ai_credit',
+      billingQuantity: 51.28584,
+      grossAmount: 0.5128584,
+      netAmount: 0.5128584,
+      aicQuantity: 51.28584,
+      aicGrossAmount: 0.5128584,
+    });
+    const rows = [requestRow, copilotAiCreditRow, codeQualityRow];
+    const billingArtifacts = buildBillingArtifactsFromProcessedData(rows);
+
+    const { result } = renderHook(() => useUsageBasedBillingScope(rows, billingArtifacts));
+
+    expect(result.current.isUsageBasedBilling).toBe(true);
+    expect(result.current.billingRows).toEqual([copilotAiCreditRow, codeQualityRow]);
+    expect(result.current.scopedBillingArtifacts?.totals).toMatchObject({
+      gross: 0.6378584,
+      net: 0.6378584,
+      aicQuantity: 63.78584,
+    });
+    expect(result.current.scopedBillingArtifacts?.billingByModel.has('Claude Sonnet 4')).toBe(false);
+  });
 });
