@@ -24,6 +24,7 @@ import { UserDetailsView } from './UserDetailsView';
 
 type DailyCumulativeData = { date: string; [user: string]: string | number };
 const ALL_FILTERS_VALUE = '__all__';
+const NO_COST_CENTERS_FILTER_VALUE = '__no_cost_centers__';
 
 function formatHeatmapInteger(value: number): string {
   return Math.round(value).toLocaleString();
@@ -178,7 +179,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, da
     ? selectedOrganization
     : ALL_FILTERS_VALUE;
 
-  const effectiveSelectedCostCenter = costCenterOptions.includes(selectedCostCenter)
+  const effectiveSelectedCostCenter = selectedCostCenter === NO_COST_CENTERS_FILTER_VALUE || costCenterOptions.includes(selectedCostCenter)
     ? selectedCostCenter
     : ALL_FILTERS_VALUE;
 
@@ -191,7 +192,10 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, da
       const matchesSearch = searchQuery === '' || user.user.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesOrganization = effectiveSelectedOrganization === ALL_FILTERS_VALUE || user.organization === effectiveSelectedOrganization;
       const userCostCenters = user.costCenters ?? (user.costCenter ? [user.costCenter] : []);
-      const matchesCostCenter = effectiveSelectedCostCenter === ALL_FILTERS_VALUE || userCostCenters.includes(effectiveSelectedCostCenter);
+      const matchesCostCenter = effectiveSelectedCostCenter === ALL_FILTERS_VALUE
+        || (effectiveSelectedCostCenter === NO_COST_CENTERS_FILTER_VALUE
+          ? userCostCenters.length === 0
+          : userCostCenters.includes(effectiveSelectedCostCenter));
       const matchesPlan = effectiveSelectedPlan === ALL_FILTERS_VALUE || getUserPlanLabel(user.user) === effectiveSelectedPlan;
 
       return matchesSearch && matchesOrganization && matchesCostCenter && matchesPlan;
@@ -392,6 +396,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, da
               className="min-w-56 rounded-md border border-[#d1d9e0] bg-white px-3 py-2 text-sm text-[#1f2328] shadow-sm outline-none transition duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
             >
               <option value={ALL_FILTERS_VALUE}>All cost centers</option>
+              <option value={NO_COST_CENTERS_FILTER_VALUE}>No cost centers</option>
               {costCenterOptions.map((costCenter) => (
                 <option key={costCenter} value={costCenter}>
                   {costCenter}

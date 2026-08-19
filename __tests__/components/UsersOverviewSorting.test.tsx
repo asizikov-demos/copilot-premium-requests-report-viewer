@@ -380,6 +380,7 @@ describe('UsersOverview - sorting', () => {
       },
       { user: 'test-user-two', totalRequests: 20, modelBreakdown: { 'model-one': 20 }, organization: 'test-org-two', costCenter: 'test-cost-center-two' },
       { user: 'test-user-three', totalRequests: 15, modelBreakdown: { 'model-one': 15 }, organization: 'test-org-one', costCenter: 'test-cost-center-two' },
+      { user: 'test-user-four', totalRequests: 5, modelBreakdown: { 'model-one': 5 } },
     ];
 
     const quotaArtifacts = makeQuota([
@@ -397,6 +398,7 @@ describe('UsersOverview - sorting', () => {
           'test-user-one': 1,
           'test-user-two': 1,
           'test-user-three': 1,
+          'test-user-four': 1,
         }]}
         quotaArtifacts={quotaArtifacts}
         usageArtifacts={makeUsage(userData)}
@@ -417,6 +419,10 @@ describe('UsersOverview - sorting', () => {
 
     fireEvent.change(screen.getByLabelText('Cost center'), { target: { value: 'test-cost-center-two' } });
     expect(getRowUserOrder()).toEqual(['test-user-three', 'test-user-one']);
+
+    fireEvent.change(screen.getByLabelText('Organization'), { target: { value: '__all__' } });
+    fireEvent.change(screen.getByLabelText('Cost center'), { target: { value: '__no_cost_centers__' } });
+    expect(getRowUserOrder()).toEqual(['test-user-four']);
   });
 
   it('opens inline user details and returns via breadcrumb', () => {

@@ -1,6 +1,9 @@
 'use client';
 
-import { BillingGroupEntry, BillingGroupRow, BillingGroupTable, useBillingGroupRows } from '@/components/BillingGroupTable';
+import { useMemo, useState } from 'react';
+
+import { BillingGroupDetailsView } from '@/components/BillingGroupDetailsView';
+import { BillingGroupEntry, BillingGroupRow, BillingGroupTable, createDetailsColumn, useBillingGroupRows } from '@/components/BillingGroupTable';
 import { useAnalysisContext } from '@/context/AnalysisContext';
 import { useUsageBasedBillingScope } from '@/hooks/useUsageBasedBillingScope';
 import { UNASSIGNED_BILLING_GROUP } from '@/utils/ingestion';
@@ -13,6 +16,7 @@ export function OrganizationsOverview() {
   const { aggregateProcessedData, billingArtifacts } = useAnalysisContext();
   const { isUsageBasedBilling, billingRows, scopedBillingArtifacts, quantityColumnLabel, costLabels } =
     useUsageBasedBillingScope(aggregateProcessedData, billingArtifacts);
+  const [selectedOrganization, setSelectedOrganization] = useState<string | null>(null);
 
   const orgRows = useBillingGroupRows<{ users: number }>({
     sourceRows: billingRows,
@@ -29,6 +33,30 @@ export function OrganizationsOverview() {
 
   const hasCosts = orgRows.some(r => r.gross > 0 || r.net > 0);
   const hasAicGross = scopedBillingArtifacts?.hasAnyAicData === true;
+
+  const selectedOrganizationRows = useMemo(
+    () => (selectedOrganization === null
+      ? []
+      : billingRows.filter((row) => (row.organization || UNASSIGNED_BILLING_GROUP) === selectedOrganization)),
+    [billingRows, selectedOrganization]
+  );
+
+  if (selectedOrganization !== null) {
+    return (
+      <BillingGroupDetailsView
+        groupName={selectedOrganization}
+        groupLabel="organization"
+        groupsLabel="organizations"
+        detailIdPrefix="organization-daily-details"
+        rows={selectedOrganizationRows}
+        isUsageBasedBilling={isUsageBasedBilling}
+        quantityColumnLabel={quantityColumnLabel}
+        costLabels={costLabels}
+        hasAicGross={hasAicGross && !isUsageBasedBilling}
+        onBack={() => setSelectedOrganization(null)}
+      />
+    );
+  }
 
   return (
     <BillingGroupTable<OrganizationRow>
@@ -50,6 +78,7 @@ export function OrganizationsOverview() {
           render: (row) => row.users.toLocaleString(),
         },
       ]}
+      endColumns={[createDetailsColumn<OrganizationRow>(setSelectedOrganization)]}
     />
   );
 }
