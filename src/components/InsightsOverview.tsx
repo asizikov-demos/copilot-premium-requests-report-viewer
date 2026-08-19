@@ -7,6 +7,7 @@ import { ProcessedData } from '@/types/csv';
 import { UserSummary } from '@/utils/analytics';
 import { categorizeUserConsumption, calculateUnusedValue, CONSUMPTION_THRESHOLDS } from '@/utils/analytics/insights';
 import { QuotaArtifacts, UsageArtifacts, FeatureUsageArtifacts } from '@/utils/ingestion/types';
+import { formatDecimalQuantity } from '@/utils/formatters';
 import { buildConsumptionCategoriesFromArtifacts, buildFeatureUtilizationFromArtifacts } from '@/utils/ingestion/analytics';
 import type { WeeklyQuotaExhaustionBreakdown } from '@/utils/ingestion/analytics';
 
@@ -217,6 +218,17 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
               </p>
               <p className="text-xs text-[#636c76] mt-1">
                 {featureUtilization.spark.averagePerUser.toFixed(1)} avg per user • {featureUtilization.spark.userCount} users
+              </p>
+            </div>
+
+            {/* Code Quality */}
+            <div className="p-4 bg-white border border-[#d1d9e0] rounded-md">
+              <p className="text-xs font-medium text-[#636c76] uppercase tracking-[0.05em] mb-2">Code Quality</p>
+              <p className="text-2xl font-semibold text-[#1f2328] tabular-nums">
+                {formatDecimalQuantity(featureUtilization.codeQuality.totalSessions)}
+              </p>
+              <p className="text-xs text-[#636c76] mt-1">
+                {featureUtilization.codeQuality.averagePerUser.toFixed(1)} avg per user • {featureUtilization.codeQuality.userCount} users
               </p>
             </div>
 

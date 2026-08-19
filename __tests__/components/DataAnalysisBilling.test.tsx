@@ -72,9 +72,9 @@ function createIngestionResultWithBillingArtifacts(billingArtifacts: BillingArti
       'usage': { users: [], userTotals: new Map(), modelBreakdown: new Map(), globalModelTotals: new Map(), topModelPerUser: new Map(), modelTotals: {}, userCount: 0, modelCount: 0 },
       'dailyBuckets': { dailyUserTotals: new Map(), startDate: new Date(), endDate: new Date() },
       'featureUsage': {
-        featureTotals: { codeReview: 0, codingAgent: 0, spark: 0 },
-        featureUsers: { codeReview: new Set(), codingAgent: new Set(), spark: new Set() },
-        specialTotals: { nonCopilotCodeReview: 0 }
+        featureTotals: { codeReview: 0, codingAgent: 0, spark: 0, codeQuality: 0 },
+        featureUsers: { codeReview: new Set(), codingAgent: new Set(), spark: new Set(), codeQuality: new Set() },
+        specialTotals: { nonCopilotCodeReview: 0, unattributedCodeQuality: 0 }
       },
       'billing': billingArtifacts
     },
@@ -656,6 +656,21 @@ describe('DataAnalysis billing summary', () => {
         net_amount: '0.160',
         cost_center_name: 'Engineering',
       },
+      {
+        date: '2025-10-05',
+        username: 'test-user-five',
+        product: 'code_quality',
+        sku: 'code_quality_ai_credit',
+        model: 'Claude Sonnet 4.6',
+        quantity: '51.28584',
+        exceeds_quota: 'False',
+        total_monthly_quota: '1000',
+        applied_cost_per_quantity: '0.01',
+        gross_amount: '0.5128584',
+        discount_amount: '0.000',
+        net_amount: '0.5128584',
+        cost_center_name: 'Engineering',
+      },
     ];
 
     const ingestionResult = createIngestionResultFromRawRows(billingRows);
@@ -667,6 +682,8 @@ describe('DataAnalysis billing summary', () => {
       expect(screen.getAllByText('Spark').length).toBeGreaterThan(0);
       expect(screen.getAllByText('Cloud Agent').length).toBeGreaterThan(0);
       expect(screen.getAllByText('Code Review').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Code Quality').length).toBeGreaterThan(0);
+      expect(screen.getAllByRole('button', { name: 'Insights' }).length).toBeGreaterThan(0);
 
       expect(screen.getByText('Claude Sonnet 4')).toBeInTheDocument();
       expect(screen.getByText('Claude Sonnet 4.5')).toBeInTheDocument();
@@ -760,6 +777,61 @@ describe('DataAnalysis billing summary', () => {
 
     await waitFor(() => {
       expect(screen.getAllByText('Spark').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Copilot').length).toBeGreaterThan(0);
+    });
+  });
+
+  it('shows Code Quality as a separate product inside cost center breakdowns', async () => {
+    const billingRows: CSVData[] = [
+      {
+        date: '2025-10-01',
+        username: 'test-user-one',
+        product: 'copilot',
+        sku: 'copilot_premium_request',
+        model: 'Claude Sonnet 4',
+        quantity: '1',
+        exceeds_quota: 'False',
+        total_monthly_quota: '1000',
+        applied_cost_per_quantity: '0.04',
+        gross_amount: '0.040',
+        discount_amount: '0.000',
+        net_amount: '0.040',
+        cost_center_name: 'test-cost-center-one',
+      },
+      {
+        date: '2025-10-02',
+        username: 'test-user-two',
+        product: 'code_quality',
+        sku: 'code_quality_ai_credit',
+        model: 'Claude Sonnet 4.6',
+        quantity: '51.28584',
+        exceeds_quota: 'False',
+        total_monthly_quota: '1000',
+        applied_cost_per_quantity: '0.01',
+        gross_amount: '0.5128584',
+        discount_amount: '0.000',
+        net_amount: '0.5128584',
+        cost_center_name: 'test-cost-center-one',
+      },
+    ];
+
+    const ingestionResult = createIngestionResultFromRawRows(billingRows);
+    render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: 'Cost Centers' }).length).toBeGreaterThan(0);
+    });
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Cost Centers' })[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /test-cost-center-one/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /test-cost-center-one/i }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Code Quality').length).toBeGreaterThan(0);
       expect(screen.getAllByText('Copilot').length).toBeGreaterThan(0);
     });
   });

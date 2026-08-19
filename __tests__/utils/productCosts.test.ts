@@ -21,6 +21,7 @@ describe('aggregateProductCosts', () => {
       makeProcessedData({ ...PRODUCT_COST_ROW_DEFAULTS, product: 'spark', sku: 'spark_premium_request', model: 'Claude Sonnet 4.5', requestsUsed: 3, grossAmount: 0.12, netAmount: 0.12 }),
       makeProcessedData({ ...PRODUCT_COST_ROW_DEFAULTS, model: 'Coding Agent model', requestsUsed: 4, grossAmount: 0.16, netAmount: 0.16 }),
       makeProcessedData({ ...PRODUCT_COST_ROW_DEFAULTS, model: 'Code Review model', requestsUsed: 5, grossAmount: 0.2, netAmount: 0.2 }),
+      makeProcessedData({ ...PRODUCT_COST_ROW_DEFAULTS, product: 'code_quality', sku: 'code_quality_ai_credit', model: 'Claude Sonnet 4.6', requestsUsed: 51.28584, grossAmount: 0.5128584, netAmount: 0.5128584 }),
       makeProcessedData({ ...PRODUCT_COST_ROW_DEFAULTS, user: '', model: 'Code Review', requestsUsed: 6, grossAmount: 0.24, netAmount: 0.24, isNonCopilotUsage: true, usageBucket: 'non_copilot_code_review' }),
     ];
 
@@ -29,6 +30,7 @@ describe('aggregateProductCosts', () => {
       expect.objectContaining({ category: 'Spark', label: 'Spark', requests: 3 }),
       expect.objectContaining({ category: 'Coding Agent', label: 'Cloud Agent', requests: 4 }),
       expect.objectContaining({ category: 'Code Review', label: 'Code Review', requests: 5 }),
+      expect.objectContaining({ category: 'Code Quality', label: 'Code Quality', requests: 51.28584 }),
       expect.objectContaining({ category: 'Code Review for Non-Copilot Users', label: 'Code Review for Non-Copilot Users', requests: 6 }),
     ]);
   });

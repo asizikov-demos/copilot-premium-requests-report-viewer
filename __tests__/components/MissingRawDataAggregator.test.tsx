@@ -24,9 +24,9 @@ function createIngestionResultWithoutRawData(): IngestionResult {
       usage: { users: [], modelTotals: {}, userCount: 0, modelCount: 0 },
       dailyBuckets: makeDailyBucketsArtifacts(),
       featureUsage: {
-        featureTotals: { codeReview: 0, codingAgent: 0, spark: 0 },
-        featureUsers: { codeReview: new Set(), codingAgent: new Set(), spark: new Set() },
-        specialTotals: { nonCopilotCodeReview: 0 }
+        featureTotals: { codeReview: 0, codingAgent: 0, spark: 0, codeQuality: 0 },
+        featureUsers: { codeReview: new Set(), codingAgent: new Set(), spark: new Set(), codeQuality: new Set() },
+        specialTotals: { nonCopilotCodeReview: 0, unattributedCodeQuality: 0 }
       }
       // Intentionally no rawData aggregator output
     },

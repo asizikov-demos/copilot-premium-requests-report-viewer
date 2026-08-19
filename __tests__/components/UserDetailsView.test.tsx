@@ -199,6 +199,48 @@ describe('UserDetailsView', () => {
     });
   });
 
+  it('renders Code Quality as a separate billing product bucket', async () => {
+    const timestamp = new Date('2025-06-10T10:00:00Z');
+    const iso = timestamp.toISOString();
+    const processedData: ProcessedData[] = [
+      {
+        timestamp,
+        user: 'test-user-one',
+        model: 'Claude Sonnet 4.6',
+        requestsUsed: 51.28584,
+        exceedsQuota: false,
+        totalQuota: '1000',
+        quotaValue: 1000,
+        iso,
+        dateKey: iso.slice(0, 10),
+        monthKey: iso.slice(0, 7),
+        epoch: timestamp.getTime(),
+        product: 'code_quality',
+        sku: 'code_quality_ai_credit',
+        organization: 'test-org-one',
+        costCenter: 'test-cost-center-one',
+        grossAmount: 0.5128584,
+        discountAmount: 0,
+        netAmount: 0.5128584,
+      },
+    ];
+
+    render(
+      <UserDetailsView
+        user="test-user-one"
+        processedData={processedData}
+        userQuotaValue={1000}
+        onBack={mockOnBack}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Cost per Product')).toBeInTheDocument();
+      expect(screen.getByText('Code Quality')).toBeInTheDocument();
+      expect(screen.queryByText('Copilot')).not.toBeInTheDocument();
+    });
+  });
+
   it('groups user spend by cost center and omits the table without cost centers', () => {
     const makeRow = (
       date: string,

@@ -18,6 +18,7 @@ export const PRODUCT_CATEGORY_ORDER: ProductCategory[] = [
   'Spark',
   'Coding Agent',
   'Code Review',
+  'Code Quality',
   'Code Review for Non-Copilot Users',
 ];
 

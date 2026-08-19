@@ -10,6 +10,7 @@ import { getEffectiveAicQuantity } from '@/utils/aicFields';
 import { formatCurrency } from '@/utils/formatters';
 import { buildDailyModelAicUsageFromArtifacts, buildDailyModelUsageFromArtifacts } from '@/utils/ingestion/analytics';
 import { generateModelColors } from '@/utils/modelColors';
+import { isUsageBasedBillingRow } from '@/utils/unitType';
 
 interface TopAicModelRow {
   model: string;
@@ -28,7 +29,7 @@ export function ModelUsageTrendsOverview() {
     aggregateProcessedData,
   } = useAnalysisContext();
   const isUsageBasedBilling = useMemo(() => {
-    return aggregateProcessedData.some((row) => row.usageUnit === 'ai_credit');
+    return aggregateProcessedData.some(isUsageBasedBillingRow);
   }, [aggregateProcessedData]);
 
   const { data, models } = useMemo(() => {
