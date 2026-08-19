@@ -15,16 +15,21 @@ describe('FeatureUsageAggregator', () => {
       makeNormalizedRow({ user: 'u1', model: 'Coding Agent', quantity: 5 }),
       makeNormalizedRow({ user: 'u3', model: 'Copilot Coding Agent', quantity: 4 }),
       makeNormalizedRow({ user: 'u2', model: 'gpt-4.1', product: 'spark', sku: 'spark_premium_request', quantity: 7 }),
-      makeNormalizedRow({ user: 'u4', model: 'o3-mini', product: 'spark', sku: 'spark_premium_request', quantity: 1 })
+      makeNormalizedRow({ user: 'u4', model: 'o3-mini', product: 'spark', sku: 'spark_premium_request', quantity: 1 }),
+      makeNormalizedRow({ user: 'u5', model: 'Claude Sonnet 4.6', product: 'code_quality', sku: 'code_quality_ai_credit', quantity: 51.28584 }),
+      makeNormalizedRow({ user: '', model: 'Claude Sonnet 4.6', product: 'code_quality', sku: 'code_quality_ai_credit', quantity: 10 })
     ];
     for (const r of rows) agg.onRow(r, ctx);
     const out = agg.finalize(ctx);
     expect(out.featureTotals.codeReview).toBe(5);
     expect(out.featureTotals.codingAgent).toBe(9);
     expect(out.featureTotals.spark).toBe(8);
+    expect(out.featureTotals.codeQuality).toBe(61.28584);
     expect(out.featureUsers.codeReview.size).toBe(2);
     expect(out.featureUsers.codingAgent.size).toBe(2);
     expect(out.featureUsers.spark.size).toBe(2);
+    expect(out.featureUsers.codeQuality.size).toBe(1);
+    expect(out.featureUsers.codeQuality.has('u5')).toBeTruthy();
     expect(out.featureUsers.codeReview.has('u1')).toBeTruthy();
     expect(out.featureUsers.codeReview.has('u2')).toBeTruthy();
   });

@@ -7,6 +7,7 @@ export type ProductCategory =
   | 'Coding Agent'
   | 'Code Review'
   | 'Spark'
+  | 'Code Quality'
   | typeof NON_COPILOT_CODE_REVIEW_PRODUCT_CATEGORY;
 
 function normalizeProductValue(value?: string): string {
@@ -30,6 +31,14 @@ export function isSparkProduct(product?: string, sku?: string): boolean {
     || normalizedSku === 'spark_premium_request';
 }
 
+export function isCodeQualityProduct(product?: string, sku?: string): boolean {
+  const normalizedProduct = normalizeProductValue(product);
+  const normalizedSku = normalizeProductValue(sku);
+
+  return normalizedProduct === 'code_quality'
+    || normalizedSku === 'code_quality_ai_credit';
+}
+
 export function classifyProductCategory(
   model: string,
   product?: string,
@@ -45,6 +54,10 @@ export function classifyProductCategory(
 
   if (isSparkProduct(product, sku)) {
     return 'Spark';
+  }
+
+  if (isCodeQualityProduct(product, sku)) {
+    return 'Code Quality';
   }
 
   if (isCodingAgentModel(model)) {

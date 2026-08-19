@@ -66,8 +66,8 @@ function createContextValue() {
       dateRange: { min: '2025-06-01', max: '2025-06-02' },
     }),
     featureUsageArtifacts: {
-      featureTotals: { codeReview: 0, codingAgent: 0, spark: 0 },
-      featureUsers: { codeReview: new Set(), codingAgent: new Set(), spark: new Set() },
+      featureTotals: { codeReview: 0, codingAgent: 0, spark: 0, codeQuality: 0 },
+      featureUsers: { codeReview: new Set(), codingAgent: new Set(), spark: new Set(), codeQuality: new Set() },
       specialTotals: { nonCopilotCodeReview: 0 },
     } as FeatureUsageArtifacts,
     billingArtifacts: undefined as BillingArtifacts | undefined,

@@ -220,6 +220,17 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
               </p>
             </div>
 
+            {/* Code Quality */}
+            <div className="p-4 bg-white border border-[#d1d9e0] rounded-md">
+              <p className="text-xs font-medium text-[#636c76] uppercase tracking-[0.05em] mb-2">Code Quality</p>
+              <p className="text-2xl font-semibold text-[#1f2328]">
+                {Math.round(featureUtilization.codeQuality.totalSessions)}
+              </p>
+              <p className="text-xs text-[#636c76] mt-1">
+                {featureUtilization.codeQuality.averagePerUser.toFixed(1)} avg per user • {featureUtilization.codeQuality.userCount} users
+              </p>
+            </div>
+
             <div className="p-4 bg-white border border-[#d1d9e0] rounded-md">
               <p className="text-xs font-medium text-[#636c76] uppercase tracking-[0.05em] mb-2">Code Review for Non-Copilot Users</p>
               <p className="text-2xl font-semibold text-[#1f2328]">

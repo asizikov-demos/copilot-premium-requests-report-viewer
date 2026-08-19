@@ -22,6 +22,7 @@ export interface FeatureUtilizationStats {
   codeReview: { totalSessions: number; averagePerUser: number; userCount: number; };
   codingAgent: { totalSessions: number; averagePerUser: number; userCount: number; };
   spark: { totalSessions: number; averagePerUser: number; userCount: number; };
+  codeQuality: { totalSessions: number; averagePerUser: number; userCount: number; };
   nonCopilotCodeReview: { totalSessions: number; };
 }
 

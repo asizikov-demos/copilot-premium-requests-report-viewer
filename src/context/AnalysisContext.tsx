@@ -92,10 +92,12 @@ function isFeatureUsageArtifacts(value: unknown): value is FeatureUsageArtifacts
     typeof featureTotals.codeReview === 'number' &&
     typeof featureTotals.codingAgent === 'number' &&
     typeof featureTotals.spark === 'number' &&
+    typeof featureTotals.codeQuality === 'number' &&
     isRecord(featureUsers) &&
     featureUsers.codeReview instanceof Set &&
     featureUsers.codingAgent instanceof Set &&
     featureUsers.spark instanceof Set &&
+    featureUsers.codeQuality instanceof Set &&
     isRecord(specialTotals) &&
     typeof specialTotals.nonCopilotCodeReview === 'number'
   );

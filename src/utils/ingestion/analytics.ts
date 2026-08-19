@@ -535,6 +535,7 @@ export function buildFeatureUtilizationFromArtifacts(featureUsage: FeatureUsageA
   const codeReviewUsers = featureUsers.codeReview.size;
   const codingAgentUsers = featureUsers.codingAgent.size;
   const sparkUsers = featureUsers.spark.size;
+  const codeQualityUsers = featureUsers.codeQuality.size;
   const nonCopilotCodeReviewRequests = specialTotals.nonCopilotCodeReview;
   const codeReviewRequests = Math.max(0, featureTotals.codeReview - nonCopilotCodeReviewRequests);
   return {
@@ -552,6 +553,11 @@ export function buildFeatureUtilizationFromArtifacts(featureUsage: FeatureUsageA
       totalSessions: featureTotals.spark,
       averagePerUser: avg(featureTotals.spark, sparkUsers),
       userCount: sparkUsers
+    },
+    codeQuality: {
+      totalSessions: featureTotals.codeQuality,
+      averagePerUser: avg(featureTotals.codeQuality, codeQualityUsers),
+      userCount: codeQualityUsers
     },
     nonCopilotCodeReview: {
       totalSessions: nonCopilotCodeReviewRequests
