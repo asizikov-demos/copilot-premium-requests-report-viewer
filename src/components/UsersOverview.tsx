@@ -10,6 +10,7 @@ import { useSortableTable } from '@/hooks/useSortableTable';
 import { ProcessedData } from '@/types/csv';
 import type { UserSummary } from '@/utils/analytics';
 import { formatCurrency } from '@/utils/formatters';
+import { isUsageBasedBillingRow } from '@/utils/unitType';
 import {
   BillingArtifacts,
   buildBillingArtifactsFromProcessedData,
@@ -87,7 +88,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, da
 
   const hasAicGross = effectiveBillingArtifacts.hasAnyAicData;
   const isUsageBasedBilling = useMemo(() => {
-    return processedData.some((row) => row.usageUnit === 'ai_credit');
+    return processedData.some(isUsageBasedBillingRow);
   }, [processedData]);
   const showRequestMetrics = !isUsageBasedBilling;
   const showAicGross = hasAicGross && !isUsageBasedBilling;

@@ -16,6 +16,7 @@ import {
 } from '@/utils/ingestion';
 import { filterDailySeriesByMonths } from '@/utils/analytics/filters';
 import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
+import { isUsageBasedBillingRow } from '@/utils/unitType';
 
 import { AgentUsersTable, type AgentUsageTableRow } from './charts/AgentUsersTable';
 import { CodingAgentUsageChart } from './charts/CodingAgentUsageChart';
@@ -75,7 +76,7 @@ export function CodingAgentOverview({
   const { aggregateProcessedData, dailyBucketsArtifacts, selectedMonths } = useAnalysisContext();
   const typedDailyBuckets = dailyBucketsArtifacts as DailyBucketsArtifacts | undefined;
   const hasAiCreditUsage = useMemo(
-    () => aggregateProcessedData.some((row) => row.usageUnit === 'ai_credit'),
+    () => aggregateProcessedData.some(isUsageBasedBillingRow),
     [aggregateProcessedData]
   );
   const isUsageBasedBilling = hasAiCreditUsage;

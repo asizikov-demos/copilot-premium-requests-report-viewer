@@ -83,4 +83,38 @@ describe('useUsageBasedBillingScope', () => {
       net: 'Additional usage',
     });
   });
+
+  it('keeps mixed premium-request reports request-based when only Code Quality uses AI credits', () => {
+    const requestRow = makeProcessedData({
+      user: 'test-user-one',
+      model: 'Claude Sonnet 4',
+      product: 'copilot',
+      sku: 'copilot_premium_request',
+      requestsUsed: 1,
+      usageUnit: 'request',
+      billingQuantity: 1,
+      grossAmount: 0.04,
+      netAmount: 0.04,
+    });
+    const codeQualityRow = makeProcessedData({
+      user: 'test-user-two',
+      model: 'Claude Sonnet 4.6',
+      product: 'code_quality',
+      sku: 'code_quality_ai_credit',
+      requestsUsed: 0,
+      usageUnit: 'ai_credit',
+      billingQuantity: 51.28584,
+      grossAmount: 0.5128584,
+      netAmount: 0.5128584,
+    });
+    const rows = [requestRow, codeQualityRow];
+    const billingArtifacts = buildBillingArtifactsFromProcessedData(rows);
+
+    const { result } = renderHook(() => useUsageBasedBillingScope(rows, billingArtifacts));
+
+    expect(result.current.isUsageBasedBilling).toBe(false);
+    expect(result.current.billingRows).toBe(rows);
+    expect(result.current.scopedBillingArtifacts).toBe(billingArtifacts);
+    expect(result.current.quantityColumnLabel).toBe('Requests');
+  });
 });

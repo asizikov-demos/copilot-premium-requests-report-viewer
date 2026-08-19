@@ -5,9 +5,7 @@ import { useMemo } from 'react';
 import type { ProcessedData } from '@/types/csv';
 import { getBillingCostLabels, type BillingCostLabels } from '@/utils/billingLabels';
 import { buildBillingArtifactsFromProcessedData, type BillingArtifacts } from '@/utils/ingestion';
-import type { UsageUnitKind } from '@/utils/unitType';
-
-const AI_CREDIT_USAGE_UNIT: UsageUnitKind = 'ai_credit';
+import { isUsageBasedBillingRow } from '@/utils/unitType';
 
 interface UseUsageBasedBillingScopeResult {
   isUsageBasedBilling: boolean;
@@ -17,21 +15,17 @@ interface UseUsageBasedBillingScopeResult {
   costLabels: BillingCostLabels;
 }
 
-function isAiCreditUsage(row: ProcessedData): boolean {
-  return row.usageUnit === AI_CREDIT_USAGE_UNIT;
-}
-
 export function useUsageBasedBillingScope(
   aggregateProcessedData: ProcessedData[],
   billingArtifacts: BillingArtifacts | undefined
 ): UseUsageBasedBillingScopeResult {
   const isUsageBasedBilling = useMemo(
-    () => aggregateProcessedData.some(isAiCreditUsage),
+    () => aggregateProcessedData.some(isUsageBasedBillingRow),
     [aggregateProcessedData]
   );
   const billingRows = useMemo(
     () => isUsageBasedBilling
-      ? aggregateProcessedData.filter(isAiCreditUsage)
+      ? aggregateProcessedData.filter(isUsageBasedBillingRow)
       : aggregateProcessedData,
     [aggregateProcessedData, isUsageBasedBilling]
   );

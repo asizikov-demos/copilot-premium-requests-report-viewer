@@ -34,3 +34,16 @@ export function getUsageUnitKind(unitType: string | undefined, sku?: string): Us
 export function isSupportedUsageUnitType(unitType: string | undefined, sku?: string): boolean {
   return getUsageUnitKind(unitType, sku) !== 'unknown';
 }
+
+export function isUsageBasedBillingRow(row: {
+  usageUnit?: UsageUnitKind;
+  product?: string;
+  sku?: string;
+}): boolean {
+  if (row.usageUnit !== 'ai_credit') {
+    return false;
+  }
+
+  return normalizeUsageValue(row.product) !== 'code_quality'
+    && normalizeUsageValue(row.sku) !== 'code_quality_ai_credit';
+}
