@@ -71,7 +71,7 @@ export class FeatureUsageAggregator implements Aggregator<FeatureUsageArtifacts>
     }
 
     if (isCodeQualityProduct(row.product, row.sku)) {
-      this.codeQualityTotal += qty;
+      this.codeQualityTotal += row.billingQuantity ?? qty;
       if (!row.isNonCopilotUsage && row.user) {
         this.codeQualityUsers.add(row.user);
       }

@@ -1,5 +1,5 @@
 import { PRICING } from '@/constants/pricing';
-import { AggregatorContext, NormalizedRow } from '@/utils/ingestion';
+import { AggregatorContext, NormalizedRow, normalizeRow } from '@/utils/ingestion';
 import { FeatureUsageAggregator } from '@/utils/ingestion/FeatureUsageAggregator';
 
 import { makeNormalizedRow } from '../helpers/makeNormalizedRow';
@@ -16,8 +16,8 @@ describe('FeatureUsageAggregator', () => {
       makeNormalizedRow({ user: 'u3', model: 'Copilot Coding Agent', quantity: 4 }),
       makeNormalizedRow({ user: 'u2', model: 'gpt-4.1', product: 'spark', sku: 'spark_premium_request', quantity: 7 }),
       makeNormalizedRow({ user: 'u4', model: 'o3-mini', product: 'spark', sku: 'spark_premium_request', quantity: 1 }),
-      makeNormalizedRow({ user: 'u5', model: 'Claude Sonnet 4.6', product: 'code_quality', sku: 'code_quality_ai_credit', quantity: 51.28584 }),
-      makeNormalizedRow({ user: '', model: 'Claude Sonnet 4.6', product: 'code_quality', sku: 'code_quality_ai_credit', quantity: 10 })
+      makeNormalizedRow({ user: 'u5', model: 'Claude Sonnet 4.6', product: 'code_quality', sku: 'code_quality_ai_credit', quantity: 0, billingQuantity: 51.28584 }),
+      makeNormalizedRow({ user: '', model: 'Claude Sonnet 4.6', product: 'code_quality', sku: 'code_quality_ai_credit', quantity: 0, billingQuantity: 10 })
     ];
     for (const r of rows) agg.onRow(r, ctx);
     const out = agg.finalize(ctx);
@@ -53,5 +53,39 @@ describe('FeatureUsageAggregator', () => {
     expect(out.featureUsers.codeReview.size).toBe(1);
     expect(out.featureUsers.codeReview.has('u1')).toBe(true);
     expect(out.specialTotals.nonCopilotCodeReview).toBe(4);
+  });
+
+  test('counts Code Quality AI-credit rows from billing quantity after normalization', () => {
+    const warnings: string[] = [];
+    const row = normalizeRow({
+      date: '2026-08-03',
+      username: 'test-user-one',
+      product: 'code_quality',
+      sku: 'code_quality_ai_credit',
+      model: 'Claude Sonnet 4.6',
+      quantity: '51.28584',
+      unit_type: 'ai-credits',
+      applied_cost_per_quantity: '0.01',
+      gross_amount: '0.5128584',
+      discount_amount: '0',
+      net_amount: '0.5128584',
+      organization: 'test-org-one',
+      cost_center_name: 'test-cost-center-one',
+    }, warnings);
+
+    expect(row).not.toBeNull();
+    expect(row?.quantity).toBe(0);
+    expect(row?.billingQuantity).toBe(51.28584);
+
+    const agg = new FeatureUsageAggregator();
+    const ctx: AggregatorContext = { pricing: PRICING };
+    agg.init?.(ctx);
+    agg.onRow(row as NormalizedRow, ctx);
+
+    const out = agg.finalize(ctx);
+    expect(out.featureTotals.codeQuality).toBe(51.28584);
+    expect(out.featureUsers.codeQuality.size).toBe(1);
+    expect(out.featureUsers.codeQuality.has('test-user-one')).toBe(true);
+    expect(warnings).toEqual([]);
   });
 });
