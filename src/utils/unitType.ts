@@ -15,7 +15,8 @@ export function isAiCreditUnitType(unitType: string | undefined): boolean {
 }
 
 export function isAiCreditSku(sku: string | undefined): boolean {
-  return normalizeUsageValue(sku) === 'copilot_ai_credit';
+  const normalizedSku = normalizeUsageValue(sku);
+  return normalizedSku === 'copilot_ai_credit' || normalizedSku === 'code_quality_ai_credit';
 }
 
 export function getUsageUnitKind(unitType: string | undefined, sku?: string): UsageUnitKind {

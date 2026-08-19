@@ -88,4 +88,37 @@ describe('FeatureUsageAggregator', () => {
     expect(out.featureUsers.codeQuality.has('test-user-one')).toBe(true);
     expect(warnings).toEqual([]);
   });
+
+  test('keeps blank-user Code Quality rows when unit_type is omitted', () => {
+    const warnings: string[] = [];
+    const row = normalizeRow({
+      date: '2026-08-03',
+      username: '',
+      product: 'code_quality',
+      sku: 'code_quality_ai_credit',
+      model: 'Claude Sonnet 4.6',
+      quantity: '51.28584',
+      applied_cost_per_quantity: '0.01',
+      gross_amount: '0.5128584',
+      discount_amount: '0',
+      net_amount: '0.5128584',
+      organization: 'test-org-one',
+      cost_center_name: 'test-cost-center-one',
+    }, warnings);
+
+    expect(row).not.toBeNull();
+    expect(row?.usageUnit).toBe('ai_credit');
+    expect(row?.quantity).toBe(0);
+    expect(row?.billingQuantity).toBe(51.28584);
+    expect(warnings).toEqual([]);
+
+    const agg = new FeatureUsageAggregator();
+    const ctx: AggregatorContext = { pricing: PRICING };
+    agg.init?.(ctx);
+    agg.onRow(row as NormalizedRow, ctx);
+
+    const out = agg.finalize(ctx);
+    expect(out.featureTotals.codeQuality).toBe(51.28584);
+    expect(out.featureUsers.codeQuality.size).toBe(0);
+  });
 });
