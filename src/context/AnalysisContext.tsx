@@ -99,7 +99,8 @@ function isFeatureUsageArtifacts(value: unknown): value is FeatureUsageArtifacts
     featureUsers.spark instanceof Set &&
     featureUsers.codeQuality instanceof Set &&
     isRecord(specialTotals) &&
-    typeof specialTotals.nonCopilotCodeReview === 'number'
+    typeof specialTotals.nonCopilotCodeReview === 'number' &&
+    typeof specialTotals.unattributedCodeQuality === 'number'
   );
 }
 

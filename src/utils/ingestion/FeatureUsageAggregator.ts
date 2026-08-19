@@ -24,6 +24,7 @@ export class FeatureUsageAggregator implements Aggregator<FeatureUsageArtifacts>
   private sparkTotal = 0;
   private codeQualityTotal = 0;
   private nonCopilotCodeReviewTotal = 0;
+  private unattributedCodeQualityTotal = 0;
 
   private codeReviewUsers = new Set<string>();
   private codingAgentUsers = new Set<string>();
@@ -37,6 +38,7 @@ export class FeatureUsageAggregator implements Aggregator<FeatureUsageArtifacts>
     this.sparkTotal = 0;
     this.codeQualityTotal = 0;
     this.nonCopilotCodeReviewTotal = 0;
+    this.unattributedCodeQualityTotal = 0;
     this.codeReviewUsers.clear();
     this.codingAgentUsers.clear();
     this.sparkUsers.clear();
@@ -71,9 +73,12 @@ export class FeatureUsageAggregator implements Aggregator<FeatureUsageArtifacts>
     }
 
     if (isCodeQualityProduct(row.product, row.sku)) {
-      this.codeQualityTotal += row.billingQuantity ?? qty;
+      const codeQualityQty = row.billingQuantity ?? qty;
+      this.codeQualityTotal += codeQualityQty;
       if (!row.isNonCopilotUsage && row.user) {
         this.codeQualityUsers.add(row.user);
+      } else {
+        this.unattributedCodeQualityTotal += codeQualityQty;
       }
     }
   }
@@ -94,7 +99,8 @@ export class FeatureUsageAggregator implements Aggregator<FeatureUsageArtifacts>
         codeQuality: this.codeQualityUsers
       },
       specialTotals: {
-        nonCopilotCodeReview: this.nonCopilotCodeReviewTotal
+        nonCopilotCodeReview: this.nonCopilotCodeReviewTotal,
+        unattributedCodeQuality: this.unattributedCodeQualityTotal
       }
     };
   }

@@ -14,6 +14,7 @@ function makeFeatureUsageArtifacts({
   spark = 0,
   codeQuality = 0,
   nonCopilotCodeReview = 0,
+  unattributedCodeQuality = 0,
   codeReviewUsers = [],
   codingAgentUsers = [],
   sparkUsers = [],
@@ -24,6 +25,7 @@ function makeFeatureUsageArtifacts({
   spark?: number;
   codeQuality?: number;
   nonCopilotCodeReview?: number;
+  unattributedCodeQuality?: number;
   codeReviewUsers?: string[];
   codingAgentUsers?: string[];
   sparkUsers?: string[];
@@ -43,7 +45,8 @@ function makeFeatureUsageArtifacts({
       codeQuality: new Set(codeQualityUsers)
     },
     specialTotals: {
-      nonCopilotCodeReview
+      nonCopilotCodeReview,
+      unattributedCodeQuality
     }
   };
 }
@@ -122,6 +125,19 @@ describe('insights analytics', () => {
     expect(stats.spark.userCount).toBe(2);
     expect(stats.codeQuality.totalSessions).toBe(51.28584);
     expect(stats.codeQuality.userCount).toBe(1);
+    expect(stats.codeQuality.averagePerUser).toBe(51.28584);
+  });
+
+  test('feature utilization excludes unattributed Code Quality credits from the per-user average', () => {
+    const stats = buildFeatureUtilizationFromArtifacts(makeFeatureUsageArtifacts({
+      codeQuality: 61.28584,
+      unattributedCodeQuality: 10,
+      codeQualityUsers: ['test-user-five']
+    }));
+
+    expect(stats.codeQuality.totalSessions).toBe(61.28584);
+    expect(stats.codeQuality.userCount).toBe(1);
+    expect(stats.codeQuality.averagePerUser).toBe(51.28584);
   });
 
   test('feature utilization uses spark totals and users from artifacts', () => {

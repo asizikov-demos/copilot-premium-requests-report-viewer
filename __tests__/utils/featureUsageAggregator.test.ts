@@ -30,6 +30,7 @@ describe('FeatureUsageAggregator', () => {
     expect(out.featureUsers.spark.size).toBe(2);
     expect(out.featureUsers.codeQuality.size).toBe(1);
     expect(out.featureUsers.codeQuality.has('u5')).toBeTruthy();
+    expect(out.specialTotals.unattributedCodeQuality).toBe(10);
     expect(out.featureUsers.codeReview.has('u1')).toBeTruthy();
     expect(out.featureUsers.codeReview.has('u2')).toBeTruthy();
   });
@@ -120,5 +121,6 @@ describe('FeatureUsageAggregator', () => {
     const out = agg.finalize(ctx);
     expect(out.featureTotals.codeQuality).toBe(51.28584);
     expect(out.featureUsers.codeQuality.size).toBe(0);
+    expect(out.specialTotals.unattributedCodeQuality).toBe(51.28584);
   });
 });

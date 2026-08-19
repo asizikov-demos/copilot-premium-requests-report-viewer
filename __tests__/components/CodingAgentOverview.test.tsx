@@ -68,7 +68,7 @@ function createContextValue() {
     featureUsageArtifacts: {
       featureTotals: { codeReview: 0, codingAgent: 0, spark: 0, codeQuality: 0 },
       featureUsers: { codeReview: new Set(), codingAgent: new Set(), spark: new Set(), codeQuality: new Set() },
-      specialTotals: { nonCopilotCodeReview: 0 },
+      specialTotals: { nonCopilotCodeReview: 0, unattributedCodeQuality: 0 },
     } as FeatureUsageArtifacts,
     billingArtifacts: undefined as BillingArtifacts | undefined,
     baseProcessed: [] as ProcessedData[],

@@ -235,6 +235,7 @@ export interface FeatureUsageArtifacts {
   };
   specialTotals: {
     nonCopilotCodeReview: number;
+    unattributedCodeQuality: number;
   };
 }
 

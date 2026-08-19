@@ -74,7 +74,7 @@ function createIngestionResultWithBillingArtifacts(billingArtifacts: BillingArti
       'featureUsage': {
         featureTotals: { codeReview: 0, codingAgent: 0, spark: 0, codeQuality: 0 },
         featureUsers: { codeReview: new Set(), codingAgent: new Set(), spark: new Set(), codeQuality: new Set() },
-        specialTotals: { nonCopilotCodeReview: 0 }
+        specialTotals: { nonCopilotCodeReview: 0, unattributedCodeQuality: 0 }
       },
       'billing': billingArtifacts
     },
@@ -683,6 +683,7 @@ describe('DataAnalysis billing summary', () => {
       expect(screen.getAllByText('Cloud Agent').length).toBeGreaterThan(0);
       expect(screen.getAllByText('Code Review').length).toBeGreaterThan(0);
       expect(screen.getAllByText('Code Quality').length).toBeGreaterThan(0);
+      expect(screen.getAllByRole('button', { name: 'Insights' }).length).toBeGreaterThan(0);
 
       expect(screen.getByText('Claude Sonnet 4')).toBeInTheDocument();
       expect(screen.getByText('Claude Sonnet 4.5')).toBeInTheDocument();
