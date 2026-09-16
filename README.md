@@ -55,6 +55,8 @@ the selected user's rows contain token data. Input, Output, Cache Write, and Cac
 Read columns follow the table's date/model/cost-center grouping. Missing counts
 display as `—`, explicit zeros as `0`, and incomplete sums are marked `(partial)`.
 Reports without token data retain the existing table layout.
+Token-bearing reports also show the daily breakdown when commercial fields are
+absent; monetary columns are omitted rather than displayed as zero.
 
 User details also include a **Token Usage Over Time** chart with a model selector,
 a **Model Consumption Breakdown** with each model's share of reported AI Credits
@@ -72,6 +74,7 @@ Warnings remain in the ingestion result; this change adds no warning UI.
 If a summed count exceeds JavaScript's safe integer range, token aggregation fails
 with an ingestion warning and a `null` token artifact rather than rounded or partial
 totals. Other ingestion artifacts remain available.
+Subsequent rows skip the failed token accumulator, keeping its warnings bounded.
 
 Token artifacts contain separate totals for each token type, per model, per named
 user, per special usage bucket, and per UTC day. Each aggregate records its row count
