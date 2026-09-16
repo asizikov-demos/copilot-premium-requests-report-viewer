@@ -4,6 +4,7 @@ import { UserDetailsView } from '@/components/UserDetailsView';
 import { PRICING } from '@/constants/pricing';
 import { AnalysisContext } from '@/context/AnalysisContext';
 import type { ProcessedData, UserDailyData } from '@/types/csv';
+import { buildProcessedDataFromRawRows } from '@/utils/ingestion/adapters';
 
 import { makeUsageArtifacts } from '../helpers/makeArtifacts';
 
@@ -16,6 +17,8 @@ jest.mock('recharts', () => ({
   ),
   Bar: () => <div data-testid="bar" />,
   Line: () => <div data-testid="line" />,
+  LineChart: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Legend: () => <div />,
   XAxis: () => <div data-testid="x-axis" />,
   YAxis: () => <div data-testid="y-axis" />,
   CartesianGrid: () => <div data-testid="cartesian-grid" />,
@@ -29,6 +32,115 @@ jest.mock('recharts', () => ({
 
 describe('UserDetailsView', () => {
   const mockOnBack = jest.fn();
+
+  it('renders token-only daily rows without monetary columns and preserves cost centers', () => {
+    const base = {
+      date: '2026-06-30', username: 'test-user-one', model: 'test-model-one', quantity: '1',
+    };
+    const rows = buildProcessedDataFromRawRows([
+      { ...base, input: '0', cost_center_name: 'test-cost-center-one' },
+      { ...base, input: '10', cache_write: '2', cost_center_name: 'test-cost-center-two' },
+    ]);
+    const { rerender } = render(
+      <UserDetailsView user="test-user-one" processedData={rows} userQuotaValue="unknown" onBack={mockOnBack} />
+    );
+    const table = screen.getByRole('table', { name: 'Daily Model Usage Breakdown' });
+    expect(within(table).getAllByRole('columnheader').map(header => header.textContent)).toEqual([
+      'Date', 'Model', 'Cost Center', 'Requests', 'Input Tokens', 'Output Tokens',
+      'Cache Write Tokens', 'Cache Read Tokens',
+    ]);
+    expect(within(table).getAllByRole('row')).toHaveLength(3);
+    expect(within(table).getByText('test-cost-center-one')).toBeInTheDocument();
+    expect(within(table).getByText('test-cost-center-two')).toBeInTheDocument();
+    expect(within(table).getByRole('cell', { name: '0' })).toBeInTheDocument();
+    expect(within(table).getByRole('cell', { name: '10' })).toBeInTheDocument();
+    expect(table).not.toHaveTextContent('$');
+    expect(screen.queryByRole('table', { name: 'Cost per Cost Center' })).not.toBeInTheDocument();
+
+    rerender(
+      <UserDetailsView user="test-user-one" processedData={buildProcessedDataFromRawRows([base])} userQuotaValue="unknown" onBack={mockOnBack} />
+    );
+    expect(screen.queryByRole('table', { name: 'Daily Model Usage Breakdown' })).not.toBeInTheDocument();
+  });
+
+  it('groups token counts by UTC date, model and cost center, preserving zero and partial coverage', () => {
+    const base = {
+      date: '2026-06-30T23:59:59Z',
+      username: 'test-user-one',
+      model: 'test-model-one',
+      quantity: '1',
+      unit_type: 'ai-credits',
+      gross_amount: '1',
+      cost_center_name: 'test-cost-center-one',
+    };
+    const processedData = buildProcessedDataFromRawRows([
+      { ...base, input: '1000', output: '0', cache_read: '20', cache_write: '5' },
+      { ...base, input: '250', cache_read: '30' },
+      { ...base, cost_center_name: 'test-cost-center-two', input: '9', output: '0' },
+      { ...base, date: '2026-07-01', input: '7' },
+      { ...base, model: 'test-model-two' },
+      { ...base, username: 'test-user-two', input: '9999' },
+    ]);
+    const { rerender } = render(
+      <UserDetailsView user="test-user-one" processedData={processedData} userQuotaValue="unknown" onBack={mockOnBack} />
+    );
+    const table = screen.getByRole('table', { name: 'Daily Model Usage Breakdown' });
+    const headings = screen.getAllByRole('heading', { level: 3 }).map(heading => heading.textContent);
+    expect(headings.slice(headings.indexOf('Daily Model Usage'))).toEqual([
+      'Daily Model Usage',
+      'Token Usage Over Time',
+      'Model Consumption Breakdown',
+      'Daily Model Usage Breakdown',
+    ]);
+    expect(within(table).getAllByRole('columnheader').map(header => header.textContent)).toEqual([
+      'Date', 'Model', 'Cost Center', 'AI Credits', 'Input Tokens', 'Output Tokens',
+      'Cache Write Tokens', 'Cache Read Tokens', 'Gross Amount', 'Included credits', 'Additional usage',
+    ]);
+    const rows = within(table).getAllByRole('row').slice(1);
+    const cells = (row: HTMLElement) => within(row).getAllByRole('cell').map(cell => cell.textContent);
+    expect(cells(rows[0]).slice(0, 8)).toEqual([
+      '2026-06-30', '- test-model-one', 'test-cost-center-one', '2.00',
+      (1250).toLocaleString(), '0(partial)', '5(partial)', '50',
+    ]);
+    expect(within(rows[0]).getAllByText('(partial)')[0]).toHaveAttribute(
+      'title', '1 of 2 rows reported this token count'
+    );
+    expect(cells(rows[1]).slice(0, 7)).toEqual([
+      '- test-model-one', 'test-cost-center-two', '1.00', '9', '0', '—', '—',
+    ]);
+    expect(within(rows[2]).getAllByLabelText('Not reported')).toHaveLength(4);
+    expect(cells(rows[3])[0]).toBe('2026-07-01');
+    expect(table).not.toHaveTextContent('9,999');
+
+    rerender(
+      <UserDetailsView user="test-user-one" processedData={processedData.filter(row => row.monthKey === '2026-07')} userQuotaValue="unknown" onBack={mockOnBack} />
+    );
+    const filteredTable = screen.getByRole('table', { name: 'Daily Model Usage Breakdown' });
+    expect(filteredTable).not.toHaveTextContent('2026-06-30');
+    expect(within(filteredTable).getAllByRole('row')).toHaveLength(2);
+    expect(within(filteredTable).getByRole('cell', { name: '7' })).toBeInTheDocument();
+  });
+
+  it('shows all four token columns for reported zeros and hides them for legacy user rows', () => {
+    const base = {
+      date: '2026-06-30', username: 'test-user-one', model: 'test-model-one', quantity: '1', gross_amount: '0',
+    };
+    const { rerender } = render(
+      <UserDetailsView user="test-user-one" processedData={buildProcessedDataFromRawRows([
+        { ...base, input: '0', output: '0', cache_read: '0', cache_write: '0' },
+      ])} userQuotaValue="unknown" onBack={mockOnBack} />
+    );
+    const table = screen.getByRole('table', { name: 'Daily Model Usage Breakdown' });
+    expect(within(table).getByRole('columnheader', { name: 'Input Tokens' })).toBeInTheDocument();
+    expect(within(table).getAllByRole('cell', { name: '0' })).toHaveLength(4);
+    rerender(
+      <UserDetailsView user="test-user-one" processedData={buildProcessedDataFromRawRows([
+        base, { ...base, username: 'test-user-two', input: '10' },
+      ])} userQuotaValue="unknown" onBack={mockOnBack} />
+    );
+    expect(screen.queryByRole('columnheader', { name: /Tokens/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Partial totals/)).not.toBeInTheDocument();
+  });
 
   const createMockProcessedData = (quotaValues: Array<number | 'unknown'>): ProcessedData[] => {
     return quotaValues.map((quotaValue, index) => {
@@ -543,7 +655,7 @@ describe('UserDetailsView', () => {
       expect(screen.getByText('Cost per Product')).toBeInTheDocument();
       expect(screen.getByText('Bars: daily AI Credits by model · Black line: cumulative · Red line: quota')).toBeInTheDocument();
       expect(screen.getByText('Daily Model Usage Breakdown')).toBeInTheDocument();
-      expect(screen.getAllByRole('columnheader', { name: 'AI Credits' })).toHaveLength(2);
+      expect(screen.getAllByRole('columnheader', { name: 'AI Credits' })).toHaveLength(3);
       expect(screen.getAllByRole('columnheader', { name: 'Gross Amount' })).toHaveLength(2);
       expect(screen.queryByRole('columnheader', { name: 'AI Credits Gross' })).not.toBeInTheDocument();
       expect(screen.queryByRole('columnheader', { name: 'Requests' })).not.toBeInTheDocument();

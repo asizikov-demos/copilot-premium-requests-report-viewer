@@ -28,12 +28,14 @@ import {
   type Aggregator,
   type FeatureUsageArtifacts,
   type NormalizedRow,
+  type TokenArtifacts,
   type QuotaArtifacts,
   type UsageArtifacts,
 } from './types';
 import { DailyBucketsAggregator } from './DailyBucketsAggregator';
 import { QuotaAggregator } from './QuotaAggregator';
 import { UsageAccumulator } from './UsageAccumulator';
+import { TokenAggregator } from './TokenAggregator';
 
 export type { DailyBucketsArtifacts } from './types';
 
@@ -140,6 +142,10 @@ export function buildNormalizedRowFromProcessedData(row: ProcessedData): Normali
     netAmount: row.netAmount,
     aicQuantity: row.aicQuantity,
     aicGrossAmount: row.aicGrossAmount,
+    inputTokens: row.inputTokens,
+    outputTokens: row.outputTokens,
+    cacheReadTokens: row.cacheReadTokens,
+    cacheWriteTokens: row.cacheWriteTokens,
     isNonCopilotUsage: row.isNonCopilotUsage,
     usageBucket: row.usageBucket,
   };
@@ -160,6 +166,10 @@ function runAggregatorOverProcessedData<T>(aggregator: Aggregator<T>, processed:
 
 export function buildQuotaArtifactsFromProcessedData(processed: ProcessedData[]): QuotaArtifacts {
   return runAggregatorOverProcessedData(new QuotaAggregator(), processed);
+}
+
+export function buildTokenArtifactsFromProcessedData(processed: ProcessedData[]): TokenArtifacts {
+  return runAggregatorOverProcessedData(new TokenAggregator(), processed);
 }
 
 export function buildDailyBucketsArtifactsFromProcessedData(processed: ProcessedData[]): DailyBucketsArtifacts {

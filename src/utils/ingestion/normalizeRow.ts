@@ -9,6 +9,7 @@ import { isCodeReviewModel } from '@/utils/productClassification';
 import { getUsageUnitKind } from '@/utils/unitType';
 
 import { normalizeDateToIso, type DateNormalizer } from './dateNormalization';
+import { parseTokenCounts } from './tokenFields';
 import {
   NON_COPILOT_CODE_REVIEW_BUCKET,
   NormalizedRow,
@@ -152,5 +153,6 @@ export function normalizeRow(
     aicGrossAmount: shouldUseAiCreditValues ? grossAmountValue : parseNum(aic_gross_amount),
     isNonCopilotUsage: isSpecialUsage,
     usageBucket,
+    ...parseTokenCounts(rawRecord, warnings),
   };
 }

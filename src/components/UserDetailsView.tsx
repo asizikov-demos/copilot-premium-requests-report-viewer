@@ -2,6 +2,8 @@
 
 import React, { useContext, useMemo } from 'react';
 
+import { UserConsumptionMetrics } from '@/components/UserConsumptionMetrics';
+import { TOKEN_COLUMNS, TokenValue } from '@/components/TokenValue';
 import { COST_OPTIMIZATION_THRESHOLDS, PRICING } from '@/constants/pricing';
 import { AnalysisContext } from '@/context/AnalysisContext';
 import { UserDailyStackedChart } from '@/components/charts/UserDailyStackedChart';
@@ -12,6 +14,8 @@ import { getQuotaTier, isLegacyPremiumRequestQuotaValue } from '@/utils/analytic
 import {
   buildUserDailyAicModelDataFromArtifacts,
   buildUserDailyModelDataFromArtifacts,
+  buildTokenArtifactsFromProcessedData,
+  type TokenTotals,
   type BillingArtifacts,
   DailyBucketsArtifacts,
   getUserQuota,
@@ -292,17 +296,21 @@ export function UserDetailsView({
     aicGrossAmount: number;
     isFirstInDate: boolean;
     rowSpan: number;
+    tokens?: TokenTotals;
   };
 
   const hasAicGross = useMemo(() => hasAicFields(userData), [userData]);
   const showAicGross = hasAicGross && !isUserUsageBasedBilling;
+  const showTokens = analysisCtx?.tokenArtifacts !== null &&
+    userData.some(row => TOKEN_COLUMNS.some(({ field }) => row[field] !== undefined));
+  const hasUserCostCenters = userData.some(row => Boolean(row.costCenter));
 
   const dailyBreakdownRows = useMemo((): DailyModelRow[] => {
-    if (!hasBillingData) return [];
+    if (!hasBillingData && !showTokens) return [];
 
     // Aggregate by date + model + cost center so cost-center changes remain visible.
     type Key = string;
-    const agg = new Map<Key, { date: string; model: string; costCenter?: string; requests: number; gross: number; discount: number; net: number; aicGrossAmount: number }>();
+    const agg = new Map<Key, { date: string; model: string; costCenter?: string; requests: number; gross: number; discount: number; net: number; aicGrossAmount: number; sourceRows: ProcessedData[] }>();
     for (const row of userData) {
       const key = `${row.dateKey}||${row.model}||${row.costCenter ?? ''}`;
       const quantity = isUserUsageBasedBilling ? row.billingQuantity ?? row.requestsUsed : row.requestsUsed;
@@ -313,6 +321,7 @@ export function UserDetailsView({
         existing.discount += row.discountAmount ?? 0;
         existing.net += row.netAmount ?? 0;
         existing.aicGrossAmount += row.aicGrossAmount ?? 0;
+        existing.sourceRows.push(row);
       } else {
         agg.set(key, {
           date: row.dateKey,
@@ -323,6 +332,7 @@ export function UserDetailsView({
           discount: row.discountAmount ?? 0,
           net: row.netAmount ?? 0,
           aicGrossAmount: row.aicGrossAmount ?? 0,
+          sourceRows: [row],
         });
       }
     }
@@ -342,9 +352,14 @@ export function UserDetailsView({
     return sorted.map((r) => {
       const isFirst = !seenDates.has(r.date);
       if (isFirst) seenDates.add(r.date);
-      return { ...r, isFirstInDate: isFirst, rowSpan: dateSpan.get(r.date) ?? 1 };
+      return {
+        ...r,
+        tokens: showTokens ? buildTokenArtifactsFromProcessedData(r.sourceRows).totals : undefined,
+        isFirstInDate: isFirst,
+        rowSpan: dateSpan.get(r.date) ?? 1,
+      };
     });
-  }, [hasBillingData, isUserUsageBasedBilling, userData]);
+  }, [hasBillingData, isUserUsageBasedBilling, showTokens, userData]);
 
   const productCosts = useMemo(() => {
     if (!hasBillingData) return [];
@@ -617,11 +632,18 @@ export function UserDetailsView({
         )}
       </div>
 
+      <UserConsumptionMetrics key={user} rows={userData} tokensAvailable={analysisCtx?.tokenArtifacts !== null} />
+
       {/* Daily Model Usage Breakdown table — standalone card */}
       {dailyBreakdownRows.length > 0 && (
         <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
           <div className="px-5 py-4 border-b border-[#d1d9e0]">
             <h3 className="text-sm font-medium text-[#1f2328]">Daily Model Usage Breakdown</h3>
+            {showTokens && (
+              <p className="text-xs text-[#636c76] mt-1">
+                Token counts: — means not reported. Partial totals include only rows with reported counts.
+              </p>
+            )}
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full" aria-label="Daily Model Usage Breakdown">
@@ -629,16 +651,25 @@ export function UserDetailsView({
                 <tr className="border-b border-[#d1d9e0]">
                   <th className="px-5 py-3 w-28 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">Date</th>
                   <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Model</th>
-                  {costCenterCosts.length > 0 && (
+                  {hasUserCostCenters && (
                     <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">Cost Center</th>
                   )}
                   <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">{userQuantityColumnLabel}</th>
+                  {showTokens && TOKEN_COLUMNS.map(({ field, label }) => (
+                    <th key={field} scope="col" className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">
+                      {label}
+                    </th>
+                  ))}
                   {showAicGross && (
                     <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">AI Credits Gross</th>
                   )}
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">{userCostLabels.gross}</th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">{userCostLabels.discountSummary}</th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">{userCostLabels.netSummary}</th>
+                  {hasBillingData && (
+                    <>
+                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">{userCostLabels.gross}</th>
+                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">{userCostLabels.discountSummary}</th>
+                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">{userCostLabels.netSummary}</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#d1d9e0]">
@@ -653,16 +684,25 @@ export function UserDetailsView({
                       </td>
                     ) : null}
                     <td className="px-5 py-3 text-sm text-[#636c76]">- {row.model}</td>
-                    {costCenterCosts.length > 0 && (
+                    {hasUserCostCenters && (
                       <td className="px-5 py-3 text-sm text-[#636c76] whitespace-nowrap">{row.costCenter ?? '—'}</td>
                     )}
                     <td className="px-5 py-3 text-sm font-mono text-[#1f2328] text-right">{row.requests.toFixed(2)}</td>
+                    {showTokens && TOKEN_COLUMNS.map(({ field }) => (
+                        <td key={field} className="px-5 py-3 text-sm font-mono tabular-nums text-[#636c76] text-right whitespace-nowrap">
+                          <TokenValue totals={row.tokens} field={field} />
+                        </td>
+                    ))}
                     {showAicGross && (
                       <td className="px-5 py-3 text-sm font-mono text-[#636c76] text-right">{formatCurrency(row.aicGrossAmount)}</td>
                     )}
-                    <td className="px-5 py-3 text-sm font-mono text-[#636c76] text-right">{formatCurrency(row.gross)}</td>
-                    <td className="px-5 py-3 text-sm font-mono text-emerald-600 text-right">-{formatCurrency(row.discount)}</td>
-                    <td className="px-5 py-3 text-sm font-mono font-semibold text-[#1f2328] text-right">{formatCurrency(row.net)}</td>
+                    {hasBillingData && (
+                      <>
+                        <td className="px-5 py-3 text-sm font-mono text-[#636c76] text-right">{formatCurrency(row.gross)}</td>
+                        <td className="px-5 py-3 text-sm font-mono text-emerald-600 text-right">-{formatCurrency(row.discount)}</td>
+                        <td className="px-5 py-3 text-sm font-mono font-semibold text-[#1f2328] text-right">{formatCurrency(row.net)}</td>
+                      </>
+                    )}
                   </tr>
                 ))}
               </tbody>

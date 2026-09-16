@@ -44,6 +44,48 @@ date,username,product,sku,model,quantity,unit_type,applied_cost_per_quantity,gro
 - `applied_cost_per_quantity`, `gross_amount`, `discount_amount`, `net_amount`
 - `exceeds_quota`, `total_monthly_quota`
 - `product`, `sku`, `organization`, `cost_center_name`
+
+### Optional token columns
+
+The ingestion pipeline accepts `input`, `output`, `cache_read`, and `cache_write`.
+It also accepts the respective compatibility aliases `total_input_tokens`,
+`total_output_tokens`, `total_cache_read_tokens`, and `total_cache_creation_tokens`.
+Token counts appear in the user detail **Daily Model Usage Breakdown** table when
+the selected user's rows contain token data. Input, Output, Cache Write, and Cache
+Read columns follow the table's date/model/cost-center grouping. Missing counts
+display as `—`, explicit zeros as `0`, and incomplete sums are marked `(partial)`.
+Reports without token data retain the existing table layout.
+Token-bearing reports also show the daily breakdown when commercial fields are
+absent; monetary columns are omitted rather than displayed as zero.
+
+User details also include a **Token Usage Over Time** chart with a model selector,
+a **Model Consumption Breakdown** with each model's share of reported AI Credits
+and each token type. These use the selected billing period and user.
+The model selector affects only the token chart. Token series are not stacked;
+missing or incomplete daily counts leave gaps instead of plotting false zeros.
+Shares use reported amounts only and are omitted when their denominator is zero.
+
+Counts must be non-negative safe integers; CSV values must contain decimal digits
+(surrounding whitespace is allowed). Missing or blank values remain absent, while
+an explicit `0` remains a reported zero. A nonblank short-name field takes precedence
+over its alias, even when invalid. Invalid counts and conflicting aliases are recorded
+in ingestion warnings without dropping the billing row or counting both aliases.
+Warnings remain in the ingestion result; this change adds no warning UI.
+If a summed count exceeds JavaScript's safe integer range, token aggregation fails
+with an ingestion warning and a `null` token artifact rather than rounded or partial
+totals. Other ingestion artifacts remain available.
+Subsequent rows skip the failed token accumulator, keeping its warnings bounded.
+
+Token artifacts contain separate totals for each token type, per model, per named
+user, per special usage bucket, and per UTC day. Each aggregate records its row count
+and the number of valid reported values per token type so partial coverage is not
+mistaken for a complete total. Unattributed usage contributes to overall/model/day
+totals, not to a fabricated user. Billing-period filtering also filters token artifacts,
+including when raw rows are not retained.
+
+Token counts do not change requests, AI Credits, quotas, or monetary calculations.
+The pipeline does not infer costs or a combined total across token categories.
+
 ## What You Get
 - Per-user request breakdown with quota status
 - Model usage distribution charts
