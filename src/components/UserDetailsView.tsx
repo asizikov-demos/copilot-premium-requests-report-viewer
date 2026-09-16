@@ -303,9 +303,10 @@ export function UserDetailsView({
   const showAicGross = hasAicGross && !isUserUsageBasedBilling;
   const showTokens = analysisCtx?.tokenArtifacts !== null &&
     userData.some(row => TOKEN_COLUMNS.some(({ field }) => row[field] !== undefined));
+  const hasUserCostCenters = userData.some(row => Boolean(row.costCenter));
 
   const dailyBreakdownRows = useMemo((): DailyModelRow[] => {
-    if (!hasBillingData) return [];
+    if (!hasBillingData && !showTokens) return [];
 
     // Aggregate by date + model + cost center so cost-center changes remain visible.
     type Key = string;
@@ -650,7 +651,7 @@ export function UserDetailsView({
                 <tr className="border-b border-[#d1d9e0]">
                   <th className="px-5 py-3 w-28 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">Date</th>
                   <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Model</th>
-                  {costCenterCosts.length > 0 && (
+                  {hasUserCostCenters && (
                     <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">Cost Center</th>
                   )}
                   <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">{userQuantityColumnLabel}</th>
@@ -662,9 +663,13 @@ export function UserDetailsView({
                   {showAicGross && (
                     <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">AI Credits Gross</th>
                   )}
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">{userCostLabels.gross}</th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">{userCostLabels.discountSummary}</th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">{userCostLabels.netSummary}</th>
+                  {hasBillingData && (
+                    <>
+                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">{userCostLabels.gross}</th>
+                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">{userCostLabels.discountSummary}</th>
+                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">{userCostLabels.netSummary}</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#d1d9e0]">
@@ -679,7 +684,7 @@ export function UserDetailsView({
                       </td>
                     ) : null}
                     <td className="px-5 py-3 text-sm text-[#636c76]">- {row.model}</td>
-                    {costCenterCosts.length > 0 && (
+                    {hasUserCostCenters && (
                       <td className="px-5 py-3 text-sm text-[#636c76] whitespace-nowrap">{row.costCenter ?? '—'}</td>
                     )}
                     <td className="px-5 py-3 text-sm font-mono text-[#1f2328] text-right">{row.requests.toFixed(2)}</td>
@@ -691,9 +696,13 @@ export function UserDetailsView({
                     {showAicGross && (
                       <td className="px-5 py-3 text-sm font-mono text-[#636c76] text-right">{formatCurrency(row.aicGrossAmount)}</td>
                     )}
-                    <td className="px-5 py-3 text-sm font-mono text-[#636c76] text-right">{formatCurrency(row.gross)}</td>
-                    <td className="px-5 py-3 text-sm font-mono text-emerald-600 text-right">-{formatCurrency(row.discount)}</td>
-                    <td className="px-5 py-3 text-sm font-mono font-semibold text-[#1f2328] text-right">{formatCurrency(row.net)}</td>
+                    {hasBillingData && (
+                      <>
+                        <td className="px-5 py-3 text-sm font-mono text-[#636c76] text-right">{formatCurrency(row.gross)}</td>
+                        <td className="px-5 py-3 text-sm font-mono text-emerald-600 text-right">-{formatCurrency(row.discount)}</td>
+                        <td className="px-5 py-3 text-sm font-mono font-semibold text-[#1f2328] text-right">{formatCurrency(row.net)}</td>
+                      </>
+                    )}
                   </tr>
                 ))}
               </tbody>

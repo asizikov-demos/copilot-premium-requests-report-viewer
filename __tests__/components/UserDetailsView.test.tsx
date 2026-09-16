@@ -33,6 +33,36 @@ jest.mock('recharts', () => ({
 describe('UserDetailsView', () => {
   const mockOnBack = jest.fn();
 
+  it('renders token-only daily rows without monetary columns and preserves cost centers', () => {
+    const base = {
+      date: '2026-06-30', username: 'test-user-one', model: 'test-model-one', quantity: '1',
+    };
+    const rows = buildProcessedDataFromRawRows([
+      { ...base, input: '0', cost_center_name: 'test-cost-center-one' },
+      { ...base, input: '10', cache_write: '2', cost_center_name: 'test-cost-center-two' },
+    ]);
+    const { rerender } = render(
+      <UserDetailsView user="test-user-one" processedData={rows} userQuotaValue="unknown" onBack={mockOnBack} />
+    );
+    const table = screen.getByRole('table', { name: 'Daily Model Usage Breakdown' });
+    expect(within(table).getAllByRole('columnheader').map(header => header.textContent)).toEqual([
+      'Date', 'Model', 'Cost Center', 'Requests', 'Input Tokens', 'Output Tokens',
+      'Cache Write Tokens', 'Cache Read Tokens',
+    ]);
+    expect(within(table).getAllByRole('row')).toHaveLength(3);
+    expect(within(table).getByText('test-cost-center-one')).toBeInTheDocument();
+    expect(within(table).getByText('test-cost-center-two')).toBeInTheDocument();
+    expect(within(table).getByRole('cell', { name: '0' })).toBeInTheDocument();
+    expect(within(table).getByRole('cell', { name: '10' })).toBeInTheDocument();
+    expect(table).not.toHaveTextContent('$');
+    expect(screen.queryByRole('table', { name: 'Cost per Cost Center' })).not.toBeInTheDocument();
+
+    rerender(
+      <UserDetailsView user="test-user-one" processedData={buildProcessedDataFromRawRows([base])} userQuotaValue="unknown" onBack={mockOnBack} />
+    );
+    expect(screen.queryByRole('table', { name: 'Daily Model Usage Breakdown' })).not.toBeInTheDocument();
+  });
+
   it('groups token counts by UTC date, model and cost center, preserving zero and partial coverage', () => {
     const base = {
       date: '2026-06-30T23:59:59Z',
