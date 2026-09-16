@@ -69,11 +69,12 @@ describe('ingestStream date format normalization', () => {
       'date,username,model,quantity,input',
       `2026-06-30,test-user-one,test-model-one,1,${Number.MAX_SAFE_INTEGER}`,
       '2026-06-30,test-user-one,test-model-one,1,1',
+      ...Array.from({ length: 1000 }, () => '2026-06-30,test-user-one,test-model-one,1,1'),
     ].join('\n');
     const result = await ingestCsv(csv, [new TokenAggregator(), createCapturingAggregator()]);
-    expect(result.rowsProcessed).toBe(2);
+    expect(result.rowsProcessed).toBe(1002);
     expect(result.outputs.tokens).toBeNull();
-    expect(result.outputs.capturedRows).toHaveLength(2);
+    expect(result.outputs.capturedRows).toHaveLength(1002);
     expect(result.warnings).toEqual([
       'Aggregator tokens error: Error: Token total exceeds the safe integer range in inputTokens',
       'Aggregator tokens finalize error: Error: Token total exceeds the safe integer range in inputTokens',

@@ -62,7 +62,8 @@ export class TokenAccumulator {
   private failure?: Error;
 
   addRow(row: NormalizedRow): void {
-    if (this.failure) throw this.failure;
+    // The first failure is already reported; finalize still rejects partial totals.
+    if (this.failure) return;
     const totals = createTotals();
     totals.rowCount = 1;
     for (const field of TOKEN_FIELDS) {
