@@ -2,6 +2,8 @@
 
 import React, { useContext, useMemo } from 'react';
 
+import { UserConsumptionMetrics } from '@/components/UserConsumptionMetrics';
+import { TOKEN_COLUMNS, TokenValue } from '@/components/TokenValue';
 import { COST_OPTIMIZATION_THRESHOLDS, PRICING } from '@/constants/pricing';
 import { AnalysisContext } from '@/context/AnalysisContext';
 import { UserDailyStackedChart } from '@/components/charts/UserDailyStackedChart';
@@ -56,13 +58,6 @@ interface UserCostCenterCost {
   net: number;
   aicGrossAmount: number;
 }
-
-const TOKEN_COLUMNS = [
-  { field: 'inputTokens', label: 'Input Tokens' },
-  { field: 'outputTokens', label: 'Output Tokens' },
-  { field: 'cacheWriteTokens', label: 'Cache Write Tokens' },
-  { field: 'cacheReadTokens', label: 'Cache Read Tokens' },
-] as const;
 
 export interface UserDetailsViewProps {
   user: string;
@@ -636,6 +631,8 @@ export function UserDetailsView({
         )}
       </div>
 
+      <UserConsumptionMetrics key={user} rows={userData} tokensAvailable={analysisCtx?.tokenArtifacts !== null} />
+
       {/* Daily Model Usage Breakdown table — standalone card */}
       {dailyBreakdownRows.length > 0 && (
         <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
@@ -686,27 +683,11 @@ export function UserDetailsView({
                       <td className="px-5 py-3 text-sm text-[#636c76] whitespace-nowrap">{row.costCenter ?? '—'}</td>
                     )}
                     <td className="px-5 py-3 text-sm font-mono text-[#1f2328] text-right">{row.requests.toFixed(2)}</td>
-                    {showTokens && TOKEN_COLUMNS.map(({ field }) => {
-                      const count = row.tokens?.[field];
-                      const reportedRows = row.tokens?.reportedRows[field] ?? 0;
-                      const partial = count !== undefined && reportedRows < (row.tokens?.rowCount ?? 0);
-                      return (
+                    {showTokens && TOKEN_COLUMNS.map(({ field }) => (
                         <td key={field} className="px-5 py-3 text-sm font-mono tabular-nums text-[#636c76] text-right whitespace-nowrap">
-                          {count === undefined ? (
-                            <span aria-label="Not reported">—</span>
-                          ) : (
-                            <>
-                              {count.toLocaleString()}
-                              {partial && (
-                                <span className="ml-1 text-xs" title={`${reportedRows} of ${row.tokens?.rowCount} rows reported this token count`}>
-                                  (partial)
-                                </span>
-                              )}
-                            </>
-                          )}
+                          <TokenValue totals={row.tokens} field={field} />
                         </td>
-                      );
-                    })}
+                    ))}
                     {showAicGross && (
                       <td className="px-5 py-3 text-sm font-mono text-[#636c76] text-right">{formatCurrency(row.aicGrossAmount)}</td>
                     )}

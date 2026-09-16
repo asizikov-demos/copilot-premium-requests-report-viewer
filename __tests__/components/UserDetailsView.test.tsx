@@ -17,6 +17,8 @@ jest.mock('recharts', () => ({
   ),
   Bar: () => <div data-testid="bar" />,
   Line: () => <div data-testid="line" />,
+  LineChart: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Legend: () => <div />,
   XAxis: () => <div data-testid="x-axis" />,
   YAxis: () => <div data-testid="y-axis" />,
   CartesianGrid: () => <div data-testid="cartesian-grid" />,
@@ -53,6 +55,13 @@ describe('UserDetailsView', () => {
       <UserDetailsView user="test-user-one" processedData={processedData} userQuotaValue="unknown" onBack={mockOnBack} />
     );
     const table = screen.getByRole('table', { name: 'Daily Model Usage Breakdown' });
+    const headings = screen.getAllByRole('heading', { level: 3 }).map(heading => heading.textContent);
+    expect(headings.slice(headings.indexOf('Daily Model Usage'))).toEqual([
+      'Daily Model Usage',
+      'Token Usage Over Time',
+      'Model Consumption Breakdown',
+      'Daily Model Usage Breakdown',
+    ]);
     expect(within(table).getAllByRole('columnheader').map(header => header.textContent)).toEqual([
       'Date', 'Model', 'Cost Center', 'AI Credits', 'Input Tokens', 'Output Tokens',
       'Cache Write Tokens', 'Cache Read Tokens', 'Gross Amount', 'Included credits', 'Additional usage',
@@ -616,7 +625,7 @@ describe('UserDetailsView', () => {
       expect(screen.getByText('Cost per Product')).toBeInTheDocument();
       expect(screen.getByText('Bars: daily AI Credits by model · Black line: cumulative · Red line: quota')).toBeInTheDocument();
       expect(screen.getByText('Daily Model Usage Breakdown')).toBeInTheDocument();
-      expect(screen.getAllByRole('columnheader', { name: 'AI Credits' })).toHaveLength(2);
+      expect(screen.getAllByRole('columnheader', { name: 'AI Credits' })).toHaveLength(3);
       expect(screen.getAllByRole('columnheader', { name: 'Gross Amount' })).toHaveLength(2);
       expect(screen.queryByRole('columnheader', { name: 'AI Credits Gross' })).not.toBeInTheDocument();
       expect(screen.queryByRole('columnheader', { name: 'Requests' })).not.toBeInTheDocument();

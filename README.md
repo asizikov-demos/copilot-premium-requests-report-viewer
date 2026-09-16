@@ -56,6 +56,13 @@ Read columns follow the table's date/model/cost-center grouping. Missing counts
 display as `—`, explicit zeros as `0`, and incomplete sums are marked `(partial)`.
 Reports without token data retain the existing table layout.
 
+User details also include a **Token Usage Over Time** chart with a model selector,
+a **Model Consumption Breakdown** with each model's share of reported AI Credits
+and each token type. These use the selected billing period and user.
+The model selector affects only the token chart. Token series are not stacked;
+missing or incomplete daily counts leave gaps instead of plotting false zeros.
+Shares use reported amounts only and are omitted when their denominator is zero.
+
 Counts must be non-negative safe integers; CSV values must contain decimal digits
 (surrounding whitespace is allowed). Missing or blank values remain absent, while
 an explicit `0` remains a reported zero. A nonblank short-name field takes precedence
