@@ -12,6 +12,8 @@ import { getQuotaTier, isLegacyPremiumRequestQuotaValue } from '@/utils/analytic
 import {
   buildUserDailyAicModelDataFromArtifacts,
   buildUserDailyModelDataFromArtifacts,
+  buildTokenArtifactsFromProcessedData,
+  type TokenTotals,
   type BillingArtifacts,
   DailyBucketsArtifacts,
   getUserQuota,
@@ -54,6 +56,13 @@ interface UserCostCenterCost {
   net: number;
   aicGrossAmount: number;
 }
+
+const TOKEN_COLUMNS = [
+  { field: 'inputTokens', label: 'Input Tokens' },
+  { field: 'outputTokens', label: 'Output Tokens' },
+  { field: 'cacheWriteTokens', label: 'Cache Write Tokens' },
+  { field: 'cacheReadTokens', label: 'Cache Read Tokens' },
+] as const;
 
 export interface UserDetailsViewProps {
   user: string;
@@ -292,17 +301,20 @@ export function UserDetailsView({
     aicGrossAmount: number;
     isFirstInDate: boolean;
     rowSpan: number;
+    tokens?: TokenTotals;
   };
 
   const hasAicGross = useMemo(() => hasAicFields(userData), [userData]);
   const showAicGross = hasAicGross && !isUserUsageBasedBilling;
+  const showTokens = analysisCtx?.tokenArtifacts !== null &&
+    userData.some(row => TOKEN_COLUMNS.some(({ field }) => row[field] !== undefined));
 
   const dailyBreakdownRows = useMemo((): DailyModelRow[] => {
     if (!hasBillingData) return [];
 
     // Aggregate by date + model + cost center so cost-center changes remain visible.
     type Key = string;
-    const agg = new Map<Key, { date: string; model: string; costCenter?: string; requests: number; gross: number; discount: number; net: number; aicGrossAmount: number }>();
+    const agg = new Map<Key, { date: string; model: string; costCenter?: string; requests: number; gross: number; discount: number; net: number; aicGrossAmount: number; sourceRows: ProcessedData[] }>();
     for (const row of userData) {
       const key = `${row.dateKey}||${row.model}||${row.costCenter ?? ''}`;
       const quantity = isUserUsageBasedBilling ? row.billingQuantity ?? row.requestsUsed : row.requestsUsed;
@@ -313,6 +325,7 @@ export function UserDetailsView({
         existing.discount += row.discountAmount ?? 0;
         existing.net += row.netAmount ?? 0;
         existing.aicGrossAmount += row.aicGrossAmount ?? 0;
+        existing.sourceRows.push(row);
       } else {
         agg.set(key, {
           date: row.dateKey,
@@ -323,6 +336,7 @@ export function UserDetailsView({
           discount: row.discountAmount ?? 0,
           net: row.netAmount ?? 0,
           aicGrossAmount: row.aicGrossAmount ?? 0,
+          sourceRows: [row],
         });
       }
     }
@@ -342,9 +356,14 @@ export function UserDetailsView({
     return sorted.map((r) => {
       const isFirst = !seenDates.has(r.date);
       if (isFirst) seenDates.add(r.date);
-      return { ...r, isFirstInDate: isFirst, rowSpan: dateSpan.get(r.date) ?? 1 };
+      return {
+        ...r,
+        tokens: showTokens ? buildTokenArtifactsFromProcessedData(r.sourceRows).totals : undefined,
+        isFirstInDate: isFirst,
+        rowSpan: dateSpan.get(r.date) ?? 1,
+      };
     });
-  }, [hasBillingData, isUserUsageBasedBilling, userData]);
+  }, [hasBillingData, isUserUsageBasedBilling, showTokens, userData]);
 
   const productCosts = useMemo(() => {
     if (!hasBillingData) return [];
@@ -622,6 +641,11 @@ export function UserDetailsView({
         <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
           <div className="px-5 py-4 border-b border-[#d1d9e0]">
             <h3 className="text-sm font-medium text-[#1f2328]">Daily Model Usage Breakdown</h3>
+            {showTokens && (
+              <p className="text-xs text-[#636c76] mt-1">
+                Token counts: — means not reported. Partial totals include only rows with reported counts.
+              </p>
+            )}
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full" aria-label="Daily Model Usage Breakdown">
@@ -633,6 +657,11 @@ export function UserDetailsView({
                     <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">Cost Center</th>
                   )}
                   <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">{userQuantityColumnLabel}</th>
+                  {showTokens && TOKEN_COLUMNS.map(({ field, label }) => (
+                    <th key={field} scope="col" className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">
+                      {label}
+                    </th>
+                  ))}
                   {showAicGross && (
                     <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">AI Credits Gross</th>
                   )}
@@ -657,6 +686,27 @@ export function UserDetailsView({
                       <td className="px-5 py-3 text-sm text-[#636c76] whitespace-nowrap">{row.costCenter ?? '—'}</td>
                     )}
                     <td className="px-5 py-3 text-sm font-mono text-[#1f2328] text-right">{row.requests.toFixed(2)}</td>
+                    {showTokens && TOKEN_COLUMNS.map(({ field }) => {
+                      const count = row.tokens?.[field];
+                      const reportedRows = row.tokens?.reportedRows[field] ?? 0;
+                      const partial = count !== undefined && reportedRows < (row.tokens?.rowCount ?? 0);
+                      return (
+                        <td key={field} className="px-5 py-3 text-sm font-mono tabular-nums text-[#636c76] text-right whitespace-nowrap">
+                          {count === undefined ? (
+                            <span aria-label="Not reported">—</span>
+                          ) : (
+                            <>
+                              {count.toLocaleString()}
+                              {partial && (
+                                <span className="ml-1 text-xs" title={`${reportedRows} of ${row.tokens?.rowCount} rows reported this token count`}>
+                                  (partial)
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </td>
+                      );
+                    })}
                     {showAicGross && (
                       <td className="px-5 py-3 text-sm font-mono text-[#636c76] text-right">{formatCurrency(row.aicGrossAmount)}</td>
                     )}
