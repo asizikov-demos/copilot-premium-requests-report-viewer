@@ -13,8 +13,11 @@ import {
   DailyBucketsArtifacts,
   FeatureUsageArtifacts,
   BillingArtifacts,
+  TokenArtifacts,
   NormalizedRow,
   buildBillingArtifactsFromProcessedData,
+  buildTokenArtifactsFromProcessedData,
+  filterTokenArtifactsByMonths,
   buildProcessedDataFromRows
 } from '@/utils/ingestion';
 
@@ -41,6 +44,7 @@ interface AnalysisContextValue {
   dailyBucketsArtifacts: DailyBucketsArtifacts;
   featureUsageArtifacts: FeatureUsageArtifacts;
   billingArtifacts?: BillingArtifacts; // new billing summary artifacts
+  tokenArtifacts?: TokenArtifacts | null;
   
   // Raw & processed (adapter bridge - to be phased out)
   baseProcessed: ProcessedData[];
@@ -138,12 +142,13 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
   const [view, setView] = useState<ViewType>('overview');
 
   // Extract aggregator outputs
-  const { quotaArtifacts, usageArtifacts, dailyBucketsArtifacts, featureUsageArtifacts, billingArtifacts } = useMemo(() => {
+  const { quotaArtifacts, usageArtifacts, dailyBucketsArtifacts, featureUsageArtifacts, billingArtifacts, tokenArtifacts } = useMemo(() => {
     return {
       quotaArtifacts: ingestionResult.outputs.quota as QuotaArtifacts,
       usageArtifacts: ingestionResult.outputs.usage as UsageArtifacts,
       dailyBucketsArtifacts: ingestionResult.outputs.dailyBuckets as DailyBucketsArtifacts,
       featureUsageArtifacts: requireFeatureUsageArtifacts(ingestionResult.outputs.featureUsage),
+      tokenArtifacts: ingestionResult.outputs.tokens as TokenArtifacts | null | undefined,
       billingArtifacts: withBillingArtifactDefaults(ingestionResult.outputs.billing as BillingArtifacts | undefined)
     };
   }, [ingestionResult]);
@@ -186,6 +191,17 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
       : billingArtifacts
   ), [aggregateProcessedData, baseProcessed.length, billingArtifacts]);
 
+  const effectiveTokenArtifacts = useMemo(() => {
+    // Null is a recorded ingestion failure, not an absent legacy artifact.
+    if (tokenArtifacts === null) return null;
+    if (tokenArtifacts) {
+      return filterTokenArtifactsByMonths(tokenArtifacts, selectedMonths);
+    }
+    return baseProcessed.length > 0
+      ? buildTokenArtifactsFromProcessedData(aggregateProcessedData)
+      : undefined;
+  }, [aggregateProcessedData, baseProcessed.length, selectedMonths, tokenArtifacts]);
+
   // Use the suggested plan from data (auto-derived from report content)
   const selectedPlan = analysis.quotaBreakdown.suggestedPlan ?? 'business';
 
@@ -217,6 +233,7 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
     dailyBucketsArtifacts,
     featureUsageArtifacts,
     billingArtifacts: effectiveBillingArtifacts,
+    tokenArtifacts: effectiveTokenArtifacts,
     // Legacy adapter bridge
     baseProcessed,
     processedData,

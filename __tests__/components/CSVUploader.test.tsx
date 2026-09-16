@@ -75,6 +75,11 @@ describe('CSVUploader', () => {
     await waitFor(() => {
       expect(mockOnDataLoad).toHaveBeenCalledWith(expect.objectContaining({ rowsProcessed: newFormatRows.length }), 'new-format.csv');
     });
+    expect(ingestStream).toHaveBeenCalledWith(
+      mockFile,
+      expect.arrayContaining([expect.objectContaining({ id: 'tokens' })]),
+      expect.any(Object)
+    );
   });
 
   it('should handle successful CSV parsing', async () => {

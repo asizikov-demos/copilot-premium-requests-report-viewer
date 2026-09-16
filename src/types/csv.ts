@@ -1,3 +1,5 @@
+import type { TokenCounts } from './tokens';
+
 // CSV FORMAT (expanded billing export)
 // Uses daily date (YYYY-MM-DD) & additional commercial + cost fields.
 export interface CSVData {
@@ -18,10 +20,18 @@ export interface CSVData {
   cost_center_name?: string;
   aic_quantity?: string; // numeric string
   aic_gross_amount?: string; // numeric string
+  input?: string;
+  output?: string;
+  cache_read?: string;
+  cache_write?: string;
+  total_input_tokens?: string;
+  total_output_tokens?: string;
+  total_cache_read_tokens?: string;
+  total_cache_creation_tokens?: string;
 }
 
 // Processed record produced from CSV row.
-export interface ProcessedData {
+export interface ProcessedData extends TokenCounts {
   timestamp: Date; // Normalized UTC timestamp (date + T00:00:00Z)
   user: string; // username from CSV
   model: string; // normalized raw model name (prefixes like 'Auto: ' stripped later in analytics if needed)

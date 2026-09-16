@@ -3,6 +3,7 @@
  */
 
 import { PRICING } from '@/constants/pricing';
+import type { TokenCounts } from '@/types/tokens';
 import type { UsageUnitKind } from '@/utils/unitType';
 
 export const NON_COPILOT_CODE_REVIEW_BUCKET = 'non_copilot_code_review' as const;
@@ -46,7 +47,7 @@ export interface SpecialBillingBucketTotals {
  * Normalized row after parsing and basic validation.
  * All aggregators receive this uniform shape.
  */
-export interface NormalizedRow {
+export interface NormalizedRow extends TokenCounts {
   date: string;            // Source date: YYYY-MM-DD or full ISO timestamp
   day: string;             // Precomputed YYYY-MM-DD (UTC preserved)
   user: string;
@@ -82,6 +83,24 @@ export interface AggregatorContext {
   pricing: typeof PRICING;
   abortSignal?: AbortSignal;
   // Future: logger, feature flags, etc.
+}
+
+export interface TokenTotals extends TokenCounts {
+  rowCount: number;
+  /** Valid counts reported per field, including explicit zeros. */
+  reportedRows: Record<keyof TokenCounts, number>;
+}
+
+export interface TokenBreakdown {
+  totals: TokenTotals;
+  byModel: Map<string, TokenTotals>;
+  byUser: Map<string, TokenTotals>;
+  specialBuckets: Map<SpecialUsageBucketKey, TokenTotals>;
+}
+
+export interface TokenArtifacts extends TokenBreakdown {
+  hasAnyTokenData: boolean;
+  byDay: Map<string, TokenBreakdown>;
 }
 
 /**
