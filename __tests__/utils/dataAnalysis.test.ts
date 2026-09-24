@@ -17,9 +17,9 @@ import {
   makeProcessedData
 } from '../helpers/testUtils';
 
-// Explicit model requests interface to remove implicit any usage
-interface ModelRequest { model: string; totalRequests: number }
-const modelTotal = (requests: ModelRequest[], name: string) => requests.find(r => r.model === name)?.totalRequests;
+// Explicit model credits interface to remove implicit any usage
+interface ModelCredit { model: string; totalCredits: number }
+const modelTotal = (credits: ModelCredit[], name: string) => credits.find(r => r.model === name)?.totalCredits;
 interface WeekExhaustion { weekNumber: number; startDate: string; endDate: string; usersExhaustedInWeek: number }
 
 describe('CSV Data Processing', () => {
@@ -30,37 +30,22 @@ describe('CSV Data Processing', () => {
       expect(result).toHaveLength(4);
       expect(result[0]).toMatchObject({
         timestamp: new Date('2025-06-03T00:00:00Z'),
-        user: 'test-user-a',
+        user: 'test-user-one',
         model: 'gpt-4.1-2025-04-14',
-        requestsUsed: 1.00,
-        exceedsQuota: false,
+        creditsUsed: 1.00,
         totalQuota: 'Unknown',
         quotaValue: 'unknown'
       });
     });
 
-    it('should handle boolean conversion correctly', () => {
-      const testData: CSVData[] = [
-        createMockCSVData({
-          exceeds_quota: 'TRUE'
-        })
-      ];
-      
-      const result = processCSVData(testData);
-      expect(result[0].exceedsQuota).toBe(true);
-    });
-
-    it('should handle case-insensitive boolean conversion', () => {
-      const testData: CSVData[] = [
-        createMockCSVData({ exceeds_quota: 'True' }),
-        createMockCSVData({ exceeds_quota: 'FALSE' }),
-        createMockCSVData({ exceeds_quota: 'false' })
-      ];
-      
-      const result = processCSVData(testData);
-      expect(result[0].exceedsQuota).toBe(true);
-      expect(result[1].exceedsQuota).toBe(false);
-      expect(result[2].exceedsQuota).toBe(false);
+    it('rejects request-unit rows without converting them into AI credits', () => {
+      const testData = createMockCSVData({
+        unit_type: 'requests',
+        sku: 'copilot_premium_request',
+        quantity: '5',
+        aic_quantity: '20',
+      });
+      expect(processCSVData([testData])).toEqual([]);
     });
 
     it('should handle numeric conversion correctly', () => {
@@ -71,7 +56,7 @@ describe('CSV Data Processing', () => {
       ];
       
       const result = processCSVData(testData);
-      expect(result[0].requestsUsed).toBe(3.14159);
+      expect(result[0].creditsUsed).toBe(3.14159);
     });
 
     it('should handle invalid numbers gracefully', () => {
@@ -82,7 +67,7 @@ describe('CSV Data Processing', () => {
       ];
       
       const result = processCSVData(testData);
-      expect(result[0].requestsUsed).toBeNaN();
+      expect(result[0].creditsUsed).toBeNaN();
     });
 
     it('should handle zero values correctly', () => {
@@ -93,7 +78,7 @@ describe('CSV Data Processing', () => {
       ];
       
       const result = processCSVData(testData);
-      expect(result[0].requestsUsed).toBe(0);
+      expect(result[0].creditsUsed).toBe(0);
     });
 
     it('should use production quota parsing for blank quotas', () => {
@@ -118,12 +103,11 @@ describe('CSV Data Processing', () => {
       
       expect(result[1]).toMatchObject({
         timestamp: new Date('2025-06-03T00:00:00Z'),
-        user: 'test-user-b',
+        user: 'test-user-two',
         model: 'claude-3.7-sonnet-thought',
-        requestsUsed: 2.50,
-        exceedsQuota: true,
-        totalQuota: 'Unknown',
-        quotaValue: 'unknown'
+        creditsUsed: 2.50,
+        totalQuota: String(PRICING.BUSINESS_AI_CREDIT_QUOTA),
+        quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA
       });
     });
 
@@ -146,7 +130,7 @@ describe('CSV Data Processing', () => {
         timeFrame: { start: '', end: '' },
         totalUniqueUsers: 0,
         usersExceedingQuota: 0,
-        requestsByModel: [],
+        creditsByModel: [],
         quotaBreakdown: {
           unknown: [],
           business: [],
@@ -161,9 +145,9 @@ describe('CSV Data Processing', () => {
       const processedData = processCSVData(validCSVData);
       const result = analyzeData(processedData);
       
-      expect(result.totalUniqueUsers).toBe(3); // test-user-a, test-user-b, test-user-c
-      expect(result.usersExceedingQuota).toBe(0); // Nobody actually exceeds their quota (test-user-b: 2.5, unknown quota; others unknown)
-      expect(result.requestsByModel).toHaveLength(4); // 4 different models
+      expect(result.totalUniqueUsers).toBe(3);
+      expect(result.usersExceedingQuota).toBe(0);
+      expect(result.creditsByModel).toHaveLength(4); // 4 different models
     });
 
     it('should calculate correct time frame', () => {
@@ -174,11 +158,11 @@ describe('CSV Data Processing', () => {
       expect(result.timeFrame.end).toBe('2025-06-04');
     });
 
-    it('should aggregate requests by model correctly', () => {
+    it('should aggregate AI credits by model correctly', () => {
       const processedData = processCSVData(validCSVData);
-      const result = analyzeData(processedData) as { requestsByModel: ModelRequest[] };
-      expect(modelTotal(result.requestsByModel, 'gpt-4.1-2025-04-14')).toBe(1);
-      expect(modelTotal(result.requestsByModel, 'claude-3.7-sonnet-thought')).toBe(2.5);
+      const result = analyzeData(processedData) as { creditsByModel: ModelCredit[] };
+      expect(modelTotal(result.creditsByModel, 'gpt-4.1-2025-04-14')).toBe(1);
+      expect(modelTotal(result.creditsByModel, 'claude-3.7-sonnet-thought')).toBe(2.5);
     });
 
     it('should handle single data point', () => {
@@ -187,7 +171,7 @@ describe('CSV Data Processing', () => {
       
       expect(result.totalUniqueUsers).toBe(1);
       expect(result.usersExceedingQuota).toBe(0);
-      expect(result.requestsByModel).toHaveLength(1);
+      expect(result.creditsByModel).toHaveLength(1);
     });
 
     it('should sort data by timestamp internally', () => {
@@ -218,18 +202,18 @@ describe('CSV Data Processing', () => {
       const processedData = processCSVData([
         createMockCSVData({
           username: 'test-user-one',
-          quantity: '400',
-          total_monthly_quota: String(PRICING.BUSINESS_QUOTA),
+          quantity: String(PRICING.BUSINESS_AI_CREDIT_QUOTA + 100),
+          total_monthly_quota: String(PRICING.BUSINESS_AI_CREDIT_QUOTA),
         }),
         createMockCSVData({
           username: 'test-user-one',
           quantity: '0',
-          total_monthly_quota: String(PRICING.ENTERPRISE_QUOTA),
+          total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
         }),
         createMockCSVData({
           username: 'test-user-two',
-          quantity: '1200',
-          total_monthly_quota: String(PRICING.BUSINESS_QUOTA),
+          quantity: String(PRICING.BUSINESS_AI_CREDIT_QUOTA + 100),
+          total_monthly_quota: String(PRICING.BUSINESS_AI_CREDIT_QUOTA),
         }),
         createMockCSVData({
           username: 'test-user-two',
@@ -250,18 +234,18 @@ describe('CSV Data Processing', () => {
   // Helper: build minimal UsageArtifacts from processed data for artifact power user tests
   function buildUsageArtifacts(processed: ProcessedData[]): UsageArtifacts {
     const modelTotals: Record<string, number> = {};
-    const usersMap = new Map<string, { totalRequests: number; modelBreakdown: Record<string, number> }>();
+    const usersMap = new Map<string, { totalCredits: number; modelBreakdown: Record<string, number> }>();
     for (const row of processed) {
-      modelTotals[row.model] = (modelTotals[row.model] || 0) + row.requestsUsed;
-      const entry = usersMap.get(row.user) || { totalRequests: 0, modelBreakdown: {} };
-      entry.totalRequests += row.requestsUsed;
-      entry.modelBreakdown[row.model] = (entry.modelBreakdown[row.model] || 0) + row.requestsUsed;
+      modelTotals[row.model] = (modelTotals[row.model] || 0) + row.creditsUsed;
+      const entry = usersMap.get(row.user) || { totalCredits: 0, modelBreakdown: {} };
+      entry.totalCredits += row.creditsUsed;
+      entry.modelBreakdown[row.model] = (entry.modelBreakdown[row.model] || 0) + row.creditsUsed;
       usersMap.set(row.user, entry);
     }
     const users = Array.from(usersMap.entries()).map(([user, v]) => {
       let topModel: string | undefined; let topModelValue = 0;
       for (const [m, qty] of Object.entries(v.modelBreakdown)) { if (qty > topModelValue) { topModelValue = qty; topModel = m; } }
-      return { user, totalRequests: v.totalRequests, modelBreakdown: v.modelBreakdown, topModel, topModelValue };
+      return { user, totalCredits: v.totalCredits, modelBreakdown: v.modelBreakdown, topModel, topModelValue };
     });
     return { users, modelTotals, userCount: users.length, modelCount: Object.keys(modelTotals).length } as UsageArtifacts;
   }
@@ -273,8 +257,7 @@ describe('CSV Data Processing', () => {
         timestamp,
         user: 'test-user',
         model: 'test-model',
-        requestsUsed: 1.0,
-        exceedsQuota: false,
+        creditsUsed: 1.0,
         quotaValue: 100,
       });
     };
@@ -384,7 +367,7 @@ describe('CSV Data Processing', () => {
         timestamp: new Date(e.ts),
         user: e.user,
         model: e.model || 'test-model',
-        requestsUsed: e.used,
+        creditsUsed: e.used,
         quotaValue: e.quota,
       }));
     };
@@ -397,24 +380,21 @@ describe('CSV Data Processing', () => {
     });
 
     it('should compute week buckets and first exhaustion correctly (single month)', () => {
-      // UserA quota 300: reaches exactly 300 on day 10 (week2) (100+100+100)
-      // UserB quota 300: reaches 300 on day 7 (week1) (150+150)
-      // UserC unknown: ignored
-      // UserD quota 300: reaches 310 on day 29 (week5)
+      const quotaValue = PRICING.BUSINESS_AI_CREDIT_QUOTA;
       const data = makeProcessed([
-        { ts: '2025-06-01T10:00:00Z', user: 'UserB', used: 150, quota: 300 },
-        { ts: '2025-06-03T10:00:00Z', user: 'UserA', used: 100, quota: 300 },
-        { ts: '2025-06-05T10:00:00Z', user: 'UserC', used: 500, quota: 'unknown' },
-        { ts: '2025-06-07T10:00:00Z', user: 'UserB', used: 150, quota: 300 }, // UserB exhausts week1 (day7)
-        { ts: '2025-06-08T10:00:00Z', user: 'UserA', used: 100, quota: 300 },
-        { ts: '2025-06-10T10:00:00Z', user: 'UserA', used: 100, quota: 300 }, // UserA exhausts week2 (day10)
-        { ts: '2025-06-22T10:00:00Z', user: 'UserD', used: 200, quota: 300 },
-        { ts: '2025-06-29T10:00:00Z', user: 'UserD', used: 110, quota: 300 }, // UserD exhausts week5 (day29)
+        { ts: '2025-06-01T10:00:00Z', user: 'test-user-two', used: quotaValue / 2, quota: quotaValue },
+        { ts: '2025-06-03T10:00:00Z', user: 'test-user-one', used: quotaValue / 2, quota: quotaValue },
+        { ts: '2025-06-05T10:00:00Z', user: 'test-user-three', used: 500, quota: 'unknown' },
+        { ts: '2025-06-07T10:00:00Z', user: 'test-user-two', used: quotaValue / 2, quota: quotaValue },
+        { ts: '2025-06-08T10:00:00Z', user: 'test-user-one', used: quotaValue / 4, quota: quotaValue },
+        { ts: '2025-06-10T10:00:00Z', user: 'test-user-one', used: quotaValue / 4, quota: quotaValue },
+        { ts: '2025-06-22T10:00:00Z', user: 'test-user-four', used: quotaValue - 10, quota: quotaValue },
+        { ts: '2025-06-29T10:00:00Z', user: 'test-user-four', used: 11, quota: quotaValue },
       ]);
       const daily = makeDailyBucketsArtifacts(data.map(row => ({
         date: row.dateKey,
         user: row.user,
-        used: row.requestsUsed,
+        used: row.creditsUsed,
         model: row.model,
       })));
       const quota = makeQuotaArtifacts(data.map(row => ({ user: row.user, quota: row.quotaValue })));
@@ -431,16 +411,16 @@ describe('CSV Data Processing', () => {
     });
 
     it('should not double count users if they exceed multiple times', () => {
-      // User hits quota in week 3; later requests should not change week assignment
+      // Later AI credits should not change the first exhaustion week.
       const data = makeProcessed([
-        { ts: '2025-06-15T10:00:00Z', user: 'UserA', used: 200, quota: 300 },
-        { ts: '2025-06-18T10:00:00Z', user: 'UserA', used: 120, quota: 300 }, // cumulative 320 -> week3
-        { ts: '2025-06-25T10:00:00Z', user: 'UserA', used: 50, quota: 300 }  // extra
+        { ts: '2025-06-15T10:00:00Z', user: 'test-user-one', used: PRICING.BUSINESS_AI_CREDIT_QUOTA - 100, quota: PRICING.BUSINESS_AI_CREDIT_QUOTA },
+        { ts: '2025-06-18T10:00:00Z', user: 'test-user-one', used: 120, quota: PRICING.BUSINESS_AI_CREDIT_QUOTA },
+        { ts: '2025-06-25T10:00:00Z', user: 'test-user-one', used: 50, quota: PRICING.BUSINESS_AI_CREDIT_QUOTA }  // extra
       ]);
       const daily = makeDailyBucketsArtifacts(data.map(row => ({
         date: row.dateKey,
         user: row.user,
-        used: row.requestsUsed,
+        used: row.creditsUsed,
         model: row.model,
       })));
       const quota = makeQuotaArtifacts(data.map(row => ({ user: row.user, quota: row.quotaValue })));
@@ -453,13 +433,13 @@ describe('CSV Data Processing', () => {
 
     it('should handle multiple months by producing separate week entries ordered properly', () => {
       const data = makeProcessed([
-        { ts: '2025-06-05T10:00:00Z', user: 'UserJ', used: 400, quota: 300 }, // June week1
-        { ts: '2025-07-09T10:00:00Z', user: 'UserK', used: 500, quota: 300 }  // July week2
+        { ts: '2025-06-05T10:00:00Z', user: 'test-user-one', used: PRICING.BUSINESS_AI_CREDIT_QUOTA + 100, quota: PRICING.BUSINESS_AI_CREDIT_QUOTA },
+        { ts: '2025-07-09T10:00:00Z', user: 'test-user-two', used: PRICING.BUSINESS_AI_CREDIT_QUOTA + 100, quota: PRICING.BUSINESS_AI_CREDIT_QUOTA }
       ]);
       const daily = makeDailyBucketsArtifacts(data.map(row => ({
         date: row.dateKey,
         user: row.user,
-        used: row.requestsUsed,
+        used: row.creditsUsed,
         model: row.model,
       })));
       const quota = makeQuotaArtifacts(data.map(row => ({ user: row.user, quota: row.quotaValue })));

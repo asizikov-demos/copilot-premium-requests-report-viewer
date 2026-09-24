@@ -1,111 +1,82 @@
-import type { UsageArtifacts, QuotaArtifacts } from '@/utils/ingestion';
-import { PRICING, COST_OPTIMIZATION_THRESHOLDS } from '@/constants/pricing';
-import { calculateOverageCost, calculateOverageRequests } from '@/utils/userCalculations';
+import { PRICING } from '@/constants/pricing';
+import type { BillingArtifacts, QuotaArtifacts, UsageArtifacts } from '@/utils/ingestion';
+import { calculateExcessCredits } from '@/utils/userCalculations';
 
-export interface CostOptimizationCandidate {
+const NEAR_QUOTA_FRACTION = 0.8;
+
+export interface CostMonitoringUser {
   user: string;
-  totalRequests: number;
+  totalCredits: number;
   quota: number;
-  overageRequests: number;
-  overageCost: number;
-  enterpriseQuota: number;
-  enterpriseExtraCapacity: number;
-  potentialSavings: number;
-  enterpriseUpgradeCost: number;
+  excessCredits: number;
+  billedNetCharge: number;
 }
 
 export interface CostOptimizationSummary {
-  candidates: CostOptimizationCandidate[];
-  totalCandidates: number;
-  totalOverageCost: number;
-  estimatedEnterpriseCost: number;
-  totalPotentialSavings: number;
-  approachingBreakEven: CostOptimizationCandidate[];
-}
-
-export interface EnterpriseUpgradeSavings {
-  enterpriseExtraCapacity: number;
-  avoidedOverageRequests: number;
-  remainingOverageRequests: number;
-  avoidedOverageCost: number;
-  remainingOverageCost: number;
-  enterpriseUpgradeCost: number;
-  potentialSavings: number;
-}
-
-export function calculateEnterpriseUpgradeSavings(overageRequests: number): EnterpriseUpgradeSavings {
-  const enterpriseExtraCapacity = PRICING.ENTERPRISE_QUOTA - PRICING.BUSINESS_QUOTA;
-  const avoidedOverageRequests = Math.min(Math.max(0, overageRequests), enterpriseExtraCapacity);
-  const remainingOverageRequests = Math.max(0, overageRequests - enterpriseExtraCapacity);
-  const avoidedOverageCost = calculateOverageCost(avoidedOverageRequests);
-  const remainingOverageCost = calculateOverageCost(remainingOverageRequests);
-  const enterpriseUpgradeCost = PRICING.ENTERPRISE_UPGRADE_DELTA;
-
-  return {
-    enterpriseExtraCapacity,
-    avoidedOverageRequests,
-    remainingOverageRequests,
-    avoidedOverageCost,
-    remainingOverageCost,
-    enterpriseUpgradeCost,
-    potentialSavings: Math.max(0, avoidedOverageCost - enterpriseUpgradeCost),
-  };
+  overQuotaUsers: CostMonitoringUser[];
+  nearQuotaUsers: CostMonitoringUser[];
+  totalOverQuotaUsers: number;
+  totalBilledNetCharge: number;
+  totalExcessCredits: number;
+  missingBillingUsers: number;
 }
 
 /**
- * Identify Copilot Business users (BUSINESS_QUOTA) whose overage is at least STRONG_CANDIDATE_THRESHOLD requests.
- * These users are strong candidates for upgrading to Copilot Enterprise (ENTERPRISE_QUOTA).
+ * Monitor actual billed net charges for Business users in the current artifact scope.
+ * Net charges are not necessarily attributable solely to quota overage.
  */
 export function computeCostOptimizationFromArtifacts(
   usage: UsageArtifacts,
-  quota: QuotaArtifacts
-): CostOptimizationSummary {
-  const candidates: CostOptimizationCandidate[] = [];
-  const approachingBreakEven: CostOptimizationCandidate[] = [];
+  quota: QuotaArtifacts,
+  billing?: BillingArtifacts
+): CostOptimizationSummary | null {
+  const overQuotaUsers: CostMonitoringUser[] = [];
+  const nearQuotaUsers: CostMonitoringUser[] = [];
+  let missingBillingUsers = 0;
+  let billedUsers = 0;
 
   for (const u of usage.users) {
-    const q = quota.quotaByUser.get(u.user);
-    if (q !== PRICING.BUSINESS_QUOTA) continue;
+    if (quota.quotaByUser.get(u.user) !== PRICING.BUSINESS_AI_CREDIT_QUOTA) continue;
+    if (!Number.isFinite(u.totalCredits)) continue;
 
-    const overageRequests = calculateOverageRequests(u.totalRequests, q);
-    // Users with very low overage are not interesting for optimization scenarios.
-    if (overageRequests < COST_OPTIMIZATION_THRESHOLDS.MIN_OVERAGE_THRESHOLD) continue;
+    const billedNetCharge = billing?.userMap.get(u.user)?.net;
+    if (typeof billedNetCharge !== 'number' || !Number.isFinite(billedNetCharge)) {
+      missingBillingUsers++;
+      continue;
+    }
+    billedUsers++;
 
-    const overageCost = calculateOverageCost(overageRequests);
-    const enterpriseQuota = PRICING.ENTERPRISE_QUOTA;
-    const savings = calculateEnterpriseUpgradeSavings(overageRequests);
-
-    const baseCandidate: CostOptimizationCandidate = {
+    const excessCredits = calculateExcessCredits(u.totalCredits, PRICING.BUSINESS_AI_CREDIT_QUOTA);
+    const entry: CostMonitoringUser = {
       user: u.user,
-      totalRequests: u.totalRequests,
-      quota: q,
-      overageRequests,
-      overageCost,
-      enterpriseQuota,
-      enterpriseExtraCapacity: savings.enterpriseExtraCapacity,
-      potentialSavings: savings.potentialSavings,
-      enterpriseUpgradeCost: savings.enterpriseUpgradeCost
+      totalCredits: u.totalCredits,
+      quota: PRICING.BUSINESS_AI_CREDIT_QUOTA,
+      excessCredits,
+      billedNetCharge
     };
 
-    // Strong recommendation: overage clearly above break-even (>= STRONG_CANDIDATE_THRESHOLD PRUs)
-    if (overageRequests >= COST_OPTIMIZATION_THRESHOLDS.STRONG_CANDIDATE_THRESHOLD) {
-      candidates.push(baseCandidate);
-    } else if (overageRequests >= COST_OPTIMIZATION_THRESHOLDS.APPROACHING_BREAKEVEN_THRESHOLD) {
-      // Approaching break-even: within ~(STRONG_CANDIDATE_THRESHOLD - APPROACHING_BREAKEVEN_THRESHOLD) PRUs of the tipping point.
-      approachingBreakEven.push(baseCandidate);
+    if (excessCredits > 0) {
+      overQuotaUsers.push(entry);
+    } else if (u.totalCredits >= PRICING.BUSINESS_AI_CREDIT_QUOTA * NEAR_QUOTA_FRACTION) {
+      nearQuotaUsers.push(entry);
     }
   }
 
-  const totalOverageCost = candidates.reduce((sum, c) => sum + c.overageCost, 0);
-  const estimatedEnterpriseCost = candidates.reduce((sum, candidate) => sum + candidate.enterpriseUpgradeCost, 0);
-  const totalPotentialSavings = candidates.reduce((sum, candidate) => sum + candidate.potentialSavings, 0);
+  if (billedUsers === 0) return null;
+
+  overQuotaUsers.sort((left, right) =>
+    right.billedNetCharge - left.billedNetCharge || right.excessCredits - left.excessCredits || left.user.localeCompare(right.user)
+  );
+  nearQuotaUsers.sort((left, right) =>
+    right.totalCredits - left.totalCredits || left.user.localeCompare(right.user)
+  );
 
   return {
-    candidates,
-    totalCandidates: candidates.length,
-    totalOverageCost,
-    estimatedEnterpriseCost,
-    totalPotentialSavings,
-    approachingBreakEven
+    overQuotaUsers,
+    nearQuotaUsers,
+    totalOverQuotaUsers: overQuotaUsers.length,
+    totalBilledNetCharge: overQuotaUsers.reduce((sum, user) => sum + user.billedNetCharge, 0),
+    totalExcessCredits: overQuotaUsers.reduce((sum, user) => sum + user.excessCredits, 0),
+    missingBillingUsers
   };
 }

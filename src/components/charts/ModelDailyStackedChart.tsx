@@ -6,7 +6,7 @@ import { chartTooltipContentStyle, chartTooltipLabelStyle, utcDateTickFormatter 
 
 export interface ModelDailyDatum {
   date: string;
-  totalRequests: number;
+  totalCredits: number;
   [model: string]: string | number;
 }
 

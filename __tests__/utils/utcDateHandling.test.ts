@@ -1,3 +1,4 @@
+import { PRICING } from '@/constants/pricing';
 import { buildMonthListFromArtifacts } from '@/utils/ingestion/analytics';
 import { filterBySelectedMonths } from '@/utils/analytics/filters';
 
@@ -9,42 +10,47 @@ describe('UTC Date Handling and Billing Periods', () => {
   const edgeCaseData: CSVData[] = [
     {
       date: '2025-06-30', // Last day of June
-      username: 'UserA',
+      username: 'test-user-one',
+      sku: 'copilot_ai_credit',
+      unit_type: 'ai-credits',
       model: 'gpt-4.1-2025-04-14',
       quantity: '10.00',
-      exceeds_quota: 'false',
-      total_monthly_quota: '300'
+      total_monthly_quota: String(PRICING.BUSINESS_AI_CREDIT_QUOTA)
     },
     {
       date: '2025-07-01', // First day of July
-      username: 'UserA',
+      username: 'test-user-one',
+      sku: 'copilot_ai_credit',
+      unit_type: 'ai-credits',
       model: 'claude-3.5-sonnet-2024-10-22',
       quantity: '15.50',
-      exceeds_quota: 'false',
-      total_monthly_quota: '300'
+      total_monthly_quota: String(PRICING.BUSINESS_AI_CREDIT_QUOTA)
     },
     {
       date: '2025-07-31', // Last day of July
-      username: 'UserB',
+      username: 'test-user-two',
+      sku: 'copilot_ai_credit',
+      unit_type: 'ai-credits',
       model: 'gemini-2.0-flash',
       quantity: '200.00',
-      exceeds_quota: 'false',
-      total_monthly_quota: '1000'
+      total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA)
     },
     {
       date: '2025-08-01', // First day of August
-      username: 'UserB',
+      username: 'test-user-two',
+      sku: 'copilot_ai_credit',
+      unit_type: 'ai-credits',
       model: 'gpt-4.1-2025-04-14',
       quantity: '25.00',
-      exceeds_quota: 'false',
-      total_monthly_quota: '1000'
+      total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA)
     },
     {
       date: '2025-12-31', // Last day of year
-      username: 'UserC',
+      username: 'test-user-three',
+      sku: 'copilot_ai_credit',
+      unit_type: 'ai-credits',
       model: 'o3-mini',
       quantity: '5.00',
-      exceeds_quota: 'false',
       total_monthly_quota: 'Unknown'
     }
   ];
@@ -110,7 +116,7 @@ describe('UTC Date Handling and Billing Periods', () => {
     // Should only include December 31st record (midnight UTC)
     expect(decemberData).toHaveLength(1);
     expect(decemberData[0].timestamp.toISOString()).toBe('2025-12-31T00:00:00.000Z');
-    expect(decemberData[0].user).toBe('UserC');
+    expect(decemberData[0].user).toBe('test-user-three');
   });
 
   it('should handle multiple billing periods selection', () => {
@@ -142,19 +148,21 @@ describe('UTC Date Handling and Billing Periods', () => {
     const timezoneEdgeData: CSVData[] = [
       {
         date: '2025-03-31',
-        username: 'UserX',
+        username: 'test-user-one',
+      sku: 'copilot_ai_credit',
+      unit_type: 'ai-credits',
         model: 'test-model',
         quantity: '1.00',
-        exceeds_quota: 'false',
-        total_monthly_quota: '300'
+        total_monthly_quota: String(PRICING.BUSINESS_AI_CREDIT_QUOTA)
       },
       {
         date: '2025-04-01',
-        username: 'UserX',
+        username: 'test-user-one',
+      sku: 'copilot_ai_credit',
+      unit_type: 'ai-credits',
         model: 'test-model',
         quantity: '1.00',
-        exceeds_quota: 'false',
-        total_monthly_quota: '300'
+        total_monthly_quota: String(PRICING.BUSINESS_AI_CREDIT_QUOTA)
       }
     ];
 

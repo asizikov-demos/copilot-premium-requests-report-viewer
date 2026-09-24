@@ -1,36 +1,27 @@
 import { ProcessedData } from '@/types/csv';
-import { PRICING } from '@/constants/pricing';
-
 /**
- * Calculate total requests for a specific user
+ * Calculate total AI Credits for a specific user
  */
-export function calculateUserTotalRequests(
+export function calculateUserTotalCredits(
   processedData: ProcessedData[], 
   userName: string
 ): number {
   return processedData
     .filter(d => d.user === userName)
-    .reduce((total, record) => total + record.requestsUsed, 0);
+    .reduce((total, record) => total + record.creditsUsed, 0);
 }
 
 /**
- * Calculate overage requests for a user based on their specific quota
+ * Calculate credits consumed beyond a user's quota.
  */
-export function calculateOverageRequests(
-  totalRequests: number, 
+export function calculateExcessCredits(
+  totalCredits: number,
   quota: number | 'unknown'
 ): number {
   if (quota === 'unknown') {
     return 0;
   }
-  return Math.max(0, totalRequests - quota);
-}
-
-/**
- * Calculate overage cost based on overage requests
- */
-export function calculateOverageCost(overageRequests: number): number {
-  return overageRequests * PRICING.OVERAGE_RATE_PER_REQUEST;
+  return Math.max(0, totalCredits - quota);
 }
 
 /**

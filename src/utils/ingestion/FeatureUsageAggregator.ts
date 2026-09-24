@@ -8,7 +8,7 @@
  *  - Code Quality (product/sku fields via isCodeQualityProduct)
  *
  * Output artifacts provide O(1) access to:
- *  - featureTotals: total request quantities per feature
+ *  - featureTotals: total AI-credit quantities per feature
  *  - featureUsers: distinct user sets per feature
  *
  * This replaces on-render O(R) scans with incremental O(1) updates during ingestion.
@@ -23,7 +23,7 @@ export class FeatureUsageAggregator implements Aggregator<FeatureUsageArtifacts>
   private codingAgentTotal = 0;
   private sparkTotal = 0;
   private codeQualityTotal = 0;
-  private nonCopilotCodeReviewTotal = 0;
+  private unattributedCodeReviewTotal = 0;
   private unattributedCodeQualityTotal = 0;
 
   private codeReviewUsers = new Set<string>();
@@ -37,7 +37,7 @@ export class FeatureUsageAggregator implements Aggregator<FeatureUsageArtifacts>
     this.codingAgentTotal = 0;
     this.sparkTotal = 0;
     this.codeQualityTotal = 0;
-    this.nonCopilotCodeReviewTotal = 0;
+    this.unattributedCodeReviewTotal = 0;
     this.unattributedCodeQualityTotal = 0;
     this.codeReviewUsers.clear();
     this.codingAgentUsers.clear();
@@ -51,23 +51,23 @@ export class FeatureUsageAggregator implements Aggregator<FeatureUsageArtifacts>
 
     if (isCodeReviewModel(row.model)) {
       this.codeReviewTotal += qty;
-      if (row.isNonCopilotUsage) {
-        this.nonCopilotCodeReviewTotal += qty;
-      } else {
+      if (!row.isUnattributedUsage) {
         this.codeReviewUsers.add(row.user);
+      } else {
+        this.unattributedCodeReviewTotal += qty;
       }
     }
 
     if (isCodingAgentModel(row.model)) {
       this.codingAgentTotal += qty;
-      if (!row.isNonCopilotUsage) {
+      if (!row.isUnattributedUsage) {
         this.codingAgentUsers.add(row.user);
       }
     }
 
     if (isSparkProduct(row.product, row.sku)) {
       this.sparkTotal += qty;
-      if (!row.isNonCopilotUsage) {
+      if (!row.isUnattributedUsage) {
         this.sparkUsers.add(row.user);
       }
     }
@@ -75,7 +75,7 @@ export class FeatureUsageAggregator implements Aggregator<FeatureUsageArtifacts>
     if (isCodeQualityProduct(row.product, row.sku)) {
       const codeQualityQty = row.billingQuantity ?? qty;
       this.codeQualityTotal += codeQualityQty;
-      if (!row.isNonCopilotUsage && row.user) {
+      if (!row.isUnattributedUsage && row.user) {
         this.codeQualityUsers.add(row.user);
       } else {
         this.unattributedCodeQualityTotal += codeQualityQty;
@@ -99,7 +99,7 @@ export class FeatureUsageAggregator implements Aggregator<FeatureUsageArtifacts>
         codeQuality: this.codeQualityUsers
       },
       specialTotals: {
-        nonCopilotCodeReview: this.nonCopilotCodeReviewTotal,
+        unattributedCodeReview: this.unattributedCodeReviewTotal,
         unattributedCodeQuality: this.unattributedCodeQualityTotal
       }
     };

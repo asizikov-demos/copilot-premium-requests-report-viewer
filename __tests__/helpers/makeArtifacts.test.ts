@@ -6,9 +6,7 @@ describe('makeDailyBucketsArtifacts', () => {
 
     expect(artifacts).toEqual({
       dailyUserTotals: new Map(),
-      dailyUserAicTotals: new Map(),
       dailyUserModelTotals: new Map(),
-      dailyUserAicModelTotals: new Map(),
       dailyBucketTotals: new Map(),
       dailyBucketModelTotals: new Map(),
       dateRange: null,

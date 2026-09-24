@@ -1,14 +1,11 @@
 # Copilot Billing Report Viewer
 
-Analyze CSV exports from GitHub Copilot usage reports. See per-user consumption, quota tracking, model breakdowns, and cost optimization — all processed locally in your browser.
+Analyze GitHub Copilot AI Credit billing exports. See per-user consumption, quota tracking, model and token breakdowns, and billed costs — all processed locally in your browser.
 
 
-![Screenshot of the application dashboard](readme/01-overview.png)
+## Cost Monitoring
 
-
-## Cost Optimization
-
-![Screenshot of the Cost Optimization feature](readme/02-cost-optimization.png)
+Review billed net charges alongside monthly AI Credit consumption. The dashboard does not estimate Enterprise upgrade savings from request-unit pricing.
 
 ## Live Demo
 
@@ -26,12 +23,12 @@ Try the Sample Data option on the upload screen to see how it works without need
 
 ## Supported CSV Format
 
-This application supports the GitHub Copilot expanded billing export format.
+This application supports AI Credit rows in the GitHub Copilot expanded billing export format. A request-only export is rejected; in a mixed export, transitional premium-request rows are ignored so they cannot contaminate AI Credit totals.
 
 ### CSV Format
 ```csv
-date,username,product,sku,model,quantity,unit_type,applied_cost_per_quantity,gross_amount,discount_amount,net_amount,exceeds_quota,total_monthly_quota,organization,cost_center_name
-2025-10-01,alice,copilot,copilot_premium_request,Claude Sonnet 4,3.6,requests,0.04,0.144,0,0.144,False,1000,org-alpha,CC-Alpha
+date,username,product,sku,model,quantity,unit_type,applied_cost_per_quantity,gross_amount,discount_amount,net_amount,total_monthly_quota,organization,repository,cost_center_name,aic_quantity,aic_gross_amount,input,output,cache_read,cache_write
+2026-06-01,test-user-one,copilot,copilot_ai_credit,Claude Sonnet 4.5,21.36,ai-credits,0.01,0.2136,0.2136,0,3900,test-org-one,,test-cost-center-one,0,0,1420,590,175000,4200
 ```
 
 **Minimum required columns:**
@@ -39,11 +36,15 @@ date,username,product,sku,model,quantity,unit_type,applied_cost_per_quantity,gro
 - `username`
 - `model`
 - `quantity`
+- `unit_type` (`ai-credit` or `ai-credits`) or a recognized AI-credit `sku`
 
 **Optional billing & organizational columns** (auto-detected when present):
 - `applied_cost_per_quantity`, `gross_amount`, `discount_amount`, `net_amount`
-- `exceeds_quota`, `total_monthly_quota`
-- `product`, `sku`, `organization`, `cost_center_name`
+- `total_monthly_quota`
+- `product`, `sku`, `organization`, `repository`, `cost_center_name`
+- `aic_quantity`, `aic_gross_amount`
+
+Current Business and Enterprise monthly AI Credit quota values are defined in `src/constants/pricing.ts`. Commercial fields and token counts can be omitted; the viewer does not invent missing billed amounts.
 
 ### Optional token columns
 
@@ -83,13 +84,13 @@ mistaken for a complete total. Unattributed usage contributes to overall/model/d
 totals, not to a fabricated user. Billing-period filtering also filters token artifacts,
 including when raw rows are not retained.
 
-Token counts do not change requests, AI Credits, quotas, or monetary calculations.
+Token counts do not change AI Credits, quotas, or monetary calculations.
 The pipeline does not infer costs or a combined total across token categories.
 
 ## What You Get
-- Per-user request breakdown with quota status
+- Per-user AI credit breakdown with quota status
 - Model usage distribution charts
-- Overage cost calculations (Business: 300/mo, Enterprise: 1000/mo)
+- Reported additional-usage charges and AI Credit budget insights
 - Daily/weekly usage trends
 
  **How to get this report**:

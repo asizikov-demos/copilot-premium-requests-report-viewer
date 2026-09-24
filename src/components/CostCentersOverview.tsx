@@ -10,7 +10,7 @@ import { UNASSIGNED_BILLING_GROUP } from '@/utils/ingestion';
 
 export function CostCentersOverview() {
   const { aggregateProcessedData, billingArtifacts } = useAnalysisContext();
-  const { isUsageBasedBilling, billingRows, scopedBillingArtifacts, quantityColumnLabel, costLabels } =
+  const { billingRows, scopedBillingArtifacts, quantityColumnLabel, costLabels } =
     useUsageBasedBillingScope(aggregateProcessedData, billingArtifacts);
   const [selectedCostCenter, setSelectedCostCenter] = useState<string | null>(null);
 
@@ -21,7 +21,6 @@ export function CostCentersOverview() {
   });
 
   const hasCosts = costCenterRows.some(r => r.gross > 0 || r.net > 0);
-  const hasAicGross = scopedBillingArtifacts?.hasAnyAicData === true;
 
   const selectedCostCenterRows = useMemo(
     () => (selectedCostCenter === null
@@ -38,10 +37,9 @@ export function CostCentersOverview() {
         groupsLabel="cost centers"
         detailIdPrefix="cost-center-daily-details"
         rows={selectedCostCenterRows}
-        isUsageBasedBilling={isUsageBasedBilling}
         quantityColumnLabel={quantityColumnLabel}
         costLabels={costLabels}
-        hasAicGross={hasAicGross && !isUsageBasedBilling}
+        hasAicGross={false}
         showUsers
         onBack={() => setSelectedCostCenter(null)}
       />
@@ -55,7 +53,7 @@ export function CostCentersOverview() {
       nameColumnLabel="Cost Center"
       rows={costCenterRows}
       hasCosts={hasCosts}
-      hasAicGross={hasAicGross && !isUsageBasedBilling}
+      hasAicGross={false}
       detailIdPrefix="cost-center-details"
       quantityColumnLabel={quantityColumnLabel}
       grossColumnLabel={costLabels.gross}

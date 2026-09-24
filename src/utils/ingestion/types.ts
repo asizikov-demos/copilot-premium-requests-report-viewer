@@ -6,26 +6,21 @@ import { PRICING } from '@/constants/pricing';
 import type { TokenCounts } from '@/types/tokens';
 import type { UsageUnitKind } from '@/utils/unitType';
 
-export const NON_COPILOT_CODE_REVIEW_BUCKET = 'non_copilot_code_review' as const;
-export const NON_COPILOT_CODE_REVIEW_LABEL = 'Non-Copilot Users' as const;
 export const UNATTRIBUTED_AI_CREDIT_BUCKET = 'unattributed_ai_credit' as const;
 export const UNATTRIBUTED_AI_CREDIT_LABEL = 'Unattributed AI Credits' as const;
 export const UNASSIGNED_BILLING_GROUP = 'Unassigned' as const;
 
-export type SpecialUsageBucketKey =
-  | typeof NON_COPILOT_CODE_REVIEW_BUCKET
-  | typeof UNATTRIBUTED_AI_CREDIT_BUCKET;
+export type SpecialUsageBucketKey = typeof UNATTRIBUTED_AI_CREDIT_BUCKET;
 
 export function getSpecialUsageBucketLabel(key: SpecialUsageBucketKey): string {
-  return key === NON_COPILOT_CODE_REVIEW_BUCKET
-    ? NON_COPILOT_CODE_REVIEW_LABEL
-    : UNATTRIBUTED_AI_CREDIT_LABEL;
+  void key;
+  return UNATTRIBUTED_AI_CREDIT_LABEL;
 }
 
 export interface SpecialUsageBucketAggregate {
   key: SpecialUsageBucketKey;
   label: string;
-  totalRequests: number;
+  totalCredits: number;
   modelBreakdown: Record<string, number>;
   quotaValue: 0;
 }
@@ -34,7 +29,6 @@ export interface SpecialBillingBucketTotals {
   key: SpecialUsageBucketKey;
   label: string;
   quantity: number;
-  overage: BillingOverageTotals;
   gross?: number;
   discount?: number;
   net?: number;
@@ -55,7 +49,6 @@ export interface NormalizedRow extends TokenCounts {
   quantity: number;        // Parsed numeric value
   quotaRaw?: string;       // Raw quota string from CSV
   quotaValue?: number | 'unknown';
-  exceedsQuota?: boolean;
   // Additional fields can be added as needed
   // Extended commercial & billing fields (parsed during normalization)
   product?: string;
@@ -71,7 +64,7 @@ export interface NormalizedRow extends TokenCounts {
   netAmount?: number;
   aicQuantity?: number;
   aicGrossAmount?: number;
-  isNonCopilotUsage?: boolean;
+  isUnattributedUsage?: boolean;
   usageBucket?: SpecialUsageBucketKey;
 }
 
@@ -171,7 +164,7 @@ export interface QuotaArtifacts {
  */
 export interface UserAggregate {
   user: string;
-  totalRequests: number;
+  totalCredits: number;
   modelBreakdown: Record<string, number>;
   topModel?: string;
   topModelValue?: number;
@@ -199,11 +192,6 @@ export interface UsageArtifacts {
  */
 export interface DailyBucketsArtifacts {
   dailyUserTotals: Map<string, Map<string, number>>;
-  /**
-   * Optional AI Credits totals: day -> user -> AI Credits quantity.
-   * Kept separate from request totals because usage-based rows have zero request quantity.
-   */
-  dailyUserAicTotals?: Map<string, Map<string, number>>;
   dateRange: { min: string; max: string } | null;
   /**
    * Optional richer breakdown: day -> user -> model -> quantity.
@@ -212,13 +200,8 @@ export interface DailyBucketsArtifacts {
    */
   dailyUserModelTotals?: Map<string, Map<string, Map<string, number>>>;
   /**
-   * Optional richer AI Credits breakdown: day -> user -> model -> AI Credits quantity.
-   * Used by user detail model charts for usage-based billing reports.
-   */
-  dailyUserAicModelTotals?: Map<string, Map<string, Map<string, number>>>;
-  /**
    * Optional special bucket totals: day -> bucket -> quantity.
-   * Used for non-user usage such as non-Copilot Code Review rows.
+   * Used for unattributed AI Credit usage.
    */
   dailyBucketTotals?: Map<string, Map<SpecialUsageBucketKey, number>>;
   /**
@@ -253,7 +236,7 @@ export interface FeatureUsageArtifacts {
     codeQuality: Set<string>;
   };
   specialTotals: {
-    nonCopilotCodeReview: number;
+    unattributedCodeReview: number;
     unattributedCodeQuality: number;
   };
 }
@@ -266,8 +249,7 @@ export interface FeatureUsageArtifacts {
  */
 export interface BillingUserTotals {
   user: string;
-  quantity: number; // total request quantity (duplicate of usageArtifacts but convenient for billing view)
-  overage: BillingOverageTotals;
+  quantity: number; // total AI Credits
   quotaValue?: number | 'unknown';
   gross?: number;
   discount?: number;
@@ -288,15 +270,8 @@ export interface BillingGroupTotals extends BillingFieldTotals {
   quantity: number;
 }
 
-export interface BillingOverageTotals {
-  requests: number;
-  cost: number;
-  hasBilledOverageData: boolean;
-}
-
 export interface BillingArtifacts {
-  totals: BillingFieldTotals & { aicIncludedCredits: number; aicAdditionalUsageGrossAmount: number };
-  overage: BillingOverageTotals;
+  totals: BillingFieldTotals;
   users: BillingUserTotals[]; // unsorted list; consumer may sort
   userMap: Map<string, BillingUserTotals>; // internal convenience map (exposed for advanced consumers)
   orgTotals: Map<string, BillingGroupTotals>;

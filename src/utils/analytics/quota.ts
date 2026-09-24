@@ -1,6 +1,6 @@
-import { BUSINESS_QUOTA_VALUES, ENTERPRISE_QUOTA_VALUES, KNOWN_QUOTA_VALUES, PRICING } from '@/constants/pricing';
+import { BUSINESS_QUOTA_VALUES, ENTERPRISE_QUOTA_VALUES, KNOWN_QUOTA_VALUES } from '@/constants/pricing';
 import { ProcessedData } from '@/types/csv';
-import { isRequestUnitType, isSupportedUsageUnitType } from '@/utils/unitType';
+import { isSupportedUsageUnitType } from '@/utils/unitType';
 
 export interface QuotaBreakdownResult {
   unknown: string[];
@@ -38,10 +38,6 @@ export function isEnterpriseQuotaValue(quotaValue: number | 'unknown' | undefine
 
 export function isKnownQuotaValue(quotaValue: number | 'unknown' | undefined): quotaValue is number {
   return getQuotaTier(quotaValue) !== null;
-}
-
-export function isLegacyPremiumRequestQuotaValue(quotaValue: number | 'unknown' | undefined): quotaValue is number {
-  return quotaValue === PRICING.BUSINESS_QUOTA || quotaValue === PRICING.ENTERPRISE_QUOTA;
 }
 
 function getQuotaTierRank(quotaValue: number | 'unknown' | undefined): number {
@@ -96,15 +92,11 @@ export function shouldReplaceQuotaValue(
   return incoming > existing;
 }
 
-function buildUserQuotaMap(data: ProcessedData[], includeAiCreditUsage: boolean): Map<string, number | 'unknown'> {
+function buildUserQuotaMap(data: ProcessedData[]): Map<string, number | 'unknown'> {
   const userQuotas = new Map<string, number | 'unknown'>();
 
   for (const row of data) {
-    const shouldUseQuota = includeAiCreditUsage
-      ? isSupportedUsageUnitType(row.unitType, row.sku)
-      : isRequestUnitType(row.unitType);
-
-    if (row.isNonCopilotUsage || !shouldUseQuota) {
+    if (row.isUnattributedUsage || !isSupportedUsageUnitType(row.unitType, row.sku)) {
       continue;
     }
 
@@ -120,15 +112,15 @@ function buildUserQuotaMap(data: ProcessedData[], includeAiCreditUsage: boolean)
 }
 
 /**
- * Build per-user premium request quotas from processed rows using the canonical
+ * Build per-user AI-credit quotas from processed rows using the canonical
  * policy: numeric quotas win over unknown values, and the highest tier wins.
  */
 export function buildUserQuotaMapFromRows(data: ProcessedData[]): Map<string, number | 'unknown'> {
-  return buildUserQuotaMap(data, false);
+  return buildUserQuotaMap(data);
 }
 
 export function buildUsageQuotaMapFromRows(data: ProcessedData[]): Map<string, number | 'unknown'> {
-  return buildUserQuotaMap(data, true);
+  return buildUserQuotaMap(data);
 }
 
 /**

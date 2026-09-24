@@ -1,8 +1,7 @@
 import { PRICING } from '@/constants/pricing';
 import type { ProcessedData } from '@/types/csv';
 import type { UserSummary } from '@/utils/analytics';
-import { categorizeUserConsumption, calculateUnusedValue, classifyConsumptionUser, CONSUMPTION_THRESHOLDS } from '@/utils/analytics/insights';
-import type { UserConsumptionCategory } from '@/utils/analytics/insights';
+import { categorizeUserConsumption, classifyConsumptionUser, CONSUMPTION_THRESHOLDS } from '@/utils/analytics/insights';
 import { buildFeatureUtilizationFromArtifacts } from '@/utils/ingestion/analytics';
 import type { FeatureUsageArtifacts } from '@/utils/ingestion/types';
 
@@ -13,7 +12,7 @@ function makeFeatureUsageArtifacts({
   codingAgent = 0,
   spark = 0,
   codeQuality = 0,
-  nonCopilotCodeReview = 0,
+  unattributedCodeReview = 0,
   unattributedCodeQuality = 0,
   codeReviewUsers = [],
   codingAgentUsers = [],
@@ -24,7 +23,7 @@ function makeFeatureUsageArtifacts({
   codingAgent?: number;
   spark?: number;
   codeQuality?: number;
-  nonCopilotCodeReview?: number;
+  unattributedCodeReview?: number;
   unattributedCodeQuality?: number;
   codeReviewUsers?: string[];
   codingAgentUsers?: string[];
@@ -45,7 +44,7 @@ function makeFeatureUsageArtifacts({
       codeQuality: new Set(codeQualityUsers)
     },
     specialTotals: {
-      nonCopilotCodeReview,
+      unattributedCodeReview,
       unattributedCodeQuality
     }
   };
@@ -55,8 +54,8 @@ describe('insights analytics', () => {
   test('classifyConsumptionUser handles quota and threshold categories', () => {
     const quota = 100;
 
-    expect(classifyConsumptionUser(50, 'unknown')).toEqual({ consumptionPercentage: 0, category: 'low' });
-    expect(classifyConsumptionUser(50, 0)).toEqual({ consumptionPercentage: 0, category: 'low' });
+    expect(classifyConsumptionUser(50, 'unknown')).toEqual({ consumptionPercentage: 0, category: 'unknown' });
+    expect(classifyConsumptionUser(50, 0)).toEqual({ consumptionPercentage: 0, category: 'unknown' });
 
     const belowAvg = classifyConsumptionUser((CONSUMPTION_THRESHOLDS.averageMinPct - 0.1) / 100 * quota, quota);
     expect(belowAvg.consumptionPercentage).toBeCloseTo(CONSUMPTION_THRESHOLDS.averageMinPct - 0.1, 6);
@@ -72,12 +71,12 @@ describe('insights analytics', () => {
   });
 
   test('categorizeUserConsumption threshold boundaries', () => {
-    const quota = 300;
+    const quota = PRICING.BUSINESS_AI_CREDIT_QUOTA;
     const users: UserSummary[] = [
-      { user: 'test-user-low-edge-below', totalRequests: (CONSUMPTION_THRESHOLDS.averageMinPct - 0.1) / 100 * quota, modelBreakdown: {} },
-      { user: 'test-user-average-edge', totalRequests: (CONSUMPTION_THRESHOLDS.averageMinPct) / 100 * quota, modelBreakdown: {} },
-      { user: 'test-user-average-high', totalRequests: (CONSUMPTION_THRESHOLDS.powerMinPct - 0.1) / 100 * quota, modelBreakdown: {} },
-      { user: 'test-user-power-edge', totalRequests: (CONSUMPTION_THRESHOLDS.powerMinPct) / 100 * quota, modelBreakdown: {} }
+      { user: 'test-user-low-edge-below', totalCredits: (CONSUMPTION_THRESHOLDS.averageMinPct - 0.1) / 100 * quota, modelBreakdown: {} },
+      { user: 'test-user-average-edge', totalCredits: (CONSUMPTION_THRESHOLDS.averageMinPct) / 100 * quota, modelBreakdown: {} },
+      { user: 'test-user-average-high', totalCredits: (CONSUMPTION_THRESHOLDS.powerMinPct - 0.1) / 100 * quota, modelBreakdown: {} },
+      { user: 'test-user-power-edge', totalCredits: (CONSUMPTION_THRESHOLDS.powerMinPct) / 100 * quota, modelBreakdown: {} }
     ];
     const processed: ProcessedData[] = users.map(u => makeProcessedData({ user: u.user, quotaValue: quota }));
     const categorized = categorizeUserConsumption(users, processed);
@@ -92,38 +91,27 @@ describe('insights analytics', () => {
     expect(byUser['test-user-power-edge']).toBe('power');
   });
 
-  test('calculateUnusedValue sums unused correctly', () => {
-    const users: UserConsumptionCategory[] = [
-      { user: 'test-user-one', totalRequests: 100, quota: 300, consumptionPercentage: 33.33, category: 'low' },
-      { user: 'test-user-two', totalRequests: 250, quota: 300, consumptionPercentage: 83.33, category: 'average' },
-      { user: 'test-user-three', totalRequests: 500, quota: 'unknown', consumptionPercentage: 0, category: 'low' }
-    ];
-    const total = calculateUnusedValue(users);
-    // unused: a=200, b=50 => 250 * overage rate (import pricing constant to avoid magic number).
-    expect(total).toBeCloseTo((200 + 50) * PRICING.OVERAGE_RATE_PER_REQUEST, 6);
-  });
-
-  test('feature utilization counts sessions & users from artifacts', () => {
+  test('feature utilization counts AI credits and users from artifacts', () => {
     const stats = buildFeatureUtilizationFromArtifacts(makeFeatureUsageArtifacts({
       codeReview: 9,
       codingAgent: 9,
       spark: 8,
       codeQuality: 51.28584,
-      nonCopilotCodeReview: 4,
+      unattributedCodeReview: 4,
       codeReviewUsers: ['test-user-one', 'test-user-two'],
       codingAgentUsers: ['test-user-one', 'test-user-three'],
       sparkUsers: ['test-user-two', 'test-user-four'],
       codeQualityUsers: ['test-user-five']
     }));
 
-    expect(stats.codeReview.totalSessions).toBe(5);
+    expect(stats.codeReview.totalCredits).toBe(9);
     expect(stats.codeReview.userCount).toBe(2);
-    expect(stats.nonCopilotCodeReview.totalSessions).toBe(4);
-    expect(stats.codingAgent.totalSessions).toBe(9);
+    expect(stats.codeReview.averagePerUser).toBe(2.5);
+    expect(stats.codingAgent.totalCredits).toBe(9);
     expect(stats.codingAgent.userCount).toBe(2);
-    expect(stats.spark.totalSessions).toBe(8);
+    expect(stats.spark.totalCredits).toBe(8);
     expect(stats.spark.userCount).toBe(2);
-    expect(stats.codeQuality.totalSessions).toBe(51.28584);
+    expect(stats.codeQuality.totalCredits).toBe(51.28584);
     expect(stats.codeQuality.userCount).toBe(1);
     expect(stats.codeQuality.averagePerUser).toBe(51.28584);
   });
@@ -135,7 +123,7 @@ describe('insights analytics', () => {
       codeQualityUsers: ['test-user-five']
     }));
 
-    expect(stats.codeQuality.totalSessions).toBe(61.28584);
+    expect(stats.codeQuality.totalCredits).toBe(61.28584);
     expect(stats.codeQuality.userCount).toBe(1);
     expect(stats.codeQuality.averagePerUser).toBe(51.28584);
   });
@@ -146,7 +134,7 @@ describe('insights analytics', () => {
       sparkUsers: ['test-user-one', 'test-user-two']
     }));
 
-    expect(stats.spark.totalSessions).toBe(5);
+    expect(stats.spark.totalCredits).toBe(5);
     expect(stats.spark.userCount).toBe(2);
   });
 });

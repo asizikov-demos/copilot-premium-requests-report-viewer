@@ -14,8 +14,8 @@ describe('FeatureUsageAggregator', () => {
       makeNormalizedRow({ user: 'u2', model: 'code review session', quantity: 2 }),
       makeNormalizedRow({ user: 'u1', model: 'Coding Agent', quantity: 5 }),
       makeNormalizedRow({ user: 'u3', model: 'Copilot Coding Agent', quantity: 4 }),
-      makeNormalizedRow({ user: 'u2', model: 'gpt-4.1', product: 'spark', sku: 'spark_premium_request', quantity: 7 }),
-      makeNormalizedRow({ user: 'u4', model: 'o3-mini', product: 'spark', sku: 'spark_premium_request', quantity: 1 }),
+      makeNormalizedRow({ user: 'u2', model: 'gpt-4.1', product: 'spark', sku: 'copilot_ai_credit', quantity: 7 }),
+      makeNormalizedRow({ user: 'u4', model: 'o3-mini', product: 'spark', sku: 'copilot_ai_credit', quantity: 1 }),
       makeNormalizedRow({ user: 'u5', model: 'Claude Sonnet 4.6', product: 'code_quality', sku: 'code_quality_ai_credit', quantity: 0, billingQuantity: 51.28584 }),
       makeNormalizedRow({ user: '', model: 'Claude Sonnet 4.6', product: 'code_quality', sku: 'code_quality_ai_credit', quantity: 0, billingQuantity: 10 })
     ];
@@ -35,7 +35,7 @@ describe('FeatureUsageAggregator', () => {
     expect(out.featureUsers.codeReview.has('u2')).toBeTruthy();
   });
 
-  test('counts non-Copilot code review usage in totals but not in user counts', () => {
+  test('counts unattributed Code Review AI credits in totals but not in named-user counts', () => {
     const agg = new FeatureUsageAggregator();
     const ctx: AggregatorContext = { pricing: PRICING };
     agg.init?.(ctx);
@@ -44,8 +44,8 @@ describe('FeatureUsageAggregator', () => {
       user: '',
       model: 'Code Review',
       quantity: 4,
-      isNonCopilotUsage: true,
-      usageBucket: 'non_copilot_code_review'
+      isUnattributedUsage: true,
+      usageBucket: 'unattributed_ai_credit'
     }), ctx);
     agg.onRow(makeNormalizedRow({ user: 'u1', model: 'Code Review', quantity: 1 }), ctx);
 
@@ -53,7 +53,7 @@ describe('FeatureUsageAggregator', () => {
     expect(out.featureTotals.codeReview).toBe(5);
     expect(out.featureUsers.codeReview.size).toBe(1);
     expect(out.featureUsers.codeReview.has('u1')).toBe(true);
-    expect(out.specialTotals.nonCopilotCodeReview).toBe(4);
+    expect(out.specialTotals.unattributedCodeReview).toBe(4);
   });
 
   test('counts Code Quality AI-credit rows from billing quantity after normalization', () => {
@@ -75,7 +75,7 @@ describe('FeatureUsageAggregator', () => {
     }, warnings);
 
     expect(row).not.toBeNull();
-    expect(row?.quantity).toBe(0);
+    expect(row?.quantity).toBe(51.28584);
     expect(row?.billingQuantity).toBe(51.28584);
 
     const agg = new FeatureUsageAggregator();
@@ -109,7 +109,7 @@ describe('FeatureUsageAggregator', () => {
 
     expect(row).not.toBeNull();
     expect(row?.usageUnit).toBe('ai_credit');
-    expect(row?.quantity).toBe(0);
+    expect(row?.quantity).toBe(51.28584);
     expect(row?.billingQuantity).toBe(51.28584);
     expect(warnings).toEqual([]);
 

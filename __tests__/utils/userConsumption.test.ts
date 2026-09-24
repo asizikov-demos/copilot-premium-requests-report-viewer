@@ -27,16 +27,16 @@ describe('user consumption metrics', () => {
       { ...base, quantity: '10' },
       { ...base, date: '2026-07-01', unit_type: 'requests', quantity: '1' },
     ]));
-    expect(missing.credits).toEqual({ quantity: 10, rowCount: 2, reportedRows: 1 });
+    expect(missing.credits).toEqual({ quantity: 10, rowCount: 1, reportedRows: 1 });
 
     const zero = buildUserConsumption(buildProcessedDataFromRawRows([{ ...base, input: '0' }]));
     expect(zero.credits.quantity).toBe(0);
     expect(buildUserConsumption([]).credits.quantity).toBeUndefined();
   });
 
-  it('uses existing AI Credit semantics alongside token-only activity', () => {
+  it('retains token-only activity alongside supported AI-credit usage', () => {
     const result = buildUserConsumption(buildProcessedDataFromRawRows([
-      { ...base, aic_quantity: '5', unit_type: 'requests', aic_gross_amount: String(10 * PRICING.AI_CREDIT_USD_VALUE) },
+      { ...base, quantity: '10', aic_quantity: '5', aic_gross_amount: String(10 * PRICING.AI_CREDIT_USD_VALUE) },
       { ...base, date: '2026-07-01', cache_read: '50' },
     ]));
     expect(result.credits.quantity).toBe(10);

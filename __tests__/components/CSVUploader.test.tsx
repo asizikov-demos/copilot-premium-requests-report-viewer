@@ -247,7 +247,7 @@ describe('CSVUploader', () => {
   });
 
   it('should load and ingest sample data when button is clicked', async () => {
-    const sampleCsv = 'date,username,model,quantity\n2025-10-01,user001,GPT-5,1';
+    const sampleCsv = 'date,username,sku,unit_type,model,quantity\n2025-10-01,test-user-one,copilot_ai_credit,ai-credits,GPT-5,1';
 
     // Mock fetch to return the sample CSV as a blob.
     global.fetch = jest.fn().mockResolvedValue({
@@ -258,7 +258,7 @@ describe('CSVUploader', () => {
     const { ingestStream } = jest.requireMock('@/utils/ingestion');
     ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onComplete: (result: IngestionResult) => void }) => {
       setTimeout(() => {
-        options.onComplete(createMockIngestionResult([{ date: '2025-10-01', username: 'user001', model: 'GPT-5', quantity: '1' }]));
+        options.onComplete(createMockIngestionResult([{ date: '2025-10-01', username: 'test-user-one', sku: 'copilot_ai_credit', unit_type: 'ai-credits', model: 'GPT-5', quantity: '1' }]));
       }, 0);
     });
 
@@ -268,16 +268,16 @@ describe('CSVUploader', () => {
     await user.click(sampleButton);
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(expect.stringMatching(/\/data\/pru-example\.csv$/));
+      expect(global.fetch).toHaveBeenCalledWith(expect.stringMatching(/\/data\/ai-credits-example\.csv$/));
       expect(mockOnDataLoad).toHaveBeenCalledWith(
         expect.objectContaining({ rowsProcessed: 1 }),
-        'pru-example.csv'
+        'ai-credits-example.csv'
       );
     });
   });
 
   it('should prevent concurrent sample downloads when clicked multiple times', async () => {
-    const sampleCsv = 'date,username,model,quantity\n2025-10-01,user001,GPT-5,1';
+    const sampleCsv = 'date,username,sku,unit_type,model,quantity\n2025-10-01,test-user-one,copilot_ai_credit,ai-credits,GPT-5,1';
 
     let resolveFetch: (value: unknown) => void;
     const fetchPromise = new Promise((resolve) => {
@@ -289,7 +289,7 @@ describe('CSVUploader', () => {
     const { ingestStream } = jest.requireMock('@/utils/ingestion');
     ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onComplete: (result: IngestionResult) => void }) => {
       setTimeout(() => {
-        options.onComplete(createMockIngestionResult([{ date: '2025-10-01', username: 'user001', model: 'GPT-5', quantity: '1' }]));
+        options.onComplete(createMockIngestionResult([{ date: '2025-10-01', username: 'test-user-one', sku: 'copilot_ai_credit', unit_type: 'ai-credits', model: 'GPT-5', quantity: '1' }]));
       }, 0);
     });
 
@@ -309,7 +309,7 @@ describe('CSVUploader', () => {
     await waitFor(() => {
       expect(mockOnDataLoad).toHaveBeenCalledWith(
         expect.objectContaining({ rowsProcessed: 1 }),
-        'pru-example.csv'
+        'ai-credits-example.csv'
       );
     });
   });
@@ -389,7 +389,6 @@ describe('CSVUploader', () => {
       username: 'test-user-a',
       model: 'gpt-4.1-2025-04-14',
       quantity: '1.00',
-      exceeds_quota: 'false',
       total_monthly_quota: 'Unknown',
       extra_column: 'extra_value'
     }];

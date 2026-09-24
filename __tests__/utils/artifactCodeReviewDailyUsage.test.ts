@@ -1,5 +1,4 @@
 import {
-  buildDailyCodeReviewAicUsageFromArtifacts,
   buildDailyCodeReviewUsageFromArtifacts,
   type DailyCodingAgentUsageDatum,
 } from '@/utils/ingestion';
@@ -16,8 +15,8 @@ describe('buildDailyCodeReviewUsageFromArtifacts', () => {
     ]);
     const result = buildDailyCodeReviewUsageFromArtifacts(artifacts);
     const expected: DailyCodingAgentUsageDatum[] = [
-      { date: '2025-06-01', dailyRequests: 6, cumulativeRequests: 6 },
-      { date: '2025-06-02', dailyRequests: 7, cumulativeRequests: 13 },
+      { date: '2025-06-01', dailyCredits: 6, cumulativeCredits: 6 },
+      { date: '2025-06-02', dailyCredits: 7, cumulativeCredits: 13 },
     ];
     expect(result).toEqual(expected);
   });
@@ -57,26 +56,24 @@ describe('buildDailyCodeReviewUsageFromArtifacts', () => {
     expect(buildDailyCodeReviewUsageFromArtifacts(artifacts)).toEqual([]);
   });
 
-  test('aggregates AI Credits from the AI Credits per-model breakdown', () => {
+  test('aggregates fractional AI Credits from the canonical per-model breakdown', () => {
     const artifacts = makeDailyBucketsArtifacts([
       {
         date: '2026-03-01',
         user: 'test-user-one',
         used: 8.25,
         model: 'Code Review model',
-        isAic: true,
       },
       {
         date: '2026-03-01',
         user: 'test-user-one',
         used: 3,
         model: 'Coding Agent model',
-        isAic: true,
       },
     ]);
 
-    expect(buildDailyCodeReviewAicUsageFromArtifacts(artifacts)).toEqual([
-      { date: '2026-03-01', dailyRequests: 8.25, cumulativeRequests: 8.25 },
+    expect(buildDailyCodeReviewUsageFromArtifacts(artifacts)).toEqual([
+      { date: '2026-03-01', dailyCredits: 8.25, cumulativeCredits: 8.25 },
     ]);
   });
 });

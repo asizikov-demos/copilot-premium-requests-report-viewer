@@ -2,7 +2,7 @@ import { PRICING } from '@/constants/pricing';
 import type { ProcessedData } from '@/types/csv';
 
 const AUTO_MODE_MODEL_PREFIX = /^auto:\s*/i;
-const COST_BEFORE_AUTO_MULTIPLIER = 1 + PRICING.AUTO_MODE_DISCOUNT_RATE;
+const COST_BEFORE_AUTO_MULTIPLIER = 1 / (1 - PRICING.AUTO_MODE_DISCOUNT_RATE);
 
 export interface AutoModeSavingsRow {
   model: string;
@@ -12,19 +12,7 @@ export interface AutoModeSavingsRow {
 }
 
 function getBilledQuantity(row: ProcessedData): number {
-  if (row.usageUnit === 'ai_credit') {
-    return row.aicQuantity ?? row.billingQuantity ?? 0;
-  }
-
-  return row.requestsUsed;
-}
-
-function getUnitCost(row: ProcessedData): number {
-  if (row.usageUnit === 'ai_credit') {
-    return row.appliedCostPerQuantity ?? PRICING.AI_CREDIT_USD_VALUE;
-  }
-
-  return row.appliedCostPerQuantity ?? PRICING.OVERAGE_RATE_PER_REQUEST;
+  return row.billingQuantity ?? row.creditsUsed;
 }
 
 export function getAutoModeBaseModel(model: string): string | null {
@@ -42,12 +30,12 @@ export function aggregateAutoModeSavings(rows: ProcessedData[]): AutoModeSavings
   for (const row of rows) {
     const model = getAutoModeBaseModel(row.model);
 
-    if (!model) {
+    if (!model || row.grossAmount === undefined) {
       continue;
     }
 
     const billedQuantity = getBilledQuantity(row);
-    const billedGrossAmount = row.grossAmount ?? billedQuantity * getUnitCost(row);
+    const billedGrossAmount = row.grossAmount;
     const costBeforeAuto = billedGrossAmount * COST_BEFORE_AUTO_MULTIPLIER;
     const savings = costBeforeAuto - billedGrossAmount;
     const bucket = buckets.get(model) ?? {

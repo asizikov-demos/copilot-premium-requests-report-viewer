@@ -4,18 +4,18 @@ export const invalidCSVData = {
   
   emptyFile: '',
   
-  malformedData: `date,username,model,quantity,exceeds_quota,total_monthly_quota
-2025-06-03,test-user-a,gpt-4.1-2025-04-14,invalid_number,false,Unknown`,
+  malformedData: `date,username,sku,unit_type,model,quantity,total_monthly_quota
+2025-06-03,test-user-one,copilot_ai_credit,ai-credits,gpt-4.1-2025-04-14,invalid_number,Unknown`,
   
-  invalidDate: `date,username,model,quantity,exceeds_quota,total_monthly_quota
-invalid-date,test-user-a,gpt-4.1-2025-04-14,1.00,false,Unknown`,
+  invalidDate: `date,username,sku,unit_type,model,quantity,total_monthly_quota
+invalid-date,test-user-one,copilot_ai_credit,ai-credits,gpt-4.1-2025-04-14,1.00,Unknown`,
 
   missingRequiredColumns: `username,model,quantity
-test-user-a,gpt-4.1-2025-04-14,1.00`,
+test-user-one,gpt-4.1-2025-04-14,1.00`,
 
-  extraColumns: `date,username,model,quantity,exceeds_quota,total_monthly_quota,extra_column
-2025-06-03,test-user-a,gpt-4.1-2025-04-14,1.00,false,Unknown,extra_value`,
+  extraColumns: `date,username,sku,unit_type,model,quantity,total_monthly_quota,extra_column
+2025-06-03,test-user-one,copilot_ai_credit,ai-credits,gpt-4.1-2025-04-14,1.00,Unknown,extra_value`,
 
-  invalidBooleanValues: `date,username,model,quantity,exceeds_quota,total_monthly_quota
-2025-06-03,test-user-a,gpt-4.1-2025-04-14,1.00,maybe,Unknown`
+  unsupportedRequestUnits: `date,username,sku,unit_type,model,quantity,total_monthly_quota
+2025-06-03,test-user-one,copilot_premium_request,requests,gpt-4.1-2025-04-14,1.00,Unknown`
 };

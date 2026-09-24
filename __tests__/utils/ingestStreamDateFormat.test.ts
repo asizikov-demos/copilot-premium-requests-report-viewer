@@ -1,3 +1,4 @@
+import { PRICING } from '@/constants/pricing';
 import { ingestStream } from '@/utils/ingestion/orchestrator';
 import type { Aggregator, IngestionResult, NormalizedRow } from '@/utils/ingestion/types';
 import { TokenAggregator } from '@/utils/ingestion/TokenAggregator';
@@ -64,12 +65,91 @@ function ingestCsv(
 }
 
 describe('ingestStream date format normalization', () => {
+  it.each([
+    {
+      name: 'request unit',
+      sku: 'copilot_ai_credit',
+      unitType: 'requests',
+    },
+    {
+      name: 'premium-request SKU',
+      sku: 'copilot_premium_request',
+      unitType: 'ai-credits',
+    },
+  ])('rejects a $name import exactly once without completing', ({ sku, unitType }) => {
+    const csv = [
+      'date,username,sku,unit_type,model,quantity',
+      `2026-07-01,test-user-one,${sku},${unitType},test-model-one,2`,
+    ].join('\n');
+    const onComplete = jest.fn();
+    const onError = jest.fn();
+    const originalFileReader = globalThis.FileReader;
+    globalThis.FileReader = MockFileReader as unknown as typeof FileReader;
+
+    try {
+      ingestStream(createStreamingCsvFile(csv), [createCapturingAggregator()], {
+        onComplete,
+        onError,
+      });
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onError).toHaveBeenCalledWith(expect.stringContaining('unsupported premium-request rows'));
+      expect(onComplete).not.toHaveBeenCalled();
+    } finally {
+      globalThis.FileReader = originalFileReader;
+    }
+  });
+
+  it('accepts an AI-credit SKU without unit_type or optional billing columns', async () => {
+    const csv = [
+      'date,username,sku,model,quantity,total_monthly_quota',
+      `2026-07-01,test-user-one,copilot_ai_credit,test-model-one,2.5,${PRICING.BUSINESS_AI_CREDIT_QUOTA}`,
+    ].join('\n');
+
+    const result = await ingestCsv(csv);
+    expect(result.rowsProcessed).toBe(1);
+    expect(result.warnings).toEqual([]);
+    expect(result.outputs.capturedRows).toEqual([
+      expect.objectContaining({
+        user: 'test-user-one',
+        usageUnit: 'ai_credit',
+        quantity: 2.5,
+        quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA,
+        grossAmount: undefined,
+        discountAmount: undefined,
+        netAmount: undefined,
+      }),
+    ]);
+  });
+
+  it('skips legacy request rows in a mixed export while completing with only AI credits', async () => {
+    const csv = [
+      'date,username,sku,unit_type,model,quantity,net_amount',
+      '2026-06-30,test-user-one,copilot_ai_credit,ai-credits,test-model-one,2.5,0.025',
+      '2026-06-30,test-user-one,copilot_ai_credit,requests,test-model-one,100,1',
+      '2026-07-01,test-user-two,copilot_ai_credit,ai-credits,test-model-two,3.5,',
+      '2026-07-01,test-user-two,copilot_premium_request,ai-credits,test-model-two,200,2',
+    ].join('\n');
+
+    const result = await ingestCsv(csv, [createCapturingAggregator()], 96);
+    const rows = result.outputs.capturedRows as NormalizedRow[];
+    expect(result.rowsProcessed).toBe(2);
+    expect(result.warnings).toEqual([]);
+    expect(rows.map(row => ({
+      user: row.user,
+      quantity: row.quantity,
+      netAmount: row.netAmount,
+    }))).toEqual([
+      { user: 'test-user-one', quantity: 2.5, netAmount: 0.025 },
+      { user: 'test-user-two', quantity: 3.5, netAmount: undefined },
+    ]);
+  });
+
   it('reports token overflow without exposing partial token totals or losing other artifacts', async () => {
     const csv = [
-      'date,username,model,quantity,input',
-      `2026-06-30,test-user-one,test-model-one,1,${Number.MAX_SAFE_INTEGER}`,
-      '2026-06-30,test-user-one,test-model-one,1,1',
-      ...Array.from({ length: 1000 }, () => '2026-06-30,test-user-one,test-model-one,1,1'),
+      'date,username,unit_type,model,quantity,input',
+      `2026-06-30,test-user-one,ai-credits,test-model-one,1,${Number.MAX_SAFE_INTEGER}`,
+      '2026-06-30,test-user-one,ai-credits,test-model-one,1,1',
+      ...Array.from({ length: 1000 }, () => '2026-06-30,test-user-one,ai-credits,test-model-one,1,1'),
     ].join('\n');
     const result = await ingestCsv(csv, [new TokenAggregator(), createCapturingAggregator()]);
     expect(result.rowsProcessed).toBe(1002);
@@ -106,9 +186,9 @@ describe('ingestStream date format normalization', () => {
 
   it('normalizes US slash dates through the streaming ingestion path', async () => {
     const csv = [
-      'date,username,product,sku,model,quantity,exceeds_quota,total_monthly_quota,organization,cost_center_name',
-      '5/29/26,test-user-one,copilot,copilot_premium_request,Claude Sonnet 4,2,FALSE,1000,test-org-one,test-cost-center-one',
-      '6/1/26,test-user-two,copilot,copilot_premium_request,Code Review model,3,TRUE,300,test-org-two,test-cost-center-two',
+      'date,username,product,sku,model,quantity,total_monthly_quota,organization,cost_center_name',
+      `5/29/26,test-user-one,copilot,copilot_ai_credit,Claude Sonnet 4,2,${PRICING.ENTERPRISE_AI_CREDIT_QUOTA},test-org-one,test-cost-center-one`,
+      `6/1/26,test-user-two,copilot,copilot_ai_credit,Code Review model,3,${PRICING.BUSINESS_AI_CREDIT_QUOTA},test-org-two,test-cost-center-two`,
     ].join('\n');
 
     const result = await ingestCsv(csv);
@@ -122,9 +202,9 @@ describe('ingestStream date format normalization', () => {
 
   it('warns and skips rows when the first streamed date format is unrecognized', async () => {
     const csv = [
-      'date,username,product,sku,model,quantity,exceeds_quota,total_monthly_quota,organization,cost_center_name',
-      'May 29 2026,test-user-one,copilot,copilot_premium_request,Claude Sonnet 4,2,FALSE,1000,test-org-one,test-cost-center-one',
-      '2026-05-30,test-user-two,copilot,copilot_premium_request,Claude Sonnet 4,3,FALSE,1000,test-org-two,test-cost-center-two',
+      'date,username,product,sku,model,quantity,total_monthly_quota,organization,cost_center_name',
+      `May 29 2026,test-user-one,copilot,copilot_ai_credit,Claude Sonnet 4,2,${PRICING.ENTERPRISE_AI_CREDIT_QUOTA},test-org-one,test-cost-center-one`,
+      `2026-05-30,test-user-two,copilot,copilot_ai_credit,Claude Sonnet 4,3,${PRICING.ENTERPRISE_AI_CREDIT_QUOTA},test-org-two,test-cost-center-two`,
     ].join('\n');
 
     const result = await ingestCsv(csv);
@@ -143,8 +223,8 @@ describe('ingestStream date format normalization', () => {
 
   it('continues to normalize ISO dates through ingestStream', async () => {
     const csv = [
-      'date,username,product,sku,model,quantity,exceeds_quota,total_monthly_quota,organization,cost_center_name',
-      '2026-05-29,test-user-one,copilot,copilot_premium_request,Claude Sonnet 4,2,FALSE,1000,test-org-one,test-cost-center-one',
+      'date,username,product,sku,model,quantity,total_monthly_quota,organization,cost_center_name',
+      `2026-05-29,test-user-one,copilot,copilot_ai_credit,Claude Sonnet 4,2,${PRICING.ENTERPRISE_AI_CREDIT_QUOTA},test-org-one,test-cost-center-one`,
     ].join('\n');
 
     const result = await ingestCsv(csv);

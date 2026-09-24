@@ -1,11 +1,11 @@
-import { buildDailyModelAicUsageFromArtifacts, buildDailyModelUsageFromArtifacts } from '@/utils/ingestion/analytics';
+import { buildDailyModelUsageFromArtifacts } from '@/utils/ingestion/analytics';
 import type { DailyBucketsArtifacts, UsageArtifacts } from '@/utils/ingestion';
 import { makeUsageArtifacts, makeDailyBucketsArtifacts } from '../helpers/makeArtifacts';
 
 function makeUsageFromModelTotals(modelTotals: Record<string, number>): UsageArtifacts {
   const total = Object.values(modelTotals).reduce((a, b) => a + b, 0);
   const users = Object.keys(modelTotals).length
-    ? [{ user: 'test-user-one', totalRequests: total, modelBreakdown: modelTotals }]
+    ? [{ user: 'test-user-one', totalCredits: total, modelBreakdown: modelTotals }]
     : [];
   return makeUsageArtifacts(users);
 }
@@ -23,41 +23,12 @@ function makeDailyBucketsFromNested(dates: string[], data: Array<Record<string, 
   return makeDailyBucketsArtifacts(entries);
 }
 
-function cloneDailyModelTotals(
-  source: Map<string, Map<string, Map<string, number>>>
-): Map<string, Map<string, Map<string, number>>> {
-  // Clone date → user → model → value maps so tests catch use of the wrong artifact field.
-  return new Map(
-    Array.from(source.entries()).map(([date, userMap]) => [
-      date,
-      new Map(
-        Array.from(userMap.entries()).map(([user, modelMap]) => [
-          user,
-          new Map(modelMap),
-        ])
-      ),
-    ])
-  );
-}
-
-function makeDailyAicBucketsFromNested(dates: string[], data: Array<Record<string, Record<string, number>>>): DailyBucketsArtifacts {
-  const artifacts = makeDailyBucketsFromNested(dates, data);
-  if (!artifacts.dailyUserModelTotals) {
-    throw new Error('Expected daily model totals from test artifact builder');
-  }
-
-  return {
-    ...artifacts,
-    dailyUserAicModelTotals: cloneDailyModelTotals(artifacts.dailyUserModelTotals),
-  };
-}
-
 describe('buildDailyModelUsageFromArtifacts', () => {
   it('aggregates per-day per-model totals across users', () => {
     const dates = ['2025-06-01', '2025-06-02'];
     const dailyData: Array<Record<string, Record<string, number>>> = [
-      { alice: { 'gpt-4.1': 2 }, bob: { 'gpt-4.1': 1, 'gpt-4.1-mini': 3 } },
-      { alice: { 'gpt-4.1': 1 }, bob: { 'gpt-4.1': 0, 'gpt-4.1-mini': 2 } }
+      { 'test-user-one': { 'gpt-4.1': 2 }, 'test-user-two': { 'gpt-4.1': 1, 'gpt-4.1-mini': 3 } },
+      { 'test-user-one': { 'gpt-4.1': 1 }, 'test-user-two': { 'gpt-4.1': 0, 'gpt-4.1-mini': 2 } }
     ];
     const usageArtifacts = makeUsageFromModelTotals({ 'gpt-4.1': 3, 'gpt-4.1-mini': 5 });
     const dailyBucketsArtifacts = makeDailyBucketsFromNested(dates, dailyData);
@@ -68,12 +39,12 @@ describe('buildDailyModelUsageFromArtifacts', () => {
     expect(result[0].date).toBe('2025-06-01');
     expect(result[0]['gpt-4.1']).toBe(3);
     expect(result[0]['gpt-4.1-mini']).toBe(3);
-    expect(result[0].totalRequests).toBe(6);
+    expect(result[0].totalCredits).toBe(6);
 
     expect(result[1].date).toBe('2025-06-02');
     expect(result[1]['gpt-4.1']).toBe(1);
     expect(result[1]['gpt-4.1-mini']).toBe(2);
-    expect(result[1].totalRequests).toBe(3);
+    expect(result[1].totalCredits).toBe(3);
   });
 
   it('returns empty array when artifacts incomplete', () => {
@@ -90,9 +61,9 @@ describe('buildDailyModelUsageFromArtifacts', () => {
   it('respects full date range including days without activity', () => {
     const dates = ['2025-06-01', '2025-06-02', '2025-06-03'];
     const dailyData: Array<Record<string, Record<string, number>>> = [
-      { alice: { 'gpt-4.1': 2 } },
+      { 'test-user-one': { 'gpt-4.1': 2 } },
       {},
-      { alice: { 'gpt-4.1': 1 } }
+      { 'test-user-one': { 'gpt-4.1': 1 } }
     ];
     const usageArtifacts = makeUsageFromModelTotals({ 'gpt-4.1': 3 });
     const dailyBucketsArtifacts = makeDailyBucketsFromNested(dates, dailyData);
@@ -102,29 +73,29 @@ describe('buildDailyModelUsageFromArtifacts', () => {
     expect(result).toHaveLength(3);
     expect(result[1].date).toBe('2025-06-02');
     expect(result[1]['gpt-4.1']).toBe(0);
-    expect(result[1].totalRequests).toBe(0);
+    expect(result[1].totalCredits).toBe(0);
   });
 });
 
-describe('buildDailyModelAicUsageFromArtifacts', () => {
+describe('buildDailyModelUsageFromArtifacts with fractional AI credits', () => {
   it('returns empty array for empty artifacts', () => {
     const usageArtifacts = makeUsageFromModelTotals({});
-    const dailyBucketsArtifacts = makeDailyAicBucketsFromNested([], []);
+    const dailyBucketsArtifacts = makeDailyBucketsFromNested([], []);
 
-    const result = buildDailyModelAicUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
+    const result = buildDailyModelUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
 
     expect(result).toEqual([]);
   });
 
-  it('returns empty array when AIC model artifacts are missing', () => {
+  it('returns empty array when model artifacts are missing', () => {
     const usageArtifacts = makeUsageFromModelTotals({ 'test-model-one': 1 });
     const dailyBucketsArtifacts = makeDailyBucketsArtifacts([], {
       dateRange: { min: '2025-06-01', max: '2025-06-01' },
-      dailyUserAicModelTotals: undefined,
+      dailyUserModelTotals: undefined,
       months: ['2025-06'],
     });
 
-    const result = buildDailyModelAicUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
+    const result = buildDailyModelUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
 
     expect(result).toEqual([]);
   });
@@ -135,21 +106,21 @@ describe('buildDailyModelAicUsageFromArtifacts', () => {
       { 'test-user-one': { 'test-model-one': 2.5 }, 'test-user-two': { 'test-model-one': 1.25 } }
     ];
     const usageArtifacts = makeUsageFromModelTotals({ 'test-model-one': 3.75 });
-    const dailyBucketsArtifacts = makeDailyAicBucketsFromNested(dates, dailyData);
+    const dailyBucketsArtifacts = makeDailyBucketsFromNested(dates, dailyData);
 
-    const result = buildDailyModelAicUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
+    const result = buildDailyModelUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
 
     expect(result).toHaveLength(1);
     expect(result[0].date).toBe('2025-06-30');
     expect(result[0]['test-model-one']).toBe(3.75);
-    expect(result[0].totalRequests).toBe(3.75);
+    expect(result[0].totalCredits).toBe(3.75);
   });
 
   it('includes unattributed AI Credits in the daily model total', () => {
     const date = '2026-07-01';
     const model = 'Gemini 3.5 Flash';
     const usageArtifacts = makeUsageFromModelTotals({ [model]: 9364.837755 });
-    const dailyBucketsArtifacts = makeDailyAicBucketsFromNested(
+    const dailyBucketsArtifacts = makeDailyBucketsFromNested(
       [date],
       [{ 'test-user-one': { [model]: 9364.837755 } }]
     );
@@ -159,17 +130,17 @@ describe('buildDailyModelAicUsageFromArtifacts', () => {
       ])],
     ]);
 
-    const result = buildDailyModelAicUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
+    const result = buildDailyModelUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
 
     expect(result[0][model]).toBeCloseTo(27386.50344);
-    expect(result[0].totalRequests).toBeCloseTo(27386.50344);
+    expect(result[0].totalCredits).toBeCloseTo(27386.50344);
   });
 
   it('includes a day containing only unattributed AI Credits', () => {
     const date = '2026-07-01';
     const model = 'Gemini 3.5 Flash';
     const usageArtifacts = makeUsageFromModelTotals({ [model]: 0 });
-    const dailyBucketsArtifacts = makeDailyAicBucketsFromNested([date], [{}]);
+    const dailyBucketsArtifacts = makeDailyBucketsFromNested([date], [{}]);
     dailyBucketsArtifacts.dateRange = { min: date, max: date };
     dailyBucketsArtifacts.months = ['2026-07'];
     dailyBucketsArtifacts.dailyBucketModelTotals = new Map([
@@ -178,10 +149,10 @@ describe('buildDailyModelAicUsageFromArtifacts', () => {
       ])],
     ]);
 
-    const result = buildDailyModelAicUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
+    const result = buildDailyModelUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
 
     expect(result[0][model]).toBeCloseTo(18021.665685);
-    expect(result[0].totalRequests).toBeCloseTo(18021.665685);
+    expect(result[0].totalCredits).toBeCloseTo(18021.665685);
   });
 
   it('builds dense multi-day UTC date-keyed AIC model totals for multiple models', () => {
@@ -192,19 +163,19 @@ describe('buildDailyModelAicUsageFromArtifacts', () => {
       { 'test-user-two': { 'test-model-one': 0.5, 'test-model-two': 3 } }
     ];
     const usageArtifacts = makeUsageFromModelTotals({ 'test-model-one': 2.5, 'test-model-two': 4 });
-    const dailyBucketsArtifacts = makeDailyAicBucketsFromNested(dates, dailyData);
+    const dailyBucketsArtifacts = makeDailyBucketsFromNested(dates, dailyData);
 
-    const result = buildDailyModelAicUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
+    const result = buildDailyModelUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
 
     expect(result.map((row) => row.date)).toEqual(['2025-06-30', '2025-07-01', '2025-07-02']);
     expect(result[0]['test-model-one']).toBe(2);
     expect(result[0]['test-model-two']).toBe(1);
-    expect(result[0].totalRequests).toBe(3);
+    expect(result[0].totalCredits).toBe(3);
     expect(result[1]['test-model-one']).toBe(0);
     expect(result[1]['test-model-two']).toBe(0);
-    expect(result[1].totalRequests).toBe(0);
+    expect(result[1].totalCredits).toBe(0);
     expect(result[2]['test-model-one']).toBe(0.5);
     expect(result[2]['test-model-two']).toBe(3);
-    expect(result[2].totalRequests).toBe(3.5);
+    expect(result[2].totalCredits).toBe(3.5);
   });
 });

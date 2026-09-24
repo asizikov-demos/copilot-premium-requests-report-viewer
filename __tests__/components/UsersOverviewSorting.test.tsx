@@ -61,7 +61,7 @@ function makeUsage(users: UserSummary[]): UsageArtifacts {
   return {
     users: users.map(u => ({
       user: u.user,
-      totalRequests: u.totalRequests,
+      totalCredits: u.totalCredits,
       modelBreakdown: u.modelBreakdown,
       organization: u.organization,
       costCenter: u.costCenter,
@@ -76,25 +76,59 @@ function makeUsage(users: UserSummary[]): UsageArtifacts {
 }
 
 describe('UsersOverview - sorting', () => {
+  it('hides monthly quota badges and chart thresholds when the report spans months', () => {
+    const userData: UserSummary[] = [{
+      user: 'test-user-one',
+      totalCredits: 3000,
+      modelBreakdown: { 'test-model-one': 3000 },
+    }];
+    const quotaArtifacts = makeQuota([
+      { user: 'test-user-one', quota: PRICING.BUSINESS_AI_CREDIT_QUOTA },
+    ]);
+    const processedData = [
+      makeProcessedData({ user: 'test-user-one', model: 'test-model-one',
+        timestamp: new Date('2026-06-30T00:00:00Z'), creditsUsed: 1500 }),
+      makeProcessedData({ user: 'test-user-one', model: 'test-model-one',
+        timestamp: new Date('2026-07-01T00:00:00Z'), creditsUsed: 1500 }),
+    ];
+    const props = {
+      userData,
+      dailyCumulativeData: [
+        { date: '2026-06-30', 'test-user-one': 1500 },
+        { date: '2026-07-01', 'test-user-one': 1500 },
+      ],
+      quotaArtifacts,
+      usageArtifacts: makeUsage(userData),
+    };
+
+    const { rerender } = render(<UsersOverview {...props} processedData={processedData} />);
+    expect(screen.queryByText('1,900 quota')).not.toBeInTheDocument();
+    expect(within(screen.getByRole('table', { name: 'Users' })).queryByText('(+1100.0)')).not.toBeInTheDocument();
+
+    rerender(<UsersOverview {...props} processedData={[processedData[0]]} />);
+    expect(screen.getByText('1,900 quota')).toBeInTheDocument();
+    expect(within(screen.getByRole('table', { name: 'Users' })).getByText('(+1100.0)')).toBeInTheDocument();
+  });
+
   it('shows a Copilot plan user summary above filters', () => {
     const userData: UserSummary[] = [
-      { user: 'Alice', totalRequests: 10, modelBreakdown: { 'gpt-4': 10 } },
-      { user: 'Bob', totalRequests: 20, modelBreakdown: { 'gpt-4': 20 } },
-      { user: 'Charlie', totalRequests: 30, modelBreakdown: { 'gpt-4': 30 } },
-      { user: 'Dana', totalRequests: 5, modelBreakdown: { 'gpt-4': 5 } },
+      { user: 'test-user-one', totalCredits: 10, modelBreakdown: { 'gpt-4': 10 } },
+      { user: 'test-user-two', totalCredits: 20, modelBreakdown: { 'gpt-4': 20 } },
+      { user: 'test-user-three', totalCredits: 30, modelBreakdown: { 'gpt-4': 30 } },
+      { user: 'test-user-four', totalCredits: 5, modelBreakdown: { 'gpt-4': 5 } },
     ];
 
     const quotaArtifacts = makeQuota([
-      { user: 'Alice', quota: PRICING.BUSINESS_QUOTA },
-      { user: 'Bob', quota: PRICING.ENTERPRISE_QUOTA },
-      { user: 'Charlie', quota: 'unknown' },
+      { user: 'test-user-one', quota: PRICING.BUSINESS_AI_CREDIT_QUOTA },
+      { user: 'test-user-two', quota: PRICING.ENTERPRISE_AI_CREDIT_QUOTA },
+      { user: 'test-user-three', quota: 'unknown' },
     ]);
 
     render(
       <UsersOverview
         userData={userData}
         processedData={[]}
-        dailyCumulativeData={[{ date: '2026-03-01T00:00:00Z', Alice: 10, Bob: 20, Charlie: 30, Dana: 5 }]}
+        dailyCumulativeData={[{ date: '2026-03-01T00:00:00Z', 'test-user-one': 10, 'test-user-two': 20, 'test-user-three': 30, 'test-user-four': 5 }]}
         quotaArtifacts={quotaArtifacts}
         usageArtifacts={makeUsage(userData)}
       />
@@ -115,15 +149,15 @@ describe('UsersOverview - sorting', () => {
 
   it('shows and sorts AI Credits Gross when AIC data is present', () => {
     const userData: UserSummary[] = [
-      { user: 'test-user-one', totalRequests: 10, modelBreakdown: { 'gpt-4': 10 } },
-      { user: 'test-user-two', totalRequests: 20, modelBreakdown: { 'gpt-4': 20 } },
-      { user: 'test-user-three', totalRequests: 30, modelBreakdown: { 'gpt-4': 30 } },
+      { user: 'test-user-one', totalCredits: 10, modelBreakdown: { 'gpt-4': 10 } },
+      { user: 'test-user-two', totalCredits: 20, modelBreakdown: { 'gpt-4': 20 } },
+      { user: 'test-user-three', totalCredits: 30, modelBreakdown: { 'gpt-4': 30 } },
     ];
 
     const quotaArtifacts = makeQuota([
-      { user: 'test-user-one', quota: PRICING.BUSINESS_QUOTA },
-      { user: 'test-user-two', quota: PRICING.BUSINESS_QUOTA },
-      { user: 'test-user-three', quota: PRICING.ENTERPRISE_QUOTA },
+      { user: 'test-user-one', quota: PRICING.BUSINESS_AI_CREDIT_QUOTA },
+      { user: 'test-user-two', quota: PRICING.BUSINESS_AI_CREDIT_QUOTA },
+      { user: 'test-user-three', quota: PRICING.ENTERPRISE_AI_CREDIT_QUOTA },
     ]);
 
     const timestamp = new Date('2026-03-01T00:00:00Z');
@@ -136,24 +170,27 @@ describe('UsersOverview - sorting', () => {
             timestamp,
             user: 'test-user-one',
             model: 'Coding Agent model',
-            requestsUsed: 10,
-            quotaValue: PRICING.ENTERPRISE_QUOTA,
+            creditsUsed: 10,
+            quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
+            grossAmount: 0.09,
             aicGrossAmount: 0.09,
           }),
           makeProcessedData({
             timestamp,
             user: 'test-user-two',
             model: 'Coding Agent model',
-            requestsUsed: 20,
-            quotaValue: PRICING.ENTERPRISE_QUOTA,
+            creditsUsed: 20,
+            quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
+            grossAmount: 0.18,
             aicGrossAmount: 0.18,
           }),
           makeProcessedData({
             timestamp,
             user: 'test-user-three',
             model: 'Coding Agent model',
-            requestsUsed: 30,
-            quotaValue: PRICING.ENTERPRISE_QUOTA,
+            creditsUsed: 30,
+            quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
+            grossAmount: 0.12,
             aicGrossAmount: 0.12,
           }),
         ]}
@@ -169,7 +206,7 @@ describe('UsersOverview - sorting', () => {
     );
 
     const table = screen.getByRole('table', { name: 'Users' });
-    expect(within(table).getByRole('columnheader', { name: /AI Credits Gross/ })).toBeInTheDocument();
+    expect(within(table).getByRole('columnheader', { name: /Gross Amount/ })).toBeInTheDocument();
     expect(within(table).getByText('$0.18')).toBeInTheDocument();
 
     const getRowUserOrder = (): string[] => {
@@ -177,23 +214,24 @@ describe('UsersOverview - sorting', () => {
       return rows.map(row => within(row).getByRole('button').textContent ?? '');
     };
 
-    const aicGrossHeader = within(table).getByRole('columnheader', { name: /AI Credits Gross/ });
-    fireEvent.click(aicGrossHeader);
+    const grossHeader = within(table).getByRole('columnheader', { name: /Gross Amount/ });
+    fireEvent.click(grossHeader);
     expect(getRowUserOrder()).toEqual(['test-user-two', 'test-user-three', 'test-user-one']);
   });
 
-  it('shows AI Credits Gross when the new report fields are present with zero spend', () => {
+  it('keeps AI-credit usage visible when monetary spend is zero', () => {
     const userData: UserSummary[] = [
-      { user: 'test-user-one', totalRequests: 10, modelBreakdown: { 'gpt-4': 10 } },
+      { user: 'test-user-one', totalCredits: 10, modelBreakdown: { 'gpt-4': 10 } },
     ];
-    const quotaArtifacts = makeQuota([{ user: 'test-user-one', quota: PRICING.BUSINESS_QUOTA }]);
+    const quotaArtifacts = makeQuota([{ user: 'test-user-one', quota: PRICING.BUSINESS_AI_CREDIT_QUOTA }]);
     const timestamp = new Date('2026-03-01T00:00:00Z');
     const processedData: ProcessedData[] = [makeProcessedData({
       timestamp,
       user: 'test-user-one',
       model: 'gpt-4',
-      requestsUsed: 10,
-      quotaValue: PRICING.BUSINESS_QUOTA,
+      creditsUsed: 10,
+      quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA,
+      grossAmount: 0,
       aicGrossAmount: 0,
     })];
 
@@ -208,15 +246,15 @@ describe('UsersOverview - sorting', () => {
     );
 
     const table = screen.getByRole('table', { name: 'Users' });
-    expect(within(table).getByRole('columnheader', { name: /AI Credits Gross/ })).toBeInTheDocument();
-    expect(within(table).getByText('$0.00')).toBeInTheDocument();
+    expect(within(table).getByRole('columnheader', { name: /Total AI Credits/ })).toBeInTheDocument();
+    expect(within(table).queryByRole('columnheader', { name: /Gross Amount/ })).not.toBeInTheDocument();
   });
 
   it('shows usage-based billing columns and hides request-only columns', () => {
     const userData: UserSummary[] = [
-      { user: 'test-user-one', totalRequests: 0, modelBreakdown: {} },
-      { user: 'test-user-two', totalRequests: 0, modelBreakdown: {} },
-      { user: 'test-user-three', totalRequests: 0, modelBreakdown: {} },
+      { user: 'test-user-one', totalCredits: 0, modelBreakdown: {} },
+      { user: 'test-user-two', totalCredits: 0, modelBreakdown: {} },
+      { user: 'test-user-three', totalCredits: 0, modelBreakdown: {} },
     ];
     const quotaArtifacts = makeQuota([
       { user: 'test-user-one', quota: PRICING.BUSINESS_AI_CREDIT_QUOTA },
@@ -233,7 +271,7 @@ describe('UsersOverview - sorting', () => {
             timestamp,
             user: 'test-user-one',
             model: 'Auto: Claude Haiku 4.5',
-            requestsUsed: 0,
+            creditsUsed: 10,
             quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA,
             sku: 'copilot_ai_credit',
             unitType: 'ai-credits',
@@ -248,7 +286,7 @@ describe('UsersOverview - sorting', () => {
             timestamp,
             user: 'test-user-two',
             model: 'Auto: Claude Haiku 4.5',
-            requestsUsed: 0,
+            creditsUsed: 20,
             quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
             sku: 'copilot_ai_credit',
             unitType: 'ai-credits',
@@ -263,7 +301,7 @@ describe('UsersOverview - sorting', () => {
             timestamp,
             user: 'test-user-three',
             model: 'Auto: Claude Haiku 4.5',
-            requestsUsed: 0,
+            creditsUsed: 30,
             quotaValue: 'unknown',
             sku: 'copilot_ai_credit',
             unitType: 'ai-credits',
@@ -275,8 +313,7 @@ describe('UsersOverview - sorting', () => {
             aicGrossAmount: 0.3,
           }),
         ]}
-        dailyCumulativeData={[{ date: '2026-06-01T00:00:00Z' }]}
-        dailyAicCumulativeData={[{
+        dailyCumulativeData={[{
           date: '2026-06-01',
           'test-user-one': 10,
           'test-user-two': 20,
@@ -294,28 +331,24 @@ describe('UsersOverview - sorting', () => {
     expect(screen.getByText('3,900 Enterprise')).toBeInTheDocument();
 
     const table = screen.getByRole('table', { name: 'Users' });
-    expect(within(table).getByRole('columnheader', { name: /Plan/ })).toBeInTheDocument();
+    expect(within(table).getByRole('columnheader', { name: /Quota/ })).toBeInTheDocument();
     expect(within(table).getByRole('columnheader', { name: /Gross Amount/ })).toBeInTheDocument();
-    expect(within(table).queryByRole('columnheader', { name: /Quota/ })).not.toBeInTheDocument();
     expect(within(table).queryByRole('columnheader', { name: /Total Requests/ })).not.toBeInTheDocument();
     expect(within(table).queryByRole('columnheader', { name: 'AI Credits Gross' })).not.toBeInTheDocument();
-    expect(within(table).queryByRole('columnheader', { name: 'Gross' })).not.toBeInTheDocument();
-    expect(within(table).getByText('Business')).toBeInTheDocument();
-    expect(within(table).getByText('Enterprise')).toBeInTheDocument();
-    expect(within(table).getByText('Unknown')).toBeInTheDocument();
+    expect(within(table).getByRole('columnheader', { name: /Total AI Credits/ })).toBeInTheDocument();
   });
 
   it('sorts by quota (including Unknown) when clicking Quota header', () => {
     const userData: UserSummary[] = [
-      { user: 'Alice', totalRequests: 10, modelBreakdown: { 'gpt-4': 10 } },
-      { user: 'Bob', totalRequests: 20, modelBreakdown: { 'gpt-4': 20 } },
-      { user: 'Charlie', totalRequests: 30, modelBreakdown: { 'gpt-4': 30 } },
+      { user: 'test-user-one', totalCredits: 10, modelBreakdown: { 'gpt-4': 10 } },
+      { user: 'test-user-two', totalCredits: 20, modelBreakdown: { 'gpt-4': 20 } },
+      { user: 'test-user-three', totalCredits: 30, modelBreakdown: { 'gpt-4': 30 } },
     ];
 
     const quotaArtifacts = makeQuota([
-      { user: 'Alice', quota: 'unknown' },
-      { user: 'Bob', quota: PRICING.BUSINESS_QUOTA },
-      { user: 'Charlie', quota: PRICING.ENTERPRISE_QUOTA },
+      { user: 'test-user-one', quota: 'unknown' },
+      { user: 'test-user-two', quota: PRICING.BUSINESS_AI_CREDIT_QUOTA },
+      { user: 'test-user-three', quota: PRICING.ENTERPRISE_AI_CREDIT_QUOTA },
     ]);
 
     const usageArtifacts = makeUsage(userData);
@@ -324,9 +357,9 @@ describe('UsersOverview - sorting', () => {
     const dailyCumulativeData = [
       {
         date: '2025-01-01T00:00:00Z',
-        Alice: 1,
-        Bob: 1,
-        Charlie: 1,
+        'test-user-one': 1,
+        'test-user-two': 1,
+        'test-user-three': 1,
       }
     ];
 
@@ -352,8 +385,8 @@ describe('UsersOverview - sorting', () => {
       });
     };
 
-    // Default sort is totalRequests desc.
-    expect(getRowUserOrder()).toEqual(['Charlie', 'Bob', 'Alice']);
+    // Default sort is totalCredits desc.
+    expect(getRowUserOrder()).toEqual(['test-user-three', 'test-user-two', 'test-user-one']);
 
     const quotaHeader = within(table).getByText('Quota');
     const quotaTh = quotaHeader.closest('th');
@@ -361,32 +394,32 @@ describe('UsersOverview - sorting', () => {
 
     // First click selects quota sorting desc: higher known quotas first, Unknown last.
     fireEvent.click(quotaTh as HTMLElement);
-    expect(getRowUserOrder()).toEqual(['Charlie', 'Bob', 'Alice']);
+    expect(getRowUserOrder()).toEqual(['test-user-three', 'test-user-two', 'test-user-one']);
 
     // Second click toggles to asc: Unknown first, then lowest known quota.
     fireEvent.click(quotaTh as HTMLElement);
-    expect(getRowUserOrder()).toEqual(['Alice', 'Bob', 'Charlie']);
+    expect(getRowUserOrder()).toEqual(['test-user-one', 'test-user-two', 'test-user-three']);
   });
 
   it('filters users by organization and cost center when metadata is available', () => {
     const userData: UserSummary[] = [
       {
         user: 'test-user-one',
-        totalRequests: 10,
+        totalCredits: 10,
         modelBreakdown: { 'model-one': 10 },
         organization: 'test-org-one',
         costCenter: 'test-cost-center-one',
         costCenters: ['test-cost-center-one', 'test-cost-center-two'],
       },
-      { user: 'test-user-two', totalRequests: 20, modelBreakdown: { 'model-one': 20 }, organization: 'test-org-two', costCenter: 'test-cost-center-two' },
-      { user: 'test-user-three', totalRequests: 15, modelBreakdown: { 'model-one': 15 }, organization: 'test-org-one', costCenter: 'test-cost-center-two' },
-      { user: 'test-user-four', totalRequests: 5, modelBreakdown: { 'model-one': 5 } },
+      { user: 'test-user-two', totalCredits: 20, modelBreakdown: { 'model-one': 20 }, organization: 'test-org-two', costCenter: 'test-cost-center-two' },
+      { user: 'test-user-three', totalCredits: 15, modelBreakdown: { 'model-one': 15 }, organization: 'test-org-one', costCenter: 'test-cost-center-two' },
+      { user: 'test-user-four', totalCredits: 5, modelBreakdown: { 'model-one': 5 } },
     ];
 
     const quotaArtifacts = makeQuota([
-      { user: 'test-user-one', quota: PRICING.BUSINESS_QUOTA },
-      { user: 'test-user-two', quota: PRICING.BUSINESS_QUOTA },
-      { user: 'test-user-three', quota: PRICING.BUSINESS_QUOTA },
+      { user: 'test-user-one', quota: PRICING.BUSINESS_AI_CREDIT_QUOTA },
+      { user: 'test-user-two', quota: PRICING.BUSINESS_AI_CREDIT_QUOTA },
+      { user: 'test-user-three', quota: PRICING.BUSINESS_AI_CREDIT_QUOTA },
     ]);
 
     render(
@@ -427,13 +460,13 @@ describe('UsersOverview - sorting', () => {
 
   it('opens inline user details and returns via breadcrumb', () => {
     const userData: UserSummary[] = [
-      { user: 'test-user-one', totalRequests: 10, modelBreakdown: { 'gpt-4': 10 }, organization: 'test-org-one', costCenter: 'test-cost-center-one' },
-      { user: 'test-user-two', totalRequests: 20, modelBreakdown: { 'gpt-4': 20 }, organization: 'test-org-two', costCenter: 'test-cost-center-two' },
+      { user: 'test-user-one', totalCredits: 10, modelBreakdown: { 'gpt-4': 10 }, organization: 'test-org-one', costCenter: 'test-cost-center-one' },
+      { user: 'test-user-two', totalCredits: 20, modelBreakdown: { 'gpt-4': 20 }, organization: 'test-org-two', costCenter: 'test-cost-center-two' },
     ];
 
     const quotaArtifacts = makeQuota([
-      { user: 'test-user-one', quota: PRICING.BUSINESS_QUOTA },
-      { user: 'test-user-two', quota: PRICING.ENTERPRISE_QUOTA },
+      { user: 'test-user-one', quota: PRICING.BUSINESS_AI_CREDIT_QUOTA },
+      { user: 'test-user-two', quota: PRICING.ENTERPRISE_AI_CREDIT_QUOTA },
     ]);
 
     const timestamp = new Date('2025-01-01T00:00:00Z');
@@ -442,8 +475,8 @@ describe('UsersOverview - sorting', () => {
         timestamp,
         user: 'test-user-one',
         model: 'gpt-4',
-        requestsUsed: 10,
-        quotaValue: PRICING.BUSINESS_QUOTA,
+        creditsUsed: 10,
+        quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA,
         organization: 'test-org-one',
         costCenter: 'test-cost-center-one',
       }),

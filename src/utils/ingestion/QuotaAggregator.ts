@@ -33,7 +33,7 @@ export class QuotaAggregator implements Aggregator<QuotaArtifacts> {
   
   onRow(row: NormalizedRow, _ctx: AggregatorContext): void {
     void _ctx;
-    if (row.isNonCopilotUsage && row.usageBucket) {
+    if (row.isUnattributedUsage && row.usageBucket) {
       this.specialBucketQuotas.set(row.usageBucket, 0);
       return;
     }

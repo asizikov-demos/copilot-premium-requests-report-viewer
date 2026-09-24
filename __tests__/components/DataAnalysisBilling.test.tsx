@@ -13,7 +13,7 @@ import {
   UsageAggregator,
   normalizeRow,
 } from '@/utils/ingestion';
-import type { AggregatorContext, BillingArtifacts, IngestionResult, NormalizedRow } from '@/utils/ingestion/types';
+import type { AggregatorContext, BillingArtifacts, IngestionResult, NormalizedRow, UsageArtifacts } from '@/utils/ingestion/types';
 
 import { newFormatRows } from '../fixtures/newFormatCSVData';
 
@@ -74,7 +74,7 @@ function createIngestionResultWithBillingArtifacts(billingArtifacts: BillingArti
       'featureUsage': {
         featureTotals: { codeReview: 0, codingAgent: 0, spark: 0, codeQuality: 0 },
         featureUsers: { codeReview: new Set(), codingAgent: new Set(), spark: new Set(), codeQuality: new Set() },
-        specialTotals: { nonCopilotCodeReview: 0, unattributedCodeQuality: 0 }
+        specialTotals: { unattributedCodeReview: 0, unattributedCodeQuality: 0 }
       },
       'billing': billingArtifacts
     },
@@ -95,14 +95,14 @@ describe('DataAnalysis billing summary', () => {
       expect(billing).toBeInTheDocument();
       // New compact format uses abbreviated labels
       expect(billing).toHaveTextContent(/Gross/i);
-      expect(billing).toHaveTextContent(/Net/i);
+      expect(billing).toHaveTextContent(/Additional usage/i);
     });
 
     expect(screen.queryByText('Usage-based billing preview')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'AI Usage' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'AI Usage' }).length).toBeGreaterThan(0);
   });
 
-  it('renders stored AI Credits pool totals from billing artifacts', async () => {
+  it('renders supplied AI-credit billing totals without legacy pool estimates', async () => {
     const billingArtifacts: BillingArtifacts = {
       totals: {
         gross: 1,
@@ -110,8 +110,6 @@ describe('DataAnalysis billing summary', () => {
         net: 1,
         aicQuantity: 100,
         aicGrossAmount: 1,
-        aicIncludedCredits: 1234,
-        aicAdditionalUsageGrossAmount: 4.56,
       },
       users: [],
       userMap: new Map(),
@@ -120,11 +118,6 @@ describe('DataAnalysis billing summary', () => {
       billingByModel: new Map(),
       hasAnyBillingData: true,
       hasAnyAicData: true,
-      overage: {
-        requests: 0,
-        cost: 0,
-        hasBilledOverageData: false,
-      },
       specialBuckets: [],
     };
     const ingestionResult = createIngestionResultWithBillingArtifacts(billingArtifacts);
@@ -132,11 +125,10 @@ describe('DataAnalysis billing summary', () => {
     render(<DataAnalysis ingestionResult={ingestionResult} filename="stored-billing.csv" onReset={() => {}} />);
 
     await waitFor(() => {
-      const summary = screen.getByLabelText('ai-credits-summary');
-      expect(summary).toHaveTextContent('AI Credits included');
-      expect(summary).toHaveTextContent('1,234');
-      expect(summary).toHaveTextContent('AI Credits additional usage gross');
-      expect(summary).toHaveTextContent('$4.56');
+      const summary = screen.getByLabelText('billing-summary');
+      expect(summary).toHaveTextContent('Gross cost');
+      expect(summary).toHaveTextContent('$1.00');
+      expect(summary).not.toHaveTextContent('additional usage gross');
     });
   });
 
@@ -144,51 +136,51 @@ describe('DataAnalysis billing summary', () => {
     const aicRows: CSVData[] = [
       {
         date: '2026-03-01',
-        username: 'test-user-a',
+        username: 'test-user-one',
         product: 'copilot',
-        sku: 'coding_agent_premium_request',
+        sku: 'copilot_ai_credit',
         model: 'Coding Agent model',
         quantity: '2',
-        total_monthly_quota: '1000',
-        applied_cost_per_quantity: '0.04',
+        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
+        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
         gross_amount: '0.08',
         discount_amount: '0.08',
         net_amount: '0',
-        organization: 'example-org-a',
+        organization: 'test-org-one',
         cost_center_name: '',
         aic_quantity: '8.68986',
         aic_gross_amount: '0.08689859999999999',
       },
       {
         date: '2026-03-01',
-        username: 'test-user-b',
+        username: 'test-user-two',
         product: 'copilot',
-        sku: 'coding_agent_premium_request',
+        sku: 'copilot_ai_credit',
         model: 'Coding Agent model',
         quantity: '2',
-        total_monthly_quota: '1000',
-        applied_cost_per_quantity: '0.04',
+        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
+        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
         gross_amount: '0.08',
         discount_amount: '0.08',
         net_amount: '0',
-        organization: 'example-org-b',
-        cost_center_name: 'example-cost-center-b',
+        organization: 'test-org-two',
+        cost_center_name: 'test-cost-center-two',
         aic_quantity: '18.33306',
         aic_gross_amount: '0.1833306',
       },
       {
         date: '2026-03-02',
-        username: 'test-user-c',
+        username: 'test-user-three',
         product: 'copilot',
-        sku: 'copilot_premium_request',
+        sku: 'copilot_ai_credit',
         model: 'Claude Opus 4.6',
         quantity: '24',
-        total_monthly_quota: '1000',
-        applied_cost_per_quantity: '0.04',
+        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
+        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
         gross_amount: '0.96',
         discount_amount: '0.96',
         net_amount: '0',
-        organization: 'example-org-c',
+        organization: 'test-org-three',
         cost_center_name: '',
         aic_quantity: '12.3146',
         aic_gross_amount: '0.123146',
@@ -204,16 +196,9 @@ describe('DataAnalysis billing summary', () => {
       expect(screen.queryByRole('link', { name: 'gh.io/copilot-billing-blog' })).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'gh.io/billing-preview' })).not.toBeInTheDocument();
       expect(screen.getAllByText('AI Credits').length).toBeGreaterThan(0);
-      expect(screen.getByLabelText('ai-credits-summary')).toHaveTextContent('$0.39');
-      expect(screen.getByLabelText('ai-credits-summary')).toHaveTextContent('AI Credits included');
-      expect(screen.getByLabelText('ai-credits-summary')).toHaveTextContent('21,000');
-      expect(screen.getByLabelText('ai-credits-summary')).toHaveTextContent('AI Credits additional usage gross');
-      expect(screen.getByLabelText('ai-credits-summary')).toHaveTextContent('$0.00');
-      expect(screen.getByText('39.34')).toBeInTheDocument();
-      expect(screen.getByText('1 credit = $0.01')).toBeInTheDocument();
-      expect(screen.getAllByRole('columnheader', { name: 'AI Credits Gross' })).toHaveLength(2);
-      expect(screen.getAllByText('$0.27').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('$0.12').length).toBeGreaterThan(0);
+      expect(screen.getByLabelText('billing-summary')).toHaveTextContent('Gross cost');
+      expect(screen.getByLabelText('billing-summary')).toHaveTextContent('Additional usage');
+      expect(screen.queryByRole('columnheader', { name: 'AI Credits Gross' })).not.toBeInTheDocument();
       expect(screen.getAllByRole('button', { name: 'AI Usage' }).length).toBeGreaterThan(0);
     });
 
@@ -230,30 +215,28 @@ describe('DataAnalysis billing summary', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Cost Centers' })).toBeInTheDocument();
-      expect(screen.getAllByRole('columnheader', { name: 'AI Credits Gross' }).length).toBeGreaterThan(0);
-      expect(screen.getByText('$0.18')).toBeInTheDocument();
+      expect(screen.getAllByRole('columnheader', { name: 'AI Credits' }).length).toBeGreaterThan(0);
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /example-cost-center-b/i }));
+    fireEvent.click(screen.getByRole('button', { name: /test-cost-center-two/i }));
 
     await waitFor(() => {
       expect(screen.getAllByText('Cloud Agent').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('$0.18').length).toBeGreaterThan(1);
+      expect(screen.getAllByText('Cloud Agent').length).toBeGreaterThan(0);
     });
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Organizations' })[0]);
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Organizations' })).toBeInTheDocument();
-      expect(screen.getAllByRole('columnheader', { name: 'AI Credits Gross' }).length).toBeGreaterThan(0);
-      expect(screen.getByText('$0.12')).toBeInTheDocument();
+      expect(screen.getAllByRole('columnheader', { name: 'AI Credits' }).length).toBeGreaterThan(0);
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /example-org-c/i }));
+    fireEvent.click(screen.getByRole('button', { name: /test-org-three/i }));
 
     await waitFor(() => {
       expect(screen.getAllByText('Copilot').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('$0.12').length).toBeGreaterThan(1);
+      expect(screen.getAllByText('Copilot').length).toBeGreaterThan(0);
     });
   });
 
@@ -263,10 +246,10 @@ describe('DataAnalysis billing summary', () => {
         date: '2026-03-01',
         username: 'test-user-one',
         product: 'copilot',
-        sku: 'copilot_premium_request',
+        sku: 'copilot_ai_credit',
         model: 'Model Alpha',
         quantity: '10',
-        total_monthly_quota: '1000',
+        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
         organization: 'test-org-one',
         cost_center_name: 'test-cost-center-one',
         aic_quantity: '50',
@@ -276,10 +259,10 @@ describe('DataAnalysis billing summary', () => {
         date: '2026-03-02',
         username: 'test-user-two',
         product: 'copilot',
-        sku: 'copilot_premium_request',
+        sku: 'copilot_ai_credit',
         model: 'Model Beta',
         quantity: '20',
-        total_monthly_quota: '1000',
+        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
         organization: 'test-org-one',
         cost_center_name: 'test-cost-center-one',
         aic_quantity: '100',
@@ -289,10 +272,10 @@ describe('DataAnalysis billing summary', () => {
         date: '2026-03-03',
         username: 'test-user-three',
         product: 'copilot',
-        sku: 'copilot_premium_request',
+        sku: 'copilot_ai_credit',
         model: 'Model Gamma',
         quantity: '5',
-        total_monthly_quota: '1000',
+        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
         organization: 'test-org-two',
         cost_center_name: 'test-cost-center-two',
         aic_quantity: '30',
@@ -302,10 +285,10 @@ describe('DataAnalysis billing summary', () => {
         date: '2026-03-04',
         username: 'test-user-four',
         product: 'copilot',
-        sku: 'copilot_premium_request',
+        sku: 'copilot_ai_credit',
         model: 'Model Delta',
         quantity: '8',
-        total_monthly_quota: '1000',
+        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
         organization: 'test-org-two',
         cost_center_name: 'test-cost-center-two',
         aic_quantity: '80',
@@ -315,10 +298,10 @@ describe('DataAnalysis billing summary', () => {
         date: '2026-03-05',
         username: 'test-user-five',
         product: 'copilot',
-        sku: 'copilot_premium_request',
+        sku: 'copilot_ai_credit',
         model: 'Model Epsilon',
         quantity: '12',
-        total_monthly_quota: '1000',
+        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
         organization: 'test-org-three',
         cost_center_name: 'test-cost-center-three',
         aic_gross_amount: '1.2',
@@ -333,38 +316,36 @@ describe('DataAnalysis billing summary', () => {
     const topModelsTable = await screen.findByRole('table', { name: 'Top AI Credits models' });
     const rows = within(topModelsTable).getAllByRole('row');
 
-    expect(screen.getByText(/Top 3 models drive/)).toHaveTextContent('Top 3 models drive 78.9% of total AI Credits consumption.');
+    expect(screen.getByText(/Top 3 models drive/)).toHaveTextContent('Top 3 models drive 76.4% of total AI Credits consumption.');
     expect(rows).toHaveLength(4);
     expect(rows[1]).toHaveTextContent('#1');
-    expect(rows[1]).toHaveTextContent('Model Epsilon');
-    expect(rows[1]).toHaveTextContent('120.00');
-    expect(rows[1]).toHaveTextContent('$1.20');
-    expect(rows[1]).toHaveTextContent('31.6%');
-    expect(rows[2]).toHaveTextContent('Model Beta');
-    expect(rows[2]).toHaveTextContent('100.00');
-    expect(rows[2]).toHaveTextContent('$1.00');
-    expect(rows[2]).toHaveTextContent('26.3%');
-    expect(rows[3]).toHaveTextContent('Model Delta');
-    expect(rows[3]).toHaveTextContent('21.1%');
-    expect(within(topModelsTable).queryByText('Model Alpha')).not.toBeInTheDocument();
+    expect(rows[1]).toHaveTextContent('Model Beta');
+    expect(rows[1]).toHaveTextContent('20.00');
+    expect(rows[1]).toHaveTextContent('36.4%');
+    expect(rows[2]).toHaveTextContent('Model Epsilon');
+    expect(rows[2]).toHaveTextContent('12.00');
+    expect(rows[2]).toHaveTextContent('21.8%');
+    expect(rows[3]).toHaveTextContent('Model Alpha');
+    expect(rows[3]).toHaveTextContent('18.2%');
+    expect(within(topModelsTable).queryByText('Model Delta')).not.toBeInTheDocument();
     expect(within(topModelsTable).queryByText('Model Gamma')).not.toBeInTheDocument();
   });
 
   it('renders AI Credits columns for zero-value new-format AIC fields', async () => {
     const zeroAicRows: CSVData[] = [{
       date: '2026-03-01',
-      username: 'zero-user',
+      username: 'test-user-one',
       product: 'copilot',
-      sku: 'copilot_premium_request',
+      sku: 'copilot_ai_credit',
       model: 'Claude Opus 4.6',
       quantity: '2',
-      total_monthly_quota: '1000',
-      applied_cost_per_quantity: '0.04',
+      total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
+      applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
       gross_amount: '0.08',
       discount_amount: '0.08',
       net_amount: '0',
-      organization: 'zero-org',
-      cost_center_name: 'zero-cost-center',
+      organization: 'test-org-one',
+      cost_center_name: 'test-cost-center-one',
       aic_quantity: '0',
       aic_gross_amount: '0',
     }];
@@ -374,36 +355,36 @@ describe('DataAnalysis billing summary', () => {
 
     await waitFor(() => {
       expect(screen.queryByText('Usage-based billing preview')).not.toBeInTheDocument();
-      expect(screen.getByLabelText('ai-credits-summary')).toHaveTextContent('$0.00');
-      expect(screen.getAllByRole('columnheader', { name: 'AI Credits Gross' })).toHaveLength(2);
+      expect(screen.getByLabelText('billing-summary')).toHaveTextContent('Additional usage');
+      expect(screen.queryByRole('columnheader', { name: 'AI Credits Gross' })).not.toBeInTheDocument();
     });
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Cost Centers' })[0]);
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Cost Centers' })).toBeInTheDocument();
-      expect(screen.getAllByRole('columnheader', { name: 'AI Credits Gross' }).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole('columnheader', { name: 'AI Credits' }).length).toBeGreaterThan(0);
     });
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Organizations' })[0]);
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Organizations' })).toBeInTheDocument();
-      expect(screen.getAllByRole('columnheader', { name: 'AI Credits Gross' }).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole('columnheader', { name: 'AI Credits' }).length).toBeGreaterThan(0);
     });
   });
 
-  it('omits PRU cost columns from Cost per Product when only AIC gross is present', async () => {
+  it('shows AI-credit quantity when optional primary billing fields are absent', async () => {
     const aicOnlyRows: CSVData[] = [{
       date: '2026-03-01',
-      username: 'aic-only-user',
+      username: 'test-user-one',
       product: 'copilot',
-      sku: 'copilot_premium_request',
+      sku: 'copilot_ai_credit',
       model: 'Claude Opus 4.6',
       quantity: '2',
-      total_monthly_quota: '1000',
-      organization: 'aic-only-org',
-      cost_center_name: 'aic-only-cost-center',
+      total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
+      organization: 'test-org-one',
+      cost_center_name: 'test-cost-center-one',
       aic_quantity: '12.5',
       aic_gross_amount: '0.125',
     }];
@@ -420,11 +401,12 @@ describe('DataAnalysis billing summary', () => {
     expect(productTable).not.toBeNull();
     const table = within(productTable!);
 
-    expect(table.getByRole('columnheader', { name: 'AI Credits Gross' })).toBeInTheDocument();
+    expect(table.getByRole('columnheader', { name: 'AI Credits' })).toBeInTheDocument();
+    expect(table.queryByRole('columnheader', { name: 'AI Credits Gross' })).not.toBeInTheDocument();
     expect(table.queryByRole('columnheader', { name: 'Gross' })).not.toBeInTheDocument();
     expect(table.queryByRole('columnheader', { name: 'Discount' })).not.toBeInTheDocument();
     expect(table.queryByRole('columnheader', { name: 'Net' })).not.toBeInTheDocument();
-    expect(table.getByText('$0.13')).toBeInTheDocument();
+    expect(table.getByText('2.00')).toBeInTheDocument();
   });
 
   it('renames discount and net billing labels for usage-based AI Credits reports', async () => {
@@ -437,11 +419,11 @@ describe('DataAnalysis billing summary', () => {
         model: 'Auto: Claude Haiku 4.5',
         quantity: '42.5',
         unit_type: 'ai-credits',
-        applied_cost_per_quantity: '0.01',
+        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
         gross_amount: '0.425',
         discount_amount: '0.425',
         net_amount: '0',
-        total_monthly_quota: '3900',
+        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
         organization: 'test-org-one',
         cost_center_name: 'test-cost-center-one',
       },
@@ -449,15 +431,15 @@ describe('DataAnalysis billing summary', () => {
         date: '2026-06-01',
         username: 'test-user-two',
         product: 'copilot',
-        sku: 'copilot_premium_request',
+        sku: 'copilot_ai_credit',
         model: 'Auto: Claude Haiku 4.5',
         quantity: '3',
         unit_type: 'requests',
-        applied_cost_per_quantity: '0.04',
+        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
         gross_amount: '0.12',
         discount_amount: '0',
         net_amount: '0.12',
-        total_monthly_quota: '300',
+        total_monthly_quota: String(PRICING.BUSINESS_AI_CREDIT_QUOTA),
         organization: 'test-org-one',
         cost_center_name: 'test-cost-center-one',
       },
@@ -482,18 +464,18 @@ describe('DataAnalysis billing summary', () => {
       expect(screen.getByText(/10% AI Credits discount/)).toBeInTheDocument();
       expect(screen.getAllByText('42.50').length).toBeGreaterThan(0);
       expect(screen.getAllByText('$0.47').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('$0.04').length).toBeGreaterThan(0);
-      expect(screen.getByText('$0.04 saved')).toBeInTheDocument();
+      expect(screen.getAllByText('$0.05').length).toBeGreaterThan(0);
+      expect(screen.getByText('$0.05 saved')).toBeInTheDocument();
       expect(screen.getAllByRole('columnheader', { name: 'Included Credits' }).length).toBeGreaterThanOrEqual(2);
       expect(screen.getAllByRole('columnheader', { name: 'Additional usage' }).length).toBeGreaterThanOrEqual(2);
-      expect(screen.queryAllByRole('button', { name: 'Insights' })).toHaveLength(0);
-      expect(screen.queryAllByRole('button', { name: 'Cost Optimization' })).toHaveLength(0);
+      expect(screen.getAllByRole('button', { name: 'Insights' }).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole('button', { name: 'Cost Optimization' }).length).toBeGreaterThan(0);
     });
 
     const productHeader = screen.getByRole('columnheader', { name: 'Product' });
     const productTable = productHeader.closest('table');
     expect(productTable).not.toBeNull();
-    expect(within(productTable!).getByRole('columnheader', { name: 'Total AI Credits' })).toBeInTheDocument();
+    expect(within(productTable!).getByRole('columnheader', { name: 'AI Credits' })).toBeInTheDocument();
     expect(within(productTable!).queryByRole('columnheader', { name: 'Requests' })).not.toBeInTheDocument();
     expect(within(productTable!).queryByRole('columnheader', { name: 'AI Credits Gross' })).not.toBeInTheDocument();
 
@@ -501,7 +483,7 @@ describe('DataAnalysis billing summary', () => {
     const autoModeSavingsCard = autoModeSavingsHeading.closest('.bg-white');
     expect(autoModeSavingsCard).not.toBeNull();
     const autoModeSavingsTable = within(autoModeSavingsCard as HTMLElement).getByRole('table');
-    expect(within(autoModeSavingsTable).getByRole('columnheader', { name: 'Total AI Credits' })).toBeInTheDocument();
+    expect(within(autoModeSavingsTable).getByRole('columnheader', { name: 'AI Credits' })).toBeInTheDocument();
     expect(within(autoModeSavingsTable).queryByRole('columnheader', { name: 'Requests' })).not.toBeInTheDocument();
     expect(within(autoModeSavingsTable).getAllByText('42.50').length).toBeGreaterThan(0);
     expect(within(autoModeSavingsTable).queryByText('45.50')).not.toBeInTheDocument();
@@ -510,7 +492,7 @@ describe('DataAnalysis billing summary', () => {
     const modelDetailsCard = modelDetailsHeading.closest('.bg-white');
     expect(modelDetailsCard).not.toBeNull();
     const modelDetailsTable = within(modelDetailsCard as HTMLElement).getByRole('table');
-    expect(within(modelDetailsTable).getByRole('columnheader', { name: 'Total AI Credits' })).toBeInTheDocument();
+    expect(within(modelDetailsTable).getByRole('columnheader', { name: 'AI Credits' })).toBeInTheDocument();
     expect(within(modelDetailsTable).getByRole('columnheader', { name: 'Gross Amount' })).toBeInTheDocument();
     expect(within(modelDetailsTable).getByRole('columnheader', { name: 'Included Credits' })).toBeInTheDocument();
     expect(within(modelDetailsTable).getByRole('columnheader', { name: 'Additional usage' })).toBeInTheDocument();
@@ -554,7 +536,7 @@ describe('DataAnalysis billing summary', () => {
   it.each([
     { buttonName: 'Insights', headingName: 'Consumption Insights' },
     { buttonName: 'Cost Optimization', headingName: 'Cost Optimization' },
-  ])('redirects from $buttonName when rerendered with a usage-based report', async ({ buttonName, headingName }) => {
+  ])('keeps $buttonName available when switching AI-credit reports', async ({ buttonName, headingName }) => {
     const usageBasedRows: CSVData[] = [
       {
         date: '2026-06-01',
@@ -573,24 +555,27 @@ describe('DataAnalysis billing summary', () => {
         cost_center_name: 'test-cost-center-one',
       },
     ];
-    const requestReport = createIngestionResultFromRawRows(newFormatRows);
+    const firstReport = createIngestionResultFromRawRows(newFormatRows);
     const usageBasedReport = createIngestionResultFromRawRows(usageBasedRows);
     const { rerender } = render(
-      <DataAnalysis ingestionResult={requestReport} filename="request-report.csv" onReset={() => {}} />
+      <DataAnalysis ingestionResult={firstReport} filename="first-report.csv" onReset={() => {}} />
     );
 
     fireEvent.click(screen.getAllByRole('button', { name: buttonName })[0]);
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: headingName })).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: buttonName }).length).toBeGreaterThan(0);
     });
 
     rerender(<DataAnalysis ingestionResult={usageBasedReport} filename="usage-based.csv" onReset={() => {}} />);
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'AI Credits by Model' })).toBeInTheDocument();
-      expect(screen.queryAllByRole('button', { name: 'Insights' })).toHaveLength(0);
-      expect(screen.queryAllByRole('button', { name: 'Cost Optimization' })).toHaveLength(0);
+      expect(screen.getByText('usage-based.csv')).toBeInTheDocument();
+      if (buttonName === 'Insights') {
+        expect(screen.getByRole('heading', { name: headingName })).toBeInTheDocument();
+      }
+      expect(screen.getAllByRole('button', { name: 'Insights' }).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole('button', { name: 'Cost Optimization' }).length).toBeGreaterThan(0);
     });
   });
 
@@ -598,63 +583,59 @@ describe('DataAnalysis billing summary', () => {
     const billingRows: CSVData[] = [
       {
         date: '2025-10-01',
-        username: 'alice',
+        username: 'test-user-one',
         product: 'copilot',
-        sku: 'copilot_premium_request',
+        sku: 'copilot_ai_credit',
         model: 'Claude Sonnet 4',
         quantity: '3.6',
-        exceeds_quota: 'False',
-        total_monthly_quota: '1000',
-        applied_cost_per_quantity: '0.04',
+        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
+        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
         gross_amount: '0.144',
         discount_amount: '0.010',
         net_amount: '0.134',
-        cost_center_name: 'Engineering',
+        cost_center_name: 'test-cost-center-one',
       },
       {
         date: '2025-10-02',
-        username: 'bob',
+        username: 'test-user-two',
         product: 'copilot',
-        sku: 'copilot_premium_request',
+        sku: 'copilot_ai_credit',
         model: 'Coding Agent',
         quantity: '2',
-        exceeds_quota: 'False',
-        total_monthly_quota: '1000',
-        applied_cost_per_quantity: '0.04',
+        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
+        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
         gross_amount: '0.080',
         discount_amount: '0.020',
         net_amount: '0.060',
-        cost_center_name: 'Engineering',
+        cost_center_name: 'test-cost-center-one',
       },
       {
         date: '2025-10-03',
-        username: 'carol',
+        username: 'test-user-three',
         product: 'copilot',
-        sku: 'copilot_premium_request',
+        sku: 'copilot_ai_credit',
         model: 'Code Review',
         quantity: '1',
-        exceeds_quota: 'False',
-        total_monthly_quota: '1000',
-        applied_cost_per_quantity: '0.04',
+        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
+        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
         gross_amount: '0.040',
         discount_amount: '0.005',
         net_amount: '0.035',
-        cost_center_name: 'Engineering',
+        cost_center_name: 'test-cost-center-one',
       },
       {
         date: '2025-10-04',
-        username: 'dave',
+        username: 'test-user-four',
         product: 'spark',
-        sku: 'spark_premium_request',
+        sku: 'copilot_ai_credit',
         model: 'Claude Sonnet 4.5',
         quantity: '4',
-        exceeds_quota: 'False',
-        total_monthly_quota: '1000',
-        applied_cost_per_quantity: '0.04',
+        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
+        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
         gross_amount: '0.160',
         discount_amount: '0.000',
         net_amount: '0.160',
-        cost_center_name: 'Engineering',
+        cost_center_name: 'test-cost-center-one',
       },
       {
         date: '2025-10-05',
@@ -663,13 +644,12 @@ describe('DataAnalysis billing summary', () => {
         sku: 'code_quality_ai_credit',
         model: 'Claude Sonnet 4.6',
         quantity: '51.28584',
-        exceeds_quota: 'False',
-        total_monthly_quota: '1000',
+        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
         applied_cost_per_quantity: '0.01',
         gross_amount: '0.5128584',
         discount_amount: '0.000',
         net_amount: '0.5128584',
-        cost_center_name: 'Engineering',
+        cost_center_name: 'test-cost-center-one',
       },
     ];
 
@@ -697,19 +677,18 @@ describe('DataAnalysis billing summary', () => {
     const billingRows: CSVData[] = [
       {
         date: '2026-04-01',
-        username: 'auto-mode-user',
+        username: 'test-user-one',
         product: 'copilot',
-        sku: 'copilot_premium_request',
+        sku: 'copilot_ai_credit',
         model: 'Auto: GPT-5.3-Codex',
         quantity: '0.9',
-        exceeds_quota: 'False',
-        total_monthly_quota: '300',
-        applied_cost_per_quantity: '0.04',
+        total_monthly_quota: String(PRICING.BUSINESS_AI_CREDIT_QUOTA),
+        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
         gross_amount: '0.036',
         discount_amount: '0',
         net_amount: '0.036',
-        organization: 'example-org',
-        cost_center_name: 'example-cost-center',
+        organization: 'test-org-one',
+        cost_center_name: 'test-cost-center-one',
       },
     ];
 
@@ -730,33 +709,31 @@ describe('DataAnalysis billing summary', () => {
     const billingRows: CSVData[] = [
       {
         date: '2025-10-01',
-        username: 'alice',
+        username: 'test-user-one',
         product: 'copilot',
-        sku: 'copilot_premium_request',
+        sku: 'copilot_ai_credit',
         model: 'Claude Sonnet 4',
         quantity: '1',
-        exceeds_quota: 'False',
-        total_monthly_quota: '1000',
-        applied_cost_per_quantity: '0.04',
+        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
+        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
         gross_amount: '0.040',
         discount_amount: '0.000',
         net_amount: '0.040',
-        cost_center_name: 'Engineering',
+        cost_center_name: 'test-cost-center-one',
       },
       {
         date: '2025-10-02',
-        username: 'bob',
+        username: 'test-user-two',
         product: 'spark',
-        sku: 'spark_premium_request',
+        sku: 'copilot_ai_credit',
         model: 'Claude Sonnet 4.5',
         quantity: '4',
-        exceeds_quota: 'False',
-        total_monthly_quota: '1000',
-        applied_cost_per_quantity: '0.04',
+        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
+        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
         gross_amount: '0.160',
         discount_amount: '0.000',
         net_amount: '0.160',
-        cost_center_name: 'Engineering',
+        cost_center_name: 'test-cost-center-one',
       },
     ];
 
@@ -770,10 +747,10 @@ describe('DataAnalysis billing summary', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Cost Centers' })[0]);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Engineering/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /test-cost-center-one/i })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Engineering/i }));
+    fireEvent.click(screen.getByRole('button', { name: /test-cost-center-one/i }));
 
     await waitFor(() => {
       expect(screen.getAllByText('Spark').length).toBeGreaterThan(0);
@@ -787,12 +764,11 @@ describe('DataAnalysis billing summary', () => {
         date: '2025-10-01',
         username: 'test-user-one',
         product: 'copilot',
-        sku: 'copilot_premium_request',
+        sku: 'copilot_ai_credit',
         model: 'Claude Sonnet 4',
         quantity: '1',
-        exceeds_quota: 'False',
-        total_monthly_quota: '1000',
-        applied_cost_per_quantity: '0.04',
+        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
+        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
         gross_amount: '0.040',
         discount_amount: '0.000',
         net_amount: '0.040',
@@ -805,8 +781,7 @@ describe('DataAnalysis billing summary', () => {
         sku: 'code_quality_ai_credit',
         model: 'Claude Sonnet 4.6',
         quantity: '51.28584',
-        exceeds_quota: 'False',
-        total_monthly_quota: '1000',
+        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
         applied_cost_per_quantity: '0.01',
         gross_amount: '0.5128584',
         discount_amount: '0.000',
@@ -836,83 +811,91 @@ describe('DataAnalysis billing summary', () => {
     });
   });
 
-  it('shows non-Copilot code review as a separate aggregate product and insight block', async () => {
+  it('keeps unattributed Code Review credits in grouped billing without inventing a user', async () => {
     const billingRows: CSVData[] = [
       {
         date: '2025-10-01',
         username: '',
         product: 'copilot',
-        sku: 'copilot_premium_request',
+        sku: 'copilot_ai_credit',
         model: 'Code Review',
         quantity: '3',
-        exceeds_quota: 'False',
-        total_monthly_quota: '1000',
-        applied_cost_per_quantity: '0.04',
+        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
+        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
         gross_amount: '0.120',
         discount_amount: '0.000',
         net_amount: '0.120',
-        organization: 'Org One',
-        cost_center_name: 'Engineering',
+        organization: 'test-org-one',
+        cost_center_name: 'test-cost-center-one',
       },
       {
         date: '2025-10-02',
-        username: 'alice',
+        username: 'test-user-one',
         product: 'copilot',
-        sku: 'copilot_premium_request',
+        sku: 'copilot_ai_credit',
         model: 'Code Review',
         quantity: '2',
-        exceeds_quota: 'False',
-        total_monthly_quota: '1000',
-        applied_cost_per_quantity: '0.04',
+        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
+        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
         gross_amount: '0.080',
         discount_amount: '0.000',
         net_amount: '0.080',
-        organization: 'Org One',
-        cost_center_name: 'Engineering',
+        organization: 'test-org-one',
+        cost_center_name: 'test-cost-center-one',
       },
     ];
 
     const ingestionResult = createIngestionResultFromRawRows(billingRows);
+    const usage = ingestionResult.outputs.usage as UsageArtifacts;
+    const billing = ingestionResult.outputs.billing as BillingArtifacts;
+    expect(usage.userCount).toBe(1);
+    expect(usage.specialBuckets).toEqual([
+      expect.objectContaining({ label: 'Unattributed AI Credits', totalCredits: 3 }),
+    ]);
+    expect(usage.modelTotals['Code Review']).toBe(5);
+    expect(billing.billingByModel.get('Code Review')?.quantity).toBe(5);
     render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
 
     await waitFor(() => {
-      expect(screen.getAllByText('Code Review for Non-Copilot Users').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Code Review').length).toBeGreaterThan(0);
     });
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Cost Centers' })[0]);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Engineering/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /test-cost-center-one/i })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Engineering/i }));
+    fireEvent.click(screen.getByRole('button', { name: /test-cost-center-one/i }));
 
     await waitFor(() => {
-      expect(screen.getAllByText('Code Review for Non-Copilot Users').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Code Review').length).toBeGreaterThan(0);
     });
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Organizations' })[0]);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Org One/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /test-org-one/i })).toBeInTheDocument();
     });
 
-    const organizationRow = screen.getByRole('button', { name: /Org One/i }).closest('tr');
+    const organizationRow = screen.getByRole('button', { name: /test-org-one/i }).closest('tr');
     expect(organizationRow).not.toBeNull();
     expect(within(organizationRow as HTMLTableRowElement).getByText('1')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Org One/i }));
+    fireEvent.click(screen.getByRole('button', { name: /test-org-one/i }));
 
     await waitFor(() => {
-      expect(screen.getAllByText('Code Review for Non-Copilot Users').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Code Review').length).toBeGreaterThan(0);
     });
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Insights' })[0]);
 
     await waitFor(() => {
       expect(screen.getByText('Feature Utilization')).toBeInTheDocument();
-      expect(screen.getAllByText('Code Review for Non-Copilot Users').length).toBeGreaterThan(0);
-      expect(screen.getByText('Aggregate requests outside licensed Copilot users')).toBeInTheDocument();
+      expect(screen.getAllByText('Code Review').length).toBeGreaterThan(0);
     });
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Agent Adoption' })[0]);
+    expect(screen.getAllByText('Unattributed AI Credits').length).toBeGreaterThan(0);
   });
 });

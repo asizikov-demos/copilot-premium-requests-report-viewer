@@ -11,8 +11,7 @@ function makeRow(overrides: Partial<ProcessedData> & { dateKey: string }): Proce
     timestamp,
     user: 'test-user-one',
     model: 'Test Model',
-    requestsUsed: 1,
-    exceedsQuota: false,
+    creditsUsed: 1,
     totalQuota: '300',
     quotaValue: 300,
     iso: timestamp.toISOString(),
@@ -31,7 +30,7 @@ const rows: ProcessedData[] = [
     dateKey: '2026-03-01',
     user: 'test-user-one',
     model: 'Test Model',
-    requestsUsed: 4,
+    creditsUsed: 4,
     grossAmount: 0.16,
     discountAmount: 0.04,
     netAmount: 0.12,
@@ -40,7 +39,7 @@ const rows: ProcessedData[] = [
     dateKey: '2026-03-03',
     user: 'test-user-two',
     model: 'Coding Agent model',
-    requestsUsed: 2,
+    creditsUsed: 2,
     grossAmount: 0.08,
     discountAmount: 0,
     netAmount: 0.08,
@@ -55,9 +54,8 @@ function renderView(onBack = jest.fn()) {
       groupsLabel="organizations"
       detailIdPrefix="organization-daily-details"
       rows={rows}
-      isUsageBasedBilling={false}
-      quantityColumnLabel="Requests"
-      costLabels={getBillingCostLabels(false)}
+      quantityColumnLabel="AI Credits"
+      costLabels={getBillingCostLabels()}
       hasAicGross={false}
       onBack={onBack}
     />
@@ -117,9 +115,8 @@ describe('BillingGroupDetailsView', () => {
         groupsLabel="cost centers"
         detailIdPrefix="cost-center-daily-details"
         rows={rows.map((row) => ({ ...row, costCenter: 'test-cost-center-one' }))}
-        isUsageBasedBilling={false}
-        quantityColumnLabel="Requests"
-        costLabels={getBillingCostLabels(false)}
+        quantityColumnLabel="AI Credits"
+        costLabels={getBillingCostLabels()}
         hasAicGross={false}
         onBack={onBack}
       />
@@ -145,9 +142,8 @@ describe('BillingGroupDetailsView', () => {
           groupsLabel="cost centers"
           detailIdPrefix="cost-center-daily-details"
           rows={rows}
-          isUsageBasedBilling={false}
-          quantityColumnLabel="Requests"
-          costLabels={getBillingCostLabels(false)}
+          quantityColumnLabel="AI Credits"
+          costLabels={getBillingCostLabels()}
           hasAicGross={false}
           showUsers
           onBack={jest.fn()}
@@ -186,13 +182,12 @@ describe('BillingGroupDetailsView', () => {
             makeRow({
               dateKey: '2026-03-02',
               user: 'test-user-three',
-              isNonCopilotUsage: true,
-              usageBucket: 'non_copilot_code_review',
+              isUnattributedUsage: true,
+              usageBucket: 'unattributed_ai_credit',
             }),
           ]}
-          isUsageBasedBilling={false}
-          quantityColumnLabel="Requests"
-          costLabels={getBillingCostLabels(false)}
+          quantityColumnLabel="AI Credits"
+          costLabels={getBillingCostLabels()}
           hasAicGross={false}
           showUsers
           onBack={jest.fn()}
@@ -221,7 +216,7 @@ describe('BillingGroupDetailsView', () => {
         makeRow({
           dateKey: '2026-03-01',
           user: `test-user-${index.toString().padStart(3, '0')}`,
-          requestsUsed: 1,
+          creditsUsed: 1,
         })
       ));
 
@@ -232,9 +227,8 @@ describe('BillingGroupDetailsView', () => {
           groupsLabel="cost centers"
           detailIdPrefix="cost-center-daily-details"
           rows={paginatedRows}
-          isUsageBasedBilling={false}
-          quantityColumnLabel="Requests"
-          costLabels={getBillingCostLabels(false)}
+          quantityColumnLabel="AI Credits"
+          costLabels={getBillingCostLabels()}
           hasAicGross={false}
           showUsers
           onBack={jest.fn()}

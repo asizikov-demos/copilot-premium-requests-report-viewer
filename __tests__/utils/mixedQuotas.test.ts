@@ -1,223 +1,93 @@
-import { processCSVData, analyzeData } from '../helpers/processCSVData';
-import { CSVData } from '../../src/types/csv';
+import { PRICING } from '@/constants/pricing';
+import type { CSVData } from '@/types/csv';
 
-describe('Mixed Quota Support', () => {
-  const mockData: CSVData[] = [
-    {
-      date: '2025-06-01',
-      username: 'UserA',
-      model: 'gpt-4.1-2025-04-14',
-      quantity: '5.00',
-      exceeds_quota: 'false',
-      total_monthly_quota: '300'
-    },
-    {
-      date: '2025-06-15',
-      username: 'UserB',
-      model: 'claude-3.5-sonnet-2024-10-22',
-      quantity: '10.50',
-      exceeds_quota: 'false',
-      total_monthly_quota: '1000'
-    },
-    {
-      date: '2025-07-01',
-      username: 'UserC',
-      model: 'gpt-4.1-2025-04-14',
-      quantity: '15.25',
-      exceeds_quota: 'false',
-      total_monthly_quota: 'Unknown'
-    },
-    {
-      date: '2025-07-10',
-      username: 'UserA',
-      model: 'gemini-2.0-flash',
-      quantity: '350.00',
-      exceeds_quota: 'true',
-      total_monthly_quota: '300'
-    }
+import { analyzeData, processCSVData } from '../helpers/processCSVData';
+
+const row = (
+  username: string,
+  quantity: number,
+  quota: number | 'Unknown',
+  date = '2026-06-01'
+): CSVData => ({
+  date,
+  username,
+  product: 'copilot',
+  sku: 'copilot_ai_credit',
+  unit_type: 'ai-credits',
+  model: 'test-model',
+  quantity: String(quantity),
+  total_monthly_quota: String(quota),
+});
+
+describe('AI-credit quota tiers', () => {
+  const data = [
+    row('test-user-one', 100, PRICING.BUSINESS_AI_CREDIT_QUOTA),
+    row('test-user-two', 10.5, PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
+    row('test-user-three', 15.25, 'Unknown'),
+    row('test-user-one', PRICING.BUSINESS_AI_CREDIT_QUOTA, PRICING.BUSINESS_AI_CREDIT_QUOTA, '2026-06-10'),
   ];
 
-  it('should correctly parse quota values', () => {
-    const processedData = processCSVData(mockData);
-    
-    expect(processedData[0].quotaValue).toBe(300);
-    expect(processedData[1].quotaValue).toBe(1000);
-    expect(processedData[2].quotaValue).toBe('unknown');
-    expect(processedData[3].quotaValue).toBe(300);
+  it('parses the recognized quotas and treats other quotas as unknown', () => {
+    expect(processCSVData(data).map(r => r.quotaValue)).toEqual([
+      PRICING.BUSINESS_AI_CREDIT_QUOTA,
+      PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
+      'unknown',
+      PRICING.BUSINESS_AI_CREDIT_QUOTA,
+    ]);
+    expect(processCSVData([row('test-user-four', 5, 300)])[0].quotaValue).toBe('unknown');
+    expect(processCSVData([row('test-user-four', 5, 1000)])[0].quotaValue).toBe('unknown');
   });
 
-  it('should correctly build quota breakdown', () => {
-    const processedData = processCSVData(mockData);
-    const analysis = analyzeData(processedData);
-    
-    expect(analysis.quotaBreakdown.business).toContain('UserA');
-    expect(analysis.quotaBreakdown.enterprise).toContain('UserB');
-    expect(analysis.quotaBreakdown.unknown).toContain('UserC');
-    expect(analysis.quotaBreakdown.mixed).toBe(true);
-    expect(analysis.quotaBreakdown.suggestedPlan).toBe(null); // Mixed should not suggest a plan
+  it('classifies mixed tiers and counts users with credits above their individual quota', () => {
+    const analysis = analyzeData(processCSVData(data));
+    expect(analysis.quotaBreakdown).toMatchObject({
+      business: ['test-user-one'],
+      enterprise: ['test-user-two'],
+      unknown: ['test-user-three'],
+      mixed: true,
+      suggestedPlan: null,
+    });
+    expect(analysis.usersExceedingQuota).toBe(1);
   });
 
-  it('should correctly identify users exceeding their specific quotas', () => {
-    const processedData = processCSVData(mockData);
-    const analysis = analyzeData(processedData);
-    
-    // UserA exceeds 300 quota (355 total), UserB doesn't exceed 1000 quota (10.5 total), UserC unknown
-    expect(analysis.usersExceedingQuota).toBe(1); // Only UserA
+  it('suggests a plan for homogeneous business and enterprise data', () => {
+    const business = analyzeData(processCSVData([
+      row('test-user-one', 5, PRICING.BUSINESS_AI_CREDIT_QUOTA),
+      row('test-user-two', 10, PRICING.BUSINESS_AI_CREDIT_QUOTA),
+    ]));
+    expect(business.quotaBreakdown).toMatchObject({
+      mixed: false,
+      suggestedPlan: 'business',
+      business: ['test-user-one', 'test-user-two'],
+    });
+    const enterprise = analyzeData(processCSVData([
+      row('test-user-one', 5, PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
+      row('test-user-two', 10, PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
+    ]));
+    expect(enterprise.quotaBreakdown).toMatchObject({
+      mixed: false,
+      suggestedPlan: 'enterprise',
+      enterprise: ['test-user-one', 'test-user-two'],
+    });
   });
 
-  it('should resolve user quota values from first occurrence', () => {
-    const processedData = processCSVData(mockData);
-    const quota = (user: string) => processedData.find(r => r.user === user)?.quotaValue ?? 'unknown';
-    expect(quota('UserA')).toBe(300);
-    expect(quota('UserB')).toBe(1000);
-    expect(quota('UserC')).toBe('unknown');
-    expect(quota('NonExistentUser')).toBe('unknown');
+  it('rejects unsupported request rows rather than letting them affect a plan', () => {
+    const processed = processCSVData([
+      row('test-user-one', 5, PRICING.BUSINESS_AI_CREDIT_QUOTA),
+      { ...row('test-user-two', 4000, PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
+        sku: 'copilot_premium_request', unit_type: 'requests' },
+    ]);
+    expect(processed).toHaveLength(1);
+    expect(analyzeData(processed).quotaBreakdown.suggestedPlan).toBe('business');
   });
 
-  it('should suggest business plan for all business users', () => {
-    const businessOnlyData: CSVData[] = [
-      {
-        date: '2025-06-01',
-        username: 'UserA',
-        model: 'gpt-4.1-2025-04-14',
-        quantity: '5.00',
-        exceeds_quota: 'false',
-        total_monthly_quota: '300'
-      },
-      {
-        date: '2025-06-15',
-        username: 'UserB',
-        model: 'claude-3.5-sonnet-2024-10-22',
-        quantity: '10.50',
-        exceeds_quota: 'false',
-        total_monthly_quota: '300'
-      }
-    ];
-
-    const processedData = processCSVData(businessOnlyData);
-    const analysis = analyzeData(processedData);
-    
-    expect(analysis.quotaBreakdown.mixed).toBe(false);
-    expect(analysis.quotaBreakdown.suggestedPlan).toBe('business');
-    expect(analysis.quotaBreakdown.business).toEqual(['UserA', 'UserB']);
-    expect(analysis.quotaBreakdown.enterprise).toEqual([]);
-    expect(analysis.quotaBreakdown.unknown).toEqual([]);
-  });
-
-  it('should ignore non-request unit rows when evaluating user plans', () => {
-    const businessWithNonRequestData: CSVData[] = [
-      {
-        date: '2026-03-01',
-        username: 'test-user-one',
-        model: 'Claude Sonnet 4',
-        unit_type: 'new-unit',
-        quantity: '10',
-        exceeds_quota: 'false',
-        total_monthly_quota: 'Unknown'
-      },
-      {
-        date: '2026-03-02',
-        username: 'test-user-one',
-        model: 'Claude Sonnet 4',
-        unit_type: 'requests',
-        quantity: '5',
-        exceeds_quota: 'false',
-        total_monthly_quota: '300'
-      },
-      {
-        date: '2026-03-02',
-        username: 'test-user-two',
-        model: 'Claude Sonnet 4',
-        unit_type: 'requests',
-        quantity: '5',
-        exceeds_quota: 'false',
-        total_monthly_quota: '300'
-      }
-    ];
-
-    const processedData = processCSVData(businessWithNonRequestData);
-    const analysis = analyzeData(processedData);
-
-    expect(analysis.quotaBreakdown.mixed).toBe(false);
-    expect(analysis.quotaBreakdown.suggestedPlan).toBe('business');
-    expect(analysis.quotaBreakdown.business).toEqual(['test-user-one', 'test-user-two']);
-    expect(analysis.quotaBreakdown.unknown).toEqual([]);
-  });
-
-  it('should treat the non-billable quota sentinel as unknown', () => {
-    const sentinelData: CSVData[] = [
-      {
-        date: '2026-03-01',
-        username: 'test-user-one',
-        model: 'Claude Sonnet 4',
-        quantity: '5.00',
-        exceeds_quota: 'false',
-        total_monthly_quota: '2147483647'
-      }
-    ];
-
-    const processedData = processCSVData(sentinelData);
-
-    expect(processedData[0].quotaValue).toBe('unknown');
-    expect(processedData[0].totalQuota).toBe('Unknown');
-  });
-
-  it('should pick the highest known quota and ignore the sentinel', () => {
-    const mixedWithSentinel: CSVData[] = [
-      {
-        date: '2026-03-01',
-        username: 'test-user-one',
-        model: 'Claude Sonnet 4',
-        quantity: '5.00',
-        exceeds_quota: 'false',
-        total_monthly_quota: '1000'
-      },
-      {
-        date: '2026-03-02',
-        username: 'test-user-one',
-        model: 'Claude Sonnet 4',
-        quantity: '2.00',
-        exceeds_quota: 'false',
-        total_monthly_quota: '2147483647'
-      }
-    ];
-
-    const processedData = processCSVData(mixedWithSentinel);
-    const analysis = analyzeData(processedData);
-
-    expect(analysis.quotaBreakdown.enterprise).toEqual(['test-user-one']);
-    expect(analysis.quotaBreakdown.business).toEqual([]);
-    expect(analysis.quotaBreakdown.unknown).toEqual([]);
-    expect(analysis.quotaBreakdown.suggestedPlan).toBe('enterprise');
-  });
-
-  it('should suggest enterprise plan for all enterprise users', () => {
-    const enterpriseOnlyData: CSVData[] = [
-      {
-        date: '2025-06-01',
-        username: 'UserA',
-        model: 'gpt-4.1-2025-04-14',
-        quantity: '5.00',
-        exceeds_quota: 'false',
-        total_monthly_quota: '1000'
-      },
-      {
-        date: '2025-06-15',
-        username: 'UserB',
-        model: 'claude-3.5-sonnet-2024-10-22',
-        quantity: '10.50',
-        exceeds_quota: 'false',
-        total_monthly_quota: '1000'
-      }
-    ];
-
-    const processedData = processCSVData(enterpriseOnlyData);
-    const analysis = analyzeData(processedData);
-    
-    expect(analysis.quotaBreakdown.mixed).toBe(false);
-    expect(analysis.quotaBreakdown.suggestedPlan).toBe('enterprise');
-    expect(analysis.quotaBreakdown.business).toEqual([]);
-    expect(analysis.quotaBreakdown.enterprise).toEqual(['UserA', 'UserB']);
-    expect(analysis.quotaBreakdown.unknown).toEqual([]);
+  it('ignores non-billable sentinels and uses the highest known quota for a user', () => {
+    const processed = processCSVData([
+      row('test-user-one', 5, PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
+      row('test-user-one', 2, 2147483647, '2026-06-02'),
+    ]);
+    expect(processed[1].quotaValue).toBe('unknown');
+    expect(processed[1].totalQuota).toBe('Unknown');
+    expect(analyzeData(processed).quotaBreakdown.enterprise).toEqual(['test-user-one']);
   });
 });

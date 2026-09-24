@@ -1,6 +1,5 @@
 import type { ProcessedData } from '@/types/csv';
 import { shouldReplaceQuotaValue } from '@/utils/analytics/quota';
-import { calculateAicPoolEstimate, calculateIncludedAicCreditsForUsers } from '@/utils/aicPool';
 import { isSupportedUsageUnitType } from '@/utils/unitType';
 
 import { buildNormalizedRowFromProcessedData } from './analytics';
@@ -8,7 +7,6 @@ import {
   BillingArtifacts,
   BillingFieldTotals,
   BillingGroupTotals,
-  BillingOverageTotals,
   BillingUserTotals,
   getSpecialUsageBucketLabel,
   SpecialBillingBucketTotals,
@@ -32,10 +30,9 @@ type BillingAccumulatorRow = Pick<
   | 'grossAmount'
   | 'discountAmount'
   | 'netAmount'
-  | 'exceedsQuota'
   | 'aicQuantity'
   | 'aicGrossAmount'
-  | 'isNonCopilotUsage'
+  | 'isUnattributedUsage'
   | 'usageBucket'
 >;
 
@@ -61,48 +58,7 @@ function createBillingGroupTotals(): BillingGroupTotals {
   };
 }
 
-function createBillingOverageTotals(): BillingOverageTotals {
-  return {
-    requests: 0,
-    cost: 0,
-    hasBilledOverageData: false,
-  };
-}
-
 type BillingFieldTarget = BillingFieldTotals | BillingUserTotals | SpecialBillingBucketTotals;
-
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value);
-}
-
-function hasBillingAmountData(row: BillingAccumulatorRow): boolean {
-  return isFiniteNumber(row.netAmount) || isFiniteNumber(row.grossAmount);
-}
-
-function getBilledOverageCost(row: BillingAccumulatorRow): number {
-  if (isFiniteNumber(row.netAmount)) {
-    return row.netAmount;
-  }
-
-  if (isFiniteNumber(row.grossAmount)) {
-    return row.grossAmount - (isFiniteNumber(row.discountAmount) ? row.discountAmount : 0);
-  }
-
-  return 0;
-}
-
-function addBilledOverage(target: BillingOverageTotals, row: BillingAccumulatorRow): void {
-  if (!row.exceedsQuota) {
-    return;
-  }
-
-  target.requests += row.quantity;
-
-  if (hasBillingAmountData(row)) {
-    target.hasBilledOverageData = true;
-    target.cost += getBilledOverageCost(row);
-  }
-}
 
 function addBillingFields(target: BillingFieldTarget, row: BillingAccumulatorRow): AccumulationSignals {
   let sawBilling = false;
@@ -145,7 +101,6 @@ export class BillingAccumulator {
   private orgTotals = new Map<string, BillingGroupTotals>();
   private costCenterTotals = new Map<string, BillingGroupTotals>();
   private billingByModel = new Map<string, BillingGroupTotals>();
-  private overage = createBillingOverageTotals();
   private hasAnyBillingData = false;
   private hasAnyAicData = false;
 
@@ -155,14 +110,13 @@ export class BillingAccumulator {
       quantity: row.billingQuantity ?? row.quantity,
     };
     let entry: BillingUserTotals | SpecialBillingBucketTotals | undefined;
-    if (billingRow.isNonCopilotUsage && billingRow.usageBucket) {
+    if (billingRow.isUnattributedUsage && billingRow.usageBucket) {
       entry = this.specialBucketMap.get(billingRow.usageBucket);
       if (!entry) {
         entry = {
           key: billingRow.usageBucket,
           label: getSpecialUsageBucketLabel(billingRow.usageBucket),
           quantity: 0,
-          overage: createBillingOverageTotals(),
           quotaValue: 0,
         };
         this.specialBucketMap.set(billingRow.usageBucket, entry);
@@ -170,7 +124,7 @@ export class BillingAccumulator {
     } else {
       entry = this.userMap.get(billingRow.user);
       if (!entry) {
-        entry = { user: billingRow.user, quantity: 0, overage: createBillingOverageTotals() };
+        entry = { user: billingRow.user, quantity: 0 };
         this.userMap.set(billingRow.user, entry);
       }
       const incomingQuota = billingRow.quotaValue;
@@ -184,8 +138,6 @@ export class BillingAccumulator {
     }
 
     entry.quantity += billingRow.quantity;
-    addBilledOverage(entry.overage, row);
-    addBilledOverage(this.overage, row);
     addBillingFields(entry, billingRow);
 
     addGroupRow(this.orgTotals, billingRow.organization || UNASSIGNED_BILLING_GROUP, billingRow);
@@ -198,20 +150,8 @@ export class BillingAccumulator {
   }
 
   finalize(): BillingArtifacts {
-    const poolEstimate = this.hasAnyAicData
-      ? calculateAicPoolEstimate(
-        calculateIncludedAicCreditsForUsers(this.userMap.values()),
-        this.totals.aicGrossAmount
-      )
-      : { includedCredits: 0, additionalUsageGrossAmount: 0 };
-
     return {
-      totals: {
-        ...this.totals,
-        aicIncludedCredits: poolEstimate.includedCredits,
-        aicAdditionalUsageGrossAmount: poolEstimate.additionalUsageGrossAmount,
-      },
-      overage: this.overage,
+      totals: { ...this.totals },
       users: Array.from(this.userMap.values()),
       userMap: this.userMap,
       orgTotals: this.orgTotals,

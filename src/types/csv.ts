@@ -10,7 +10,6 @@ export interface CSVData {
   unit_type?: string;
   model: string;
   quantity: string; // may be fractional (e.g. '3.6')
-  exceeds_quota?: string; // 'True' | 'False'
   total_monthly_quota?: string; // numeric or 'Unknown'
   applied_cost_per_quantity?: string; // numeric string
   gross_amount?: string; // numeric string
@@ -35,8 +34,7 @@ export interface ProcessedData extends TokenCounts {
   timestamp: Date; // Normalized UTC timestamp (date + T00:00:00Z)
   user: string; // username from CSV
   model: string; // normalized raw model name (prefixes like 'Auto: ' stripped later in analytics if needed)
-  requestsUsed: number; // float-safe parsed quantity/requests used
-  exceedsQuota: boolean; // derived from boolean field (defaults false if absent)
+  creditsUsed: number; // parsed AI-credit quantity
   totalQuota: string; // original string (numeric or 'Unknown')
   quotaValue: number | 'unknown'; // Parsed quota value using pricing constants/logic
   // Cached UTC-derived keys
@@ -48,7 +46,7 @@ export interface ProcessedData extends TokenCounts {
   product?: string;
   sku?: string;
   unitType?: string;
-  usageUnit?: 'request' | 'ai_credit' | 'unknown';
+  usageUnit?: 'ai_credit' | 'unknown';
   billingQuantity?: number;
   organization?: string;
   costCenter?: string;
@@ -58,8 +56,8 @@ export interface ProcessedData extends TokenCounts {
   netAmount?: number;
   aicQuantity?: number;
   aicGrossAmount?: number;
-  isNonCopilotUsage?: boolean;
-  usageBucket?: 'non_copilot_code_review' | 'unattributed_ai_credit';
+  isUnattributedUsage?: boolean;
+  usageBucket?: 'unattributed_ai_credit';
 }
 
 export interface AnalysisResults {
@@ -69,14 +67,14 @@ export interface AnalysisResults {
   };
   totalUniqueUsers: number;
   usersExceedingQuota: number;
-  requestsByModel: Array<{
+  creditsByModel: Array<{
     model: string;
-    totalRequests: number;
+    totalCredits: number;
   }>;
   quotaBreakdown: {
     unknown: string[];
-    business: string[]; // Users with Business quota (300)
-    enterprise: string[]; // Users with Enterprise quota (1000)
+    business: string[];
+    enterprise: string[];
     mixed: boolean;
     suggestedPlan: 'business' | 'enterprise' | null;
   };
@@ -92,8 +90,8 @@ export interface UserDailyData {
 // Coding Agent Adoption types
 export interface CodingAgentUser {
   user: string;
-  totalRequests: number;
-  codingAgentRequests: number;
+  totalCredits: number;
+  codingAgentCredits: number;
   codingAgentPercentage: number;
   quota: number | 'unknown';
   models: string[]; // coding agent models used
@@ -102,7 +100,7 @@ export interface CodingAgentUser {
 export interface CodingAgentAnalysis {
   totalUsers: number;
   totalUniqueUsers: number; // for percentage calculation
-  totalCodingAgentRequests: number;
+  totalCodingAgentCredits: number;
   adoptionRate: number; // percentage of total users
   users: CodingAgentUser[];
 }
@@ -110,18 +108,17 @@ export interface CodingAgentAnalysis {
 // Code Review Adoption types
 export interface CodeReviewUser {
   user: string;
-  totalRequests: number;
-  codeReviewRequests: number;
+  totalCredits: number;
+  codeReviewCredits: number;
   codeReviewPercentage: number;
   quota: number | 'unknown';
   models: string[];
-  isSyntheticNonCopilotRow?: boolean;
 }
 
 export interface CodeReviewAnalysis {
   totalUsers: number;
   totalUniqueUsers: number;
-  totalCodeReviewRequests: number;
+  totalCodeReviewCredits: number;
   adoptionRate: number;
   users: CodeReviewUser[];
 }

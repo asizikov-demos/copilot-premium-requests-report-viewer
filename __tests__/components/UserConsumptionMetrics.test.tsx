@@ -69,19 +69,19 @@ describe('UserConsumptionMetrics', () => {
   it('marks partial model totals', () => {
     render(<UserConsumptionMetrics rows={buildProcessedDataFromRawRows([
       { ...base, input: '10' },
-      { ...base, unit_type: 'requests', quantity: '1' },
+      { ...base, quantity: '1' },
     ])} />);
-    expect(within(screen.getByRole('table')).getAllByText('(partial)')).toHaveLength(2);
-    expect(within(screen.getByRole('table')).getAllByLabelText('Not reported')).toHaveLength(3);
+    expect(within(screen.getByRole('table')).getByText('(partial)')).toBeInTheDocument();
+    expect(within(screen.getByRole('table')).getAllByLabelText('Not reported').length).toBeGreaterThan(0);
   });
 
-  it('preserves legacy views and displays zero tokens without credit metrics', () => {
+  it('displays zero reported tokens alongside AI-credit usage', () => {
     const { container, rerender } = render(<UserConsumptionMetrics rows={buildProcessedDataFromRawRows([
-      { ...base, unit_type: 'requests' },
+      { ...base },
     ])} />);
-    expect(container).toBeEmptyDOMElement();
+    expect(container).not.toBeEmptyDOMElement();
     rerender(<UserConsumptionMetrics rows={buildProcessedDataFromRawRows([
-      { ...base, unit_type: 'requests', input: '0' },
+      { ...base, input: '0' },
     ])} />);
     expect(screen.getByText('Token Usage Over Time')).toBeInTheDocument();
     expect(screen.queryByText('AI Credits per Active Day')).not.toBeInTheDocument();

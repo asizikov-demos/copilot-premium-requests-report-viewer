@@ -1,3 +1,4 @@
+import { PRICING } from '@/constants/pricing';
 import type { ProcessedData } from '@/types/csv';
 import { aggregateAutoModeSavings, getAutoModeBaseModel } from '@/utils/autoModeSavings';
 
@@ -6,11 +7,11 @@ import { makeProcessedData } from '../helpers/testUtils';
 const AUTO_MODE_ROW_DEFAULTS = {
   timestamp: new Date('2026-04-01T00:00:00Z'),
   model: 'Auto: GPT-5.3-Codex',
-  requestsUsed: 0.9,
-  appliedCostPerQuantity: 0.04,
-  grossAmount: 0.036,
+  creditsUsed: 0.9,
+  appliedCostPerQuantity: PRICING.AI_CREDIT_USD_VALUE,
+  grossAmount: 0.9 * PRICING.AI_CREDIT_USD_VALUE,
   discountAmount: 0,
-  netAmount: 0.036,
+  netAmount: 0.9 * PRICING.AI_CREDIT_USD_VALUE,
 } satisfies Partial<ProcessedData>;
 
 describe('Auto Mode savings', () => {
@@ -20,45 +21,40 @@ describe('Auto Mode savings', () => {
     expect(getAutoModeBaseModel('Claude Sonnet')).toBeNull();
   });
 
-  it('aggregates Auto rows using undiscounted requests and savings', () => {
+  it('aggregates Auto rows using billed AI credits and savings', () => {
     const rows: ProcessedData[] = [
-      makeProcessedData({ ...AUTO_MODE_ROW_DEFAULTS, requestsUsed: 0.9, grossAmount: 0.036, netAmount: 0.036 }),
-      makeProcessedData({ ...AUTO_MODE_ROW_DEFAULTS, requestsUsed: 1.8, grossAmount: 0.072, netAmount: 0.072 }),
-      makeProcessedData({ ...AUTO_MODE_ROW_DEFAULTS, model: 'Claude Sonnet 4', requestsUsed: 5, grossAmount: 0.2, netAmount: 0.2 }),
+      makeProcessedData({ ...AUTO_MODE_ROW_DEFAULTS, creditsUsed: 0.9, grossAmount: .9 * PRICING.AI_CREDIT_USD_VALUE, netAmount: .9 * PRICING.AI_CREDIT_USD_VALUE }),
+      makeProcessedData({ ...AUTO_MODE_ROW_DEFAULTS, creditsUsed: 1.8, grossAmount: 1.8 * PRICING.AI_CREDIT_USD_VALUE, netAmount: 1.8 * PRICING.AI_CREDIT_USD_VALUE }),
+      makeProcessedData({ ...AUTO_MODE_ROW_DEFAULTS, model: 'Claude Sonnet 4', creditsUsed: 5, grossAmount: 5 * PRICING.AI_CREDIT_USD_VALUE, netAmount: 5 * PRICING.AI_CREDIT_USD_VALUE }),
     ];
 
     const [result] = aggregateAutoModeSavings(rows);
 
     expect(result.model).toBe('GPT-5.3-Codex');
     expect(result.quantity).toBeCloseTo(2.7);
-    expect(result.costBeforeAuto).toBeCloseTo(0.1188);
-    expect(result.savings).toBeCloseTo(0.0108);
+    expect(result.costBeforeAuto).toBeCloseTo(2.7 * PRICING.AI_CREDIT_USD_VALUE / (1 - PRICING.AUTO_MODE_DISCOUNT_RATE));
+    expect(result.savings).toBeCloseTo(result.costBeforeAuto - 2.7 * PRICING.AI_CREDIT_USD_VALUE);
   });
 
-  it('falls back to standard pricing when billing cost fields are absent', () => {
+  it('does not invent savings when billing cost fields are absent', () => {
     const rows: ProcessedData[] = [
       makeProcessedData({
         ...AUTO_MODE_ROW_DEFAULTS,
-        requestsUsed: 0.9,
+        creditsUsed: 0.9,
         appliedCostPerQuantity: undefined,
         grossAmount: undefined,
         netAmount: undefined,
       }),
     ];
 
-    const [result] = aggregateAutoModeSavings(rows);
-
-    expect(result.model).toBe('GPT-5.3-Codex');
-    expect(result.quantity).toBeCloseTo(0.9);
-    expect(result.costBeforeAuto).toBeCloseTo(0.0396);
-    expect(result.savings).toBeCloseTo(0.0036);
+    expect(aggregateAutoModeSavings(rows)).toEqual([]);
   });
 
   it('does not treat unrelated billing discounts as Auto Mode savings', () => {
     const rows: ProcessedData[] = [
       makeProcessedData({
         ...AUTO_MODE_ROW_DEFAULTS,
-        requestsUsed: 553.5,
+        creditsUsed: 553.5,
         grossAmount: 22.14,
         netAmount: 3.32,
       }),
@@ -67,19 +63,19 @@ describe('Auto Mode savings', () => {
     const [result] = aggregateAutoModeSavings(rows);
 
     expect(result.quantity).toBeCloseTo(553.5);
-    expect(result.costBeforeAuto).toBeCloseTo(24.354);
-    expect(result.savings).toBeCloseTo(2.214);
+    expect(result.costBeforeAuto).toBeCloseTo(22.14 / (1 - PRICING.AUTO_MODE_DISCOUNT_RATE));
+    expect(result.savings).toBeCloseTo(result.costBeforeAuto - 22.14);
   });
 
   it('aggregates usage-based Auto rows in AI Credits', () => {
     const rows: ProcessedData[] = [
       makeProcessedData({
         ...AUTO_MODE_ROW_DEFAULTS,
-        requestsUsed: 0,
+        creditsUsed: 100,
         usageUnit: 'ai_credit',
         billingQuantity: 100,
         aicQuantity: 100,
-        appliedCostPerQuantity: 0.01,
+        appliedCostPerQuantity: PRICING.AI_CREDIT_USD_VALUE,
         grossAmount: 1,
         discountAmount: 1,
         netAmount: 0,
@@ -90,47 +86,63 @@ describe('Auto Mode savings', () => {
 
     expect(result.model).toBe('GPT-5.3-Codex');
     expect(result.quantity).toBeCloseTo(100);
-    expect(result.costBeforeAuto).toBeCloseTo(1.1);
-    expect(result.savings).toBeCloseTo(0.1);
+    expect(result.costBeforeAuto).toBeCloseTo(1 / (1 - PRICING.AUTO_MODE_DISCOUNT_RATE));
+    expect(result.savings).toBeCloseTo(result.costBeforeAuto - 1);
   });
 
-  it('uses row-specific AI Credit unit cost when gross amount is absent', () => {
+  it('does not estimate Auto savings from a unit price without a billed gross amount', () => {
     const rows: ProcessedData[] = [
       makeProcessedData({
         ...AUTO_MODE_ROW_DEFAULTS,
-        requestsUsed: 0,
+        creditsUsed: 100,
         usageUnit: 'ai_credit',
         billingQuantity: 100,
         aicQuantity: 100,
-        appliedCostPerQuantity: 0.02,
+        appliedCostPerQuantity: PRICING.AI_CREDIT_USD_VALUE,
         grossAmount: undefined,
-        netAmount: undefined,
+        netAmount: 1,
       }),
     ];
 
-    const [result] = aggregateAutoModeSavings(rows);
-
-    expect(result.quantity).toBeCloseTo(100);
-    expect(result.costBeforeAuto).toBeCloseTo(2.2);
-    expect(result.savings).toBeCloseTo(0.2);
+    expect(aggregateAutoModeSavings(rows)).toEqual([]);
   });
 
-  it('keeps consumed AI Credits separate from the 10% higher before-Auto cost', () => {
+  it('retains reported zero gross without inventing a billed cost or savings', () => {
+    const [result] = aggregateAutoModeSavings([
+      makeProcessedData({
+        ...AUTO_MODE_ROW_DEFAULTS,
+        creditsUsed: 10,
+        grossAmount: 0,
+        netAmount: 0,
+      }),
+    ]);
+
+    expect(result).toEqual({
+      model: 'GPT-5.3-Codex',
+      quantity: 10,
+      costBeforeAuto: 0,
+      savings: 0,
+    });
+  });
+
+  it('keeps consumed AI credits separate from the before-Auto undiscounted cost', () => {
     const rows: ProcessedData[] = [
       makeProcessedData({
         ...AUTO_MODE_ROW_DEFAULTS,
-        requestsUsed: 0,
+        creditsUsed: 21404.23,
         usageUnit: 'ai_credit',
         billingQuantity: 21404.23,
         aicQuantity: 21404.23,
-        grossAmount: 214.04,
+        grossAmount: 21404.23 * PRICING.AI_CREDIT_USD_VALUE,
       }),
     ];
 
     const [result] = aggregateAutoModeSavings(rows);
 
     expect(result.quantity).toBeCloseTo(21404.23);
-    expect(result.costBeforeAuto).toBeCloseTo(235.444);
-    expect(result.savings).toBeCloseTo(21.404);
+    expect(result.costBeforeAuto).toBeCloseTo(
+      21404.23 * PRICING.AI_CREDIT_USD_VALUE / (1 - PRICING.AUTO_MODE_DISCOUNT_RATE)
+    );
+    expect(result.savings).toBeCloseTo(result.costBeforeAuto - 21404.23 * PRICING.AI_CREDIT_USD_VALUE);
   });
 });

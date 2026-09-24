@@ -1,4 +1,3 @@
-import { PRICING } from '@/constants/pricing';
 import type { ProcessedData } from '@/types/csv';
 import { buildUserQuotaMapFromRows } from '@/utils/analytics/quota';
 
@@ -6,10 +5,10 @@ import type { UserSummary } from './types';
 
 export interface UserConsumptionCategory {
   user: string;
-  totalRequests: number;
+  totalCredits: number;
   quota: number | 'unknown';
   consumptionPercentage: number;
-  category: 'power' | 'average' | 'low';
+  category: 'power' | 'average' | 'low' | 'unknown';
 }
 
 export interface InsightsOverviewData {
@@ -19,11 +18,10 @@ export interface InsightsOverviewData {
 }
 
 export interface FeatureUtilizationStats {
-  codeReview: { totalSessions: number; averagePerUser: number; userCount: number; };
-  codingAgent: { totalSessions: number; averagePerUser: number; userCount: number; };
-  spark: { totalSessions: number; averagePerUser: number; userCount: number; };
-  codeQuality: { totalSessions: number; averagePerUser: number; userCount: number; };
-  nonCopilotCodeReview: { totalSessions: number; };
+  codeReview: { totalCredits: number; averagePerUser: number; userCount: number; };
+  codingAgent: { totalCredits: number; averagePerUser: number; userCount: number; };
+  spark: { totalCredits: number; averagePerUser: number; userCount: number; };
+  codeQuality: { totalCredits: number; averagePerUser: number; userCount: number; };
 }
 
 export const CONSUMPTION_THRESHOLDS = Object.freeze({
@@ -32,10 +30,13 @@ export const CONSUMPTION_THRESHOLDS = Object.freeze({
 });
 
 export function classifyConsumptionUser(
-  totalRequests: number,
+  totalCredits: number,
   quota: number | 'unknown'
 ): { consumptionPercentage: number; category: UserConsumptionCategory['category'] } {
-  const consumptionPercentage = (typeof quota === 'number' && quota > 0) ? (totalRequests / quota) * 100 : 0;
+  if (typeof quota !== 'number' || quota <= 0) {
+    return { consumptionPercentage: 0, category: 'unknown' };
+  }
+  const consumptionPercentage = (totalCredits / quota) * 100;
   let category: UserConsumptionCategory['category'] = 'low';
   if (consumptionPercentage >= CONSUMPTION_THRESHOLDS.powerMinPct) category = 'power';
   else if (consumptionPercentage >= CONSUMPTION_THRESHOLDS.averageMinPct) category = 'average';
@@ -48,9 +49,9 @@ export function categorizeUserConsumption(userData: UserSummary[], processedData
     const quota = userQuotaMap.get(u.user) ?? 'unknown';
     return {
       user: u.user,
-      totalRequests: u.totalRequests,
+      totalCredits: u.totalCredits,
       quota,
-      ...classifyConsumptionUser(u.totalRequests, quota)
+      ...classifyConsumptionUser(u.totalCredits, quota)
     };
   }).sort((a,b) => b.consumptionPercentage - a.consumptionPercentage);
   return {
@@ -58,15 +59,4 @@ export function categorizeUserConsumption(userData: UserSummary[], processedData
     averageUsers: categorized.filter(c => c.category === 'average'),
     lowAdoptionUsers: categorized.filter(c => c.category === 'low')
   };
-}
-
-export function calculateUnusedValue(users: UserConsumptionCategory[]): number {
-  let total = 0;
-  for (const u of users) {
-    if (typeof u.quota === 'number' && u.quota > 0) {
-      const unused = Math.max(0, u.quota - u.totalRequests);
-      total += unused * PRICING.OVERAGE_RATE_PER_REQUEST;
-    }
-  }
-  return total;
 }

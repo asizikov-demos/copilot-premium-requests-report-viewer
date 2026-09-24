@@ -4,7 +4,6 @@ import React, { useMemo, useState } from 'react';
 
 import { PRICING } from '@/constants/pricing';
 import type { ProcessedData } from '@/types/csv';
-import { getEffectiveAicQuantity } from '@/utils/aicFields';
 import { formatCurrency, formatDecimalQuantity } from '@/utils/formatters';
 import type { DailyModelUsageDatum } from '@/utils/ingestion/analytics';
 
@@ -28,7 +27,6 @@ interface DailyConsumptionRow extends ConsumptionMetrics {
 interface DailyConsumptionTableProps {
   data: DailyModelUsageDatum[];
   models: string[];
-  isUsageBasedBilling: boolean;
   sourceRows: ProcessedData[];
 }
 
@@ -71,26 +69,18 @@ function createMetrics(consumption: number, grossAmount: number, additionalUsage
 function buildDailyConsumptionRows(
   data: DailyModelUsageDatum[],
   models: string[],
-  isUsageBasedBilling: boolean,
   sourceRows: ProcessedData[]
 ): DailyConsumptionRow[] {
   const commercialByDateAndModel = new Map<string, Map<string, { grossAmount: number; additionalUsage: number }>>();
 
-  if (isUsageBasedBilling) {
-    for (const row of sourceRows) {
-      if (row.usageUnit !== 'ai_credit') {
-        continue;
-      }
+  for (const row of sourceRows) {
 
       const dateModels = commercialByDateAndModel.get(row.dateKey) ?? new Map();
       const modelTotals = dateModels.get(row.model) ?? { grossAmount: 0, additionalUsage: 0 };
-      const aicQuantity = getEffectiveAicQuantity(row);
-
-      modelTotals.grossAmount += row.aicGrossAmount ?? aicQuantity * PRICING.AI_CREDIT_USD_VALUE;
+      modelTotals.grossAmount += row.aicGrossAmount ?? row.creditsUsed * PRICING.AI_CREDIT_USD_VALUE;
       modelTotals.additionalUsage += getAdditionalUsage(row);
       dateModels.set(row.model, modelTotals);
       commercialByDateAndModel.set(row.dateKey, dateModels);
-    }
   }
 
   return data.map((datum) => {
@@ -99,9 +89,7 @@ function buildDailyConsumptionRows(
       .map((model) => {
         const consumption = Number(datum[model] ?? 0);
         const commercial = dateModels?.get(model);
-        const grossAmount = isUsageBasedBilling
-          ? commercial?.grossAmount ?? consumption * PRICING.AI_CREDIT_USD_VALUE
-          : 0;
+        const grossAmount = commercial?.grossAmount ?? consumption * PRICING.AI_CREDIT_USD_VALUE;
         const additionalUsage = commercial?.additionalUsage ?? 0;
 
         return {
@@ -118,7 +106,7 @@ function buildDailyConsumptionRows(
     return {
       date: datum.date,
       models: modelRows,
-      ...createMetrics(datum.totalRequests, grossAmount, additionalUsage),
+      ...createMetrics(datum.totalCredits, grossAmount, additionalUsage),
     };
   });
 }
@@ -160,15 +148,14 @@ function UsageCells({ row, emphasized = false }: { row: ConsumptionMetrics; emph
 export function DailyConsumptionTable({
   data,
   models,
-  isUsageBasedBilling,
   sourceRows,
 }: DailyConsumptionTableProps) {
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const rows = useMemo(
-    () => buildDailyConsumptionRows(data, models, isUsageBasedBilling, sourceRows),
-    [data, isUsageBasedBilling, models, sourceRows]
+    () => buildDailyConsumptionRows(data, models, sourceRows),
+    [data, models, sourceRows]
   );
-  const columnCount = isUsageBasedBilling ? 5 : 2;
+  const columnCount = 5;
 
   return (
     <div className="overflow-hidden rounded-md border border-[#d1d9e0] bg-white">
@@ -185,7 +172,6 @@ export function DailyConsumptionTable({
               <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[#636c76]">
                 Date
               </th>
-              {isUsageBasedBilling ? (
                 <>
                   <th className="whitespace-nowrap px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-[#636c76]">
                     Included credits
@@ -200,11 +186,6 @@ export function DailyConsumptionTable({
                     Additional usage
                   </th>
                 </>
-              ) : (
-                <th className="whitespace-nowrap px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-[#636c76]">
-                  Requests
-                </th>
-              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-[#d1d9e0]">
@@ -227,13 +208,7 @@ export function DailyConsumptionTable({
                         {formatUtcDate(row.date)}
                       </button>
                     </td>
-                    {isUsageBasedBilling ? (
-                      <UsageCells row={row} emphasized />
-                    ) : (
-                      <td className="px-5 py-3.5 text-right text-sm font-mono font-semibold tabular-nums text-[#1f2328]">
-                        {formatDecimalQuantity(row.consumption)}
-                      </td>
-                    )}
+                    <UsageCells row={row} emphasized />
                   </tr>
                   {isExpanded && (
                     <tr>
@@ -244,29 +219,19 @@ export function DailyConsumptionTable({
                               <th className="px-12 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#636c76]">
                                 Model
                               </th>
-                              {isUsageBasedBilling ? (
                                 <>
                                   <th className="whitespace-nowrap px-5 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#636c76]">Included credits</th>
                                   <th className="whitespace-nowrap px-5 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#636c76]">Additional credits</th>
                                   <th className="whitespace-nowrap px-5 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#636c76]">Gross amount</th>
                                   <th className="whitespace-nowrap px-5 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#636c76]">Additional usage</th>
                                 </>
-                              ) : (
-                                <th className="whitespace-nowrap px-5 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#636c76]">Requests</th>
-                              )}
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-[#d1d9e0]">
                             {row.models.map((model) => (
                               <tr key={model.model}>
                                 <td className="px-12 py-3 text-sm font-medium text-[#1f2328]">{model.model}</td>
-                                {isUsageBasedBilling ? (
-                                  <UsageCells row={model} />
-                                ) : (
-                                  <td className="px-5 py-3 text-right text-sm font-mono tabular-nums text-[#636c76]">
-                                    {formatDecimalQuantity(model.consumption)}
-                                  </td>
-                                )}
+                                <UsageCells row={model} />
                               </tr>
                             ))}
                           </tbody>

@@ -14,7 +14,7 @@ interface OrganizationRow extends BillingGroupRow {
 
 export function OrganizationsOverview() {
   const { aggregateProcessedData, billingArtifacts } = useAnalysisContext();
-  const { isUsageBasedBilling, billingRows, scopedBillingArtifacts, quantityColumnLabel, costLabels } =
+  const { billingRows, scopedBillingArtifacts, quantityColumnLabel, costLabels } =
     useUsageBasedBillingScope(aggregateProcessedData, billingArtifacts);
   const [selectedOrganization, setSelectedOrganization] = useState<string | null>(null);
 
@@ -23,7 +23,7 @@ export function OrganizationsOverview() {
     getGroupName: (row) => row.organization || UNASSIGNED_BILLING_GROUP,
     getTotals: (name) => scopedBillingArtifacts?.orgTotals.get(name),
     updateEntry: (entry: BillingGroupEntry, row) => {
-      if (!row.isNonCopilotUsage) {
+      if (!row.isUnattributedUsage) {
         entry.users ??= new Set<string>();
         entry.users.add(row.user);
       }
@@ -32,7 +32,6 @@ export function OrganizationsOverview() {
   });
 
   const hasCosts = orgRows.some(r => r.gross > 0 || r.net > 0);
-  const hasAicGross = scopedBillingArtifacts?.hasAnyAicData === true;
 
   const selectedOrganizationRows = useMemo(
     () => (selectedOrganization === null
@@ -49,10 +48,9 @@ export function OrganizationsOverview() {
         groupsLabel="organizations"
         detailIdPrefix="organization-daily-details"
         rows={selectedOrganizationRows}
-        isUsageBasedBilling={isUsageBasedBilling}
         quantityColumnLabel={quantityColumnLabel}
         costLabels={costLabels}
-        hasAicGross={hasAicGross && !isUsageBasedBilling}
+        hasAicGross={false}
         onBack={() => setSelectedOrganization(null)}
       />
     );
@@ -65,7 +63,7 @@ export function OrganizationsOverview() {
       nameColumnLabel="Organization"
       rows={orgRows}
       hasCosts={hasCosts}
-      hasAicGross={hasAicGross && !isUsageBasedBilling}
+      hasAicGross={false}
       detailIdPrefix="organization-details"
       quantityColumnLabel={quantityColumnLabel}
       grossColumnLabel={costLabels.gross}

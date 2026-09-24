@@ -4,15 +4,14 @@ import React, { useContext, useMemo } from 'react';
 
 import { UserConsumptionMetrics } from '@/components/UserConsumptionMetrics';
 import { TOKEN_COLUMNS, TokenValue } from '@/components/TokenValue';
-import { COST_OPTIMIZATION_THRESHOLDS, PRICING } from '@/constants/pricing';
+import { PRICING } from '@/constants/pricing';
 import { AnalysisContext } from '@/context/AnalysisContext';
 import { UserDailyStackedChart } from '@/components/charts/UserDailyStackedChart';
 import { utcDateLabelFormatter } from '@/components/charts/chartTooltipStyles';
 import type { ProcessedData, UserDailyData } from '@/types/csv';
 import type { UserSummary } from '@/utils/analytics';
-import { getQuotaTier, isLegacyPremiumRequestQuotaValue } from '@/utils/analytics/quota';
+import { getQuotaTier, isKnownQuotaValue } from '@/utils/analytics/quota';
 import {
-  buildUserDailyAicModelDataFromArtifacts,
   buildUserDailyModelDataFromArtifacts,
   buildTokenArtifactsFromProcessedData,
   type TokenTotals,
@@ -22,17 +21,14 @@ import {
   QuotaArtifacts,
   UsageArtifacts,
 } from '@/utils/ingestion';
-import { hasAicFields } from '@/utils/aicFields';
 import { generateModelColors } from '@/utils/modelColors';
-import { calculateEnterpriseUpgradeSavings } from '@/utils/analytics/costOptimization';
 import { getBillingCostLabels } from '@/utils/billingLabels';
 import { enumerateDatesInclusive } from '@/utils/dateKeys';
 import { formatCurrency } from '@/utils/formatters';
 import { aggregateProductCosts } from '@/utils/productCosts';
 import {
-  calculateOverageCost,
-  calculateOverageRequests,
-  calculateUserTotalRequests,
+  calculateExcessCredits,
+  calculateUserTotalCredits,
   getUserData,
   getUserOrgMetadata,
 } from '@/utils/userCalculations';
@@ -67,7 +63,7 @@ export interface UserDetailsViewProps {
   onBack: () => void;
 }
 
-function UserDailyUsageTooltip({ active, payload, label, valueUnitLabel = 'requests' }: TooltipProps) {
+function UserDailyUsageTooltip({ active, payload, label, valueUnitLabel = 'AI Credits' }: TooltipProps) {
   if (active && payload && payload.length && label) {
     const formattedDate = utcDateLabelFormatter(label);
 
@@ -127,6 +123,7 @@ export function UserDetailsView({
   const effectiveUserQuotaValue = artifactUserQuota !== undefined ? artifactUserQuota : userQuotaValue;
 
   const userData = useMemo(() => getUserData(processedData, user), [processedData, user]);
+  const spansMultipleMonths = new Set(userData.map((row) => row.monthKey)).size > 1;
   const hasBillingData = useMemo(
     () => userData.some(
       (row) =>
@@ -137,29 +134,16 @@ export function UserDetailsView({
     ),
     [userData]
   );
-  const hasUserAiCreditUsage = useMemo(() => userData.some((row) => row.usageUnit === 'ai_credit'), [userData]);
-  const hasUserRequestUsage = useMemo(
-    () => userData.some((row) => row.usageUnit === 'request' && row.requestsUsed > 0),
-    [userData]
-  );
-  const isUserUsageBasedBilling = hasUserAiCreditUsage && !hasUserRequestUsage;
-  const userQuantityColumnLabel = isUserUsageBasedBilling ? 'AI Credits' : 'Requests';
-  const chartValueUnitLabel = isUserUsageBasedBilling ? 'AI Credits' : 'requests';
-  const userCostLabels = useMemo(
-    () => getBillingCostLabels(isUserUsageBasedBilling),
-    [isUserUsageBasedBilling]
-  );
+  const userQuantityColumnLabel = 'AI Credits';
+  const chartValueUnitLabel = 'AI Credits';
+  const userCostLabels = useMemo(() => getBillingCostLabels(), []);
   const userBillingQuantity = useMemo(
-    () => userData.reduce((total, row) => total + (row.billingQuantity ?? row.requestsUsed), 0),
+    () => userData.reduce((total, row) => total + (row.billingQuantity ?? row.creditsUsed), 0),
     [userData]
   );
 
   const userDailyData = useMemo(() => {
-    if (isUserUsageBasedBilling && usageArtifacts && dailyBucketsArtifacts?.dailyUserAicModelTotals) {
-      return buildUserDailyAicModelDataFromArtifacts(dailyBucketsArtifacts, usageArtifacts, user);
-    }
-
-    if (!isUserUsageBasedBilling && usageArtifacts && dailyBucketsArtifacts?.dailyUserModelTotals) {
+    if (usageArtifacts && dailyBucketsArtifacts?.dailyUserModelTotals) {
       return buildUserDailyModelDataFromArtifacts(dailyBucketsArtifacts, usageArtifacts, user);
     }
 
@@ -192,11 +176,16 @@ export function UserDetailsView({
     });
 
     let cumulative = 0;
+    let currentMonth = '';
     const result: UserDailyData[] = [];
     const startDate = new Date(start).toISOString().slice(0, 10);
     const endDate = new Date(end).toISOString().slice(0, 10);
 
     for (const dateStr of enumerateDatesInclusive(startDate, endDate)) {
+      if (dateStr.slice(0, 7) !== currentMonth) {
+        currentMonth = dateStr.slice(0, 7);
+        cumulative = 0;
+      }
       const day = byDate.get(dateStr) || [];
       const row: UserDailyData = { date: dateStr, totalCumulative: 0 } as UserDailyData;
       let dailyTotal = 0;
@@ -206,9 +195,7 @@ export function UserDetailsView({
       });
 
       for (const record of day) {
-        const quantity = isUserUsageBasedBilling
-          ? record.aicQuantity ?? record.billingQuantity ?? record.requestsUsed
-          : record.requestsUsed;
+        const quantity = record.creditsUsed;
         row[record.model] = (row[record.model] as number) + quantity;
         dailyTotal += quantity;
       }
@@ -219,7 +206,7 @@ export function UserDetailsView({
     }
 
     return result;
-  }, [processedData, user, usageArtifacts, dailyBucketsArtifacts, isUserUsageBasedBilling]);
+  }, [processedData, user, usageArtifacts, dailyBucketsArtifacts]);
 
   const effectiveUserAggregate = useMemo(
     () => userAggregate === undefined
@@ -241,29 +228,20 @@ export function UserDetailsView({
   const userModels = useMemo(() => Array.from(new Set(userData.map((entry) => entry.model))).sort(), [userData]);
   const modelColors = useMemo(() => generateModelColors(userModels), [userModels]);
 
-  const userTotalRequests = useMemo(() => {
+  const userTotalCredits = useMemo(() => {
     if (effectiveUserAggregate) {
-      return effectiveUserAggregate.totalRequests;
+      return effectiveUserAggregate.totalCredits;
     }
 
-    return calculateUserTotalRequests(processedData, user);
+    return calculateUserTotalCredits(processedData, user);
   }, [effectiveUserAggregate, processedData, user]);
 
-  const requestQuotaValue = isLegacyPremiumRequestQuotaValue(effectiveUserQuotaValue)
+  const quotaValue = isKnownQuotaValue(effectiveUserQuotaValue)
     ? effectiveUserQuotaValue
     : 'unknown';
-  const chartQuotaValue = isUserUsageBasedBilling && typeof effectiveUserQuotaValue === 'number'
-    ? effectiveUserQuotaValue
-    : requestQuotaValue;
-  const effectiveQuota = requestQuotaValue === 'unknown' ? Infinity : requestQuotaValue;
-  const billedOverage = billingArtifacts?.userMap.get(user)?.overage;
-  const estimatedOverageRequests = useMemo(
-    () => calculateOverageRequests(userTotalRequests, effectiveQuota),
-    [userTotalRequests, effectiveQuota]
-  );
-  const estimatedOverageCost = useMemo(() => calculateOverageCost(estimatedOverageRequests), [estimatedOverageRequests]);
-  const overageRequests = billedOverage?.hasBilledOverageData ? billedOverage.requests : estimatedOverageRequests;
-  const overageCost = billedOverage?.hasBilledOverageData ? billedOverage.cost : estimatedOverageCost;
+  const chartQuotaValue = quotaValue;
+  const excessCredits = spansMultipleMonths ? 0 : calculateExcessCredits(userTotalCredits, quotaValue);
+  const billedAdditionalUsage = billingArtifacts?.userMap.get(user)?.net;
 
   const modelUsageTotals = useMemo(() => {
     const totals: Record<string, number> = {};
@@ -289,7 +267,7 @@ export function UserDetailsView({
     date: string;
     model: string;
     costCenter?: string;
-    requests: number;
+    credits: number;
     gross: number;
     discount: number;
     net: number;
@@ -299,8 +277,7 @@ export function UserDetailsView({
     tokens?: TokenTotals;
   };
 
-  const hasAicGross = useMemo(() => hasAicFields(userData), [userData]);
-  const showAicGross = hasAicGross && !isUserUsageBasedBilling;
+  const showAicGross = false;
   const showTokens = analysisCtx?.tokenArtifacts !== null &&
     userData.some(row => TOKEN_COLUMNS.some(({ field }) => row[field] !== undefined));
   const hasUserCostCenters = userData.some(row => Boolean(row.costCenter));
@@ -310,13 +287,13 @@ export function UserDetailsView({
 
     // Aggregate by date + model + cost center so cost-center changes remain visible.
     type Key = string;
-    const agg = new Map<Key, { date: string; model: string; costCenter?: string; requests: number; gross: number; discount: number; net: number; aicGrossAmount: number; sourceRows: ProcessedData[] }>();
+    const agg = new Map<Key, { date: string; model: string; costCenter?: string; credits: number; gross: number; discount: number; net: number; aicGrossAmount: number; sourceRows: ProcessedData[] }>();
     for (const row of userData) {
       const key = `${row.dateKey}||${row.model}||${row.costCenter ?? ''}`;
-      const quantity = isUserUsageBasedBilling ? row.billingQuantity ?? row.requestsUsed : row.requestsUsed;
+      const quantity = row.creditsUsed;
       const existing = agg.get(key);
       if (existing) {
-        existing.requests += quantity;
+        existing.credits += quantity;
         existing.gross += row.grossAmount ?? 0;
         existing.discount += row.discountAmount ?? 0;
         existing.net += row.netAmount ?? 0;
@@ -327,7 +304,7 @@ export function UserDetailsView({
           date: row.dateKey,
           model: row.model,
           costCenter: row.costCenter,
-          requests: quantity,
+          credits: quantity,
           gross: row.grossAmount ?? 0,
           discount: row.discountAmount ?? 0,
           net: row.netAmount ?? 0,
@@ -359,7 +336,7 @@ export function UserDetailsView({
         rowSpan: dateSpan.get(r.date) ?? 1,
       };
     });
-  }, [hasBillingData, isUserUsageBasedBilling, showTokens, userData]);
+  }, [hasBillingData, showTokens, userData]);
 
   const productCosts = useMemo(() => {
     if (!hasBillingData) return [];
@@ -384,9 +361,7 @@ export function UserDetailsView({
         net: 0,
         aicGrossAmount: 0,
       };
-      entry.quantity += isUserUsageBasedBilling
-        ? row.aicQuantity ?? row.billingQuantity ?? row.requestsUsed
-        : row.requestsUsed;
+      entry.quantity += row.creditsUsed;
       entry.gross += row.grossAmount ?? 0;
       entry.discount += row.discountAmount ?? 0;
       entry.net += row.netAmount ?? 0;
@@ -397,11 +372,11 @@ export function UserDetailsView({
     return Array.from(totals.values()).sort(
       (left, right) => right.net - left.net || left.name.localeCompare(right.name)
     );
-  }, [hasBillingData, isUserUsageBasedBilling, userData]);
+  }, [hasBillingData, userData]);
 
   const planInfo = {
-    business: { name: 'Copilot Business', monthlyQuota: PRICING.BUSINESS_QUOTA },
-    enterprise: { name: 'Copilot Enterprise', monthlyQuota: PRICING.ENTERPRISE_QUOTA },
+    business: { name: 'Copilot Business', monthlyQuota: PRICING.BUSINESS_AI_CREDIT_QUOTA },
+    enterprise: { name: 'Copilot Enterprise', monthlyQuota: PRICING.ENTERPRISE_AI_CREDIT_QUOTA },
   };
 
   const userActualPlan = useMemo(() => {
@@ -477,33 +452,18 @@ export function UserDetailsView({
             {organization ? ` • ${organization}` : ''}
             {costCenter ? ` • ${costCenter}` : ''}
             {' • '}
-            {hasUserAiCreditUsage && !hasUserRequestUsage
-              ? `${userBillingQuantity.toFixed(1)} AI Credits consumed`
-              : `${userTotalRequests.toFixed(1)} / ${requestQuotaValue === 'unknown' ? 'Unknown' : requestQuotaValue} PRUs consumed`}
+            {spansMultipleMonths
+              ? `${userBillingQuantity.toFixed(1)} AI Credits across multiple months`
+              : `${userBillingQuantity.toFixed(1)} / ${quotaValue === 'unknown' ? 'Unknown' : quotaValue} AI Credits consumed`}
           </p>
-          {overageRequests > 0 && requestQuotaValue !== 'unknown' && (
+          {excessCredits > 0 && (
             <p className="text-sm text-red-600 font-medium" role="alert">
-              Overage: {overageRequests.toFixed(1)} PRUs · {formatCurrency(overageCost)}
+              Above included quota: {excessCredits.toFixed(1)} AI Credits
+              {billedAdditionalUsage !== undefined && ` · ${formatCurrency(billedAdditionalUsage)} additional usage billed`}
             </p>
           )}
         </div>
 
-        {userActualPlan === 'business' &&
-          overageRequests >= COST_OPTIMIZATION_THRESHOLDS.STRONG_CANDIDATE_THRESHOLD && (() => {
-            const savings = calculateEnterpriseUpgradeSavings(overageRequests);
-            return (
-              <div className="mt-3 flex items-start gap-3 p-3 bg-[#f0fdf4] border border-[#bbf7d0] rounded-md">
-                <svg className="w-4 h-4 text-[#2da44e] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="text-sm text-[#1f2328]">
-                  <span className="font-semibold text-[#2da44e]">Cost saving opportunity: </span>
-                  Upgrading this user to <span className="font-medium">Copilot Enterprise</span> would have saved{' '}
-                  <span className="font-semibold text-[#2da44e]">{formatCurrency(savings.potentialSavings)}</span> this period.
-                </p>
-              </div>
-            );
-          })()}
       </div>
 
       {/* Cost per Cost Center — standalone card */}
@@ -569,7 +529,7 @@ export function UserDetailsView({
                 {productCosts.map((product) => (
                   <tr key={product.label} className="hover:bg-[#fcfdff] transition-colors">
                     <td className="px-5 py-3 text-sm font-medium text-[#1f2328]">{product.label}</td>
-                    <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono">{product.requests.toFixed(2)}</td>
+                    <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono">{product.credits.toFixed(2)}</td>
                     {showAicGross && (
                       <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono">{formatCurrency(product.aicGrossAmount)}</td>
                     )}
@@ -687,7 +647,7 @@ export function UserDetailsView({
                     {hasUserCostCenters && (
                       <td className="px-5 py-3 text-sm text-[#636c76] whitespace-nowrap">{row.costCenter ?? '—'}</td>
                     )}
-                    <td className="px-5 py-3 text-sm font-mono text-[#1f2328] text-right">{row.requests.toFixed(2)}</td>
+                    <td className="px-5 py-3 text-sm font-mono text-[#1f2328] text-right">{row.credits.toFixed(2)}</td>
                     {showTokens && TOKEN_COLUMNS.map(({ field }) => (
                         <td key={field} className="px-5 py-3 text-sm font-mono tabular-nums text-[#636c76] text-right whitespace-nowrap">
                           <TokenValue totals={row.tokens} field={field} />
