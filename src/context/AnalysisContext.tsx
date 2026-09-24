@@ -60,7 +60,6 @@ interface AnalysisContextValue {
   dailyCumulativeData: ReturnType<typeof useAnalyzedData>['dailyCumulativeData'];
   codingAgentAnalysis: ReturnType<typeof useAnalyzedData>['codingAgentAnalysis'];
   codeReviewAnalysis: ReturnType<typeof useAnalyzedData>['codeReviewAnalysis'];
-  weeklyExhaustion: ReturnType<typeof useAnalyzedData>['weeklyExhaustion'];
 
   // Filters
   selectedMonths: string[];
@@ -189,8 +188,7 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
     codingAgentAnalysis,
     codeReviewAnalysis,
     processedData,
-    aggregateProcessedData,
-    weeklyExhaustion
+    aggregateProcessedData
   } = useAnalyzedData({
     baseProcessed,
     selectedMonths,
@@ -250,7 +248,6 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
     dailyCumulativeData,
     codingAgentAnalysis,
     codeReviewAnalysis,
-    weeklyExhaustion,
     selectedMonths,
     setSelectedMonths,
     availableMonths,

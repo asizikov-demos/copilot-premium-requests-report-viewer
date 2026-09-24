@@ -891,7 +891,7 @@ describe('DataAnalysis billing summary', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Insights' })[0]);
 
     await waitFor(() => {
-      expect(screen.getByText('Feature Utilization')).toBeInTheDocument();
+      expect(screen.getByText('Feature reach')).toBeInTheDocument();
       expect(screen.getAllByText('Code Review').length).toBeGreaterThan(0);
     });
 

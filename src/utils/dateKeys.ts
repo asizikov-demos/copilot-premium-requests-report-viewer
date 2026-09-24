@@ -20,12 +20,6 @@ export interface DateKeys {
   epoch: number;
 }
 
-export interface WeekBucket {
-  weekNumber: number;
-  startDate: string;
-  endDate: string;
-}
-
 // Static UTC month names map to avoid locale/date allocations during month label generation.
 export const MONTH_NAMES = [
   'January','February','March','April','May','June',
@@ -66,26 +60,4 @@ export function enumerateDatesInclusive(start: string, end: string): string[] {
     out.push(d.toISOString().slice(0, 10));
   }
   return out;
-}
-
-export function dayOfMonthToWeekBucket(day: number, monthKey: string): WeekBucket {
-  let weekNumber: number;
-  if (day <= 7) weekNumber = 1;
-  else if (day <= 14) weekNumber = 2;
-  else if (day <= 21) weekNumber = 3;
-  else if (day <= 28) weekNumber = 4;
-  else weekNumber = 5;
-
-  const [yearStr, monthStr] = monthKey.split('-');
-  const year = parseInt(yearStr, 10);
-  const month = parseInt(monthStr, 10);
-  const weekStartDay = weekNumber === 1 ? 1 : (weekNumber - 1) * 7 + 1;
-  const lastDayOfMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  const weekEndDay = weekNumber < 5 ? weekStartDay + 6 : lastDayOfMonth;
-
-  return {
-    weekNumber,
-    startDate: `${monthKey}-${String(weekStartDay).padStart(2, '0')}`,
-    endDate: `${monthKey}-${String(weekEndDay).padStart(2, '0')}`
-  };
 }

@@ -7,6 +7,17 @@ Analyze GitHub Copilot AI Credit billing exports. See per-user consumption, quot
 
 Review billed net charges alongside monthly AI Credit consumption. The dashboard does not estimate Enterprise upgrade savings from request-unit pricing.
 
+## Consumption Insights
+
+The overview shows compact consumption groups alongside feature reach and
+expandable adoption recommendations. Select a group to search its users or show
+the full list, then return to the overview. Unknown quotas are explicitly excluded
+from groups; select a single billing month to compare usage against quotas.
+Feature totals retain unattributed usage; Code Review and Code Quality per-user
+averages exclude it. Adoption recommendations retain the existing trigger (at least 40%
+of users below 45% consumption). Weekly quota exhaustion and its budget advisory
+have been removed; quota percentages and Cost Monitoring remain available.
+
 ## Live Demo
 
 Try the Sample Data option on the upload screen to see how it works without needing to upload your own report.
@@ -19,7 +30,6 @@ Try the Sample Data option on the upload screen to see how it works without need
 1. Clone & install: `git clone ... && npm install`
 2. Run: `npm run dev`
 3. Open http://localhost:3000 and drag in your CSV
-
 
 ## Supported CSV Format
 

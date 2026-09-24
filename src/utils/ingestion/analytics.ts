@@ -13,11 +13,11 @@ import { PRICING } from '@/constants/pricing';
 import type { AnalysisResults, ProcessedData } from '@/types/csv';
 import type { CodeReviewAnalysis } from '@/types/csv';
 import { CodingAgentAnalysis, UserDailyData } from '@/types/csv';
-import { buildAdvisoriesFromCategories, getEarlyExhausterCount, type Advisory } from '@/utils/analytics/advisory';
+import { buildAdvisoriesFromCategories, type Advisory } from '@/utils/analytics/advisory';
 import { classifyConsumptionUser } from '@/utils/analytics/insights';
 import type { FeatureUtilizationStats, InsightsOverviewData, UserConsumptionCategory } from '@/utils/analytics/insights';
 import { classifyQuotaMap, isKnownQuotaValue } from '@/utils/analytics/quota';
-import { dayOfMonthToWeekBucket, enumerateDatesInclusive, monthKeyToLabel } from '@/utils/dateKeys';
+import { enumerateDatesInclusive, monthKeyToLabel } from '@/utils/dateKeys';
 import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
 import {
   UNATTRIBUTED_AI_CREDIT_BUCKET,
@@ -286,73 +286,6 @@ export function buildDailyCumulativeDataFromArtifacts(daily: DailyBucketsArtifac
 }
 
 // -----------------------------
-// Weekly Quota Exhaustion From Artifacts
-// -----------------------------
-export interface WeeklyQuotaExhaustionBreakdown {
-  totalUsersExhausted: number;
-  weeks: Array<{ weekNumber: number; startDate: string; endDate: string; usersExhaustedInWeek: number; }>; // non-cumulative
-}
-
-export function computeWeeklyQuotaExhaustionFromArtifacts(
-  daily: DailyBucketsArtifacts,
-  quota: QuotaArtifacts
-): WeeklyQuotaExhaustionBreakdown {
-  if (!daily.dateRange) return { totalUsersExhausted: 0, weeks: [] };
-  // Determine full date range list and maintain cumulative usage per user
-  const dates = Array.from(daily.dailyUserTotals.keys()).sort();
-  if (dates.length === 0) return { totalUsersExhausted: 0, weeks: [] };
-
-  interface ExhaustionRecord { user: string; exhaustionDate: string; monthKey: string; }
-  const records: ExhaustionRecord[] = [];
-  const cumulative = new Map<string, number>();
-  const exhausted = new Set<string>();
-  const recordedUsers = new Set<string>();
-  let currentMonth = '';
-
-  for (const date of dates) {
-    const monthKey = date.slice(0, 7);
-    if (monthKey !== currentMonth) {
-      currentMonth = monthKey;
-      cumulative.clear();
-      exhausted.clear();
-    }
-    const dayMap = daily.dailyUserTotals.get(date)!;
-    for (const [user, val] of dayMap) {
-      if (exhausted.has(user)) continue;
-      const quotaVal = quota.quotaByUser.get(user);
-      if (!isKnownQuotaValue(quotaVal)) continue;
-      const newTotal = (cumulative.get(user) || 0) + val;
-      cumulative.set(user, newTotal);
-      if (newTotal >= quotaVal) {
-        exhausted.add(user);
-        if (!recordedUsers.has(user)) {
-          records.push({ user, exhaustionDate: date, monthKey });
-          recordedUsers.add(user);
-        }
-      }
-    }
-    // For users with no activity this day we still keep cumulative as-is.
-  }
-
-  if (records.length === 0) return { totalUsersExhausted: 0, weeks: [] };
-
-  interface WeekKey { monthKey: string; weekNumber: number; startDate: string; endDate: string; }
-  const weekMap = new Map<string, { key: WeekKey; users: Set<string> }>();
-  for (const rec of records) {
-    const d = rec.exhaustionDate; // YYYY-MM-DD
-    const day = parseInt(d.slice(8, 10), 10);
-    const { weekNumber, startDate, endDate } = dayOfMonthToWeekBucket(day, rec.monthKey);
-    const mapKey = `${rec.monthKey}-W${weekNumber}`;
-    if (!weekMap.has(mapKey)) weekMap.set(mapKey, { key: { monthKey: rec.monthKey, weekNumber, startDate, endDate }, users: new Set() });
-    weekMap.get(mapKey)!.users.add(rec.user);
-  }
-  const weeks = Array.from(weekMap.values())
-    .sort((a, b) => a.key.monthKey === b.key.monthKey ? a.key.weekNumber - b.key.weekNumber : a.key.monthKey.localeCompare(b.key.monthKey))
-    .map(entry => ({ weekNumber: entry.key.weekNumber, startDate: entry.key.startDate, endDate: entry.key.endDate, usersExhaustedInWeek: entry.users.size }));
-  return { totalUsersExhausted: records.length, weeks };
-}
-
-// -----------------------------
 // Coding Agent Adoption From Artifacts
 // -----------------------------
 export function analyzeCodingAgentAdoptionFromArtifacts(usage: UsageArtifacts, quota: QuotaArtifacts): CodingAgentAnalysis {
@@ -565,22 +498,17 @@ export function buildConsumptionCategoriesFromArtifacts(
 // Advisories From Artifacts
 // -----------------------------
 /**
- * Build advisories leveraging artifact-derived categories and weekly quota exhaustion.
+ * Build advisories leveraging artifact-derived consumption categories.
  * Builds advisories without raw row scans.
  */
 export function buildAdvisoriesFromArtifacts(
   categories: InsightsOverviewData,
-  weekly: WeeklyQuotaExhaustionBreakdown,
-  usage: UsageArtifacts,
-  quota: QuotaArtifacts
+  usage: UsageArtifacts
 ): Advisory[] {
-  // Currently quota artifacts not directly used; retained for future advisory enhancements.
-  void quota;
   const totalUsers = usage.userCount;
   if (totalUsers === 0) return [];
 
-  const earlyExhausterCount = getEarlyExhausterCount(weekly);
-  return buildAdvisoriesFromCategories(categories.lowAdoptionUsers, totalUsers, earlyExhausterCount);
+  return buildAdvisoriesFromCategories(categories.lowAdoptionUsers, totalUsers);
 }
 
 // -----------------------------

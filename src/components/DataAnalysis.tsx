@@ -131,7 +131,6 @@ function DataAnalysisInner() {
     processedData,
     aggregateProcessedData,
     baseProcessed,
-    weeklyExhaustion,
     availableMonths,
     hasMultipleMonthsData,
     selectedMonths,
@@ -629,27 +628,6 @@ function DataAnalysisInner() {
                   </p>
                 </div>
               )}
-
-              {/* Weekly Exhaustion Breakdown */}
-              {weeklyExhaustion.weeks.length > 0 && (
-                <div className="p-3 bg-[#f6f8fa] rounded-md border border-[#d1d9e0]">
-                  <p className="text-xs font-semibold text-[#1f2328] mb-2">Weekly Exhaustion</p>
-                  <p className="text-xs text-[#636c76] mb-3">Users exhausting quota by week</p>
-                  <div className="space-y-1.5 text-xs">
-                    <div className="flex justify-between items-center py-1 border-b border-[#d1d9e0]">
-                      <span className="font-semibold text-[#1f2328]">Total</span>
-                      <span className="font-bold text-indigo-600">{weeklyExhaustion.totalUsersExhausted}</span>
-                    </div>
-                    {weeklyExhaustion.weeks.map(w => (
-                      <div key={`${w.weekNumber}-${w.startDate}`} className="flex justify-between text-[#636c76]">
-                        <span>Week {w.weekNumber}</span>
-                        <span className="font-medium">{w.usersExhaustedInWeek}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
 
             </div>
           </div>
