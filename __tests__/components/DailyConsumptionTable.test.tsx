@@ -12,10 +12,9 @@ function makeProcessedRow(overrides: Partial<ProcessedData>): ProcessedData {
     timestamp,
     user: 'test-user-one',
     model: 'test-model-one',
-    requestsUsed: 0,
-    exceedsQuota: false,
-    totalQuota: '1000',
-    quotaValue: 1000,
+    creditsUsed: 0,
+    totalQuota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
+    quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
     iso: timestamp.toISOString(),
     dateKey,
     monthKey: dateKey.slice(0, 7),
@@ -30,22 +29,17 @@ describe('DailyConsumptionTable', () => {
     const sourceRows = [
       makeProcessedRow({
         model: 'test-model-one',
+        creditsUsed: 100,
         aicQuantity: 100,
         aicGrossAmount: 100 * PRICING.AI_CREDIT_USD_VALUE,
         netAmount: 0,
       }),
       makeProcessedRow({
         model: 'test-model-two',
+        creditsUsed: 50,
         aicQuantity: 50,
         aicGrossAmount: 50 * PRICING.AI_CREDIT_USD_VALUE,
         netAmount: 0.2,
-      }),
-      makeProcessedRow({
-        model: 'test-model-two',
-        usageUnit: 'request',
-        requestsUsed: 25,
-        grossAmount: 99,
-        netAmount: 99,
       }),
     ];
 
@@ -53,12 +47,11 @@ describe('DailyConsumptionTable', () => {
       <DailyConsumptionTable
         data={[{
           date: '2026-08-01',
-          totalRequests: 150,
+          totalCredits: 150,
           'test-model-one': 100,
           'test-model-two': 50,
         }]}
         models={['test-model-one', 'test-model-two']}
-        isUsageBasedBilling={true}
         sourceRows={sourceRows}
       />
     );
@@ -78,18 +71,17 @@ describe('DailyConsumptionTable', () => {
     expect(within(details).queryByText('$99.00')).not.toBeInTheDocument();
   });
 
-  it('uses request columns for legacy reports', () => {
+  it('renders AI-credit columns when older datasets omit billing fields', () => {
     render(
       <DailyConsumptionTable
-        data={[{ date: '2026-08-01', totalRequests: 3, 'test-model-one': 3 }]}
+        data={[{ date: '2026-08-01', totalCredits: 3, 'test-model-one': 3 }]}
         models={['test-model-one']}
-        isUsageBasedBilling={false}
         sourceRows={[]}
       />
     );
 
-    expect(screen.getByRole('columnheader', { name: 'Requests' })).toBeInTheDocument();
-    expect(screen.queryByRole('columnheader', { name: 'Included credits' })).not.toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Included credits' })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Requests' })).not.toBeInTheDocument();
     expect(screen.getByText('3.00')).toBeInTheDocument();
   });
 });

@@ -1,12 +1,7 @@
-export type UsageUnitKind = 'request' | 'ai_credit' | 'unknown';
+export type UsageUnitKind = 'ai_credit' | 'unknown';
 
 function normalizeUsageValue(value: string | undefined): string {
   return value?.trim().toLowerCase() ?? '';
-}
-
-export function isRequestUnitType(unitType: string | undefined): boolean {
-  const normalizedUnitType = normalizeUsageValue(unitType);
-  return normalizedUnitType === '' || normalizedUnitType === 'requests';
 }
 
 export function isAiCreditUnitType(unitType: string | undefined): boolean {
@@ -15,17 +10,20 @@ export function isAiCreditUnitType(unitType: string | undefined): boolean {
 }
 
 export function isAiCreditSku(sku: string | undefined): boolean {
-  const normalizedSku = normalizeUsageValue(sku);
-  return normalizedSku === 'copilot_ai_credit' || normalizedSku === 'code_quality_ai_credit';
+  return normalizeUsageValue(sku).endsWith('_ai_credit');
+}
+
+export function isLegacyRequestRow(unitType: string | undefined, sku?: string): boolean {
+  return normalizeUsageValue(unitType) === 'requests'
+    || normalizeUsageValue(sku).endsWith('_premium_request');
 }
 
 export function getUsageUnitKind(unitType: string | undefined, sku?: string): UsageUnitKind {
-  if (isAiCreditUnitType(unitType) || isAiCreditSku(sku)) {
-    return 'ai_credit';
+  if (isLegacyRequestRow(unitType, sku)) {
+    return 'unknown';
   }
-
-  if (isRequestUnitType(unitType)) {
-    return 'request';
+  if (isAiCreditUnitType(unitType) || (!normalizeUsageValue(unitType) && isAiCreditSku(sku))) {
+    return 'ai_credit';
   }
 
   return 'unknown';
@@ -33,21 +31,4 @@ export function getUsageUnitKind(unitType: string | undefined, sku?: string): Us
 
 export function isSupportedUsageUnitType(unitType: string | undefined, sku?: string): boolean {
   return getUsageUnitKind(unitType, sku) !== 'unknown';
-}
-
-export function isAiCreditUsageRow(row: { usageUnit?: UsageUnitKind }): boolean {
-  return row.usageUnit === 'ai_credit';
-}
-
-export function isUsageBasedBillingRow(row: {
-  usageUnit?: UsageUnitKind;
-  product?: string;
-  sku?: string;
-}): boolean {
-  if (!isAiCreditUsageRow(row)) {
-    return false;
-  }
-
-  return normalizeUsageValue(row.product) !== 'code_quality'
-    && normalizeUsageValue(row.sku) !== 'code_quality_ai_credit';
 }

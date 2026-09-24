@@ -39,12 +39,12 @@ export function UsersQuotaConsumptionChart({
         />
         <YAxis 
           tick={{ fill: '#636c76', fontSize: 11 }}
-          domain={[0, (dataMax: number) => Math.max(currentQuota, dataMax)]}
+          domain={[0, (dataMax: number) => showQuotaReference ? Math.max(currentQuota, dataMax) : dataMax]}
         />
         <Tooltip 
           labelFormatter={utcDateLabelFormatter}
           formatter={(value, name) => [
-            `${Number(value).toFixed(1)} requests`,
+            `${Number(value).toFixed(1)} AI Credits`,
             String(name)
           ]}
           contentStyle={chartTooltipContentStyle}
@@ -54,22 +54,22 @@ export function UsersQuotaConsumptionChart({
         {/* Quota reference lines */}
         {showQuotaReference && (hasMixedQuotas ? (
           <>
-            {quotaTypes.has(PRICING.BUSINESS_QUOTA) && (
+            {quotaTypes.has(PRICING.BUSINESS_AI_CREDIT_QUOTA) && (
               <ReferenceLine 
-                y={PRICING.BUSINESS_QUOTA} 
+                y={PRICING.BUSINESS_AI_CREDIT_QUOTA}
                 stroke="#f97316" 
                 strokeWidth={2}
                 strokeDasharray="5 5"
-                label={{ value: `${PRICING.BUSINESS_QUOTA} Business quota`, position: "insideTopRight" }}
+                label={{ value: `${PRICING.BUSINESS_AI_CREDIT_QUOTA} Business quota`, position: "insideTopRight" }}
               />
             )}
-            {quotaTypes.has(PRICING.ENTERPRISE_QUOTA) && (
+            {quotaTypes.has(PRICING.ENTERPRISE_AI_CREDIT_QUOTA) && (
               <ReferenceLine 
-                y={PRICING.ENTERPRISE_QUOTA} 
+                y={PRICING.ENTERPRISE_AI_CREDIT_QUOTA}
                 stroke="#dc2626" 
                 strokeWidth={2}
                 strokeDasharray="5 5"
-                label={{ value: `${PRICING.ENTERPRISE_QUOTA} Enterprise quota`, position: "insideTopRight" }}
+                label={{ value: `${PRICING.ENTERPRISE_AI_CREDIT_QUOTA} Enterprise quota`, position: "insideTopRight" }}
               />
             )}
           </>

@@ -22,7 +22,6 @@ const PRODUCT_CATEGORY_COLORS: Record<ProductCategory, string> = {
   'Coding Agent': '#06b6d4',
   'Code Review': '#8b5cf6',
   'Code Quality': '#22c55e',
-  'Code Review for Non-Copilot Users': '#14b8a6',
 };
 const USERS_PER_PAGE = 50;
 
@@ -47,7 +46,7 @@ interface BillingGroupUserRow {
 
 interface BillingGroupDailyChartDatum {
   date: string;
-  totalRequests: number;
+  totalCredits: number;
   [product: string]: string | number;
 }
 
@@ -61,7 +60,6 @@ export interface BillingGroupDetailsViewProps {
   /** Prefix for the generated daily breakdown detail element ids. */
   detailIdPrefix: string;
   rows: ProcessedData[];
-  isUsageBasedBilling: boolean;
   quantityColumnLabel: string;
   costLabels: BillingCostLabels;
   hasAicGross: boolean;
@@ -71,7 +69,7 @@ export interface BillingGroupDetailsViewProps {
 }
 
 function getRowQuantity(row: ProcessedData): number {
-  return row.billingQuantity ?? row.requestsUsed;
+  return row.creditsUsed;
 }
 
 function formatUtcDate(dateKey: string): string {
@@ -114,7 +112,7 @@ function buildDailyRows(rows: ProcessedData[]): BillingGroupDailyRow[] {
 
     return {
       date,
-      quantity: products.reduce((total, product) => total + product.requests, 0),
+      quantity: products.reduce((total, product) => total + product.credits, 0),
       gross: products.reduce((total, product) => total + product.gross, 0),
       discount: products.reduce((total, product) => total + product.discount, 0),
       net: products.reduce((total, product) => total + product.net, 0),
@@ -130,7 +128,6 @@ export function BillingGroupDetailsView({
   groupsLabel,
   detailIdPrefix,
   rows,
-  isUsageBasedBilling,
   quantityColumnLabel,
   costLabels,
   hasAicGross,
@@ -147,7 +144,7 @@ export function BillingGroupDetailsView({
   const userCount = useMemo(() => {
     const users = new Set<string>();
     for (const row of rows) {
-      if (!row.isNonCopilotUsage) {
+      if (!row.isUnattributedUsage) {
         users.add(row.user);
       }
     }
@@ -174,7 +171,7 @@ export function BillingGroupDetailsView({
 
     for (const row of rows) {
       // Special usage buckets are not attributable to a real user.
-      if (row.isNonCopilotUsage) {
+      if (row.isUnattributedUsage) {
         continue;
       }
 
@@ -217,13 +214,13 @@ export function BillingGroupDetailsView({
   ), [productCosts]);
 
   const chartData = useMemo((): BillingGroupDailyChartDatum[] => dailyRows.map((row) => {
-    const datum: BillingGroupDailyChartDatum = { date: row.date, totalRequests: row.quantity };
+    const datum: BillingGroupDailyChartDatum = { date: row.date, totalCredits: row.quantity };
 
     for (const label of productLabels) {
       datum[label] = 0;
     }
     for (const product of row.products) {
-      datum[product.label] = product.requests;
+      datum[product.label] = product.credits;
     }
 
     return datum;
@@ -311,7 +308,7 @@ export function BillingGroupDetailsView({
         <div className="px-5 py-4 border-b border-[#d1d9e0]">
           <h3 className="text-sm font-medium text-[#1f2328]">Spend per Product</h3>
           <p className="text-xs text-[#636c76] mt-0.5">
-            {isUsageBasedBilling ? 'AI credit consumption' : 'Premium request consumption'} attributed to this {groupLabel}.
+            AI credit consumption attributed to this {groupLabel}.
           </p>
         </div>
         {productCosts.length > 0 ? (
@@ -337,7 +334,7 @@ export function BillingGroupDetailsView({
                 {productCosts.map((product) => (
                   <tr key={product.label} className="hover:bg-[#fcfdff] transition-colors duration-150">
                     <td className="px-5 py-3 text-sm font-medium text-[#1f2328]">{product.label}</td>
-                    <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono tabular-nums">{formatDecimalQuantity(product.requests)}</td>
+                    <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono tabular-nums">{formatDecimalQuantity(product.credits)}</td>
                     {hasAicGross && (
                       <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono tabular-nums">{formatCurrency(product.aicGrossAmount)}</td>
                     )}
@@ -593,7 +590,7 @@ export function BillingGroupDetailsView({
                                 {row.products.map((product) => (
                                   <tr key={product.label}>
                                     <td className="px-12 py-3 text-sm font-medium text-[#1f2328]">{product.label}</td>
-                                    <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono tabular-nums">{formatDecimalQuantity(product.requests)}</td>
+                                    <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono tabular-nums">{formatDecimalQuantity(product.credits)}</td>
                                     {hasAicGross && (
                                       <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono tabular-nums">{formatCurrency(product.aicGrossAmount)}</td>
                                     )}

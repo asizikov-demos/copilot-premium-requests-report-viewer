@@ -6,20 +6,12 @@ export interface BillingCostLabels {
   netSummary: string;
 }
 
-export function getBillingCostLabels(isUsageBasedBilling: boolean): BillingCostLabels {
-  return isUsageBasedBilling
-    ? {
+export function getBillingCostLabels(): BillingCostLabels {
+  return {
       gross: 'Gross Amount',
       discount: 'Included Credits',
       discountSummary: 'Included credits',
       net: 'Additional usage',
       netSummary: 'Additional usage',
-    }
-    : {
-      gross: 'Gross',
-      discount: 'Discount',
-      discountSummary: 'Discounts',
-      net: 'Net',
-      netSummary: 'Net cost',
     };
 }

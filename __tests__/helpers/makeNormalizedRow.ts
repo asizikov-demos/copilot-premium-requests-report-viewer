@@ -9,7 +9,6 @@ export function makeNormalizedRow(partial: Partial<NormalizedRow> = {}): Normali
     quantity: partial.quantity ?? 1,
     quotaRaw: partial.quotaRaw,
     quotaValue: partial.quotaValue,
-    exceedsQuota: partial.exceedsQuota,
     product: partial.product,
     sku: partial.sku,
     unitType: partial.unitType,
@@ -27,7 +26,7 @@ export function makeNormalizedRow(partial: Partial<NormalizedRow> = {}): Normali
     outputTokens: partial.outputTokens,
     cacheReadTokens: partial.cacheReadTokens,
     cacheWriteTokens: partial.cacheWriteTokens,
-    isNonCopilotUsage: partial.isNonCopilotUsage ?? false,
+    isUnattributedUsage: partial.isUnattributedUsage ?? false,
     usageBucket: partial.usageBucket,
   };
 }

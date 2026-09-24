@@ -6,15 +6,12 @@ import { DailyConsumptionTable } from '@/components/DailyConsumptionTable';
 import { useAnalysisContext } from '@/context/AnalysisContext';
 import { ModelDailyStackedChart } from '@/components/charts/ModelDailyStackedChart';
 import { filterDailySeriesByMonths } from '@/utils/analytics/filters';
-import { getEffectiveAicQuantity } from '@/utils/aicFields';
 import { formatCurrency } from '@/utils/formatters';
-import { buildDailyModelAicUsageFromArtifacts, buildDailyModelUsageFromArtifacts } from '@/utils/ingestion/analytics';
+import { buildDailyModelUsageFromArtifacts } from '@/utils/ingestion/analytics';
 import { generateModelColors } from '@/utils/modelColors';
-import { isUsageBasedBillingRow } from '@/utils/unitType';
 
 interface TopAicModelRow {
   model: string;
-  requests: number;
   aicQuantity: number;
   aicGrossAmount: number;
   share: number;
@@ -28,40 +25,39 @@ export function ModelUsageTrendsOverview() {
     billingArtifacts,
     aggregateProcessedData,
   } = useAnalysisContext();
-  const isUsageBasedBilling = useMemo(() => {
-    return aggregateProcessedData.some(isUsageBasedBillingRow);
-  }, [aggregateProcessedData]);
-
   const { data, models } = useMemo(() => {
-    if (!usageArtifacts || !dailyBucketsArtifacts) {
+    if (!dailyBucketsArtifacts) {
       return { data: [], models: [] as string[] };
     }
 
-    const raw = isUsageBasedBilling
-      ? buildDailyModelAicUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts)
-      : buildDailyModelUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
-
-    const filtered = filterDailySeriesByMonths(raw, selectedMonths);
-
-    const modelKeys = Object.keys(usageArtifacts.modelTotals).sort();
-    return { data: filtered, models: modelKeys };
-  }, [dailyBucketsArtifacts, isUsageBasedBilling, selectedMonths, usageArtifacts]);
+    if (!usageArtifacts) {
+      return { data: [], models: [] as string[] };
+    }
+    const raw = buildDailyModelUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
+    return {
+      data: filterDailySeriesByMonths(raw, selectedMonths),
+      models: Object.keys(usageArtifacts.modelTotals).sort(),
+    };
+  }, [dailyBucketsArtifacts, selectedMonths, usageArtifacts]);
 
   const modelColors: Record<string, string> = useMemo(() => {
     return generateModelColors(models);
   }, [models]);
 
   const topAicModelAnalysis = useMemo((): { rows: TopAicModelRow[]; topShare: number } => {
-    if (!billingArtifacts?.hasAnyAicData) {
+    if (aggregateProcessedData.length === 0) {
       return { rows: [], topShare: 0 };
     }
 
-    const rows = Array.from(billingArtifacts.billingByModel.entries())
-      .map(([model, totals]) => ({
+    const creditsByModel = new Map<string, number>();
+    for (const row of aggregateProcessedData) {
+      creditsByModel.set(row.model, (creditsByModel.get(row.model) ?? 0) + row.creditsUsed);
+    }
+    const rows = [...creditsByModel.entries()]
+      .map(([model, credits]) => ({
         model,
-        requests: totals.quantity,
-        aicQuantity: getEffectiveAicQuantity(totals),
-        aicGrossAmount: totals.aicGrossAmount,
+        aicQuantity: credits,
+        aicGrossAmount: billingArtifacts?.billingByModel.get(model)?.aicGrossAmount ?? 0,
       }))
       .filter((row) => row.aicQuantity > 0 || row.aicGrossAmount > 0);
 
@@ -87,7 +83,7 @@ export function ModelUsageTrendsOverview() {
       rows: topRows,
       topShare: totalConsumption > 0 ? (topConsumption / totalConsumption) * 100 : 0,
     };
-  }, [billingArtifacts]);
+  }, [aggregateProcessedData, billingArtifacts]);
   const { rows: topAicModelRows, topShare: topAicModelShare } = topAicModelAnalysis;
 
   return (
@@ -95,7 +91,7 @@ export function ModelUsageTrendsOverview() {
       <div>
         <h2 className="text-2xl font-semibold tracking-tight text-[#1f2328]">Model Usage Trends</h2>
         <p className="text-sm text-[#636c76] mt-1">
-          {isUsageBasedBilling ? 'Daily stacked AI Credits by model (UTC)' : 'Daily stacked request view by model (UTC)'}
+          Daily stacked AI Credits by model (UTC)
         </p>
       </div>
 
@@ -117,7 +113,6 @@ export function ModelUsageTrendsOverview() {
                   <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">AI Credits</th>
                   <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">AI Credits Gross</th>
                   <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">Share</th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">Requests</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#d1d9e0]">
@@ -130,7 +125,6 @@ export function ModelUsageTrendsOverview() {
                     </td>
                     <td className="px-5 py-3 text-sm font-mono text-[#636c76] text-right">{formatCurrency(row.aicGrossAmount)}</td>
                     <td className="px-5 py-3 text-sm font-mono text-[#636c76] text-right">{row.share.toFixed(1)}%</td>
-                    <td className="px-5 py-3 text-sm font-mono text-[#636c76] text-right">{row.requests.toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -148,7 +142,7 @@ export function ModelUsageTrendsOverview() {
               data={data}
               models={models}
               modelColors={modelColors}
-              valueUnitLabel={isUsageBasedBilling ? 'AI Credits' : undefined}
+              valueUnitLabel="AI Credits"
             />
           </div>
         )}
@@ -158,7 +152,6 @@ export function ModelUsageTrendsOverview() {
         <DailyConsumptionTable
           data={data}
           models={models}
-          isUsageBasedBilling={isUsageBasedBilling}
           sourceRows={aggregateProcessedData}
         />
       )}

@@ -46,8 +46,7 @@ export function buildProcessedDataFromRows(
       timestamp,
       user: row.user,
       model: row.model,
-      requestsUsed: row.quantity,
-      exceedsQuota: row.exceedsQuota ?? false,
+      creditsUsed: row.quantity,
       totalQuota: row.quotaValue === 'unknown'
         ? 'Unknown'
         : (row.quotaRaw || String(row.quotaValue ?? 'Unknown')),
@@ -69,7 +68,7 @@ export function buildProcessedDataFromRows(
       outputTokens: row.outputTokens,
       cacheReadTokens: row.cacheReadTokens,
       cacheWriteTokens: row.cacheWriteTokens,
-      isNonCopilotUsage: row.isNonCopilotUsage,
+      isUnattributedUsage: row.isUnattributedUsage,
       usageBucket: row.usageBucket,
       ...keys
     });

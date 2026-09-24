@@ -7,8 +7,8 @@ import { chartTooltipContentStyle, chartTooltipLabelStyle, utcDateLabelFormatter
 
 export interface CodingAgentUsageDatum {
   date: string;              // YYYY-MM-DD (UTC original date fragment)
-  dailyRequests: number;     // usage that day
-  cumulativeRequests: number;// cumulative total up to that day
+  dailyCredits: number;     // usage that day
+  cumulativeCredits: number;// cumulative total up to that day
 }
 
 type ResponsiveHeight = number | `${number}%`;
@@ -19,9 +19,9 @@ interface CodingAgentUsageChartProps {
   valueUnitLabel?: string;
 }
 
-export function CodingAgentUsageChart({ data, height = '100%', valueUnitLabel = 'requests' }: CodingAgentUsageChartProps) {
-  const dailyLabel = valueUnitLabel === 'AI Credits' ? 'Daily AI Credits' : 'Daily Requests';
-  const cumulativeLabel = valueUnitLabel === 'AI Credits' ? 'Cumulative AI Credits' : 'Cumulative Requests';
+export function CodingAgentUsageChart({ data, height = '100%', valueUnitLabel = 'AI Credits' }: CodingAgentUsageChartProps) {
+  const dailyLabel = 'Daily AI Credits';
+  const cumulativeLabel = 'Cumulative AI Credits';
 
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -45,7 +45,7 @@ export function CodingAgentUsageChart({ data, height = '100%', valueUnitLabel = 
         />
         <Line
           type="monotone"
-          dataKey="cumulativeRequests"
+          dataKey="cumulativeCredits"
           stroke="#6366f1"
           strokeWidth={2}
           dot={{ r: 3 }}
@@ -54,7 +54,7 @@ export function CodingAgentUsageChart({ data, height = '100%', valueUnitLabel = 
         />
         <Line
           type="monotone"
-          dataKey="dailyRequests"
+          dataKey="dailyCredits"
           stroke="#22c55e"
           strokeWidth={2}
           dot={{ r: 3 }}

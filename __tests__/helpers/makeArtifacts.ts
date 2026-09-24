@@ -20,7 +20,7 @@ import { makeNormalizedRow } from './makeNormalizedRow';
 
 export interface MakeUsageUser {
   user: string;
-  totalRequests: number;
+  totalCredits: number;
   modelBreakdown?: Record<string, number>;
   organization?: string;
   costCenter?: string;
@@ -30,7 +30,7 @@ export interface MakeUsageUser {
  * Build a {@link UsageArtifacts} object from a list of users.
  *
  * `modelTotals`, `userCount` and `modelCount` are derived from the per-user
- * `modelBreakdown` (defaulting to `{ 'model-a': totalRequests }`) to keep the
+ * `modelBreakdown` (defaulting to `{ 'model-a': totalCredits }`) to keep the
  * shape consistent with UsageAggregator output.
  */
 export function makeUsageArtifacts(users: MakeUsageUser[]): UsageArtifacts {
@@ -40,7 +40,7 @@ export function makeUsageArtifacts(users: MakeUsageUser[]): UsageArtifacts {
   const userAggregates: UserAggregate[] = users.map((u) => {
     const modelBreakdown = u.modelBreakdown && Object.keys(u.modelBreakdown).length > 0
       ? u.modelBreakdown
-      : { 'model-a': u.totalRequests };
+      : { 'model-a': u.totalCredits };
 
     let topModel: string | undefined;
     let topModelValue = -Infinity;
@@ -54,7 +54,7 @@ export function makeUsageArtifacts(users: MakeUsageUser[]): UsageArtifacts {
 
     const aggregate: UserAggregate = {
       user: u.user,
-      totalRequests: u.totalRequests,
+      totalCredits: u.totalCredits,
       modelBreakdown,
       organization: u.organization || undefined,
       costCenter: u.costCenter || undefined,
@@ -89,7 +89,7 @@ export interface MakeQuotaEntry {
  *
  * Delegates to {@link QuotaAggregator} so the accumulation policy and tier logic
  * have a single source of truth. Each entry is fed through the aggregator as a
- * synthetic `requests` row so the aggregator's own logic computes the result.
+ * synthetic AI-credit row so the aggregator's own logic computes the result.
  */
 export function makeQuotaArtifacts(entries: MakeQuotaEntry[]): QuotaArtifacts {
   const aggregator = new QuotaAggregator();
@@ -100,8 +100,8 @@ export function makeQuotaArtifacts(entries: MakeQuotaEntry[]): QuotaArtifacts {
       makeNormalizedRow({
         user: e.user,
         quotaValue: e.quota,
-        unitType: 'requests',
-        sku: undefined,
+        unitType: 'ai-credits',
+        sku: 'copilot_ai_credit',
       }),
       ctx
     );
@@ -115,8 +115,6 @@ export interface MakeDailyBucketEntry {
   used: number;
   /** Optional model name; defaults to `model-a`. Used to populate `dailyUserModelTotals`. */
   model?: string;
-  /** When true, populate AI Credits daily totals instead of request daily totals. */
-  isAic?: boolean;
 }
 
 /**
@@ -132,17 +130,15 @@ export function makeDailyBucketsArtifacts(
   overrides: Partial<DailyBucketsArtifacts> = {}
 ): DailyBucketsArtifacts {
   const dailyUserTotals = new Map<string, Map<string, number>>();
-  const dailyUserAicTotals = new Map<string, Map<string, number>>();
   const dailyUserModelTotals = new Map<string, Map<string, Map<string, number>>>();
-  const dailyUserAicModelTotals = new Map<string, Map<string, Map<string, number>>>();
   const months = new Set<string>();
   let min: string | null = null;
   let max: string | null = null;
 
   for (const e of entries) {
     const model = e.model ?? 'model-a';
-    const totals = e.isAic ? dailyUserAicTotals : dailyUserTotals;
-    const modelTotals = e.isAic ? dailyUserAicModelTotals : dailyUserModelTotals;
+    const totals = dailyUserTotals;
+    const modelTotals = dailyUserModelTotals;
 
     let userMap = totals.get(e.date);
     if (!userMap) {
@@ -170,9 +166,7 @@ export function makeDailyBucketsArtifacts(
 
   const artifacts: DailyBucketsArtifacts = {
     dailyUserTotals,
-    dailyUserAicTotals,
     dailyUserModelTotals,
-    dailyUserAicModelTotals,
     dailyBucketTotals: new Map(),
     dailyBucketModelTotals: new Map(),
     dateRange: min && max ? { min, max } : null,

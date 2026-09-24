@@ -115,8 +115,8 @@ describe('token artifacts', () => {
     makeNormalizedRow({ day: '2026-06-30', model: 'test-model-one', inputTokens: 100, outputTokens: 20, cacheReadTokens: 0, cacheWriteTokens: 4 }),
     makeNormalizedRow({ day: '2026-06-30', user: 'test-user-two', model: 'test-model-one', inputTokens: 0 }),
     makeNormalizedRow({ day: '2026-06-30', model: 'test-model-one' }),
-    makeNormalizedRow({ day: '2026-06-30', user: '', model: 'test-model-one', inputTokens: 10, isNonCopilotUsage: true, usageBucket: 'unattributed_ai_credit' }),
-    makeNormalizedRow({ day: '2026-06-30', user: '', model: 'test-model-two', inputTokens: 3, isNonCopilotUsage: true, usageBucket: 'non_copilot_code_review' }),
+    makeNormalizedRow({ day: '2026-06-30', user: '', model: 'test-model-one', inputTokens: 10, isUnattributedUsage: true, usageBucket: 'unattributed_ai_credit' }),
+    makeNormalizedRow({ day: '2026-06-30', user: '', model: 'test-model-two', inputTokens: 3, isUnattributedUsage: true, usageBucket: 'unattributed_ai_credit' }),
   ];
 
   function aggregate() {
@@ -137,8 +137,7 @@ describe('token artifacts', () => {
     expect(artifacts.byUser.get('test-user-one')).toMatchObject({ inputTokens: 150, rowCount: 3 });
     expect(artifacts.byUser.get('test-user-two')).toMatchObject({ inputTokens: 0, rowCount: 1 });
     expect([...artifacts.byUser.keys()]).toEqual(['test-user-one', 'test-user-two']);
-    expect(artifacts.specialBuckets.get('unattributed_ai_credit')?.inputTokens).toBe(10);
-    expect(artifacts.specialBuckets.get('non_copilot_code_review')?.inputTokens).toBe(3);
+    expect(artifacts.specialBuckets.get('unattributed_ai_credit')?.inputTokens).toBe(13);
     expect([...artifacts.byDay.keys()]).toEqual(['2026-06-30', '2026-07-01']);
     expect(artifacts.byDay.get('2026-06-30')?.byModel.get('test-model-one')?.inputTokens).toBe(110);
     expect(artifacts.byDay.get('2026-06-30')?.byUser.get('test-user-one')?.inputTokens).toBe(100);
@@ -151,7 +150,7 @@ describe('token artifacts', () => {
     expect(june.totals.reportedRows.inputTokens).toBe(4);
     expect(june.byUser.get('test-user-one')?.inputTokens).toBe(100);
     expect(june.byModel.get('test-model-two')?.inputTokens).toBe(3);
-    expect(june.specialBuckets.get('unattributed_ai_credit')?.inputTokens).toBe(10);
+    expect(june.specialBuckets.get('unattributed_ai_credit')?.inputTokens).toBe(13);
     expect([...june.byDay.keys()]).toEqual(['2026-06-30']);
     expect(artifacts).toEqual(aggregate());
     expect(filterTokenArtifactsByMonths(artifacts, [])).toBe(artifacts);

@@ -14,7 +14,7 @@ import {
 } from '@/utils/ingestion';
 import { getBasePath } from '@/constants/deployment';
 
-const SAMPLE_DATA_FILENAME = 'pru-example.csv';
+const SAMPLE_DATA_FILENAME = 'ai-credits-example.csv';
 
 /**
  * Normalize a base path value to ensure it's safe for URL construction.
@@ -121,7 +121,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
           
           // Check if CSV is empty
           if (result.rowsProcessed === 0) {
-            onError('CSV file is empty');
+            onError(result.warnings[0] ?? 'CSV file is empty');
             setIsLoading(false);
             setProgress(0);
             setTotalRowsProcessed(0);

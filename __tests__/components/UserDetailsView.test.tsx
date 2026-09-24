@@ -7,6 +7,7 @@ import type { ProcessedData, UserDailyData } from '@/types/csv';
 import { buildProcessedDataFromRawRows } from '@/utils/ingestion/adapters';
 
 import { makeUsageArtifacts } from '../helpers/makeArtifacts';
+import { makeProcessedData } from '../helpers/testUtils';
 
 jest.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div data-testid="chart-container">{children}</div>,
@@ -35,7 +36,7 @@ describe('UserDetailsView', () => {
 
   it('renders token-only daily rows without monetary columns and preserves cost centers', () => {
     const base = {
-      date: '2026-06-30', username: 'test-user-one', model: 'test-model-one', quantity: '1',
+      date: '2026-06-30', username: 'test-user-one', model: 'test-model-one', quantity: '1', unit_type: 'ai-credits',
     };
     const rows = buildProcessedDataFromRawRows([
       { ...base, input: '0', cost_center_name: 'test-cost-center-one' },
@@ -46,7 +47,7 @@ describe('UserDetailsView', () => {
     );
     const table = screen.getByRole('table', { name: 'Daily Model Usage Breakdown' });
     expect(within(table).getAllByRole('columnheader').map(header => header.textContent)).toEqual([
-      'Date', 'Model', 'Cost Center', 'Requests', 'Input Tokens', 'Output Tokens',
+      'Date', 'Model', 'Cost Center', 'AI Credits', 'Input Tokens', 'Output Tokens',
       'Cache Write Tokens', 'Cache Read Tokens',
     ]);
     expect(within(table).getAllByRole('row')).toHaveLength(3);
@@ -123,7 +124,7 @@ describe('UserDetailsView', () => {
 
   it('shows all four token columns for reported zeros and hides them for legacy user rows', () => {
     const base = {
-      date: '2026-06-30', username: 'test-user-one', model: 'test-model-one', quantity: '1', gross_amount: '0',
+      date: '2026-06-30', username: 'test-user-one', model: 'test-model-one', quantity: '1', unit_type: 'ai-credits', gross_amount: '0',
     };
     const { rerender } = render(
       <UserDetailsView user="test-user-one" processedData={buildProcessedDataFromRawRows([
@@ -148,10 +149,9 @@ describe('UserDetailsView', () => {
       const iso = timestamp.toISOString();
       return {
         timestamp,
-        user: 'User1',
+        user: 'test-user-one',
         model: 'gpt-4',
-        requestsUsed: 1,
-        exceedsQuota: false,
+        creditsUsed: 1,
         totalQuota: quotaValue === 'unknown' ? 'Unknown' : quotaValue.toString(),
         quotaValue,
         iso,
@@ -176,9 +176,9 @@ describe('UserDetailsView', () => {
   it('renders github-style breadcrumbs and navigates back', async () => {
     render(
       <UserDetailsView
-        user="User1"
-        processedData={createMockProcessedData([300])}
-        userQuotaValue={300}
+        user="test-user-one"
+        processedData={createMockProcessedData([PRICING.BUSINESS_AI_CREDIT_QUOTA])}
+        userQuotaValue={PRICING.BUSINESS_AI_CREDIT_QUOTA}
         onBack={mockOnBack}
       />
     );
@@ -188,16 +188,16 @@ describe('UserDetailsView', () => {
     expect(mockOnBack).toHaveBeenCalledTimes(1);
 
     await waitFor(() => {
-      expect(screen.getAllByText('User1').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('test-user-one').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText(/Copilot Business/)).toBeInTheDocument();
-      expect(screen.getByText(/\d+(\.\d+)?\s*\/\s*300/)).toBeInTheDocument();
+      expect(screen.getByText(/\d+(\.\d+)?\s*\/\s*1900/)).toBeInTheDocument();
     });
   });
 
   it('renders unknown quota details', async () => {
     render(
       <UserDetailsView
-        user="User1"
+        user="test-user-one"
         processedData={createMockProcessedData(['unknown'])}
         userQuotaValue="unknown"
         onBack={mockOnBack}
@@ -211,7 +211,7 @@ describe('UserDetailsView', () => {
   });
 
   it('uses the filtered user aggregate for organization and cost center metadata', () => {
-    const processedData = createMockProcessedData([PRICING.BUSINESS_QUOTA]).map((row) => ({
+    const processedData = createMockProcessedData([PRICING.BUSINESS_AI_CREDIT_QUOTA]).map((row) => ({
       ...row,
       user: 'test-user-one',
       organization: 'test-org-row',
@@ -222,10 +222,10 @@ describe('UserDetailsView', () => {
       <UserDetailsView
         user="test-user-one"
         processedData={processedData}
-        userQuotaValue={PRICING.BUSINESS_QUOTA}
+        userQuotaValue={PRICING.BUSINESS_AI_CREDIT_QUOTA}
         userAggregate={{
           user: 'test-user-one',
-          totalRequests: 1,
+          totalCredits: 1,
           modelBreakdown: { 'test-model-one': 1 },
           organization: 'test-org-artifact',
           costCenter: 'test-cost-center-artifact',
@@ -245,7 +245,7 @@ describe('UserDetailsView', () => {
       usageArtifacts: makeUsageArtifacts([
         {
           user: 'test-user-one',
-          totalRequests: 50,
+          totalCredits: 50,
           organization: 'test-org-full-upload',
           costCenter: 'test-cost-center-full-upload',
         },
@@ -257,7 +257,7 @@ describe('UserDetailsView', () => {
         <UserDetailsView
           user="test-user-one"
           processedData={[]}
-          userQuotaValue={PRICING.BUSINESS_QUOTA}
+          userQuotaValue={PRICING.BUSINESS_AI_CREDIT_QUOTA}
           userAggregate={null}
           onBack={mockOnBack}
         />
@@ -266,7 +266,7 @@ describe('UserDetailsView', () => {
 
     expect(screen.queryByText(/test-org-full-upload/)).not.toBeInTheDocument();
     expect(screen.queryByText(/test-cost-center-full-upload/)).not.toBeInTheDocument();
-    expect(screen.getByText(/0\s*\/\s*300/)).toBeInTheDocument();
+    expect(screen.getByText(/0\s*\/\s*1900/)).toBeInTheDocument();
   });
 
   it('renders Spark as a separate billing product bucket', async () => {
@@ -275,18 +275,17 @@ describe('UserDetailsView', () => {
     const processedData: ProcessedData[] = [
       {
         timestamp,
-        user: 'User1',
+        user: 'test-user-one',
         model: 'Claude Sonnet 4.5',
-        requestsUsed: 4,
-        exceedsQuota: false,
+        creditsUsed: 4,
         totalQuota: '1000',
-        quotaValue: 1000,
+        quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
         iso,
         dateKey: iso.slice(0, 10),
         monthKey: iso.slice(0, 7),
         epoch: timestamp.getTime(),
         product: 'spark',
-        sku: 'spark_premium_request',
+        sku: 'copilot_ai_credit',
         organization: 'Org1',
         costCenter: 'CC-123',
         grossAmount: 0.16,
@@ -297,7 +296,7 @@ describe('UserDetailsView', () => {
 
     render(
       <UserDetailsView
-        user="User1"
+        user="test-user-one"
         processedData={processedData}
         userQuotaValue={1000}
         onBack={mockOnBack}
@@ -319,10 +318,9 @@ describe('UserDetailsView', () => {
         timestamp,
         user: 'test-user-one',
         model: 'Claude Sonnet 4.6',
-        requestsUsed: 51.28584,
-        exceedsQuota: false,
+        creditsUsed: 51.28584,
         totalQuota: '1000',
-        quotaValue: 1000,
+        quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
         iso,
         dateKey: iso.slice(0, 10),
         monthKey: iso.slice(0, 7),
@@ -357,7 +355,7 @@ describe('UserDetailsView', () => {
     const makeRow = (
       date: string,
       costCenter: string | undefined,
-      requestsUsed: number,
+      creditsUsed: number,
       grossAmount: number,
       discountAmount: number,
       netAmount: number
@@ -367,10 +365,9 @@ describe('UserDetailsView', () => {
         timestamp,
         user: 'test-user-one',
         model: 'test-model-one',
-        requestsUsed,
-        exceedsQuota: false,
-        totalQuota: PRICING.BUSINESS_QUOTA.toString(),
-        quotaValue: PRICING.BUSINESS_QUOTA,
+        creditsUsed,
+        totalQuota: PRICING.BUSINESS_AI_CREDIT_QUOTA.toString(),
+        quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA,
         iso: timestamp.toISOString(),
         dateKey: date,
         monthKey: date.slice(0, 7),
@@ -392,7 +389,7 @@ describe('UserDetailsView', () => {
       <UserDetailsView
         user="test-user-one"
         processedData={processedData}
-        userQuotaValue={PRICING.BUSINESS_QUOTA}
+        userQuotaValue={PRICING.BUSINESS_AI_CREDIT_QUOTA}
         onBack={mockOnBack}
       />
     );
@@ -421,7 +418,7 @@ describe('UserDetailsView', () => {
       <UserDetailsView
         user="test-user-one"
         processedData={[makeRow('2026-03-04', undefined, 2, 0.08, 0, 0.08)]}
-        userQuotaValue={PRICING.BUSINESS_QUOTA}
+        userQuotaValue={PRICING.BUSINESS_AI_CREDIT_QUOTA}
         onBack={mockOnBack}
       />
     );
@@ -434,12 +431,12 @@ describe('UserDetailsView', () => {
     render(
       <UserDetailsView
         user="test-user-one"
-        processedData={createMockProcessedData([PRICING.BUSINESS_QUOTA]).map((row) => ({
+        processedData={createMockProcessedData([PRICING.BUSINESS_AI_CREDIT_QUOTA]).map((row) => ({
           ...row,
           user: 'test-user-one',
           costCenter: 'test-cost-center-one',
         }))}
-        userQuotaValue={PRICING.BUSINESS_QUOTA}
+        userQuotaValue={PRICING.BUSINESS_AI_CREDIT_QUOTA}
         onBack={mockOnBack}
       />
     );
@@ -447,42 +444,17 @@ describe('UserDetailsView', () => {
     expect(screen.queryByRole('table', { name: 'Cost per Cost Center' })).not.toBeInTheDocument();
   });
 
-  it('does not count AI Credits as requests in mixed cost center usage', () => {
-    const requestTimestamp = new Date('2026-06-01T00:00:00Z');
-    const creditTimestamp = new Date('2026-06-02T00:00:00Z');
-    const makeRow = (
-      timestamp: Date,
-      usageUnit: 'request' | 'ai_credit',
-      requestsUsed: number,
-      billingQuantity: number
-    ): ProcessedData => ({
-      timestamp,
-      user: 'test-user-one',
-      model: 'test-model-one',
-      requestsUsed,
-      exceedsQuota: false,
-      totalQuota: PRICING.BUSINESS_QUOTA.toString(),
-      quotaValue: PRICING.BUSINESS_QUOTA,
-      iso: timestamp.toISOString(),
-      dateKey: timestamp.toISOString().slice(0, 10),
-      monthKey: timestamp.toISOString().slice(0, 7),
-      epoch: timestamp.getTime(),
-      costCenter: 'test-cost-center-one',
-      usageUnit,
-      billingQuantity,
-      grossAmount: 0.12,
-      discountAmount: 0,
-      netAmount: 0.12,
-    });
-
+  it('sums fractional AI credits across days for a cost center', () => {
     render(
       <UserDetailsView
         user="test-user-one"
         processedData={[
-          makeRow(requestTimestamp, 'request', 3, 3),
-          makeRow(creditTimestamp, 'ai_credit', 0, 42.5),
+          makeProcessedData({ user: 'test-user-one', costCenter: 'test-cost-center-one', creditsUsed: 3,
+            grossAmount: .03, discountAmount: 0, netAmount: .03 }),
+          makeProcessedData({ user: 'test-user-one', costCenter: 'test-cost-center-one', creditsUsed: 42.5,
+            grossAmount: .425, discountAmount: 0, netAmount: .425 }),
         ]}
-        userQuotaValue={PRICING.BUSINESS_QUOTA}
+        userQuotaValue={PRICING.BUSINESS_AI_CREDIT_QUOTA}
         onBack={mockOnBack}
       />
     );
@@ -490,13 +462,12 @@ describe('UserDetailsView', () => {
     const table = screen.getByRole('table', { name: 'Cost per Cost Center' });
     const costCenterRow = within(table).getByText('test-cost-center-one').closest('tr');
 
-    expect(within(table).getByRole('columnheader', { name: 'Requests' })).toBeInTheDocument();
+    expect(within(table).getByRole('columnheader', { name: 'AI Credits' })).toBeInTheDocument();
     expect(costCenterRow).not.toBeNull();
-    expect(costCenterRow).toHaveTextContent('3.00');
-    expect(costCenterRow).not.toHaveTextContent('45.50');
+    expect(costCenterRow).toHaveTextContent('45.50');
   });
 
-  it('renders AI Credits Gross in product and daily model breakdown tables', async () => {
+  it('renders billed gross in product and daily model breakdown tables', async () => {
     const firstTimestamp = new Date('2026-03-01T00:00:00Z');
     const secondTimestamp = new Date('2026-03-02T00:00:00Z');
     const firstIso = firstTimestamp.toISOString();
@@ -504,39 +475,37 @@ describe('UserDetailsView', () => {
     const processedData: ProcessedData[] = [
       {
         timestamp: firstTimestamp,
-        user: 'User1',
+        user: 'test-user-one',
         model: 'Coding Agent model',
-        requestsUsed: 2,
-        exceedsQuota: false,
-        totalQuota: '1000',
-        quotaValue: 1000,
+        creditsUsed: 2,
+        totalQuota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
+        quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
         iso: firstIso,
         dateKey: firstIso.slice(0, 10),
         monthKey: firstIso.slice(0, 7),
         epoch: firstTimestamp.getTime(),
         product: 'copilot',
-        sku: 'coding_agent_premium_request',
-        grossAmount: 0.08,
-        discountAmount: 0.08,
+        sku: 'copilot_ai_credit',
+        grossAmount: 2 * PRICING.AI_CREDIT_USD_VALUE,
+        discountAmount: 2 * PRICING.AI_CREDIT_USD_VALUE,
         netAmount: 0,
         aicGrossAmount: 1.23,
       },
       {
         timestamp: secondTimestamp,
-        user: 'User1',
+        user: 'test-user-one',
         model: 'Claude Opus 4.6',
-        requestsUsed: 24,
-        exceedsQuota: false,
-        totalQuota: '1000',
-        quotaValue: 1000,
+        creditsUsed: 24,
+        totalQuota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
+        quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
         iso: secondIso,
         dateKey: secondIso.slice(0, 10),
         monthKey: secondIso.slice(0, 7),
         epoch: secondTimestamp.getTime(),
         product: 'copilot',
-        sku: 'copilot_premium_request',
-        grossAmount: 0.96,
-        discountAmount: 0.96,
+        sku: 'copilot_ai_credit',
+        grossAmount: 24 * PRICING.AI_CREDIT_USD_VALUE,
+        discountAmount: 24 * PRICING.AI_CREDIT_USD_VALUE,
         netAmount: 0,
         aicGrossAmount: 4.56,
       },
@@ -544,9 +513,9 @@ describe('UserDetailsView', () => {
 
     render(
       <UserDetailsView
-        user="User1"
+        user="test-user-one"
         processedData={processedData}
-        userQuotaValue={1000}
+        userQuotaValue={PRICING.ENTERPRISE_AI_CREDIT_QUOTA}
         onBack={mockOnBack}
       />
     );
@@ -554,65 +523,61 @@ describe('UserDetailsView', () => {
     await waitFor(() => {
       expect(screen.getByText('Cost per Product')).toBeInTheDocument();
       expect(screen.getByText('Daily Model Usage Breakdown')).toBeInTheDocument();
-      expect(screen.getAllByRole('columnheader', { name: 'AI Credits Gross' })).toHaveLength(2);
-      expect(document.body).toHaveTextContent('$1.23');
-      expect(document.body).toHaveTextContent('$4.56');
+      expect(screen.getAllByRole('columnheader', { name: 'Gross Amount' })).toHaveLength(2);
+      expect(document.body).not.toHaveTextContent('$1.23');
+      expect(document.body).not.toHaveTextContent('$4.56');
     });
 
     const codingAgentDailyRow = screen.getByText('- Coding Agent model').closest('tr');
     expect(codingAgentDailyRow).not.toBeNull();
     const codingAgentDailyCells = within(codingAgentDailyRow as HTMLElement).getAllByRole('cell');
-    expect(codingAgentDailyCells[3]).toHaveTextContent('$1.23');
-    expect(codingAgentDailyCells[4]).toHaveTextContent('$0.08');
+    expect(codingAgentDailyCells[3]).toHaveTextContent('$0.02');
 
     const opusDailyRow = screen.getByText('- Claude Opus 4.6').closest('tr');
     expect(opusDailyRow).not.toBeNull();
     const opusDailyCells = within(opusDailyRow as HTMLElement).getAllByRole('cell');
-    expect(opusDailyCells[3]).toHaveTextContent('$4.56');
-    expect(opusDailyCells[4]).toHaveTextContent('$0.96');
+    expect(opusDailyCells[3]).toHaveTextContent('$0.24');
   });
 
-  it('renders AI Credits Gross columns when new report fields are present with zero spend', async () => {
+  it('renders gross billing with zero net spend', async () => {
     const timestamp = new Date('2026-03-01T00:00:00Z');
     const iso = timestamp.toISOString();
     const processedData: ProcessedData[] = [{
       timestamp,
-      user: 'User1',
+      user: 'test-user-one',
       model: 'Claude Opus 4.6',
-      requestsUsed: 24,
-      exceedsQuota: false,
-      totalQuota: '1000',
-      quotaValue: 1000,
+      creditsUsed: 24,
+      totalQuota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
+      quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
       iso,
       dateKey: iso.slice(0, 10),
       monthKey: iso.slice(0, 7),
       epoch: timestamp.getTime(),
       product: 'copilot',
-      sku: 'copilot_premium_request',
-      grossAmount: 0.96,
-      discountAmount: 0.96,
+      sku: 'copilot_ai_credit',
+      grossAmount: 24 * PRICING.AI_CREDIT_USD_VALUE,
+      discountAmount: 24 * PRICING.AI_CREDIT_USD_VALUE,
       netAmount: 0,
       aicGrossAmount: 0,
     }];
 
     render(
       <UserDetailsView
-        user="User1"
+        user="test-user-one"
         processedData={processedData}
-        userQuotaValue={1000}
+        userQuotaValue={PRICING.ENTERPRISE_AI_CREDIT_QUOTA}
         onBack={mockOnBack}
       />
     );
 
     await waitFor(() => {
-      expect(screen.getAllByRole('columnheader', { name: 'AI Credits Gross' })).toHaveLength(2);
+      expect(screen.getAllByRole('columnheader', { name: 'Gross Amount' })).toHaveLength(2);
     });
 
     const opusDailyRow = screen.getByText('- Claude Opus 4.6').closest('tr');
     expect(opusDailyRow).not.toBeNull();
     const opusDailyCells = within(opusDailyRow as HTMLElement).getAllByRole('cell');
-    expect(opusDailyCells[3]).toHaveTextContent('$0.00');
-    expect(opusDailyCells[4]).toHaveTextContent('$0.96');
+    expect(opusDailyCells[3]).toHaveTextContent('$0.24');
   });
 
   it('uses usage-based billing columns in product and daily model breakdown tables', async () => {
@@ -622,8 +587,7 @@ describe('UserDetailsView', () => {
       timestamp,
       user: 'test-user-one',
       model: 'Auto: Claude Haiku 4.5',
-      requestsUsed: 0,
-      exceedsQuota: false,
+      creditsUsed: 42.5,
       totalQuota: PRICING.BUSINESS_AI_CREDIT_QUOTA.toString(),
       quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA,
       iso,
@@ -679,16 +643,15 @@ describe('UserDetailsView', () => {
   });
 
   it('enumerates the full UTC date range inclusively in fallback chart data', () => {
-    const createRow = (iso: string, user: string, requestsUsed: number): ProcessedData => {
+    const createRow = (iso: string, user: string, creditsUsed: number): ProcessedData => {
       const timestamp = new Date(iso);
       return {
         timestamp,
         user,
         model: 'test-model-one',
-        requestsUsed,
-        exceedsQuota: false,
-        totalQuota: PRICING.BUSINESS_QUOTA.toString(),
-        quotaValue: PRICING.BUSINESS_QUOTA,
+        creditsUsed,
+        totalQuota: PRICING.BUSINESS_AI_CREDIT_QUOTA.toString(),
+        quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA,
         iso,
         dateKey: iso.slice(0, 10),
         monthKey: iso.slice(0, 7),
@@ -704,7 +667,7 @@ describe('UserDetailsView', () => {
       <UserDetailsView
         user="test-user-one"
         processedData={processedData}
-        userQuotaValue={PRICING.BUSINESS_QUOTA}
+        userQuotaValue={PRICING.BUSINESS_AI_CREDIT_QUOTA}
         onBack={mockOnBack}
       />
     );
@@ -714,8 +677,8 @@ describe('UserDetailsView', () => {
     ) as UserDailyData[];
     expect(chartData).toEqual([
       { date: '2025-06-30', totalCumulative: 2, 'test-model-one': 2 },
-      { date: '2025-07-01', totalCumulative: 2, 'test-model-one': 0 },
-      { date: '2025-07-02', totalCumulative: 2, 'test-model-one': 0 },
+      { date: '2025-07-01', totalCumulative: 0, 'test-model-one': 0 },
+      { date: '2025-07-02', totalCumulative: 0, 'test-model-one': 0 },
     ]);
   });
 });

@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Copilot Billing Report Viewer",
-  description: "Upload your CSV file to analyze user requests and quota usage",
+  description: "Upload your CSV file to analyze AI Credit consumption and quota usage",
 };
 
 export default function RootLayout({

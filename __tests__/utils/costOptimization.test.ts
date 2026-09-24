@@ -1,82 +1,108 @@
-import { calculateEnterpriseUpgradeSavings, computeCostOptimizationFromArtifacts } from '@/utils/analytics/costOptimization';
 import { PRICING } from '@/constants/pricing';
-import { makeUsageArtifacts as makeUsage, makeQuotaArtifacts as makeQuota } from '../helpers/makeArtifacts';
+import { computeCostOptimizationFromArtifacts } from '@/utils/analytics/costOptimization';
+import type { BillingArtifacts, QuotaArtifacts, UsageArtifacts } from '@/utils/ingestion';
 
-describe('computeCostOptimizationFromArtifacts', () => {
-  it('caps avoided overage at the extra Enterprise capacity', () => {
-    const savings = calculateEnterpriseUpgradeSavings(741.9);
+function makeCreditUsage(entries: Array<{ user: string; credits: number }>): UsageArtifacts {
+  return {
+    users: entries.map(({ user, credits }) => ({
+      user,
+      totalCredits: credits,
+      modelBreakdown: { 'model-a': credits }
+    })),
+    modelTotals: { 'model-a': entries.reduce((sum, entry) => sum + entry.credits, 0) },
+    userCount: entries.length,
+    modelCount: 1
+  };
+}
 
-    expect(savings.enterpriseExtraCapacity).toBe(PRICING.ENTERPRISE_QUOTA - PRICING.BUSINESS_QUOTA);
-    expect(savings.avoidedOverageRequests).toBeCloseTo(700, 5);
-    expect(savings.remainingOverageRequests).toBeCloseTo(41.9, 5);
-    expect(savings.avoidedOverageCost).toBeCloseTo(28, 5);
-    expect(savings.remainingOverageCost).toBeCloseTo(1.676, 5);
-    expect(savings.potentialSavings).toBeCloseTo(8, 5);
+function makeCreditQuota(entries: Array<{ user: string; quota: number }>): QuotaArtifacts {
+  return {
+    quotaByUser: new Map(entries.map(({ user, quota }) => [user, quota])),
+    conflicts: new Map(),
+    distinctQuotas: new Set(entries.map(entry => entry.quota)),
+    hasMixedQuotas: false,
+    hasMixedLicenses: false
+  };
+}
+
+function makeBilling(charges: Record<string, number | undefined>): BillingArtifacts {
+  const userMap = new Map(
+    Object.entries(charges).map(([user, net]) => [user, { user, quantity: 0, net }])
+  );
+  return {
+    totals: { gross: 0, discount: 0, net: 0, aicQuantity: 0, aicGrossAmount: 0 },
+    users: Array.from(userMap.values()),
+    userMap,
+    orgTotals: new Map(),
+    costCenterTotals: new Map(),
+    billingByModel: new Map(),
+    hasAnyBillingData: Object.values(charges).some(net => net !== undefined),
+    hasAnyAicData: true
+  };
+}
+
+describe('AI Credits cost monitoring', () => {
+  it('uses billed net charges as supplied rather than estimating from credit usage', () => {
+    const usage = makeCreditUsage([
+      { user: 'test-user-one', credits: PRICING.BUSINESS_AI_CREDIT_QUOTA + 2500 },
+      { user: 'test-user-two', credits: PRICING.BUSINESS_AI_CREDIT_QUOTA + 300 },
+      { user: 'test-user-three', credits: PRICING.BUSINESS_AI_CREDIT_QUOTA + 1200 }
+    ]);
+    const quota = makeCreditQuota(usage.users.map(({ user }) => ({ user, quota: PRICING.BUSINESS_AI_CREDIT_QUOTA })));
+    const billing = makeBilling({ 'test-user-one': 12.5, 'test-user-two': 39.25, 'test-user-three': 0 });
+
+    const result = computeCostOptimizationFromArtifacts(usage, quota, billing);
+    expect(result?.overQuotaUsers.map(user => user.user)).toEqual(['test-user-two', 'test-user-one', 'test-user-three']);
+    expect(result?.overQuotaUsers[0].billedNetCharge).toBe(39.25);
+    expect(result?.overQuotaUsers[0].excessCredits).toBe(300);
+    expect(result?.totalBilledNetCharge).toBeCloseTo(51.75);
+    expect(result?.totalExcessCredits).toBe(4000);
+    expect(result?.totalOverQuotaUsers).toBe(3);
   });
 
-  it('returns empty summary when no users qualify', () => {
-    const usage = makeUsage([
-      { user: 'a', totalRequests: 250 },
-      { user: 'b', totalRequests: 700 } // overage 400, below 500 threshold
-    ]);
-    const quota = makeQuota([
-      { user: 'a', quota: PRICING.BUSINESS_QUOTA },
-      { user: 'b', quota: PRICING.BUSINESS_QUOTA }
-    ]);
-    const res = computeCostOptimizationFromArtifacts(usage, quota);
-    expect(res.totalCandidates).toBe(0);
-    expect(res.candidates).toHaveLength(0);
-    expect(res.totalOverageCost).toBe(0);
-    expect(res.totalPotentialSavings).toBe(0);
+  it('treats missing billed net as unavailable rather than inventing charges', () => {
+    const usage = makeCreditUsage([{ user: 'test-user-one', credits: PRICING.BUSINESS_AI_CREDIT_QUOTA + 500 }]);
+    const quota = makeCreditQuota([{ user: 'test-user-one', quota: PRICING.BUSINESS_AI_CREDIT_QUOTA }]);
+
+    expect(computeCostOptimizationFromArtifacts(usage, quota)).toBeNull();
+    expect(computeCostOptimizationFromArtifacts(usage, quota, makeBilling({ 'test-user-one': undefined }))).toBeNull();
   });
 
-  it('selects only business users with >= 500 overage', () => {
-    const usage = makeUsage([
-      { user: 'biz-low', totalRequests: PRICING.BUSINESS_QUOTA + 100 }, // far below threshold
-      { user: 'biz-approaching', totalRequests: PRICING.BUSINESS_QUOTA + 450 }, // 450 over 300 -> approaching break-even
-      { user: 'biz-high', totalRequests: PRICING.BUSINESS_QUOTA + 600 }, // qualifies for strong recommendation
-      { user: 'ent-high', totalRequests: PRICING.ENTERPRISE_QUOTA + 800 } // non-business
+  it('omits unbilled users, excludes Enterprise, and tracks near-quota users', () => {
+    const usage = makeCreditUsage([
+      { user: 'test-user-one', credits: PRICING.BUSINESS_AI_CREDIT_QUOTA + 1 },
+      { user: 'test-user-two', credits: PRICING.BUSINESS_AI_CREDIT_QUOTA + 200 },
+      { user: 'test-user-three', credits: PRICING.ENTERPRISE_AI_CREDIT_QUOTA + 100 },
+      { user: 'test-user-four', credits: PRICING.BUSINESS_AI_CREDIT_QUOTA * 0.9 },
+      { user: 'test-user-five', credits: PRICING.BUSINESS_AI_CREDIT_QUOTA * 0.8 },
+      { user: 'test-user-six', credits: PRICING.BUSINESS_AI_CREDIT_QUOTA * 0.7 }
     ]);
-    const quota = makeQuota([
-      { user: 'biz-low', quota: PRICING.BUSINESS_QUOTA },
-      { user: 'biz-approaching', quota: PRICING.BUSINESS_QUOTA },
-      { user: 'biz-high', quota: PRICING.BUSINESS_QUOTA },
-      { user: 'ent-high', quota: PRICING.ENTERPRISE_QUOTA }
-    ]);
+    const quota = makeCreditQuota(usage.users.map(({ user }) => ({
+      user, quota: user === 'test-user-three' ? PRICING.ENTERPRISE_AI_CREDIT_QUOTA : PRICING.BUSINESS_AI_CREDIT_QUOTA
+    })));
+    const billing = makeBilling({
+      'test-user-one': 0,
+      'test-user-two': undefined,
+      'test-user-three': 80,
+      'test-user-four': 3,
+      'test-user-five': 2,
+      'test-user-six': 1
+    });
 
-    const res = computeCostOptimizationFromArtifacts(usage, quota);
-    // Strong recommendation list
-    expect(res.totalCandidates).toBe(1);
-    expect(res.candidates).toHaveLength(1);
-    const candidate = res.candidates[0];
-    expect(candidate.user).toBe('biz-high');
-    expect(candidate.quota).toBe(PRICING.BUSINESS_QUOTA);
-    expect(candidate.overageRequests).toBe(600);
-    expect(candidate.overageCost).toBeCloseTo(600 * PRICING.OVERAGE_RATE_PER_REQUEST, 5);
-
-    // Approaching break-even list
-    expect(res.approachingBreakEven).toHaveLength(1);
-    const approaching = res.approachingBreakEven[0];
-    expect(approaching.user).toBe('biz-approaching');
-    expect(approaching.overageRequests).toBe(450);
+    const result = computeCostOptimizationFromArtifacts(usage, quota, billing);
+    expect(result?.overQuotaUsers.map(user => user.user)).toEqual(['test-user-one']);
+    expect(result?.nearQuotaUsers.map(user => user.user)).toEqual(['test-user-four', 'test-user-five']);
+    expect(result?.totalBilledNetCharge).toBe(0);
+    expect(result?.missingBillingUsers).toBe(1);
   });
 
-  it('aggregates costs and potential savings across candidates', () => {
-    const usage = makeUsage([
-      { user: 'u1', totalRequests: PRICING.BUSINESS_QUOTA + 500 },
-      { user: 'u2', totalRequests: PRICING.BUSINESS_QUOTA + 800 }
-    ]);
-    const quota = makeQuota([
-      { user: 'u1', quota: PRICING.BUSINESS_QUOTA },
-      { user: 'u2', quota: PRICING.BUSINESS_QUOTA }
-    ]);
+  it('returns an empty, available summary when charges exist without over-quota usage', () => {
+    const usage = makeCreditUsage([{ user: 'test-user-one', credits: 100 }]);
+    const quota = makeCreditQuota([{ user: 'test-user-one', quota: PRICING.BUSINESS_AI_CREDIT_QUOTA }]);
+    const result = computeCostOptimizationFromArtifacts(usage, quota, makeBilling({ 'test-user-one': 0 }));
 
-    const res = computeCostOptimizationFromArtifacts(usage, quota);
-    expect(res.totalCandidates).toBe(2);
-
-    const expectedOverage = 500 + 800;
-    expect(res.totalOverageCost).toBeCloseTo(expectedOverage * PRICING.OVERAGE_RATE_PER_REQUEST, 5);
-    expect(res.estimatedEnterpriseCost).toBeCloseTo(2 * PRICING.ENTERPRISE_UPGRADE_DELTA, 5);
-    expect(res.totalPotentialSavings).toBeCloseTo((500 * PRICING.OVERAGE_RATE_PER_REQUEST - 20) + (700 * PRICING.OVERAGE_RATE_PER_REQUEST - 20), 5);
+    expect(result?.overQuotaUsers).toEqual([]);
+    expect(result?.nearQuotaUsers).toEqual([]);
+    expect(result?.totalBilledNetCharge).toBe(0);
   });
 });

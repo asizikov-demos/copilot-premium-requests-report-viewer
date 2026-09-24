@@ -15,10 +15,8 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
   readonly id = 'dailyBuckets';
   
   private dailyUserTotals = new Map<string, Map<string, number>>();
-  private dailyUserAicTotals = new Map<string, Map<string, number>>();
   // New: nested map for per-model breakdown (day -> user -> model -> quantity)
   private dailyUserModelTotals = new Map<string, Map<string, Map<string, number>>>();
-  private dailyUserAicModelTotals = new Map<string, Map<string, Map<string, number>>>();
   private dailyBucketTotals = new Map<string, Map<SpecialUsageBucketKey, number>>();
   private dailyBucketModelTotals = new Map<string, Map<SpecialUsageBucketKey, Map<string, number>>>();
   private minDate: string | null = null;
@@ -64,9 +62,7 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
     void _ctx;
     // Reset state
     this.dailyUserTotals.clear();
-    this.dailyUserAicTotals.clear();
     this.dailyUserModelTotals.clear();
-    this.dailyUserAicModelTotals.clear();
     this.dailyBucketTotals.clear();
     this.dailyBucketModelTotals.clear();
     this.minDate = null;
@@ -88,25 +84,13 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
     // Track month key (YYYY-MM)
     this.months.add(day.slice(0, 7));
 
-    if (row.isNonCopilotUsage && row.usageBucket) {
-      const bucketQuantity = row.usageUnit === 'ai_credit'
-        ? row.aicQuantity ?? row.billingQuantity ?? 0
-        : quantity;
+    if (row.isUnattributedUsage && row.usageBucket) {
+      const bucketQuantity = quantity;
       DailyBucketsAggregator.inc2Level(this.dailyBucketTotals, day, row.usageBucket, bucketQuantity);
       DailyBucketsAggregator.inc3Level(this.dailyBucketModelTotals, day, row.usageBucket, model, bucketQuantity);
       return;
     }
 
-    if (row.usageUnit === 'ai_credit') {
-      const aiCredits = row.aicQuantity ?? row.billingQuantity ?? 0;
-      if (aiCredits > 0) {
-        DailyBucketsAggregator.inc2Level(this.dailyUserAicTotals, day, user, aiCredits);
-        DailyBucketsAggregator.inc3Level(this.dailyUserAicModelTotals, day, user, model, aiCredits);
-      }
-      return;
-    }
-    
-    // Accumulate daily totals
     DailyBucketsAggregator.inc2Level(this.dailyUserTotals, day, user, quantity);
 
     // Accumulate per-model nested totals
@@ -117,9 +101,7 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
     void _ctx;
     return {
       dailyUserTotals: this.dailyUserTotals,
-      dailyUserAicTotals: this.dailyUserAicTotals,
       dailyUserModelTotals: this.dailyUserModelTotals,
-      dailyUserAicModelTotals: this.dailyUserAicModelTotals,
       dailyBucketTotals: this.dailyBucketTotals,
       dailyBucketModelTotals: this.dailyBucketModelTotals,
       dateRange: this.minDate && this.maxDate 

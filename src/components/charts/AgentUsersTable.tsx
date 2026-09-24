@@ -11,23 +11,13 @@ export interface AgentUsageTableRow {
   gross: number;
   included: number;
   additional: number;
-  quota: number | 'unknown';
-  isSyntheticNonCopilotRow?: boolean;
 }
 
-export function formatUsageQuantity(value: number, isUsageBasedBilling: boolean): string {
-  if (isUsageBasedBilling) {
-    return formatDecimalQuantity(value);
-  }
-
-  return value.toFixed(1);
+export function formatUsageQuantity(value: number): string {
+  return formatDecimalQuantity(value);
 }
 
-export function formatQuotaValue(quota: number | 'unknown'): string {
-  return quota === 'unknown' ? 'Unknown' : quota.toLocaleString();
-}
-
-export function getVisibleRows<T extends { isSyntheticNonCopilotRow?: boolean }>(
+export function getVisibleRows<T>(
   rows: T[],
   showAllRows: boolean,
   previewCount: number
@@ -36,20 +26,13 @@ export function getVisibleRows<T extends { isSyntheticNonCopilotRow?: boolean }>
     return rows;
   }
 
-  const preview = rows.slice(0, previewCount);
-  const syntheticRow = rows.find((row) => row.isSyntheticNonCopilotRow);
-
-  if (!syntheticRow || preview.some((row) => row.isSyntheticNonCopilotRow)) {
-    return preview;
-  }
-
-  return [...preview.slice(0, Math.max(0, previewCount - 1)), syntheticRow];
+  return rows.slice(0, previewCount);
 }
 
 interface AgentUsersTableProps {
   tableTitle: string;
   rows: AgentUsageTableRow[];
-  isUsageBasedBilling: boolean;
+  showCosts: boolean;
   quantityColumnLabel: string;
   costLabels: BillingCostLabels;
   showAll: boolean;
@@ -63,7 +46,7 @@ const headerCellClassName =
 export function AgentUsersTable({
   tableTitle,
   rows,
-  isUsageBasedBilling,
+  showCosts,
   quantityColumnLabel,
   costLabels,
   showAll,
@@ -86,14 +69,12 @@ export function AgentUsersTable({
                 User
               </th>
               <th className={headerCellClassName}>{quantityColumnLabel}</th>
-              {isUsageBasedBilling ? (
+              {showCosts && (
                 <>
                   <th className={headerCellClassName}>{costLabels.gross}</th>
                   <th className={headerCellClassName}>{costLabels.discount}</th>
                   <th className={headerCellClassName}>{costLabels.net}</th>
                 </>
-              ) : (
-                <th className={headerCellClassName}>Quota</th>
               )}
             </tr>
           </thead>
@@ -104,9 +85,9 @@ export function AgentUsersTable({
                   {user.user}
                 </td>
                 <td className="px-5 py-3 whitespace-nowrap text-sm font-mono text-[#1f2328] text-right">
-                  {formatUsageQuantity(user.quantity, isUsageBasedBilling)}
+                  {formatUsageQuantity(user.quantity)}
                 </td>
-                {isUsageBasedBilling ? (
+                {showCosts && (
                   <>
                     <td className="px-5 py-3 whitespace-nowrap text-sm font-mono text-[#636c76] text-right">
                       {formatCurrency(user.gross)}
@@ -118,10 +99,6 @@ export function AgentUsersTable({
                       {formatCurrency(user.additional)}
                     </td>
                   </>
-                ) : (
-                  <td className="px-5 py-3 whitespace-nowrap text-sm text-[#636c76] text-right">
-                    {formatQuotaValue(user.quota)}
-                  </td>
                 )}
               </tr>
             ))}

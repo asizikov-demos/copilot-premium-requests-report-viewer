@@ -20,8 +20,7 @@ function buildProcessedRow(partial: Partial<ProcessedData>): ProcessedData {
     timestamp,
     user: 'test-user-one',
     model: 'Coding Agent model',
-    requestsUsed: 0,
-    exceedsQuota: false,
+    creditsUsed: 0,
     totalQuota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
     quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
     iso: timestamp.toISOString(),
@@ -68,7 +67,7 @@ function createContextValue() {
     featureUsageArtifacts: {
       featureTotals: { codeReview: 0, codingAgent: 0, spark: 0, codeQuality: 0 },
       featureUsers: { codeReview: new Set(), codingAgent: new Set(), spark: new Set(), codeQuality: new Set() },
-      specialTotals: { nonCopilotCodeReview: 0, unattributedCodeQuality: 0 },
+      specialTotals: { unattributedCodeReview: 0, unattributedCodeQuality: 0 },
     } as FeatureUsageArtifacts,
     billingArtifacts: undefined as BillingArtifacts | undefined,
     baseProcessed: [] as ProcessedData[],
@@ -78,15 +77,15 @@ function createContextValue() {
       timeFrame: { start: '', end: '' },
       totalUniqueUsers: 0,
       usersExceedingQuota: 0,
-      requestsByModel: [],
+      creditsByModel: [],
       quotaBreakdown: { unknown: [], business: [], enterprise: [], mixed: false, suggestedPlan: null },
     },
     userData: [],
     allModels: [],
     dailyCumulativeData: [],
     dailyAicCumulativeData: [],
-    codingAgentAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodingAgentRequests: 0, adoptionRate: 0, users: [] },
-    codeReviewAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodeReviewRequests: 0, adoptionRate: 0, users: [] },
+    codingAgentAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodingAgentCredits: 0, adoptionRate: 0, users: [] },
+    codeReviewAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodeReviewCredits: 0, adoptionRate: 0, users: [] },
     weeklyExhaustion: { totalUsersExhausted: 0, weeks: [] },
     selectedMonths: [],
     setSelectedMonths: jest.fn(),
@@ -98,8 +97,8 @@ function createContextValue() {
     isDetailViewActive: true,
     chartData: [],
     planInfo: {
-      business: { name: 'Copilot Business', monthlyQuota: 300 },
-      enterprise: { name: 'Copilot Enterprise', monthlyQuota: 1000 },
+      business: { name: 'Copilot Business', monthlyQuota: PRICING.BUSINESS_AI_CREDIT_QUOTA },
+      enterprise: { name: 'Copilot Enterprise', monthlyQuota: PRICING.ENTERPRISE_AI_CREDIT_QUOTA },
     },
     filename: 'report.csv',
     onReset: jest.fn(),
@@ -107,44 +106,41 @@ function createContextValue() {
 }
 
 describe('CodingAgentOverview', () => {
-  it('renders synthetic non-Copilot code review row with zero quota while keeping adoption copy on real users', () => {
+  it('shows Code Review adoption based on named users only', () => {
     const codingAgentUsers: CodingAgentUser[] = [];
     const codeReviewAnalysis: CodeReviewAnalysis = {
       totalUsers: 2,
       totalUniqueUsers: 3,
-      totalCodeReviewRequests: 17,
+      totalCodeReviewCredits: 13,
       adoptionRate: 66.67,
       users: [
         {
           user: 'test-user-one',
-          totalRequests: 10,
-          codeReviewRequests: 8,
+          totalCredits: 10,
+          codeReviewCredits: 8,
           codeReviewPercentage: 80,
-          quota: 300,
+          quota: PRICING.BUSINESS_AI_CREDIT_QUOTA,
           models: ['Code Review beta'],
         },
         {
           user: 'test-user-two',
-          totalRequests: 20,
-          codeReviewRequests: 5,
+          totalCredits: 20,
+          codeReviewCredits: 5,
           codeReviewPercentage: 25,
           quota: 'unknown',
           models: ['code review v1'],
-        },
-        {
-          user: 'Non-Copilot Users',
-          totalRequests: 4,
-          codeReviewRequests: 4,
-          codeReviewPercentage: 100,
-          quota: 0,
-          models: ['Code Review beta'],
-          isSyntheticNonCopilotRow: true,
         },
       ],
     };
 
     render(
-      <AnalysisContext.Provider value={createContextValue()}>
+      <AnalysisContext.Provider value={{
+        ...createContextValue(),
+        aggregateProcessedData: [
+          buildProcessedRow({ user: 'test-user-one', model: 'Code Review beta', creditsUsed: 8 }),
+          buildProcessedRow({ user: 'test-user-two', model: 'code review v1', creditsUsed: 5 }),
+        ],
+      }}>
         <CodingAgentOverview
           codingAgentUsers={codingAgentUsers}
           totalUniqueUsers={0}
@@ -161,10 +157,8 @@ describe('CodingAgentOverview', () => {
     expect(reviewTable).not.toBeNull();
 
     const table = reviewTable as HTMLTableElement;
-    const syntheticRow = within(table).getByText('Non-Copilot Users').closest('tr');
-    expect(syntheticRow).not.toBeNull();
-    expect(within(syntheticRow as HTMLElement).getByText('4.0')).toBeInTheDocument();
-    expect(within(syntheticRow as HTMLElement).getByText('0')).toBeInTheDocument();
+    expect(within(table).getByText('test-user-one')).toBeInTheDocument();
+    expect(within(table).queryByText('Non-Copilot Users')).not.toBeInTheDocument();
   });
 
   it('renders usage-based agent tables in AI Credits with billing columns', () => {
@@ -172,6 +166,7 @@ describe('CodingAgentOverview', () => {
       buildProcessedRow({
         user: 'test-user-one',
         model: 'Coding Agent model',
+        creditsUsed: 12.34,
         billingQuantity: 12.34,
         aicQuantity: 12.34,
         grossAmount: 0.1234,
@@ -181,6 +176,7 @@ describe('CodingAgentOverview', () => {
       buildProcessedRow({
         user: 'test-user-one',
         model: 'Code Review model',
+        creditsUsed: 3.5,
         billingQuantity: 3.5,
         aicQuantity: 3.5,
         grossAmount: 0.035,
@@ -190,31 +186,33 @@ describe('CodingAgentOverview', () => {
       buildProcessedRow({
         user: '',
         model: 'Code Review model',
+        creditsUsed: 2,
         billingQuantity: 2,
         aicQuantity: 2,
         grossAmount: 0.02,
         discountAmount: 0,
         netAmount: 0.02,
         quotaValue: 0,
-        isNonCopilotUsage: true,
-        usageBucket: 'non_copilot_code_review',
+        isUnattributedUsage: true,
+        usageBucket: 'unattributed_ai_credit',
       }),
       buildProcessedRow({
         user: '',
         model: 'Coding Agent model',
+        creditsUsed: 4,
         billingQuantity: 4,
         aicQuantity: 4,
         grossAmount: 0.04,
         discountAmount: 0.04,
         netAmount: 0,
         quotaValue: 0,
-        isNonCopilotUsage: true,
+        isUnattributedUsage: true,
         usageBucket: 'unattributed_ai_credit',
       }),
     ];
 
-    const dailyUserAicModelTotals = new Map<string, Map<string, Map<string, number>>>();
-    dailyUserAicModelTotals.set('2026-03-01', new Map([
+    const dailyUserModelTotals = new Map<string, Map<string, Map<string, number>>>();
+    dailyUserModelTotals.set('2026-03-01', new Map([
       ['test-user-one', new Map([
         ['Coding Agent model', 12.34],
         ['Code Review model', 3.5],
@@ -224,9 +222,9 @@ describe('CodingAgentOverview', () => {
     const codingAgentUsers: CodingAgentUser[] = [
       {
         user: 'test-user-one',
-        totalRequests: 0,
-        codingAgentRequests: 0,
-        codingAgentPercentage: 0,
+        totalCredits: 15.84,
+        codingAgentCredits: 12.34,
+        codingAgentPercentage: 12.34 / 15.84 * 100,
         quota: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
         models: ['Coding Agent model'],
       },
@@ -234,25 +232,16 @@ describe('CodingAgentOverview', () => {
     const codeReviewAnalysis: CodeReviewAnalysis = {
       totalUsers: 1,
       totalUniqueUsers: 1,
-      totalCodeReviewRequests: 0,
+      totalCodeReviewCredits: 3.5,
       adoptionRate: 100,
       users: [
         {
           user: 'test-user-one',
-          totalRequests: 0,
-          codeReviewRequests: 0,
-          codeReviewPercentage: 0,
+          totalCredits: 15.84,
+          codeReviewCredits: 3.5,
+          codeReviewPercentage: 3.5 / 15.84 * 100,
           quota: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
           models: ['Code Review model'],
-        },
-        {
-          user: 'Non-Copilot Users',
-          totalRequests: 0,
-          codeReviewRequests: 0,
-          codeReviewPercentage: 0,
-          quota: 0,
-          models: ['Code Review model'],
-          isSyntheticNonCopilotRow: true,
         },
       ],
     };
@@ -263,7 +252,7 @@ describe('CodingAgentOverview', () => {
           ...createContextValue(),
           aggregateProcessedData,
           dailyBucketsArtifacts: makeDailyBucketsArtifacts([], {
-            dailyUserAicModelTotals,
+            dailyUserModelTotals,
             dateRange: { min: '2026-03-01', max: '2026-03-01' },
           }),
         }}
@@ -297,7 +286,7 @@ describe('CodingAgentOverview', () => {
 
     const reviewHeading = screen.getByRole('heading', { name: 'Code Review Users' });
     const reviewTable = reviewHeading.parentElement?.nextElementSibling?.querySelector('table') as HTMLTableElement;
-    const syntheticRow = within(reviewTable).getByText('Non-Copilot Users').closest('tr');
+    const syntheticRow = within(reviewTable).getByText('Unattributed AI Credits').closest('tr');
     expect(syntheticRow).not.toBeNull();
     expect(within(syntheticRow as HTMLElement).getByText('2.00')).toBeInTheDocument();
     expect(within(syntheticRow as HTMLElement).getAllByText('$0.02')).toHaveLength(2);

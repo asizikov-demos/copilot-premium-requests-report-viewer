@@ -7,16 +7,12 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 import type { CodeReviewAnalysis, CodingAgentUser, ProcessedData } from '@/types/csv';
 import { getBillingCostLabels } from '@/utils/billingLabels';
 import {
-  buildDailyCodeReviewAicUsageFromArtifacts,
   buildDailyCodeReviewUsageFromArtifacts,
-  buildDailyCodingAgentAicUsageFromArtifacts,
   buildDailyCodingAgentUsageFromArtifacts,
-  DailyBucketsArtifacts,
   getSpecialUsageBucketLabel,
 } from '@/utils/ingestion';
 import { filterDailySeriesByMonths } from '@/utils/analytics/filters';
-import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
-import { isUsageBasedBillingRow } from '@/utils/unitType';
+import { classifyProductCategory } from '@/utils/productClassification';
 
 import { AgentUsersTable, type AgentUsageTableRow } from './charts/AgentUsersTable';
 import { CodingAgentUsageChart } from './charts/CodingAgentUsageChart';
@@ -30,16 +26,16 @@ interface CodingAgentOverviewProps {
 
 function buildUsageBasedAgentRows(
   rows: ProcessedData[],
-  modelFilter: (model: string) => boolean
+  category: 'Coding Agent' | 'Code Review'
 ): AgentUsageTableRow[] {
   const rowsByUser = new Map<string, AgentUsageTableRow>();
 
   for (const row of rows) {
-    if (!modelFilter(row.model)) {
+    const rowCategory = classifyProductCategory(row.model, row.product, row.sku);
+    if (rowCategory !== category) {
       continue;
     }
 
-    const isSpecialUsage = Boolean(row.usageBucket);
     const user = row.usageBucket ? getSpecialUsageBucketLabel(row.usageBucket) : row.user;
     const current = rowsByUser.get(user) ?? {
       user,
@@ -47,11 +43,9 @@ function buildUsageBasedAgentRows(
       gross: 0,
       included: 0,
       additional: 0,
-      quota: isSpecialUsage ? 0 : row.quotaValue ?? 'unknown',
-      isSyntheticNonCopilotRow: isSpecialUsage,
     };
 
-    current.quantity += row.aicQuantity ?? row.billingQuantity ?? 0;
+    current.quantity += row.creditsUsed;
     current.gross += row.grossAmount ?? row.aicGrossAmount ?? 0;
     current.included += row.discountAmount ?? 0;
     current.additional += row.netAmount ?? 0;
@@ -74,68 +68,34 @@ export function CodingAgentOverview({
   const [showAllUsers, setShowAllUsers] = useState(false);
   const [showAllReviewUsers, setShowAllReviewUsers] = useState(false);
   const { aggregateProcessedData, dailyBucketsArtifacts, selectedMonths } = useAnalysisContext();
-  const typedDailyBuckets = dailyBucketsArtifacts as DailyBucketsArtifacts | undefined;
-  const hasAiCreditUsage = useMemo(
-    () => aggregateProcessedData.some(isUsageBasedBillingRow),
-    [aggregateProcessedData]
-  );
-  const isUsageBasedBilling = hasAiCreditUsage;
-  const quantityColumnLabel = isUsageBasedBilling ? 'AI Credits' : 'Premium Requests';
-  const valueUnitLabel = isUsageBasedBilling ? 'AI Credits' : 'requests';
-  const costLabels = useMemo(() => getBillingCostLabels(isUsageBasedBilling), [isUsageBasedBilling]);
+  const quantityColumnLabel = 'AI Credits';
+  const valueUnitLabel = 'AI Credits';
+  const costLabels = useMemo(() => getBillingCostLabels(), []);
    
   // Memoize daily coding agent data, filtered by selected billing months
   const dailyCodingAgentData = useMemo(() => {
-    if (typedDailyBuckets) {
-      const raw = isUsageBasedBilling
-        ? buildDailyCodingAgentAicUsageFromArtifacts(typedDailyBuckets)
-        : buildDailyCodingAgentUsageFromArtifacts(typedDailyBuckets);
-      return filterDailySeriesByMonths(raw, selectedMonths);
-    }
-    return [];
-  }, [isUsageBasedBilling, typedDailyBuckets, selectedMonths]);
+    return dailyBucketsArtifacts
+      ? filterDailySeriesByMonths(buildDailyCodingAgentUsageFromArtifacts(dailyBucketsArtifacts), selectedMonths)
+      : [];
+  }, [dailyBucketsArtifacts, selectedMonths]);
 
   const dailyCodeReviewData = useMemo(() => {
-    if (typedDailyBuckets) {
-      const raw = isUsageBasedBilling
-        ? buildDailyCodeReviewAicUsageFromArtifacts(typedDailyBuckets)
-        : buildDailyCodeReviewUsageFromArtifacts(typedDailyBuckets);
-      return filterDailySeriesByMonths(raw, selectedMonths);
-    }
-    return [];
-  }, [isUsageBasedBilling, typedDailyBuckets, selectedMonths]);
+    return dailyBucketsArtifacts
+      ? filterDailySeriesByMonths(buildDailyCodeReviewUsageFromArtifacts(dailyBucketsArtifacts), selectedMonths)
+      : [];
+  }, [dailyBucketsArtifacts, selectedMonths]);
 
   const TABLE_PREVIEW_COUNT = 5;
   const codingAgentTableRows = useMemo<AgentUsageTableRow[]>(() => {
-    if (isUsageBasedBilling) {
-      return buildUsageBasedAgentRows(aggregateProcessedData, isCodingAgentModel);
-    }
-
-    return codingAgentUsers.map((user) => ({
-      user: user.user,
-      quantity: user.codingAgentRequests,
-      gross: 0,
-      included: 0,
-      additional: 0,
-      quota: user.quota,
-    }));
-  }, [aggregateProcessedData, codingAgentUsers, isUsageBasedBilling]);
+    return buildUsageBasedAgentRows(aggregateProcessedData, 'Coding Agent');
+  }, [aggregateProcessedData]);
 
   const codeReviewTableRows = useMemo<AgentUsageTableRow[]>(() => {
-    if (isUsageBasedBilling) {
-      return buildUsageBasedAgentRows(aggregateProcessedData, isCodeReviewModel);
-    }
-
-    return codeReviewAnalysis.users.map((user) => ({
-      user: user.user,
-      quantity: user.codeReviewRequests,
-      gross: 0,
-      included: 0,
-      additional: 0,
-      quota: user.quota,
-      isSyntheticNonCopilotRow: user.isSyntheticNonCopilotRow,
-    }));
-  }, [aggregateProcessedData, codeReviewAnalysis.users, isUsageBasedBilling]);
+    return buildUsageBasedAgentRows(aggregateProcessedData, 'Code Review');
+  }, [aggregateProcessedData]);
+  const showCosts = aggregateProcessedData.some((row) =>
+    row.grossAmount !== undefined || row.discountAmount !== undefined || row.netAmount !== undefined
+  );
 
   return (
     <div className="space-y-6">
@@ -176,7 +136,7 @@ export function CodingAgentOverview({
         <AgentUsersTable
           tableTitle="Agent Users"
           rows={codingAgentTableRows}
-          isUsageBasedBilling={isUsageBasedBilling}
+          showCosts={showCosts}
           quantityColumnLabel={quantityColumnLabel}
           costLabels={costLabels}
           showAll={showAllUsers}
@@ -213,7 +173,7 @@ export function CodingAgentOverview({
             <AgentUsersTable
               tableTitle="Code Review Users"
               rows={codeReviewTableRows}
-              isUsageBasedBilling={isUsageBasedBilling}
+              showCosts={showCosts}
               quantityColumnLabel={quantityColumnLabel}
               costLabels={costLabels}
               showAll={showAllReviewUsers}

@@ -14,7 +14,7 @@ import {
 
 export interface BillingGroupRow {
   name: string;
-  requests: number;
+  credits: number;
   gross: number;
   discount: number;
   net: number;
@@ -23,7 +23,7 @@ export interface BillingGroupRow {
 }
 
 export interface BillingGroupEntry {
-  requests: number;
+  credits: number;
   productBuckets: ReturnType<typeof createEmptyProductCostMap>;
   users?: Set<string>;
 }
@@ -60,14 +60,14 @@ export function useBillingGroupRows<TExtra extends object>(
       let entry = map.get(groupName);
       if (!entry) {
         entry = {
-          requests: 0,
+          credits: 0,
           productBuckets: createEmptyProductCostMap(),
         };
         map.set(groupName, entry);
       }
 
       updateEntry?.(entry, row);
-      entry.requests += row.billingQuantity ?? row.requestsUsed;
+      entry.credits += row.creditsUsed;
       accumulateProductCost(entry.productBuckets, row);
     }
 
@@ -77,7 +77,7 @@ export function useBillingGroupRows<TExtra extends object>(
 
         const baseRow: BillingGroupRow = {
           name,
-          requests: data.requests,
+          credits: data.credits,
           gross: totals?.gross ?? 0,
           discount: totals?.discount ?? 0,
           net: totals?.net ?? 0,
@@ -142,7 +142,7 @@ export function BillingGroupTable<T extends BillingGroupRow>({
   hasCosts,
   hasAicGross,
   detailIdPrefix,
-  quantityColumnLabel = 'Requests',
+  quantityColumnLabel = 'AI Credits',
   grossColumnLabel = 'Gross',
   discountColumnLabel = 'Discount',
   netColumnLabel = 'Net',
@@ -222,7 +222,7 @@ export function BillingGroupTable<T extends BillingGroupRow>({
                         </td>
                       ))}
                       <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
-                        {formatDecimalQuantity(row.requests)}
+                        {formatDecimalQuantity(row.credits)}
                       </td>
                       {hasAicGross && (
                         <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
@@ -274,7 +274,7 @@ export function BillingGroupTable<T extends BillingGroupRow>({
                                   <tr key={product.label}>
                                     <td className="px-10 py-2.5 text-sm text-[#636c76]">{product.label}</td>
                                     <td className="px-6 py-2.5 text-sm text-[#636c76] text-right font-mono">
-                                      {formatDecimalQuantity(product.requests)}
+                                      {formatDecimalQuantity(product.credits)}
                                     </td>
                                     {hasAicGross && (
                                       <td className="px-6 py-2.5 text-sm text-[#636c76] text-right font-mono">

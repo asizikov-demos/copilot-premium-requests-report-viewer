@@ -183,7 +183,7 @@ export function AiUsageOverview() {
 
       <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
         <div className="px-5 py-4 border-b border-[#d1d9e0]">
-          <h3 className="text-sm font-medium text-[#1f2328]">Top Spend Drivers</h3>
+          <h3 className="text-sm font-medium text-[#1f2328]">Top AI Credit Consumers</h3>
           <p className="text-xs text-[#636c76] mt-0.5">
             Top 10 users ranked by AI Credits consumption
           </p>

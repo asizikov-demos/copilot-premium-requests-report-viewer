@@ -16,6 +16,10 @@ import {
   TokenArtifacts,
   NormalizedRow,
   buildBillingArtifactsFromProcessedData,
+  buildUsageArtifactsFromProcessedData,
+  buildQuotaArtifactsFromProcessedData,
+  buildDailyBucketsArtifactsFromProcessedData,
+  buildFeatureUsageArtifactsFromProcessedData,
   buildTokenArtifactsFromProcessedData,
   filterTokenArtifactsByMonths,
   buildProcessedDataFromRows
@@ -54,7 +58,6 @@ interface AnalysisContextValue {
   userData: ReturnType<typeof useAnalyzedData>['userData'];
   allModels: string[];
   dailyCumulativeData: ReturnType<typeof useAnalyzedData>['dailyCumulativeData'];
-  dailyAicCumulativeData: ReturnType<typeof useAnalyzedData>['dailyAicCumulativeData'];
   codingAgentAnalysis: ReturnType<typeof useAnalyzedData>['codingAgentAnalysis'];
   codeReviewAnalysis: ReturnType<typeof useAnalyzedData>['codeReviewAnalysis'];
   weeklyExhaustion: ReturnType<typeof useAnalyzedData>['weeklyExhaustion'];
@@ -72,7 +75,6 @@ interface AnalysisContextValue {
 
   // Derived UI helpers
   isDetailViewActive: boolean;
-  chartData: Array<{ model: string; fullModel: string; requests: number }>;
   planInfo: Record<CopilotPlan, PlanInfoEntry>;
 
   // Misc
@@ -103,7 +105,7 @@ function isFeatureUsageArtifacts(value: unknown): value is FeatureUsageArtifacts
     featureUsers.spark instanceof Set &&
     featureUsers.codeQuality instanceof Set &&
     isRecord(specialTotals) &&
-    typeof specialTotals.nonCopilotCodeReview === 'number' &&
+    typeof specialTotals.unattributedCodeReview === 'number' &&
     typeof specialTotals.unattributedCodeQuality === 'number'
   );
 }
@@ -128,7 +130,6 @@ function withBillingArtifactDefaults(value: BillingArtifacts | undefined): Billi
     orgTotals: value.orgTotals ?? new Map(),
     costCenterTotals: value.costCenterTotals ?? new Map(),
     billingByModel: value.billingByModel ?? new Map(),
-    overage: value.overage ?? { requests: 0, cost: 0, hasBilledOverageData: false },
     specialBuckets: value.specialBuckets ?? [],
   };
 }
@@ -166,12 +167,25 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
     hasMultipleMonthsData
   } = useAnalysisFilters(baseProcessed, dailyBucketsArtifacts);
 
+  const periodRows = useMemo(() => selectedMonths.length === 0
+    ? baseProcessed
+    : baseProcessed.filter((row) => selectedMonths.includes(row.monthKey)),
+  [baseProcessed, selectedMonths]);
+  const scopedArtifacts = useMemo(() => selectedMonths.length === 0
+    ? { usageArtifacts, quotaArtifacts, dailyBucketsArtifacts, featureUsageArtifacts }
+    : {
+      usageArtifacts: buildUsageArtifactsFromProcessedData(periodRows),
+      quotaArtifacts: buildQuotaArtifactsFromProcessedData(periodRows),
+      dailyBucketsArtifacts: buildDailyBucketsArtifactsFromProcessedData(periodRows),
+      featureUsageArtifacts: buildFeatureUsageArtifactsFromProcessedData(periodRows),
+    },
+  [dailyBucketsArtifacts, featureUsageArtifacts, periodRows, quotaArtifacts, selectedMonths.length, usageArtifacts]);
+
   const {
     analysis,
     userData,
     allModels,
     dailyCumulativeData,
-    dailyAicCumulativeData,
     codingAgentAnalysis,
     codeReviewAnalysis,
     processedData,
@@ -180,9 +194,9 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
   } = useAnalyzedData({
     baseProcessed,
     selectedMonths,
-    usageArtifacts,
-    quotaArtifacts,
-    dailyBucketsArtifacts
+    usageArtifacts: scopedArtifacts.usageArtifacts,
+    quotaArtifacts: scopedArtifacts.quotaArtifacts,
+    dailyBucketsArtifacts: scopedArtifacts.dailyBucketsArtifacts
   });
 
   const effectiveBillingArtifacts = useMemo(() => (
@@ -192,7 +206,7 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
   ), [aggregateProcessedData, baseProcessed.length, billingArtifacts]);
 
   const effectiveTokenArtifacts = useMemo(() => {
-    // Null is a recorded ingestion failure, not an absent legacy artifact.
+    // Null records an ingestion failure; absence means no token artifact.
     if (tokenArtifacts === null) return null;
     if (tokenArtifacts) {
       return filterTokenArtifactsByMonths(tokenArtifacts, selectedMonths);
@@ -205,22 +219,14 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
   // Use the suggested plan from data (auto-derived from report content)
   const selectedPlan = analysis.quotaBreakdown.suggestedPlan ?? 'business';
 
-  const chartData = useMemo(() => (
-    analysis.requestsByModel.map(item => ({
-      model: item.model.length > 20 ? `${item.model.substring(0, 20)}...` : item.model,
-      fullModel: item.model,
-      requests: Math.round(item.totalRequests * 100) / 100
-    }))
-  ), [analysis.requestsByModel]);
-
   const planInfo: Record<CopilotPlan, PlanInfoEntry> = useMemo(() => ({
     business: {
       name: 'Copilot Business',
-      monthlyQuota: PRICING.BUSINESS_QUOTA
+      monthlyQuota: PRICING.BUSINESS_AI_CREDIT_QUOTA
     },
     enterprise: {
       name: 'Copilot Enterprise',
-      monthlyQuota: PRICING.ENTERPRISE_QUOTA
+      monthlyQuota: PRICING.ENTERPRISE_AI_CREDIT_QUOTA
     }
   }), []);
 
@@ -228,10 +234,10 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
 
   const value: AnalysisContextValue = {
     // New aggregator artifacts
-    quotaArtifacts,
-    usageArtifacts,
-    dailyBucketsArtifacts,
-    featureUsageArtifacts,
+    quotaArtifacts: scopedArtifacts.quotaArtifacts,
+    usageArtifacts: scopedArtifacts.usageArtifacts,
+    dailyBucketsArtifacts: scopedArtifacts.dailyBucketsArtifacts,
+    featureUsageArtifacts: scopedArtifacts.featureUsageArtifacts,
     billingArtifacts: effectiveBillingArtifacts,
     tokenArtifacts: effectiveTokenArtifacts,
     // Legacy adapter bridge
@@ -242,7 +248,6 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
     userData,
     allModels,
     dailyCumulativeData,
-    dailyAicCumulativeData,
     codingAgentAnalysis,
     codeReviewAnalysis,
     weeklyExhaustion,
@@ -254,7 +259,6 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
     view,
     setView,
     isDetailViewActive,
-    chartData,
     planInfo,
     filename,
     onReset

@@ -19,10 +19,12 @@ export const createMockFile = (content: string, name: string, type: string = 'te
 
 export const createMockCSVData = (overrides: Partial<CSVData> = {}): CSVData => ({
   date: '2025-06-03',
-  username: 'test-user',
+  username: 'test-user-one',
+  product: 'copilot',
+  sku: 'copilot_ai_credit',
+  unit_type: 'ai-credits',
   model: 'test-model',
   quantity: '1.00',
-  exceeds_quota: 'false',
   total_monthly_quota: 'Unknown',
   ...overrides
 });
@@ -35,18 +37,18 @@ export const createMockCSVData = (overrides: Partial<CSVData> = {}): CSVData => 
 export const makeProcessedData = (partial: Partial<ProcessedData> = {}): ProcessedData => {
   const timestamp = partial.timestamp ?? new Date('2025-06-01T00:00:00Z');
   const { iso, dateKey, monthKey, epoch } = buildDateKeys(timestamp);
-  const quotaValue = partial.quotaValue ?? PRICING.BUSINESS_QUOTA;
+  const quotaValue = partial.quotaValue ?? PRICING.BUSINESS_AI_CREDIT_QUOTA;
   const totalQuota = quotaValue === 'unknown' ? 'Unknown' : String(quotaValue);
 
   return {
     timestamp,
     user: 'test-user-one',
     model: 'test-model',
-    requestsUsed: 0,
-    exceedsQuota: false,
+    creditsUsed: 0,
     totalQuota,
     quotaValue,
-    unitType: 'requests',
+    unitType: 'ai-credits',
+    usageUnit: 'ai_credit',
     iso,
     dateKey,
     monthKey,

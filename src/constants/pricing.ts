@@ -1,36 +1,21 @@
 export const PRICING = {
-  OVERAGE_RATE_PER_REQUEST: 0.04,
   AI_CREDIT_USD_VALUE: 0.01,
-  BUSINESS_AI_CREDITS_INCLUDED: 3000,
-  ENTERPRISE_AI_CREDITS_INCLUDED: 7000,
   BUSINESS_AI_CREDIT_QUOTA: 1900,
   ENTERPRISE_AI_CREDIT_QUOTA: 3900,
   AUTO_MODE_DISCOUNT_RATE: 0.1,
-  BUSINESS_QUOTA: 300,
-  ENTERPRISE_QUOTA: 1000,
   ENTERPRISE_UPGRADE_DELTA: 20,
 } as const;
 
 export const BUSINESS_QUOTA_VALUES: readonly number[] = [
-  PRICING.BUSINESS_QUOTA,
   PRICING.BUSINESS_AI_CREDIT_QUOTA,
 ];
 
 export const ENTERPRISE_QUOTA_VALUES: readonly number[] = [
-  PRICING.ENTERPRISE_QUOTA,
   PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
 ];
 
-// Recognized quota tiers across legacy PRU reports and current AI Credits
-// reports. Any other numeric quota (e.g. non-billable sentinels) is unknown.
+// Non-billable sentinels and unrecognized quotas are unknown.
 export const KNOWN_QUOTA_VALUES: readonly number[] = [
   ...BUSINESS_QUOTA_VALUES,
   ...ENTERPRISE_QUOTA_VALUES,
 ];
-
-// Cost optimization thresholds
-export const COST_OPTIMIZATION_THRESHOLDS = {
-  MIN_OVERAGE_THRESHOLD: 100,
-  APPROACHING_BREAKEVEN_THRESHOLD: 400,
-  STRONG_CANDIDATE_THRESHOLD: 500,
-} as const;

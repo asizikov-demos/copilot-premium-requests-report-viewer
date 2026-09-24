@@ -9,7 +9,7 @@ interface OrganizationBillingGroupRow extends BillingGroupRow {
 const billingRow: OrganizationBillingGroupRow = {
   name: 'test-org-one',
   users: 2,
-  requests: 5,
+  credits: 5,
   gross: 1.2,
   discount: 0.2,
   net: 1,
@@ -18,7 +18,7 @@ const billingRow: OrganizationBillingGroupRow = {
     {
       category: 'Copilot',
       label: 'Copilot',
-      requests: 5,
+      credits: 5,
       gross: 1.2,
       discount: 0.2,
       net: 1,
@@ -65,7 +65,7 @@ describe('BillingGroupTable', () => {
     expect(detailsTable.getByText('-$0.20')).toBeInTheDocument();
   });
 
-  it('omits org-only and PRU cost columns when they are not requested', () => {
+  it('omits org-only and commercial cost columns when they are not requested', () => {
     render(
       <BillingGroupTable
         title="Cost Centers"

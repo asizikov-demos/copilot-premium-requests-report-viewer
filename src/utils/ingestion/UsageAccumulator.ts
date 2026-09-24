@@ -11,10 +11,10 @@ export interface UsageAccumulationRow {
   model: string;
   quantity: number;
   billingQuantity?: number;
-  usageUnit?: 'request' | 'ai_credit' | 'unknown';
+  usageUnit?: 'ai_credit' | 'unknown';
   organization?: string;
   costCenter?: string;
-  isNonCopilotUsage?: boolean;
+  isUnattributedUsage?: boolean;
   usageBucket?: SpecialUsageBucketKey;
 }
 
@@ -35,22 +35,20 @@ export class UsageAccumulator {
   private specialBuckets = new Map<SpecialUsageBucketKey, SpecialUsageBucketAggregate>();
 
   addRow(row: UsageAccumulationRow): void {
-    if (row.isNonCopilotUsage && row.usageBucket) {
+    if (row.isUnattributedUsage && row.usageBucket) {
       let bucket = this.specialBuckets.get(row.usageBucket);
       if (!bucket) {
         bucket = {
           key: row.usageBucket,
           label: getSpecialUsageBucketLabel(row.usageBucket),
-          totalRequests: 0,
+          totalCredits: 0,
           modelBreakdown: {},
           quotaValue: 0,
         };
         this.specialBuckets.set(row.usageBucket, bucket);
       }
-      const bucketQuantity = row.usageUnit === 'ai_credit'
-        ? row.billingQuantity ?? 0
-        : row.quantity;
-      bucket.totalRequests += bucketQuantity;
+      const bucketQuantity = row.quantity;
+      bucket.totalCredits += bucketQuantity;
       bucket.modelBreakdown[row.model] = (bucket.modelBreakdown[row.model] || 0) + bucketQuantity;
       this.modelTotals.set(row.model, (this.modelTotals.get(row.model) || 0) + row.quantity);
       return;
@@ -98,7 +96,7 @@ export class UsageAccumulator {
   finalize(): UsageArtifacts {
     const users: UserAggregate[] = [];
 
-    for (const [user, totalRequests] of this.userTotals) {
+    for (const [user, totalCredits] of this.userTotals) {
       const modelMap = this.userModelTotals.get(user);
       if (!modelMap) {
         continue;
@@ -114,7 +112,7 @@ export class UsageAccumulator {
 
       users.push({
         user,
-        totalRequests,
+        totalCredits,
         modelBreakdown,
         topModel: topEntry?.model,
         topModelValue: topEntry?.value,

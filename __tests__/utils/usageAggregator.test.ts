@@ -40,10 +40,10 @@ describe('UsageAggregator', () => {
         organization: 'test-org-two',
         costCenter: 'test-cost-center-one',
         costCenters: ['test-cost-center-one', 'test-cost-center-two'],
-        totalRequests: 5,
+        totalCredits: 5,
       }),
-      expect.objectContaining({ user: 'test-user-two', organization: 'test-org-one', costCenter: 'test-cost-center-two', totalRequests: 1 }),
-      expect.objectContaining({ user: 'test-user-three', organization: undefined, costCenter: 'test-cost-center-two', totalRequests: 4 }),
+      expect.objectContaining({ user: 'test-user-two', organization: 'test-org-one', costCenter: 'test-cost-center-two', totalCredits: 1 }),
+      expect.objectContaining({ user: 'test-user-three', organization: undefined, costCenter: 'test-cost-center-two', totalCredits: 4 }),
     ]));
   });
 
@@ -56,8 +56,8 @@ describe('UsageAggregator', () => {
       user: '',
       model: 'Code Review',
       quantity: 6,
-      isNonCopilotUsage: true,
-      usageBucket: 'non_copilot_code_review'
+      isUnattributedUsage: true,
+      usageBucket: 'unattributed_ai_credit'
     }), ctx);
     agg.onRow(makeNormalizedRow({ user: 'test-user-one', model: 'gpt-4.1', quantity: 2 }), ctx);
 
@@ -67,8 +67,8 @@ describe('UsageAggregator', () => {
     expect(output.users[0].user).toBe('test-user-one');
     expect(output.specialBuckets).toEqual([
       expect.objectContaining({
-        key: 'non_copilot_code_review',
-        totalRequests: 6,
+        key: 'unattributed_ai_credit',
+        totalCredits: 6,
         quotaValue: 0,
         modelBreakdown: { 'Code Review': 6 }
       })
@@ -101,8 +101,8 @@ describe('UsageAggregator', () => {
         user: '',
         model: 'Code Review',
         quantity: 4,
-        isNonCopilotUsage: true,
-        usageBucket: 'non_copilot_code_review',
+        isUnattributedUsage: true,
+        usageBucket: 'unattributed_ai_credit',
       }),
     ];
     const agg = new UsageAggregator();
@@ -115,8 +115,7 @@ describe('UsageAggregator', () => {
       timestamp: new Date(`${row.day}T00:00:00Z`),
       user: row.user,
       model: row.model,
-      requestsUsed: row.quantity,
-      exceedsQuota: row.exceedsQuota ?? false,
+      creditsUsed: row.quantity,
       totalQuota: row.quotaRaw ?? 'Unknown',
       quotaValue: row.quotaValue ?? 'unknown',
       iso: `${row.day}T00:00:00.000Z`,
@@ -125,7 +124,7 @@ describe('UsageAggregator', () => {
       epoch: new Date(`${row.day}T00:00:00Z`).getTime(),
       organization: row.organization,
       costCenter: row.costCenter,
-      isNonCopilotUsage: row.isNonCopilotUsage,
+      isUnattributedUsage: row.isUnattributedUsage,
       usageBucket: row.usageBucket,
     }));
 
@@ -142,8 +141,8 @@ describe('UsageAggregator', () => {
     ]));
     expect(processedOutput.specialBuckets).toEqual([
       expect.objectContaining({
-        key: 'non_copilot_code_review',
-        totalRequests: 4,
+        key: 'unattributed_ai_credit',
+        totalCredits: 4,
         modelBreakdown: { 'Code Review': 4 },
       }),
     ]);
@@ -156,8 +155,7 @@ describe('processed data artifact builders', () => {
       timestamp: new Date(`${row.day}T00:00:00Z`),
       user: row.user,
       model: row.model,
-      requestsUsed: row.quantity,
-      exceedsQuota: row.exceedsQuota ?? false,
+      creditsUsed: row.quantity,
       totalQuota: row.quotaRaw ?? (row.quotaValue === 'unknown' ? 'Unknown' : String(row.quotaValue ?? 'Unknown')),
       quotaValue: row.quotaValue ?? 'unknown',
       iso: `${row.day}T00:00:00.000Z`,
@@ -174,7 +172,7 @@ describe('processed data artifact builders', () => {
       grossAmount: row.grossAmount,
       discountAmount: row.discountAmount,
       netAmount: row.netAmount,
-      isNonCopilotUsage: row.isNonCopilotUsage,
+      isUnattributedUsage: row.isUnattributedUsage,
       usageBucket: row.usageBucket,
     }));
   }
@@ -184,10 +182,10 @@ describe('processed data artifact builders', () => {
       makeNormalizedRow({
         user: '',
         model: 'test-model-one',
-        quantity: 0,
+        quantity: 18.5,
         billingQuantity: 18.5,
         usageUnit: 'ai_credit',
-        isNonCopilotUsage: true,
+        isUnattributedUsage: true,
         usageBucket: 'unattributed_ai_credit',
       }),
     ];
@@ -198,7 +196,7 @@ describe('processed data artifact builders', () => {
     expect(output.specialBuckets).toEqual([
       expect.objectContaining({
         key: 'unattributed_ai_credit',
-        totalRequests: 18.5,
+        totalCredits: 18.5,
         modelBreakdown: { 'test-model-one': 18.5 },
       }),
     ]);
@@ -207,15 +205,15 @@ describe('processed data artifact builders', () => {
   test('quota processed-data builder matches QuotaAggregator license semantics', () => {
     const ctx: AggregatorContext = { pricing: PRICING };
     const rows: NormalizedRow[] = [
-      makeNormalizedRow({ user: 'test-user-one', quotaValue: PRICING.BUSINESS_QUOTA, quotaRaw: String(PRICING.BUSINESS_QUOTA) }),
+      makeNormalizedRow({ user: 'test-user-one', quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA, quotaRaw: String(PRICING.BUSINESS_AI_CREDIT_QUOTA) }),
       makeNormalizedRow({ user: 'test-user-two', quotaValue: 'unknown', quotaRaw: 'Unknown' }),
       makeNormalizedRow({
         user: '',
         model: 'Code Review',
         quantity: 4,
-        quotaValue: PRICING.BUSINESS_QUOTA,
-        isNonCopilotUsage: true,
-        usageBucket: 'non_copilot_code_review',
+        quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA,
+        isUnattributedUsage: true,
+        usageBucket: 'unattributed_ai_credit',
       }),
     ];
     const aggregator = new QuotaAggregator();
@@ -227,9 +225,9 @@ describe('processed data artifact builders', () => {
     const output = buildQuotaArtifactsFromProcessedData(toProcessedData(rows));
 
     expect(output).toEqual(aggregator.finalize(ctx));
-    expect(output.hasMixedQuotas).toBe(true);
+    expect(output.hasMixedQuotas).toBe(false);
     expect(output.hasMixedLicenses).toBe(false);
-    expect(output.specialBucketQuotas?.get('non_copilot_code_review')).toBe(0);
+    expect(output.specialBucketQuotas?.get('unattributed_ai_credit')).toBe(0);
   });
 
   test('daily processed-data builder includes per-model and special bucket breakdowns', () => {
@@ -244,8 +242,8 @@ describe('processed data artifact builders', () => {
         quantity: 7,
         day: '2025-06-02',
         date: '2025-06-02T00:00:00Z',
-        isNonCopilotUsage: true,
-        usageBucket: 'non_copilot_code_review',
+        isUnattributedUsage: true,
+        usageBucket: 'unattributed_ai_credit',
       }),
     ];
     const aggregator = new DailyBucketsAggregator();
@@ -258,8 +256,8 @@ describe('processed data artifact builders', () => {
 
     expect(output).toEqual(aggregator.finalize(ctx));
     expect(output.dailyUserModelTotals?.get('2025-06-01')?.get('test-user-one')?.get('model-two')).toBe(3);
-    expect(output.dailyBucketTotals?.get('2025-06-02')?.get('non_copilot_code_review')).toBe(7);
-    expect(output.dailyBucketModelTotals?.get('2025-06-02')?.get('non_copilot_code_review')?.get('Code Review')).toBe(7);
+    expect(output.dailyBucketTotals?.get('2025-06-02')?.get('unattributed_ai_credit')).toBe(7);
+    expect(output.dailyBucketModelTotals?.get('2025-06-02')?.get('unattributed_ai_credit')?.get('Code Review')).toBe(7);
   });
 
   test('daily aggregator accumulates repeated rows across user, AIC, and bucket maps', () => {
@@ -267,21 +265,21 @@ describe('processed data artifact builders', () => {
     const rows: NormalizedRow[] = [
       makeNormalizedRow({ user: 'test-user-one', model: 'model-one', quantity: 2 }),
       makeNormalizedRow({ user: 'test-user-one', model: 'model-one', quantity: 3 }),
-      makeNormalizedRow({ user: 'test-user-two', model: 'model-two', quantity: 1, usageUnit: 'ai_credit', aicQuantity: 4 }),
-      makeNormalizedRow({ user: 'test-user-two', model: 'model-two', quantity: 1, usageUnit: 'ai_credit', aicQuantity: 6 }),
+      makeNormalizedRow({ user: 'test-user-two', model: 'model-two', quantity: 4, usageUnit: 'ai_credit', aicQuantity: 4 }),
+      makeNormalizedRow({ user: 'test-user-two', model: 'model-two', quantity: 6, usageUnit: 'ai_credit', aicQuantity: 6 }),
       makeNormalizedRow({
         user: '',
         model: 'Code Review',
         quantity: 7,
-        isNonCopilotUsage: true,
-        usageBucket: 'non_copilot_code_review',
+        isUnattributedUsage: true,
+        usageBucket: 'unattributed_ai_credit',
       }),
       makeNormalizedRow({
         user: '',
         model: 'Code Review',
         quantity: 11,
-        isNonCopilotUsage: true,
-        usageBucket: 'non_copilot_code_review',
+        isUnattributedUsage: true,
+        usageBucket: 'unattributed_ai_credit',
       }),
     ];
     const aggregator = new DailyBucketsAggregator();
@@ -294,9 +292,9 @@ describe('processed data artifact builders', () => {
 
     expect(output.dailyUserTotals.get('2025-06-01')?.get('test-user-one')).toBe(5);
     expect(output.dailyUserModelTotals?.get('2025-06-01')?.get('test-user-one')?.get('model-one')).toBe(5);
-    expect(output.dailyUserAicTotals?.get('2025-06-01')?.get('test-user-two')).toBe(10);
-    expect(output.dailyUserAicModelTotals?.get('2025-06-01')?.get('test-user-two')?.get('model-two')).toBe(10);
-    expect(output.dailyBucketTotals?.get('2025-06-01')?.get('non_copilot_code_review')).toBe(18);
-    expect(output.dailyBucketModelTotals?.get('2025-06-01')?.get('non_copilot_code_review')?.get('Code Review')).toBe(18);
+    expect(output.dailyUserTotals.get('2025-06-01')?.get('test-user-two')).toBe(10);
+    expect(output.dailyUserModelTotals?.get('2025-06-01')?.get('test-user-two')?.get('model-two')).toBe(10);
+    expect(output.dailyBucketTotals?.get('2025-06-01')?.get('unattributed_ai_credit')).toBe(18);
+    expect(output.dailyBucketModelTotals?.get('2025-06-01')?.get('unattributed_ai_credit')?.get('Code Review')).toBe(18);
   });
 });

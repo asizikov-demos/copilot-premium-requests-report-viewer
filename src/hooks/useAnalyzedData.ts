@@ -4,11 +4,10 @@ import type { UserSummary } from '@/utils/analytics';
 import { buildQuotaBreakdown } from '@/utils/analytics/quota';
 import {
   deriveAnalysisFromArtifacts,
-  buildDailyAicCumulativeDataFromArtifacts,
   buildDailyCumulativeDataFromArtifacts,
   analyzeCodingAgentAdoptionFromArtifacts,
   analyzeCodeReviewAdoptionFromArtifacts,
-  buildRequestsByModel,
+  buildCreditsByModel,
   buildUsageArtifactsFromProcessedData,
   computeWeeklyQuotaExhaustionFromArtifacts,
   UsageArtifacts,
@@ -35,7 +34,6 @@ interface UseAnalyzedDataReturn {
   userData: UserSummary[];
   allModels: string[];
   dailyCumulativeData: { date: string; [user: string]: string | number; }[];
-  dailyAicCumulativeData: { date: string; [user: string]: string | number; }[];
   codingAgentAnalysis: CodingAgentAnalysis;
   codeReviewAnalysis: CodeReviewAnalysis;
   weeklyExhaustion: WeeklyQuotaExhaustionBreakdown;
@@ -51,7 +49,7 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
     const filteredAllRows = selectedMonths.length === 0
       ? baseProcessed
       : baseProcessed.filter(r => selectedMonths.includes(r.monthKey));
-    const filteredUserRows = filteredAllRows.filter(r => !r.isNonCopilotUsage);
+    const filteredUserRows = filteredAllRows.filter(r => !r.isUnattributedUsage);
     const artifactsAvailable = !!(
       usageArtifacts && quotaArtifacts && dailyBucketsArtifacts &&
       usageArtifacts.users && usageArtifacts.modelTotals &&
@@ -59,18 +57,18 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
     );
 
     if (!artifactsAvailable) {
-      // Minimal fallback to support legacy tests relying solely on processedData (billing summary, etc.)
+      // Fallback when streaming artifacts are unavailable.
       const filtered = filteredUserRows;
       const analysis: AnalysisResults = (() => {
         const userFiltered = filtered;
-        if (filteredAllRows.length === 0) return { timeFrame: { start: '', end: '' }, totalUniqueUsers: 0, usersExceedingQuota: 0, requestsByModel: [], quotaBreakdown: { unknown: [], business: [], enterprise: [], mixed: false, suggestedPlan: null } };
+        if (filteredAllRows.length === 0) return { timeFrame: { start: '', end: '' }, totalUniqueUsers: 0, usersExceedingQuota: 0, creditsByModel: [], quotaBreakdown: { unknown: [], business: [], enterprise: [], mixed: false, suggestedPlan: null } };
         const sorted = [...filteredAllRows].sort((a,b)=> a.epoch - b.epoch);
         const timeFrame = { start: sorted[0].dateKey, end: sorted[sorted.length-1].dateKey };
         const uniqueUsers = new Set(userFiltered.map(r=> r.user));
-        const requestsByModel = buildRequestsByModel(
+        const creditsByModel = buildCreditsByModel(
           buildUsageArtifactsFromProcessedData(filteredAllRows)
         );
-        return { timeFrame, totalUniqueUsers: uniqueUsers.size, usersExceedingQuota: 0, requestsByModel, quotaBreakdown: buildQuotaBreakdown(userFiltered) };
+        return { timeFrame, totalUniqueUsers: uniqueUsers.size, usersExceedingQuota: 0, creditsByModel, quotaBreakdown: buildQuotaBreakdown(userFiltered) };
       })();
       return {
         processedData: filtered,
@@ -79,9 +77,8 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
         userData: [],
         allModels: Array.from(new Set(filtered.map(r=> r.model))).sort(),
         dailyCumulativeData: [],
-        dailyAicCumulativeData: [],
-        codingAgentAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodingAgentRequests: 0, adoptionRate: 0, users: [] },
-        codeReviewAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodeReviewRequests: 0, adoptionRate: 0, users: [] },
+        codingAgentAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodingAgentCredits: 0, adoptionRate: 0, users: [] },
+        codeReviewAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodeReviewCredits: 0, adoptionRate: 0, users: [] },
         weeklyExhaustion: { totalUsersExhausted: 0, weeks: [] }
       };
     }
@@ -89,7 +86,6 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
     const filtered = filteredUserRows;
     const analysis = deriveAnalysisFromArtifacts(usageArtifacts!, quotaArtifacts!, dailyBucketsArtifacts!);
     const dailyCumulativeData = buildDailyCumulativeDataFromArtifacts(dailyBucketsArtifacts!);
-    const dailyAicCumulativeData = buildDailyAicCumulativeDataFromArtifacts(dailyBucketsArtifacts!);
     // When billing period filter is active, derive agent/review analyses from month-sliced data
     const effectiveUsage = selectedMonths.length > 0
       ? buildUsageArtifactsFromProcessedData(filteredAllRows)
@@ -99,12 +95,12 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
     const weeklyExhaustion = computeWeeklyQuotaExhaustionFromArtifacts(dailyBucketsArtifacts!, quotaArtifacts!);
     const userData = effectiveUsage.users.map(u => ({
       user: u.user,
-      totalRequests: u.totalRequests,
+      totalCredits: u.totalCredits,
       modelBreakdown: u.modelBreakdown,
       organization: u.organization,
       costCenter: u.costCenter,
       costCenters: u.costCenters,
-    })).sort((a, b) => b.totalRequests - a.totalRequests);
+    })).sort((a, b) => b.totalCredits - a.totalCredits);
     const allModels = Object.keys(usageArtifacts!.modelTotals).sort();
     return {
       processedData: filtered,
@@ -113,7 +109,6 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
       userData,
       allModels,
       dailyCumulativeData,
-      dailyAicCumulativeData,
       codingAgentAnalysis,
       codeReviewAnalysis,
       weeklyExhaustion

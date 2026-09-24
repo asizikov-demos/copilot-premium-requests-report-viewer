@@ -5,13 +5,11 @@
 
 import { parseQuotaValue } from '@/utils/analytics/quota';
 import type { CSVData } from '@/types/csv';
-import { isCodeReviewModel } from '@/utils/productClassification';
 import { getUsageUnitKind } from '@/utils/unitType';
 
 import { normalizeDateToIso, type DateNormalizer } from './dateNormalization';
 import { parseTokenCounts } from './tokenFields';
 import {
-  NON_COPILOT_CODE_REVIEW_BUCKET,
   NormalizedRow,
   UNATTRIBUTED_AI_CREDIT_BUCKET,
 } from './types';
@@ -40,7 +38,6 @@ export function normalizeRow(
     model,
     quantity,
     total_monthly_quota,
-    exceeds_quota,
     product,
     sku,
     unit_type,
@@ -50,8 +47,6 @@ export function normalizeRow(
     gross_amount,
     discount_amount,
     net_amount,
-    aic_quantity,
-    aic_gross_amount
   } = rawRecord;
   
   // Type guard and validate required fields
@@ -71,45 +66,27 @@ export function normalizeRow(
   const unitType = typeof unit_type === 'string' && unit_type.trim() !== '' ? unit_type.trim() : undefined;
   const skuValue = typeof sku === 'string' ? sku : undefined;
   const usageUnit = getUsageUnitKind(unitType, skuValue);
-  const isUnattributedAiCreditUsage = trimmedUsername.length === 0 && usageUnit === 'ai_credit';
-  const isNonCopilotCodeReviewUsage =
-    trimmedUsername.length === 0 && !isUnattributedAiCreditUsage && isCodeReviewModel(model);
-  const isSpecialUsage = isNonCopilotCodeReviewUsage || isUnattributedAiCreditUsage;
-  const usageBucket = isNonCopilotCodeReviewUsage
-    ? NON_COPILOT_CODE_REVIEW_BUCKET
-    : isUnattributedAiCreditUsage
-      ? UNATTRIBUTED_AI_CREDIT_BUCKET
-      : undefined;
-
-  if (trimmedUsername.length === 0 && !isSpecialUsage) {
-    warnings.push(`Blank username is only allowed for Code Review or AI Credits usage date=${date}`);
+  if (usageUnit === 'unknown') {
+    warnings.push(`Unsupported usage unit at date=${date}: expected AI Credits, received ${unitType ?? skuValue ?? 'no unit or SKU'}`);
     return null;
   }
-
-  const shouldUseRequestValues = usageUnit === 'request';
-  const shouldUseAiCreditValues = usageUnit === 'ai_credit';
-  const shouldUseUsageValues = usageUnit !== 'unknown';
+  const isUnattributedUsage = trimmedUsername.length === 0;
+  const usageBucket = isUnattributedUsage ? UNATTRIBUTED_AI_CREDIT_BUCKET : undefined;
 
   // Parse quantity
   const parsedQty = typeof quantity === 'number' ? quantity : parseFloat(String(quantity));
-  if (shouldUseUsageValues && Number.isNaN(parsedQty) && !options.allowInvalidQuantity) {
+  if (Number.isNaN(parsedQty) && !options.allowInvalidQuantity) {
     warnings.push(`Invalid quantity for user=${username} date=${date}`);
     return null;
   }
-  const qty = shouldUseRequestValues ? parsedQty : 0;
-  const billingQty = shouldUseUsageValues ? parsedQty : 0;
+  const qty = parsedQty;
   
   // Parse quota if present
-  const quotaValue = isSpecialUsage
+  const quotaValue = isUnattributedUsage
     ? 0
-    : shouldUseUsageValues && total_monthly_quota && typeof total_monthly_quota === 'string'
+    : total_monthly_quota && typeof total_monthly_quota === 'string'
       ? parseQuotaValue(total_monthly_quota)
       : undefined;
-  
-  // Parse exceeds quota flag
-  const exceedsQuota = typeof exceeds_quota === 'string'
-    ? exceeds_quota.toLowerCase() === 'true'
-    : exceeds_quota === true;
   
   // Parse billing numeric fields (ignore if unparsable)
   const parseNum = (v: unknown): number | undefined => {
@@ -117,13 +94,7 @@ export function normalizeRow(
     const n = typeof v === 'number' ? v : parseFloat(String(v));
     return Number.isNaN(n) ? undefined : n;
   };
-  const parseRequestBillingAmount = (fieldName: string, v: unknown): number | undefined => {
-    if (shouldUseUsageValues) {
-      return parseNum(v);
-    }
-    return Object.prototype.hasOwnProperty.call(rawRecord, fieldName) ? 0 : undefined;
-  };
-  const grossAmountValue = parseRequestBillingAmount('gross_amount', gross_amount);
+  const grossAmountValue = parseNum(gross_amount);
 
   return {
     date: isoDate,
@@ -131,14 +102,13 @@ export function normalizeRow(
     user: trimmedUsername,
     model,
     quantity: qty,
-    billingQuantity: billingQty,
-    quotaRaw: isSpecialUsage
+    billingQuantity: qty,
+    quotaRaw: isUnattributedUsage
       ? '0'
-      : shouldUseUsageValues && typeof total_monthly_quota === 'string'
+      : typeof total_monthly_quota === 'string'
         ? total_monthly_quota
         : undefined,
     quotaValue,
-    exceedsQuota,
     product: typeof product === 'string' ? product : undefined,
     sku: skuValue,
     unitType,
@@ -147,11 +117,11 @@ export function normalizeRow(
     costCenter: typeof cost_center_name === 'string' ? cost_center_name : undefined,
     appliedCostPerQuantity: parseNum(applied_cost_per_quantity),
     grossAmount: grossAmountValue,
-    discountAmount: parseRequestBillingAmount('discount_amount', discount_amount),
-    netAmount: parseRequestBillingAmount('net_amount', net_amount),
-    aicQuantity: shouldUseAiCreditValues ? billingQty : parseNum(aic_quantity),
-    aicGrossAmount: shouldUseAiCreditValues ? grossAmountValue : parseNum(aic_gross_amount),
-    isNonCopilotUsage: isSpecialUsage,
+    discountAmount: parseNum(discount_amount),
+    netAmount: parseNum(net_amount),
+    aicQuantity: qty,
+    aicGrossAmount: grossAmountValue,
+    isUnattributedUsage,
     usageBucket,
     ...parseTokenCounts(rawRecord, warnings),
   };

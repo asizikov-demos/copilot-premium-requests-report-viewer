@@ -5,7 +5,7 @@ import React, { useMemo, useState } from 'react';
 import { AnalysisContext } from '@/context/AnalysisContext';
 import { ProcessedData } from '@/types/csv';
 import { UserSummary } from '@/utils/analytics';
-import { categorizeUserConsumption, calculateUnusedValue, CONSUMPTION_THRESHOLDS } from '@/utils/analytics/insights';
+import { categorizeUserConsumption, CONSUMPTION_THRESHOLDS } from '@/utils/analytics/insights';
 import { QuotaArtifacts, UsageArtifacts, FeatureUsageArtifacts } from '@/utils/ingestion/types';
 import { formatDecimalQuantity } from '@/utils/formatters';
 import { buildConsumptionCategoriesFromArtifacts, buildFeatureUtilizationFromArtifacts } from '@/utils/ingestion/analytics';
@@ -55,9 +55,18 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
     return buildFeatureUtilizationFromArtifacts(featureUsageArtifacts);
   }, [featureUsageArtifacts]);
 
-  // Compute unutilized value (only for users with numeric quotas)
-  const averageUnusedValueUSD = useMemo(() => calculateUnusedValue(insightsData.averageUsers), [insightsData]);
-  const lowUnusedValueUSD = useMemo(() => calculateUnusedValue(insightsData.lowAdoptionUsers), [insightsData]);
+  const monthsInScope = analysisCtx?.dailyBucketsArtifacts?.months
+    ?? Array.from(new Set(processedData.map((row) => row.monthKey)));
+  if (monthsInScope.length > 1) {
+    return (
+      <div className="w-full space-y-6">
+        <h2 className="text-2xl font-semibold tracking-tight text-[#1f2328]">Consumption Insights</h2>
+        <div className="rounded-md border border-[#d1d9e0] bg-[#f6f8fa] p-5 text-sm text-[#636c76]">
+          Select one billing month to compare AI Credit consumption with monthly quotas.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full space-y-8">
@@ -107,10 +116,6 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
                   </p>
                   <p className="text-xs text-[#d97706] mt-0.5">45–90% usage</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-[#d97706]">Unutilized</p>
-                  <p className="text-sm font-medium text-[#1f2328]">${averageUnusedValueUSD.toFixed(0)}</p>
-                </div>
               </div>
             </div>
 
@@ -123,10 +128,6 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
                     {insightsData.lowAdoptionUsers.length}
                   </p>
                   <p className="text-xs text-[#cf222e] mt-0.5">&lt;45% usage</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-[#cf222e]">Unutilized</p>
-                  <p className="text-sm font-medium text-[#1f2328]">${lowUnusedValueUSD.toFixed(0)}</p>
                 </div>
               </div>
             </div>
@@ -192,10 +193,10 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
             <div className="p-4 bg-white border border-[#d1d9e0] rounded-md">
               <p className="text-xs font-medium text-[#636c76] uppercase tracking-[0.05em] mb-2">Code Review</p>
               <p className="text-2xl font-semibold text-[#1f2328]">
-                {Math.round(featureUtilization.codeReview.totalSessions)}
+                {formatDecimalQuantity(featureUtilization.codeReview.totalCredits)} AI Credits
               </p>
               <p className="text-xs text-[#636c76] mt-1">
-                {featureUtilization.codeReview.averagePerUser.toFixed(1)} avg per user • {featureUtilization.codeReview.userCount} users
+                {featureUtilization.codeReview.averagePerUser.toFixed(1)} credits avg per user • {featureUtilization.codeReview.userCount} users
               </p>
             </div>
 
@@ -203,10 +204,10 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
             <div className="p-4 bg-white border border-[#d1d9e0] rounded-md">
               <p className="text-xs font-medium text-[#636c76] uppercase tracking-[0.05em] mb-2">Cloud Agent</p>
               <p className="text-2xl font-semibold text-[#1f2328]">
-                {Math.round(featureUtilization.codingAgent.totalSessions)}
+                {formatDecimalQuantity(featureUtilization.codingAgent.totalCredits)} AI Credits
               </p>
               <p className="text-xs text-[#636c76] mt-1">
-                {featureUtilization.codingAgent.averagePerUser.toFixed(1)} avg per user • {featureUtilization.codingAgent.userCount} users
+                {featureUtilization.codingAgent.averagePerUser.toFixed(1)} credits avg per user • {featureUtilization.codingAgent.userCount} users
               </p>
             </div>
 
@@ -214,10 +215,10 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
             <div className="p-4 bg-white border border-[#d1d9e0] rounded-md">
               <p className="text-xs font-medium text-[#636c76] uppercase tracking-[0.05em] mb-2">Spark</p>
               <p className="text-2xl font-semibold text-[#1f2328]">
-                {Math.round(featureUtilization.spark.totalSessions)}
+                {formatDecimalQuantity(featureUtilization.spark.totalCredits)} AI Credits
               </p>
               <p className="text-xs text-[#636c76] mt-1">
-                {featureUtilization.spark.averagePerUser.toFixed(1)} avg per user • {featureUtilization.spark.userCount} users
+                {featureUtilization.spark.averagePerUser.toFixed(1)} credits avg per user • {featureUtilization.spark.userCount} users
               </p>
             </div>
 
@@ -225,22 +226,13 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
             <div className="p-4 bg-white border border-[#d1d9e0] rounded-md">
               <p className="text-xs font-medium text-[#636c76] uppercase tracking-[0.05em] mb-2">Code Quality</p>
               <p className="text-2xl font-semibold text-[#1f2328] tabular-nums">
-                {formatDecimalQuantity(featureUtilization.codeQuality.totalSessions)}
+                {formatDecimalQuantity(featureUtilization.codeQuality.totalCredits)} AI Credits
               </p>
               <p className="text-xs text-[#636c76] mt-1">
-                {featureUtilization.codeQuality.averagePerUser.toFixed(1)} avg per user • {featureUtilization.codeQuality.userCount} users
+                {featureUtilization.codeQuality.averagePerUser.toFixed(1)} credits avg per user • {featureUtilization.codeQuality.userCount} users
               </p>
             </div>
 
-            <div className="p-4 bg-white border border-[#d1d9e0] rounded-md">
-              <p className="text-xs font-medium text-[#636c76] uppercase tracking-[0.05em] mb-2">Code Review for Non-Copilot Users</p>
-              <p className="text-2xl font-semibold text-[#1f2328]">
-                {Math.round(featureUtilization.nonCopilotCodeReview.totalSessions)}
-              </p>
-              <p className="text-xs text-[#636c76] mt-1">
-                Aggregate requests outside licensed Copilot users
-              </p>
-            </div>
           </div>
         </div>
       </div>

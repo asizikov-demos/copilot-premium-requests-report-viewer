@@ -40,7 +40,7 @@ function addRow(breakdown: TokenBreakdown, row: NormalizedRow, totals: TokenTota
   addToMap(breakdown.byModel, row.model, totals);
   if (row.usageBucket) {
     addToMap(breakdown.specialBuckets, row.usageBucket, totals);
-  } else if (!row.isNonCopilotUsage && row.user !== '') {
+  } else if (!row.isUnattributedUsage && row.user !== '') {
     addToMap(breakdown.byUser, row.user, totals);
   }
 }

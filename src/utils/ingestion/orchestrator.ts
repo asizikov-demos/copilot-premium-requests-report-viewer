@@ -7,6 +7,7 @@ import Papa from 'papaparse';
 import { PRICING } from '@/constants/pricing';
 import { createDateNormalizer, detectDateFormat, type DateNormalizer } from './dateNormalization';
 import { normalizeRow } from './normalizeRow';
+import { getUsageUnitKind, isLegacyRequestRow } from '@/utils/unitType';
 import {
   Aggregator,
   AggregatorContext,
@@ -43,6 +44,8 @@ export function ingestStream(
   }
   
   let rowsProcessed = 0;
+  let sawLegacyRows = false;
+  let failed = false;
   const warnings: string[] = [];
   const t0 = performance.now();
 
@@ -58,6 +61,7 @@ export function ingestStream(
     chunk: ({ data, errors }, parser) => {
       // Handle parse errors
       if (errors.length > 0) {
+        failed = true;
         parser.abort();
         onError?.(`CSV parsing error: ${errors[0].message}`);
         return;
@@ -65,6 +69,18 @@ export function ingestStream(
       
       // Process each row in chunk
       for (const rawRow of data as Record<string, unknown>[]) {
+        const unitType = typeof rawRow.unit_type === 'string' ? rawRow.unit_type : undefined;
+        const sku = typeof rawRow.sku === 'string' ? rawRow.sku : undefined;
+        if (isLegacyRequestRow(unitType, sku)) {
+          sawLegacyRows = true;
+          continue;
+        }
+        if (getUsageUnitKind(unitType, sku) === 'unknown') {
+          failed = true;
+          parser.abort();
+          onError?.(`Unsupported usage unit in CSV: expected AI Credits, received ${unitType || sku || 'no unit or SKU'}`);
+          return;
+        }
         if (!dateNormalizer) {
           const rawDate = rawRow['date'];
           if (typeof rawDate === 'string' && rawDate.trim() !== '') {
@@ -105,6 +121,11 @@ export function ingestStream(
       }
     },
     complete: () => {
+      if (failed) return;
+      if (rowsProcessed === 0 && sawLegacyRows) {
+        onError?.('This report contains only unsupported premium-request rows. Please upload an AI Credit billing export.');
+        return;
+      }
       // Finalize all aggregators
       const outputs: Record<string, unknown> = {};
       for (const aggregator of aggregators) {

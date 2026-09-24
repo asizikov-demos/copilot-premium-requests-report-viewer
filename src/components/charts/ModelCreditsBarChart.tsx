@@ -5,29 +5,29 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { getModelColor } from '@/utils/modelColors';
 import { chartTooltipContentStyle, chartTooltipLabelStyle } from './chartTooltipStyles';
 
-export interface ModelRequestsBarChartDatum {
+export interface ModelCreditsBarChartDatum {
   model: string;      // shortened model label for axis
   fullModel: string;  // full model name used for tooltip, React keys, and color mapping
-  requests: number;   // total requests
+  credits: number;
 }
 
 
 type ResponsiveHeight = number | `${number}%`;
 
-interface ModelRequestsBarChartProps {
-  data: ModelRequestsBarChartDatum[];
+interface ModelCreditsBarChartProps {
+  data: ModelCreditsBarChartDatum[];
   height?: ResponsiveHeight;
   valueLabel?: string;
   valueUnitLabel?: string;
 }
 
 // Extracted from DataAnalysis overview section to standardize chart usage
-export function ModelRequestsBarChart({
+export function ModelCreditsBarChart({
   data,
   height = '100%' as ResponsiveHeight,
-  valueLabel = 'Total Requests',
-  valueUnitLabel = 'requests',
-}: ModelRequestsBarChartProps) {
+  valueLabel = 'AI Credits',
+  valueUnitLabel = 'AI Credits',
+}: ModelCreditsBarChartProps) {
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart
@@ -55,7 +55,7 @@ export function ModelRequestsBarChart({
             valueLabel
           ]}
           labelFormatter={(label, payload) => {
-            const item = payload?.[0]?.payload as ModelRequestsBarChartDatum | undefined;
+            const item = payload?.[0]?.payload as ModelCreditsBarChartDatum | undefined;
             return item?.fullModel ?? (label as string);
           }}
           contentStyle={chartTooltipContentStyle}
@@ -64,7 +64,7 @@ export function ModelRequestsBarChart({
           wrapperStyle={{ zIndex: 1000 }}
         />
         <Bar 
-          dataKey="requests" 
+          dataKey="credits"
           radius={[2, 2, 0, 0]}
           animationDuration={800}
           animationEasing="ease-out"

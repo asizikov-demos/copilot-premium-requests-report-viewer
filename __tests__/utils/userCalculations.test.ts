@@ -1,16 +1,16 @@
 import { PRICING } from '@/constants/pricing';
-import { calculateOverageRequests } from '@/utils/userCalculations';
+import { calculateExcessCredits } from '@/utils/userCalculations';
 
-describe('calculateOverageRequests', () => {
-  it('returns zero when requests are within quota', () => {
-    expect(calculateOverageRequests(PRICING.BUSINESS_QUOTA - 50, PRICING.BUSINESS_QUOTA)).toBe(0);
+describe('calculateExcessCredits', () => {
+  it('returns zero when AI credits are within quota', () => {
+    expect(calculateExcessCredits(PRICING.BUSINESS_AI_CREDIT_QUOTA - 50, PRICING.BUSINESS_AI_CREDIT_QUOTA)).toBe(0);
   });
 
-  it('returns requests above quota', () => {
-    expect(calculateOverageRequests(PRICING.BUSINESS_QUOTA + 150, PRICING.BUSINESS_QUOTA)).toBe(150);
+  it('returns AI credits above quota', () => {
+    expect(calculateExcessCredits(PRICING.BUSINESS_AI_CREDIT_QUOTA + 150, PRICING.BUSINESS_AI_CREDIT_QUOTA)).toBe(150);
   });
 
   it('returns zero for unknown quota', () => {
-    expect(calculateOverageRequests(PRICING.BUSINESS_QUOTA + 150, 'unknown')).toBe(0);
+    expect(calculateExcessCredits(PRICING.BUSINESS_AI_CREDIT_QUOTA + 150, 'unknown')).toBe(0);
   });
 });

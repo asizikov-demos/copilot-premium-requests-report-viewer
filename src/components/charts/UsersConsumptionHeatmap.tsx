@@ -85,8 +85,8 @@ export function UsersConsumptionHeatmap({
   hasMixedQuotas,
   showQuotaReference = true,
   title,
-  valueAxisLabel = 'Premium Requests Used',
-  valueUnitLabel = 'requests',
+  valueAxisLabel = 'AI Credits Used',
+  valueUnitLabel = 'AI Credits',
   referenceLabelSuffix = 'quota',
   formatValue = (value) => Math.round(value).toString()
 }: UsersConsumptionHeatmapProps) {

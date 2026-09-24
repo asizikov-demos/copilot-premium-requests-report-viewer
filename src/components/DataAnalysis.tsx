@@ -15,7 +15,7 @@ import { CodingAgentOverview } from './CodingAgentOverview';
 import { CostCentersOverview } from './CostCentersOverview';
 import { CostOptimizationInsights } from './CostOptimizationInsights';
 import { InsightsOverview } from './InsightsOverview';
-import { ModelRequestsBarChart } from './charts/ModelRequestsBarChart';
+import { ModelCreditsBarChart } from './charts/ModelCreditsBarChart';
 import { ModelUsageTrendsOverview } from './ModelUsageTrendsOverview';
 import { OrganizationsOverview } from './OrganizationsOverview';
 import { UsersOverview } from './UsersOverview';
@@ -119,11 +119,6 @@ const AI_USAGE_NAV_ITEM: NavigationItem = {
   ),
 };
 
-const USAGE_BASED_BILLING_HIDDEN_VIEWS = new Set<NavigationItem['key']>([
-  'insights',
-  'costOptimization',
-]);
-
 function DataAnalysisInner() {
   const {
     view,
@@ -131,7 +126,6 @@ function DataAnalysisInner() {
     analysis,
     userData,
     dailyCumulativeData,
-    dailyAicCumulativeData,
     codingAgentAnalysis,
     codeReviewAnalysis,
     processedData,
@@ -143,7 +137,6 @@ function DataAnalysisInner() {
     selectedMonths,
     setSelectedMonths,
     planInfo,
-    selectedPlan,
     filename,
     quotaArtifacts,
     usageArtifacts,
@@ -160,12 +153,9 @@ function DataAnalysisInner() {
   }, [baseProcessed]);
 
   const aicMetricsAvailable = billingArtifacts?.hasAnyAicData === true;
-  const { isUsageBasedBilling, billingRows, scopedBillingArtifacts, quantityColumnLabel, costLabels } =
+  const { billingRows, quantityColumnLabel, costLabels } =
     useUsageBasedBillingScope(aggregateProcessedData, billingArtifacts);
-  const billingQuantityLabel = isUsageBasedBilling ? 'AI Credits' : 'PRUs';
-  const unitCostLabel = isUsageBasedBilling
-    ? `1 AI Credit = ${formatCurrency(PRICING.AI_CREDIT_USD_VALUE)}`
-    : `1 PRU = ${formatCurrency(PRICING.OVERAGE_RATE_PER_REQUEST)}`;
+  const unitCostLabel = `1 AI Credit = ${formatCurrency(PRICING.AI_CREDIT_USD_VALUE)}`;
   const monthlyQuotaDisplay = useMemo(() => {
     if (analysis.quotaBreakdown.mixed) {
       return 'Mixed';
@@ -176,13 +166,11 @@ function DataAnalysisInner() {
       return distinctQuotas[0].toLocaleString();
     }
 
-    return planInfo[selectedPlan].monthlyQuota.toLocaleString();
-  }, [analysis.quotaBreakdown.mixed, planInfo, quotaArtifacts.distinctQuotas, selectedPlan]);
+    return 'Unknown';
+  }, [analysis.quotaBreakdown.mixed, quotaArtifacts.distinctQuotas]);
 
   const navItems = useMemo(() => {
-    const items = isUsageBasedBilling
-      ? NAV_ITEMS.filter((item) => !USAGE_BASED_BILLING_HIDDEN_VIEWS.has(item.key))
-      : [...NAV_ITEMS];
+    const items = [...NAV_ITEMS];
     let insertIdx = 2; // After 'users'
     if (hasCostCenters) {
       items.splice(insertIdx, 0, COST_CENTERS_NAV_ITEM);
@@ -195,7 +183,7 @@ function DataAnalysisInner() {
       items.push(AI_USAGE_NAV_ITEM);
     }
     return items;
-  }, [aicMetricsAvailable, hasCostCenters, hasOrganizations, isUsageBasedBilling]);
+  }, [aicMetricsAvailable, hasCostCenters, hasOrganizations]);
 
   useEffect(() => {
     if (!hasCostCenters && view === 'costCenters') {
@@ -207,72 +195,46 @@ function DataAnalysisInner() {
     if (!aicMetricsAvailable && view === 'aiUsage') {
       setView('overview');
     }
-    if (isUsageBasedBilling && USAGE_BASED_BILLING_HIDDEN_VIEWS.has(view)) {
-      setView('overview');
-    }
-  }, [aicMetricsAvailable, hasCostCenters, hasOrganizations, isUsageBasedBilling, setView, view]);
+  }, [aicMetricsAvailable, hasCostCenters, hasOrganizations, setView, view]);
 
   const costMetricsAvailable = billingArtifacts?.hasAnyBillingData === true;
   const aggregatedCosts = costMetricsAvailable && billingArtifacts ? billingArtifacts.totals : null;
 
-  const aggregatedAic = (
-    billingArtifacts?.hasAnyAicData
-      ? {
-        aicQuantity: billingArtifacts.totals.aicQuantity ?? 0,
-        aicGrossAmount: billingArtifacts.totals.aicGrossAmount ?? 0,
-        aicIncludedCredits: billingArtifacts.totals.aicIncludedCredits ?? 0,
-        aicAdditionalUsageGrossAmount: billingArtifacts.totals.aicAdditionalUsageGrossAmount ?? 0
-      }
-      : null
-  );
-  const showAicOverviewCard = aggregatedAic !== null && !isUsageBasedBilling;
-
   const modelRows = useMemo(() => {
-    if (scopedBillingArtifacts) {
-      return Array.from(scopedBillingArtifacts.billingByModel.entries())
-        .map(([model, totals]) => ({
-          model,
-          requests: isUsageBasedBilling ? totals.aicQuantity : totals.quantity,
-          gross: totals.gross,
-          discount: totals.discount,
-          net: totals.net,
-          aicGrossAmount: totals.aicGrossAmount,
-        }))
-        .sort((left, right) => right.requests - left.requests);
+    const byModel = new Map<string, number>();
+    for (const row of aggregateProcessedData) {
+      byModel.set(row.model, (byModel.get(row.model) ?? 0) + row.creditsUsed);
     }
-
-    return analysis.requestsByModel.map((row) => ({
-      model: row.model,
-      requests: row.totalRequests,
-      gross: 0,
-      discount: 0,
-      net: 0,
-      aicGrossAmount: 0,
-    }));
-  }, [analysis.requestsByModel, isUsageBasedBilling, scopedBillingArtifacts]);
+    return [...byModel.entries()].map(([model, credits]) => {
+      const totals = billingArtifacts?.billingByModel.get(model);
+      return {
+        model,
+        credits,
+        gross: totals?.gross ?? 0,
+        discount: totals?.discount ?? 0,
+        net: totals?.net ?? 0,
+      };
+    }).sort((left, right) => right.credits - left.credits);
+  }, [aggregateProcessedData, billingArtifacts]);
 
   const hasModelCosts = modelRows.some(
     (row) => row.gross > 0 || row.discount > 0 || row.net > 0
   );
   const showModelQuantity = true;
-  const hasModelAic = aicMetricsAvailable && !isUsageBasedBilling;
   const modelChartData = useMemo(() => (
     modelRows.map((item) => ({
       model: item.model.length > 20 ? `${item.model.substring(0, 20)}...` : item.model,
       fullModel: item.model,
-      requests: Math.round(item.requests * 100) / 100,
+      credits: Math.round(item.credits * 100) / 100,
     }))
   ), [modelRows]);
-  const modelChartTotal = modelRows.reduce((sum, model) => sum + model.requests, 0);
-  const modelChartTitle = isUsageBasedBilling ? 'AI Credits by Model' : 'Requests by Model';
-  const modelChartValueLabel = isUsageBasedBilling ? 'AI Credits' : 'Total Requests';
-  const modelChartUnitLabel = isUsageBasedBilling ? 'AI Credits' : 'requests';
-  const modelChartTotalDisplay = isUsageBasedBilling
-    ? modelChartTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    : modelChartTotal.toFixed(0);
+  const modelChartTotal = modelRows.reduce((sum, model) => sum + model.credits, 0);
+  const modelChartTitle = 'AI Credits by Model';
+  const modelChartValueLabel = 'AI Credits';
+  const modelChartUnitLabel = 'AI Credits';
+  const modelChartTotalDisplay = modelChartTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const productCosts = useMemo(() => aggregateProductCosts(billingRows), [billingRows]);
-  const showProductAicGross = aicMetricsAvailable && !isUsageBasedBilling;
   const showProductCosts = costMetricsAvailable;
   const autoModeSavingsRows = useMemo(
     () => aggregateAutoModeSavings(billingRows),
@@ -383,7 +345,6 @@ function DataAnalysisInner() {
               userData={userData}
               processedData={processedData}
               dailyCumulativeData={dailyCumulativeData}
-              dailyAicCumulativeData={dailyAicCumulativeData}
               quotaArtifacts={quotaArtifacts}
               usageArtifacts={usageArtifacts}
               billingArtifacts={billingArtifacts}
@@ -416,7 +377,7 @@ function DataAnalysisInner() {
             <div className="space-y-6">
               {/* Current Billing + Licenses row */}
               {costMetricsAvailable && aggregatedCosts && (
-                <div className={`grid grid-cols-1 ${showAicOverviewCard ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6 opacity-0 animate-fade-in-up`} style={{ animationDelay: '50ms' }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 opacity-0 animate-fade-in-up" style={{ animationDelay: '50ms' }}>
                   {/* Current Billing */}
                   <div className="bg-white border border-[#d1d9e0] rounded-md p-5">
                     <p className="text-xs font-bold text-[#636c76] uppercase tracking-wider text-center mb-3">Current Billing</p>
@@ -424,7 +385,7 @@ function DataAnalysisInner() {
                       {formatCurrency(aggregatedCosts.net)}
                     </p>
                     <p className="text-sm text-[#636c76] text-center mt-1">
-                      {aggregateProcessedData.reduce((sum, r) => sum + (r.billingQuantity ?? r.requestsUsed), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {billingQuantityLabel}
+                      {aggregateProcessedData.reduce((sum, r) => sum + r.creditsUsed, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} AI Credits
                     </p>
                     <p className="text-xs text-[#636c76] text-center mt-0.5">
                       {unitCostLabel}
@@ -480,46 +441,11 @@ function DataAnalysisInner() {
                     </div>
                   </div>
 
-                  {showAicOverviewCard && (
-                    <div className="bg-white border border-[#d1d9e0] rounded-md p-5">
-                      <p className="text-xs font-bold text-[#636c76] uppercase tracking-wider text-center mb-3">AI Credits</p>
-                      <p className="text-3xl font-bold text-[#1f2328] text-center">
-                        {aggregatedAic.aicQuantity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </p>
-                      <p className="text-sm text-[#636c76] text-center mt-1">credits consumed</p>
-                      <p className="text-xs text-[#636c76] text-center mt-0.5">
-                        1 credit = {formatCurrency(PRICING.AI_CREDIT_USD_VALUE)}
-                      </p>
-                      <div className="mt-4 pt-4 border-t border-[#d1d9e0] space-y-2 text-sm" aria-label="ai-credits-summary">
-                        <div className="flex justify-between">
-                          <span className="text-[#636c76]">Gross cost</span>
-                          <span className="font-mono font-medium text-[#1f2328]">
-                            {formatCurrency(aggregatedAic.aicGrossAmount)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-[#636c76]">AI Credits included</span>
-                          <span className="font-mono font-medium text-[#1f2328]">
-                            {aggregatedAic.aicIncludedCredits.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-[#636c76]">AI Credits additional usage gross</span>
-                          <span className="font-mono font-medium text-[#1f2328]">
-                            {formatCurrency(aggregatedAic.aicAdditionalUsageGrossAmount)}
-                          </span>
-                        </div>
-                        <p className="text-xs text-[#636c76]">
-                          Estimated values. Gross cost excludes any included credits applied to the final bill.
-                        </p>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
 
               {/* Cost per Product */}
-              {productCosts.length > 0 && (showProductCosts || showProductAicGross) && (
+              {productCosts.length > 0 && (
                 <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
                   <div className="px-6 py-4 border-b border-[#d1d9e0] bg-[#f6f8fa]">
                     <h3 className="text-lg font-semibold text-[#1f2328]">Cost per Product</h3>
@@ -530,9 +456,6 @@ function DataAnalysisInner() {
                         <tr className="border-b border-[#d1d9e0]">
                           <th className="px-6 py-3 text-left text-xs font-bold text-[#636c76] uppercase tracking-wider">Product</th>
                           <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{quantityColumnLabel}</th>
-                          {showProductAicGross && (
-                            <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">AI Credits Gross</th>
-                          )}
                           {showProductCosts && (
                             <>
                               <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Gross</th>
@@ -547,11 +470,8 @@ function DataAnalysisInner() {
                           <tr key={product.label} className="table-row-hover transition-colors duration-150">
                             <td className="px-6 py-3.5 text-sm font-medium text-[#1f2328]">{product.label}</td>
                             <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
-                              {(isUsageBasedBilling ? product.aicQuantity : product.requests).toFixed(2)}
+                              {product.credits.toFixed(2)}
                             </td>
-                            {showProductAicGross && (
-                              <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">{formatCurrency(product.aicGrossAmount)}</td>
-                            )}
                             {showProductCosts && (
                               <>
                                 <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">{formatCurrency(product.gross)}</td>
@@ -574,7 +494,7 @@ function DataAnalysisInner() {
                       <div>
                         <h3 className="text-lg font-semibold text-[#1f2328]">Auto Mode Savings</h3>
                         <p className="text-sm text-[#636c76] mt-0.5">
-                          Savings compare billed cost with the cost before Auto Mode&apos;s 10% {isUsageBasedBilling ? 'AI Credits' : 'PRU'} discount.
+                          Savings compare billed cost with the cost before Auto Mode&apos;s {PRICING.AUTO_MODE_DISCOUNT_RATE * 100}% AI Credits discount.
                         </p>
                       </div>
                       <span className="text-sm font-semibold text-[#2da44e]">
@@ -621,7 +541,7 @@ function DataAnalysisInner() {
                   <span className="text-xs text-[#636c76] font-medium">Total: {modelChartTotalDisplay} {modelChartUnitLabel}</span>
                 </div>
                 <div className="h-72 xl:h-80 2xl:h-96">
-                  <ModelRequestsBarChart
+                  <ModelCreditsBarChart
                     data={modelChartData}
                     valueLabel={modelChartValueLabel}
                     valueUnitLabel={modelChartUnitLabel}
@@ -640,9 +560,6 @@ function DataAnalysisInner() {
                         <th className="px-6 py-3 text-left text-xs font-bold text-[#636c76] uppercase tracking-wider">Model</th>
                         {showModelQuantity && (
                           <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{quantityColumnLabel}</th>
-                        )}
-                        {hasModelAic && (
-                          <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">AI Credits Gross</th>
                         )}
                         {hasModelCosts && (
                           <>
@@ -665,12 +582,7 @@ function DataAnalysisInner() {
                             </td>
                             {showModelQuantity && (
                               <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
-                                {item.requests.toFixed(2)}
-                              </td>
-                            )}
-                            {hasModelAic && (
-                              <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
-                                {formatCurrency(item.aicGrossAmount)}
+                                {item.credits.toFixed(2)}
                               </td>
                             )}
                             {hasModelCosts && (
