@@ -4,4 +4,3 @@
 
 export * from './analytics/quota';
 export * from './analytics/filters';
-export * from './analytics/exhaustion';

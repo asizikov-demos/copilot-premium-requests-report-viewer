@@ -1,13 +1,9 @@
-import {
-  computeWeeklyQuotaExhaustionFromArtifacts
-} from '@/utils/ingestion/analytics';
 import type { UsageArtifacts } from '@/utils/ingestion';
 import { buildMonthListFromArtifacts } from '@/utils/ingestion/analytics';
 import { filterBySelectedMonths } from '@/utils/analytics/filters';
 import { PRICING } from '@/constants/pricing';
 import { CSVData, ProcessedData } from '@/types/csv';
 
-import { makeDailyBucketsArtifacts, makeQuotaArtifacts } from '../helpers/makeArtifacts';
 import { processCSVData, analyzeData } from '../helpers/processCSVData';
 import { validCSVData, powerUserCSVData } from '../fixtures/validCSVData';
 import {
@@ -20,7 +16,6 @@ import {
 // Explicit model credits interface to remove implicit any usage
 interface ModelCredit { model: string; totalCredits: number }
 const modelTotal = (credits: ModelCredit[], name: string) => credits.find(r => r.model === name)?.totalCredits;
-interface WeekExhaustion { weekNumber: number; startDate: string; endDate: string; usersExhaustedInWeek: number }
 
 describe('CSV Data Processing', () => {
   describe('processCSVData', () => {
@@ -360,94 +355,4 @@ describe('CSV Data Processing', () => {
     });
   });
 
-  describe('computeWeeklyQuotaExhaustion (artifact-based)', () => {
-
-    const makeProcessed = (entries: Array<{ ts: string; user: string; used: number; quota: number | 'unknown'; model?: string }>): ProcessedData[] => {
-      return entries.map(e => makeProcessedData({
-        timestamp: new Date(e.ts),
-        user: e.user,
-        model: e.model || 'test-model',
-        creditsUsed: e.used,
-        quotaValue: e.quota,
-      }));
-    };
-
-    it('should return empty structure for no data', () => {
-      const daily = makeDailyBucketsArtifacts([]);
-      const quota = makeQuotaArtifacts([]);
-      const result = computeWeeklyQuotaExhaustionFromArtifacts(daily, quota);
-      expect(result).toEqual({ totalUsersExhausted: 0, weeks: [] });
-    });
-
-    it('should compute week buckets and first exhaustion correctly (single month)', () => {
-      const quotaValue = PRICING.BUSINESS_AI_CREDIT_QUOTA;
-      const data = makeProcessed([
-        { ts: '2025-06-01T10:00:00Z', user: 'test-user-two', used: quotaValue / 2, quota: quotaValue },
-        { ts: '2025-06-03T10:00:00Z', user: 'test-user-one', used: quotaValue / 2, quota: quotaValue },
-        { ts: '2025-06-05T10:00:00Z', user: 'test-user-three', used: 500, quota: 'unknown' },
-        { ts: '2025-06-07T10:00:00Z', user: 'test-user-two', used: quotaValue / 2, quota: quotaValue },
-        { ts: '2025-06-08T10:00:00Z', user: 'test-user-one', used: quotaValue / 4, quota: quotaValue },
-        { ts: '2025-06-10T10:00:00Z', user: 'test-user-one', used: quotaValue / 4, quota: quotaValue },
-        { ts: '2025-06-22T10:00:00Z', user: 'test-user-four', used: quotaValue - 10, quota: quotaValue },
-        { ts: '2025-06-29T10:00:00Z', user: 'test-user-four', used: 11, quota: quotaValue },
-      ]);
-      const daily = makeDailyBucketsArtifacts(data.map(row => ({
-        date: row.dateKey,
-        user: row.user,
-        used: row.creditsUsed,
-        model: row.model,
-      })));
-      const quota = makeQuotaArtifacts(data.map(row => ({ user: row.user, quota: row.quotaValue })));
-      const result = computeWeeklyQuotaExhaustionFromArtifacts(daily, quota);
-      expect(result.totalUsersExhausted).toBe(3);
-      // Expect weeks 1,2,5 to have counts 1 each
-      const weeks = result.weeks as WeekExhaustion[];
-      const w1 = weeks.find(w => w.weekNumber === 1);
-      const w2 = weeks.find(w => w.weekNumber === 2);
-      const w5 = weeks.find(w => w.weekNumber === 5);
-      expect(w1?.usersExhaustedInWeek).toBe(1);
-      expect(w2?.usersExhaustedInWeek).toBe(1);
-      expect(w5?.usersExhaustedInWeek).toBe(1);
-    });
-
-    it('should not double count users if they exceed multiple times', () => {
-      // Later AI credits should not change the first exhaustion week.
-      const data = makeProcessed([
-        { ts: '2025-06-15T10:00:00Z', user: 'test-user-one', used: PRICING.BUSINESS_AI_CREDIT_QUOTA - 100, quota: PRICING.BUSINESS_AI_CREDIT_QUOTA },
-        { ts: '2025-06-18T10:00:00Z', user: 'test-user-one', used: 120, quota: PRICING.BUSINESS_AI_CREDIT_QUOTA },
-        { ts: '2025-06-25T10:00:00Z', user: 'test-user-one', used: 50, quota: PRICING.BUSINESS_AI_CREDIT_QUOTA }  // extra
-      ]);
-      const daily = makeDailyBucketsArtifacts(data.map(row => ({
-        date: row.dateKey,
-        user: row.user,
-        used: row.creditsUsed,
-        model: row.model,
-      })));
-      const quota = makeQuotaArtifacts(data.map(row => ({ user: row.user, quota: row.quotaValue })));
-      const result = computeWeeklyQuotaExhaustionFromArtifacts(daily, quota);
-      expect(result.totalUsersExhausted).toBe(1);
-      const w3 = (result.weeks as WeekExhaustion[]).find(w => w.weekNumber === 3);
-      expect(w3?.usersExhaustedInWeek).toBe(1);
-      expect(result.weeks.length).toBe(1);
-    });
-
-    it('should handle multiple months by producing separate week entries ordered properly', () => {
-      const data = makeProcessed([
-        { ts: '2025-06-05T10:00:00Z', user: 'test-user-one', used: PRICING.BUSINESS_AI_CREDIT_QUOTA + 100, quota: PRICING.BUSINESS_AI_CREDIT_QUOTA },
-        { ts: '2025-07-09T10:00:00Z', user: 'test-user-two', used: PRICING.BUSINESS_AI_CREDIT_QUOTA + 100, quota: PRICING.BUSINESS_AI_CREDIT_QUOTA }
-      ]);
-      const daily = makeDailyBucketsArtifacts(data.map(row => ({
-        date: row.dateKey,
-        user: row.user,
-        used: row.creditsUsed,
-        model: row.model,
-      })));
-      const quota = makeQuotaArtifacts(data.map(row => ({ user: row.user, quota: row.quotaValue })));
-      const result = computeWeeklyQuotaExhaustionFromArtifacts(daily, quota);
-      expect(result.totalUsersExhausted).toBe(2);
-      // Weeks should contain week1 then week2 (from next month)
-      expect(result.weeks[0].weekNumber).toBe(1);
-      expect(result.weeks[1].weekNumber).toBe(2);
-    });
-  });
 });

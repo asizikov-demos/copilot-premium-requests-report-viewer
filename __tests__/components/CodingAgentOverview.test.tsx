@@ -86,7 +86,6 @@ function createContextValue() {
     dailyAicCumulativeData: [],
     codingAgentAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodingAgentCredits: 0, adoptionRate: 0, users: [] },
     codeReviewAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodeReviewCredits: 0, adoptionRate: 0, users: [] },
-    weeklyExhaustion: { totalUsersExhausted: 0, weeks: [] },
     selectedMonths: [],
     setSelectedMonths: jest.fn(),
     availableMonths: [],

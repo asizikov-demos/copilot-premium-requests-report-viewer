@@ -17,7 +17,7 @@ describe('AI-credit quota excess', () => {
     expect(calculateExcessCredits(5000, 'unknown')).toBe(0);
   });
 
-  it('does not combine usage from separate UTC billing months to infer quota exhaustion', () => {
+  it('does not combine usage from separate UTC billing months to infer excess consumption', () => {
     const quotaValue = PRICING.BUSINESS_AI_CREDIT_QUOTA;
     const daily = makeDailyBucketsArtifacts([
       { date: '2026-06-30', user: 'test-user-one', used: quotaValue - 1 },

@@ -1,10 +1,3 @@
-import { ProcessedData } from '@/types/csv';
-import {
-  buildDailyBucketsArtifactsFromProcessedData,
-  buildQuotaArtifactsFromProcessedData,
-  computeWeeklyQuotaExhaustionFromArtifacts,
-  WeeklyQuotaExhaustionBreakdown
-} from '@/utils/ingestion/analytics';
 import { isCodeReviewModel, isCodingAgentModel, isSparkProduct } from '@/utils/productClassification';
 
 const CODE_REVIEW_SPECIAL_FEATURE_SCORE = 8;
@@ -28,11 +21,4 @@ export function calculateSpecialFeaturesScore(models: string[]): number {
   }
 
   return Math.min(totalScore, MAX_SPECIAL_FEATURES_SCORE);
-}
-
-export function computeWeeklyQuotaExhaustion(processedData: ProcessedData[]): WeeklyQuotaExhaustionBreakdown {
-  if (processedData.length === 0) return { totalUsersExhausted: 0, weeks: [] };
-  const quota = buildQuotaArtifactsFromProcessedData(processedData);
-  const daily = buildDailyBucketsArtifactsFromProcessedData(processedData);
-  return computeWeeklyQuotaExhaustionFromArtifacts(daily, quota);
 }

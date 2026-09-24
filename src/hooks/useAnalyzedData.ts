@@ -9,11 +9,9 @@ import {
   analyzeCodeReviewAdoptionFromArtifacts,
   buildCreditsByModel,
   buildUsageArtifactsFromProcessedData,
-  computeWeeklyQuotaExhaustionFromArtifacts,
   UsageArtifacts,
   QuotaArtifacts,
-  DailyBucketsArtifacts,
-  WeeklyQuotaExhaustionBreakdown
+  DailyBucketsArtifacts
 } from '@/utils/ingestion';
 
 interface UseAnalyzedDataArgs {
@@ -36,7 +34,6 @@ interface UseAnalyzedDataReturn {
   dailyCumulativeData: { date: string; [user: string]: string | number; }[];
   codingAgentAnalysis: CodingAgentAnalysis;
   codeReviewAnalysis: CodeReviewAnalysis;
-  weeklyExhaustion: WeeklyQuotaExhaustionBreakdown;
 }
 
 /**
@@ -78,8 +75,7 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
         allModels: Array.from(new Set(filtered.map(r=> r.model))).sort(),
         dailyCumulativeData: [],
         codingAgentAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodingAgentCredits: 0, adoptionRate: 0, users: [] },
-        codeReviewAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodeReviewCredits: 0, adoptionRate: 0, users: [] },
-        weeklyExhaustion: { totalUsersExhausted: 0, weeks: [] }
+        codeReviewAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodeReviewCredits: 0, adoptionRate: 0, users: [] }
       };
     }
 
@@ -92,7 +88,6 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
       : usageArtifacts!;
     const codingAgentAnalysis = analyzeCodingAgentAdoptionFromArtifacts(effectiveUsage, quotaArtifacts!);
     const codeReviewAnalysis = analyzeCodeReviewAdoptionFromArtifacts(effectiveUsage, quotaArtifacts!);
-    const weeklyExhaustion = computeWeeklyQuotaExhaustionFromArtifacts(dailyBucketsArtifacts!, quotaArtifacts!);
     const userData = effectiveUsage.users.map(u => ({
       user: u.user,
       totalCredits: u.totalCredits,
@@ -110,8 +105,7 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
       allModels,
       dailyCumulativeData,
       codingAgentAnalysis,
-      codeReviewAnalysis,
-      weeklyExhaustion
+      codeReviewAnalysis
     };
   }, [baseProcessed, selectedMonths, usageArtifacts, quotaArtifacts, dailyBucketsArtifacts]);
 }
