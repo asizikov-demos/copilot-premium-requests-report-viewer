@@ -26,6 +26,8 @@ describe('DailyConsumptionChart', () => {
     expect(screen.getByText('$0.00')).toBeInTheDocument();
     expect([...container.querySelectorAll('.recharts-legend-item-text')].map((item) => item.textContent))
       .toEqual(['Included usage', 'Additional usage']);
+    expect(container.querySelector('.recharts-legend-wrapper'))
+      .toHaveStyle({ fontSize: '12px', color: '#636c76' });
 
     await waitFor(() => {
       const series = container.querySelectorAll('.recharts-bar');

@@ -42,7 +42,10 @@ export function DailyConsumptionChart({ data }: DailyConsumptionChartProps) {
           labelStyle={chartTooltipLabelStyle}
           cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }}
         />
-        <Legend itemSorter={(item) => item.dataKey === 'included' ? 0 : 1} />
+        <Legend
+          itemSorter={(item) => item.dataKey === 'included' ? 0 : 1}
+          wrapperStyle={{ fontSize: 12, color: '#636c76' }}
+        />
         <Bar dataKey="included" name="Included usage" stackId="consumption" fill="#2da44e" />
         <Bar dataKey="additional" name="Additional usage" stackId="consumption" fill="#cf222e" />
       </BarChart>
