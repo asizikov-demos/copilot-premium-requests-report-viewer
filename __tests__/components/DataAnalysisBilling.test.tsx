@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { DataAnalysis } from '@/components/DataAnalysis';
 import { PRICING } from '@/constants/pricing';
 import type { CSVData } from '@/types/csv';
+import type { DailyConsumptionDatum } from '@/utils/dailyConsumption';
 import {
   BillingAggregator,
   DailyBucketsAggregator,
@@ -16,6 +17,12 @@ import {
 import type { AggregatorContext, BillingArtifacts, IngestionResult, NormalizedRow, UsageArtifacts } from '@/utils/ingestion/types';
 
 import { newFormatRows } from '../fixtures/newFormatCSVData';
+
+jest.mock('@/components/charts/DailyConsumptionChart', () => ({
+  DailyConsumptionChart: ({ data }: { data: DailyConsumptionDatum[] }) => (
+    <div data-testid="daily-consumption-chart">{JSON.stringify(data)}</div>
+  ),
+}));
 
 // Mock ResizeObserver for Recharts ResponsiveContainer in JSDOM
 beforeAll(() => {
@@ -85,6 +92,65 @@ function createIngestionResultWithBillingArtifacts(billingArtifacts: BillingArti
 }
 
 describe('DataAnalysis billing summary', () => {
+  it('places daily consumption below product costs and filters its reported amounts by billing month', () => {
+    const ingestionResult = createIngestionResultFromRawRows([
+      {
+        date: '2026-06-30T23:59:59Z',
+        username: 'test-user-one',
+        product: 'copilot',
+        sku: 'copilot_ai_credit',
+        model: 'test-model-one',
+        quantity: '100',
+        discount_amount: '1.25',
+        net_amount: '0.75',
+      },
+      {
+        date: '2026-07-01',
+        username: 'test-user-two',
+        product: 'spark',
+        sku: 'copilot_ai_credit',
+        model: 'test-model-two',
+        quantity: '200',
+        discount_amount: '2.5',
+        net_amount: '1.5',
+      },
+    ]);
+    render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
+
+    const productHeading = screen.getByRole('heading', { name: 'Cost per Product' });
+    const consumption = screen.getByRole('region', { name: 'Daily Consumption' });
+    expect(productHeading.compareDocumentPosition(consumption) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(consumption).getByText('Included and additional usage by day in USD')).toBeInTheDocument();
+    expect(JSON.parse(screen.getByTestId('daily-consumption-chart').textContent ?? '')).toEqual([
+      { date: '2026-06-30', included: 1.25, additional: 0.75 },
+      { date: '2026-07-01', included: 2.5, additional: 1.5 },
+    ]);
+
+    const period = screen.getByLabelText('Billing Period');
+    for (const option of within(period).getAllByRole<HTMLOptionElement>('option')) {
+      option.selected = option.value === '2026-07';
+    }
+    fireEvent.change(period);
+    expect(JSON.parse(screen.getByTestId('daily-consumption-chart').textContent ?? '')).toEqual([
+      { date: '2026-07-01', included: 2.5, additional: 1.5 },
+    ]);
+  });
+
+  it('omits daily consumption when commercial fields are absent', () => {
+    const ingestionResult = createIngestionResultFromRawRows([{
+      date: '2026-06-30',
+      username: 'test-user-one',
+      sku: 'copilot_ai_credit',
+      model: 'test-model-one',
+      quantity: '100',
+      input: '100',
+    }]);
+    render(<DataAnalysis ingestionResult={ingestionResult} filename="token-export.csv" onReset={() => {}} />);
+
+    expect(screen.queryByRole('region', { name: 'Daily Consumption' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('daily-consumption-chart')).not.toBeInTheDocument();
+  });
+
   it('renders billing summary when cost fields are present', async () => {
     const ingestionResult = createIngestionResultFromRawRows(newFormatRows);
     render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
@@ -130,6 +196,7 @@ describe('DataAnalysis billing summary', () => {
       expect(summary).toHaveTextContent('$1.00');
       expect(summary).not.toHaveTextContent('additional usage gross');
     });
+    expect(screen.queryByRole('region', { name: 'Daily Consumption' })).not.toBeInTheDocument();
   });
 
   it('renders AI Credits callout and overview card when AIC fields are present', async () => {

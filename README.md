@@ -7,6 +7,12 @@ Analyze GitHub Copilot AI Credit billing exports. See per-user consumption, quot
 
 Review billed net charges alongside monthly AI Credit consumption. The dashboard does not estimate Enterprise upgrade savings from request-unit pricing.
 
+Below **Cost per Product**, the Overview shows **Daily Consumption** in USD:
+included usage (`discount_amount`) forms the green base of each day's stacked bar,
+with additional usage (`net_amount`) in red above it. The chart uses UTC billing
+days and follows the selected billing months. It is omitted when daily monetary
+amounts are unavailable.
+
 ## Consumption Insights
 
 The overview shows compact consumption groups alongside feature reach and

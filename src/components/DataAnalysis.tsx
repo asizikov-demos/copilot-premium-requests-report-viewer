@@ -6,6 +6,7 @@ import { PRICING } from '@/constants/pricing';
 import { AnalysisProvider, useAnalysisContext } from '@/context/AnalysisContext';
 import { useUsageBasedBillingScope } from '@/hooks/useUsageBasedBillingScope';
 import { aggregateAutoModeSavings } from '@/utils/autoModeSavings';
+import { aggregateDailyConsumption } from '@/utils/dailyConsumption';
 import { formatCurrency } from '@/utils/formatters';
 import { getModelColor } from '@/utils/modelColors';
 import { aggregateProductCosts } from '@/utils/productCosts';
@@ -14,6 +15,7 @@ import { AiUsageOverview } from './AiUsageOverview';
 import { CodingAgentOverview } from './CodingAgentOverview';
 import { CostCentersOverview } from './CostCentersOverview';
 import { CostOptimizationInsights } from './CostOptimizationInsights';
+import { DailyConsumptionChart } from './charts/DailyConsumptionChart';
 import { InsightsOverview } from './InsightsOverview';
 import { ModelCreditsBarChart } from './charts/ModelCreditsBarChart';
 import { ModelUsageTrendsOverview } from './ModelUsageTrendsOverview';
@@ -234,6 +236,7 @@ function DataAnalysisInner() {
   const modelChartTotalDisplay = modelChartTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const productCosts = useMemo(() => aggregateProductCosts(billingRows), [billingRows]);
+  const dailyConsumption = useMemo(() => aggregateDailyConsumption(billingRows), [billingRows]);
   const showProductCosts = costMetricsAvailable;
   const autoModeSavingsRows = useMemo(
     () => aggregateAutoModeSavings(billingRows),
@@ -484,6 +487,20 @@ function DataAnalysisInner() {
                     </table>
                   </div>
                 </div>
+              )}
+
+              {costMetricsAvailable && dailyConsumption.length > 0 && (
+                <section aria-labelledby="daily-consumption-title" className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden min-h-[20rem]">
+                  <div className="px-6 py-4 border-b border-[#d1d9e0] bg-[#f6f8fa]">
+                    <h3 id="daily-consumption-title" className="text-lg font-semibold text-[#1f2328]">Daily Consumption</h3>
+                    <p className="text-sm text-[#636c76] mt-0.5">Included and additional usage by day in USD</p>
+                  </div>
+                  <div className="p-5">
+                    <div className="h-72 sm:h-96 2xl:h-[28rem] w-full">
+                      <DailyConsumptionChart data={dailyConsumption} />
+                    </div>
+                  </div>
+                </section>
               )}
 
               {autoModeSavingsRows.length > 0 && costMetricsAvailable && (
