@@ -98,4 +98,27 @@ describe('aggregateDailyConsumption', () => {
     expect(aggregateDailyConsumption([])).toEqual([]);
     expect(aggregateDailyConsumption([makeProcessedData({ inputTokens: 100 })])).toEqual([]);
   });
+
+  it('preserves the timeline for unordered duplicate months without mutating report rows', () => {
+    const userRows = [
+      makeProcessedData({ timestamp: new Date('2025-12-15T00:00:00Z'), netAmount: 1 }),
+    ];
+    const periodRows = [
+      makeProcessedData({ timestamp: new Date('2026-01-20T00:00:00Z') }),
+      ...userRows,
+      makeProcessedData({ timestamp: new Date('2025-11-20T00:00:00Z') }),
+      makeProcessedData({ timestamp: new Date('2026-01-10T00:00:00Z') }),
+    ];
+    const originalRows = [...periodRows];
+    const result = aggregateDailyConsumption(userRows, periodRows);
+
+    expect(result).toHaveLength(92);
+    expect(result[0]).toEqual({ date: '2025-11-01', included: 0, additional: 0 });
+    expect(result[91]).toEqual({ date: '2026-01-31', included: 0, additional: 0 });
+    expect(result.filter(day => day.additional !== 0)).toEqual([
+      { date: '2025-12-15', included: 0, additional: 1 },
+    ]);
+    expect(periodRows).toEqual(originalRows);
+    expect(aggregateDailyConsumption(userRows, [])).toEqual([]);
+  });
 });

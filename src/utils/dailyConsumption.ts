@@ -33,9 +33,19 @@ export function aggregateDailyConsumption(
     return [];
   }
 
-  const months = periodRows.map(row => row.monthKey).sort();
-  const start = `${months[0]}-01`;
-  const end = new Date(`${months[months.length - 1]}-01T00:00:00Z`);
+  let earliestMonth = periodRows[0].monthKey;
+  let latestMonth = earliestMonth;
+  for (const row of periodRows) {
+    if (row.monthKey < earliestMonth) {
+      earliestMonth = row.monthKey;
+    }
+    if (row.monthKey > latestMonth) {
+      latestMonth = row.monthKey;
+    }
+  }
+
+  const start = `${earliestMonth}-01`;
+  const end = new Date(`${latestMonth}-01T00:00:00Z`);
   end.setUTCMonth(end.getUTCMonth() + 1);
   end.setUTCDate(0);
 
