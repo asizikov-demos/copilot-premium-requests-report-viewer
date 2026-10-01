@@ -48,6 +48,7 @@ export function OrganizationsOverview() {
         groupsLabel="organizations"
         detailIdPrefix="organization-daily-details"
         rows={selectedOrganizationRows}
+        periodRows={aggregateProcessedData}
         quantityColumnLabel={quantityColumnLabel}
         costLabels={costLabels}
         hasAicGross={false}

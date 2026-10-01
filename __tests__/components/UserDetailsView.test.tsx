@@ -16,6 +16,11 @@ jest.mock('recharts', () => ({
       {children}
     </div>
   ),
+  BarChart: ({ children, data }: { children: React.ReactNode; data?: unknown }) => (
+    <div data-testid="bar-chart" data-chart={JSON.stringify(data)}>
+      {children}
+    </div>
+  ),
   Bar: () => <div data-testid="bar" />,
   Line: () => <div data-testid="line" />,
   LineChart: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -33,6 +38,117 @@ jest.mock('recharts', () => ({
 
 describe('UserDetailsView', () => {
   const mockOnBack = jest.fn();
+
+  it('charts only the selected user reported daily USD consumption and follows filtered months', () => {
+    const processedData = [
+      makeProcessedData({
+        timestamp: new Date('2026-07-01T00:00:00Z'),
+        discountAmount: 0,
+        netAmount: 2,
+      }),
+      makeProcessedData({
+        timestamp: new Date('2026-06-30T23:59:59Z'),
+        discountAmount: 1.25,
+        netAmount: 0.5,
+      }),
+      makeProcessedData({
+        timestamp: new Date('2026-06-30T12:00:00Z'),
+        model: 'test-model-two',
+        product: 'spark',
+        costCenter: 'test-cost-center-two',
+        discountAmount: 2,
+        netAmount: 1,
+      }),
+      makeProcessedData({
+        timestamp: new Date('2026-06-30T00:00:00Z'),
+        user: 'test-user-two',
+        discountAmount: 100,
+        netAmount: 50,
+      }),
+      makeProcessedData({
+        timestamp: new Date('2026-08-15T00:00:00Z'),
+        user: 'test-user-two',
+        inputTokens: 100,
+      }),
+    ];
+    const { rerender } = render(
+      <UserDetailsView user="test-user-one" processedData={processedData} userQuotaValue="unknown" onBack={mockOnBack} />
+    );
+
+    const region = screen.getByRole('region', { name: 'Daily Consumption' });
+    expect(within(region).getByText('Included and additional usage by day in USD')).toBeInTheDocument();
+    expect(JSON.parse(within(region).getByTestId('bar-chart').getAttribute('data-chart')!)).toEqual([
+      ...Array.from({ length: 30 }, (_, index) => ({
+        date: `2026-06-${String(index + 1).padStart(2, '0')}`,
+        included: index === 29 ? 3.25 : 0,
+        additional: index === 29 ? 1.5 : 0,
+      })),
+      ...Array.from({ length: 31 }, (_, index) => ({
+        date: `2026-07-${String(index + 1).padStart(2, '0')}`,
+        included: 0,
+        additional: index === 0 ? 2 : 0,
+      })),
+      ...Array.from({ length: 31 }, (_, index) => ({
+        date: `2026-08-${String(index + 1).padStart(2, '0')}`,
+        included: 0,
+        additional: 0,
+      })),
+    ]);
+
+    rerender(
+      <UserDetailsView user="test-user-one" processedData={processedData.filter(row => row.monthKey === '2026-07')} userQuotaValue="unknown" onBack={mockOnBack} />
+    );
+    expect(JSON.parse(screen.getByTestId('bar-chart').getAttribute('data-chart')!)).toEqual([
+      ...Array.from({ length: 31 }, (_, index) => ({
+        date: `2026-07-${String(index + 1).padStart(2, '0')}`,
+        included: 0,
+        additional: index === 0 ? 2 : 0,
+      })),
+    ]);
+
+    rerender(
+      <UserDetailsView user="test-user-two" processedData={processedData} userQuotaValue="unknown" onBack={mockOnBack} />
+    );
+    const secondUserData = JSON.parse(screen.getByTestId('bar-chart').getAttribute('data-chart')!);
+    expect(secondUserData).toHaveLength(92);
+    expect(secondUserData[0]).toEqual({ date: '2026-06-01', included: 0, additional: 0 });
+    expect(secondUserData[91]).toEqual({ date: '2026-08-31', included: 0, additional: 0 });
+    expect(secondUserData.filter((day: { included: number; additional: number }) => day.included !== 0 || day.additional !== 0)).toEqual([
+      { date: '2026-06-30', included: 100, additional: 50 },
+    ]);
+  });
+
+  it('retains zero and optional daily USD amounts without estimating costs from credits', () => {
+    render(
+      <UserDetailsView user="test-user-one" processedData={[
+        makeProcessedData({ discountAmount: 0, netAmount: 0 }),
+        makeProcessedData({ timestamp: new Date('2025-06-02T00:00:00Z'), discountAmount: 1 }),
+        makeProcessedData({ timestamp: new Date('2025-06-03T00:00:00Z'), netAmount: 2 }),
+        makeProcessedData({ timestamp: new Date('2025-06-04T00:00:00Z'), grossAmount: 100, creditsUsed: 100 }),
+      ]} userQuotaValue="unknown" onBack={mockOnBack} />
+    );
+
+    expect(JSON.parse(screen.getByTestId('bar-chart').getAttribute('data-chart')!)).toEqual(
+      Array.from({ length: 30 }, (_, index) => ({
+        date: `2025-06-${String(index + 1).padStart(2, '0')}`,
+        included: index === 1 ? 1 : 0,
+        additional: index === 2 ? 2 : 0,
+      }))
+    );
+  });
+
+  it.each([
+    { rows: [] },
+    { rows: [makeProcessedData({ inputTokens: 100 })] },
+    { rows: [makeProcessedData({ grossAmount: 100 })] },
+    { rows: [makeProcessedData({ user: 'test-user-two', discountAmount: 1, netAmount: 2 })] },
+  ])('omits daily USD consumption when the selected user has no reported daily amounts (%#)', ({ rows }) => {
+    render(
+      <UserDetailsView user="test-user-one" processedData={rows} userQuotaValue="unknown" onBack={mockOnBack} />
+    );
+
+    expect(screen.queryByRole('region', { name: 'Daily Consumption' })).not.toBeInTheDocument();
+  });
 
   it('renders token-only daily rows without monetary columns and preserves cost centers', () => {
     const base = {

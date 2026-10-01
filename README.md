@@ -10,8 +10,18 @@ Review billed net charges alongside monthly AI Credit consumption. The dashboard
 Below **Cost per Product**, the Overview shows **Daily Consumption** in USD:
 included usage (`discount_amount`) forms the green base of each day's stacked bar,
 with additional usage (`net_amount`) in red above it. The chart uses UTC billing
-days and follows the selected billing months. It is omitted when daily monetary
+days and covers the full billing period, from the first day of the earliest
+selected month through the last day of the latest, with zero consumption on
+unreported days. It is omitted when daily monetary
 amounts are unavailable.
+
+The user detail page includes the same **Daily Consumption** chart below
+**Cost per Product**, scoped to that user's usage on the same full billing-period
+timeline, including months when only other users have reported usage.
+
+Cost center and organization detail views show the same USD chart immediately
+above **Spend per Product**, scoped to the selected group on the report-wide
+billing-period timeline.
 
 ## Consumption Insights
 

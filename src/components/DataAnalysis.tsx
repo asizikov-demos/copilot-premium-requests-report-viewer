@@ -236,7 +236,10 @@ function DataAnalysisInner() {
   const modelChartTotalDisplay = modelChartTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const productCosts = useMemo(() => aggregateProductCosts(billingRows), [billingRows]);
-  const dailyConsumption = useMemo(() => aggregateDailyConsumption(billingRows), [billingRows]);
+  const dailyConsumption = useMemo(
+    () => aggregateDailyConsumption(billingRows, aggregateProcessedData),
+    [billingRows, aggregateProcessedData]
+  );
   const showProductCosts = costMetricsAvailable;
   const autoModeSavingsRows = useMemo(
     () => aggregateAutoModeSavings(billingRows),

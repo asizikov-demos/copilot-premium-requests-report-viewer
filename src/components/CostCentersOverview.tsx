@@ -37,6 +37,7 @@ export function CostCentersOverview() {
         groupsLabel="cost centers"
         detailIdPrefix="cost-center-daily-details"
         rows={selectedCostCenterRows}
+        periodRows={aggregateProcessedData}
         quantityColumnLabel={quantityColumnLabel}
         costLabels={costLabels}
         hasAicGross={false}

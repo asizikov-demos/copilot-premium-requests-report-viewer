@@ -4,6 +4,7 @@ import React, { useContext, useMemo } from 'react';
 
 import { UserConsumptionMetrics } from '@/components/UserConsumptionMetrics';
 import { TOKEN_COLUMNS, TokenValue } from '@/components/TokenValue';
+import { DailyConsumptionChart } from '@/components/charts/DailyConsumptionChart';
 import { PRICING } from '@/constants/pricing';
 import { AnalysisContext } from '@/context/AnalysisContext';
 import { UserDailyStackedChart } from '@/components/charts/UserDailyStackedChart';
@@ -24,6 +25,7 @@ import {
 import { generateModelColors } from '@/utils/modelColors';
 import { getBillingCostLabels } from '@/utils/billingLabels';
 import { enumerateDatesInclusive } from '@/utils/dateKeys';
+import { aggregateDailyConsumption } from '@/utils/dailyConsumption';
 import { formatCurrency } from '@/utils/formatters';
 import { aggregateProductCosts } from '@/utils/productCosts';
 import {
@@ -343,6 +345,11 @@ export function UserDetailsView({
     return aggregateProductCosts(userData);
   }, [hasBillingData, userData]);
 
+  const dailyConsumption = useMemo(
+    () => aggregateDailyConsumption(userData, analysisCtx?.aggregateProcessedData ?? processedData),
+    [userData, analysisCtx?.aggregateProcessedData, processedData]
+  );
+
   const costCenterCosts = useMemo((): UserCostCenterCost[] => {
     if (!hasBillingData) return [];
 
@@ -542,6 +549,20 @@ export function UserDetailsView({
             </table>
           </div>
         </div>
+      )}
+
+      {dailyConsumption.length > 0 && (
+        <section aria-labelledby="user-daily-consumption-title" className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden min-h-[20rem]">
+          <div className="px-5 py-4 border-b border-[#d1d9e0]">
+            <h3 id="user-daily-consumption-title" className="text-sm font-medium text-[#1f2328]">Daily Consumption</h3>
+            <p className="text-xs text-[#636c76] mt-1">Included and additional usage by day in USD</p>
+          </div>
+          <div className="p-5">
+            <div className="h-72 sm:h-96 2xl:h-[28rem] w-full">
+              <DailyConsumptionChart data={dailyConsumption} />
+            </div>
+          </div>
+        </section>
       )}
 
       {/* Daily Model Usage chart — standalone card */}

@@ -3,6 +3,13 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { BillingGroupDetailsView } from '@/components/BillingGroupDetailsView';
 import type { ProcessedData } from '@/types/csv';
 import { getBillingCostLabels } from '@/utils/billingLabels';
+import type { DailyConsumptionDatum } from '@/utils/dailyConsumption';
+
+jest.mock('@/components/charts/DailyConsumptionChart', () => ({
+  DailyConsumptionChart: ({ data }: { data: DailyConsumptionDatum[] }) => (
+    <div data-testid="daily-usd-consumption-chart">{JSON.stringify(data)}</div>
+  ),
+}));
 
 function makeRow(overrides: Partial<ProcessedData> & { dateKey: string }): ProcessedData {
   const timestamp = new Date(`${overrides.dateKey}T00:00:00Z`);
@@ -65,6 +72,71 @@ function renderView(onBack = jest.fn()) {
 }
 
 describe('BillingGroupDetailsView', () => {
+  it.each([
+    { groupName: 'test-org-one', groupLabel: 'organization', groupsLabel: 'organizations' },
+    { groupName: 'test-cost-center-one', groupLabel: 'cost center', groupsLabel: 'cost centers' },
+  ])('places full-period USD consumption above product spend for a $groupLabel', ({ groupName, groupLabel, groupsLabel }) => {
+    const periodRows = [
+      ...rows,
+      makeRow({ dateKey: '2026-04-15', organization: 'test-org-two', costCenter: 'test-cost-center-two', netAmount: 100 }),
+    ];
+    const props = {
+      groupName,
+      groupLabel,
+      groupsLabel,
+      detailIdPrefix: 'test-group-daily-details',
+      rows,
+      periodRows,
+      quantityColumnLabel: 'AI Credits',
+      costLabels: getBillingCostLabels(),
+      hasAicGross: false,
+      onBack: jest.fn(),
+    };
+    const { rerender } = render(<BillingGroupDetailsView {...props} />);
+    const consumption = screen.getByRole('region', { name: 'Daily Consumption (USD)' });
+    const productTable = screen.getByRole('table', { name: 'Spend per product' });
+    expect(consumption.compareDocumentPosition(productTable) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(consumption).getByText('Included and additional usage by day in USD')).toBeInTheDocument();
+    expect(JSON.parse(within(consumption).getByTestId('daily-usd-consumption-chart').textContent ?? '')).toEqual([
+      ...Array.from({ length: 31 }, (_, index) => ({
+        date: `2026-03-${String(index + 1).padStart(2, '0')}`,
+        included: index === 0 ? 0.04 : 0,
+        additional: index === 0 ? 0.12 : index === 2 ? 0.08 : 0,
+      })),
+      ...Array.from({ length: 30 }, (_, index) => ({
+        date: `2026-04-${String(index + 1).padStart(2, '0')}`,
+        included: 0,
+        additional: 0,
+      })),
+    ]);
+
+    rerender(<BillingGroupDetailsView {...props} periodRows={rows} />);
+    const chartData = JSON.parse(screen.getByTestId('daily-usd-consumption-chart').textContent ?? '');
+    expect(chartData).toHaveLength(31);
+    expect(chartData[30]).toEqual({ date: '2026-03-31', included: 0, additional: 0 });
+  });
+
+  it.each([
+    { rows: [] },
+    { rows: [makeRow({ dateKey: '2026-03-15', grossAmount: undefined, discountAmount: undefined, netAmount: undefined, inputTokens: 100 })] },
+    { rows: [makeRow({ dateKey: '2026-03-15', grossAmount: 1, discountAmount: undefined, netAmount: undefined })] },
+  ])('omits the USD chart without reported daily monetary amounts (%#)', ({ rows }) => {
+    render(
+      <BillingGroupDetailsView
+        groupName="test-org-one"
+        groupLabel="organization"
+        groupsLabel="organizations"
+        detailIdPrefix="organization-daily-details"
+        rows={rows}
+        quantityColumnLabel="AI Credits"
+        costLabels={getBillingCostLabels()}
+        hasAicGross={false}
+        onBack={jest.fn()}
+      />
+    );
+    expect(screen.queryByRole('region', { name: 'Daily Consumption (USD)' })).not.toBeInTheDocument();
+  });
+
   it('renders the group header with aggregated totals', () => {
     renderView();
 

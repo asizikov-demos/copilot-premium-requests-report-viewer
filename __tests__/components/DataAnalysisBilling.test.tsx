@@ -92,6 +92,69 @@ function createIngestionResultWithBillingArtifacts(billingArtifacts: BillingArti
 }
 
 describe('DataAnalysis billing summary', () => {
+  it.each([
+    { view: 'Cost Centers', groupName: 'test-cost-center-one' },
+    { view: 'Organizations', groupName: 'test-org-one' },
+  ])('scopes $view detail USD consumption to the group on the full selected report period', ({ view, groupName }) => {
+    const ingestionResult = createIngestionResultFromRawRows([
+      {
+        date: '2026-06-30T23:59:59Z',
+        username: 'test-user-one',
+        organization: 'test-org-one',
+        cost_center_name: 'test-cost-center-one',
+        product: 'copilot',
+        sku: 'copilot_ai_credit',
+        model: 'test-model-one',
+        quantity: '100',
+        discount_amount: '1.25',
+        net_amount: '0.75',
+      },
+      {
+        date: '2026-07-15',
+        username: 'test-user-two',
+        organization: 'test-org-two',
+        cost_center_name: 'test-cost-center-two',
+        product: 'spark',
+        sku: 'copilot_ai_credit',
+        model: 'test-model-two',
+        quantity: '200',
+        discount_amount: '100',
+        net_amount: '50',
+      },
+    ]);
+    render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
+    fireEvent.click(screen.getAllByRole('button', { name: view })[0]);
+    const groupRow = screen.getByRole('button', { name: new RegExp(groupName) }).closest('tr');
+    expect(groupRow).not.toBeNull();
+    fireEvent.click(within(groupRow!).getByRole('button', { name: 'View details' }));
+
+    const consumption = screen.getByRole('region', { name: 'Daily Consumption (USD)' });
+    const productTable = screen.getByRole('table', { name: 'Spend per product' });
+    expect(consumption.compareDocumentPosition(productTable) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(JSON.parse(within(consumption).getByTestId('daily-consumption-chart').textContent ?? '')).toEqual([
+      ...Array.from({ length: 30 }, (_, index) => ({
+        date: `2026-06-${String(index + 1).padStart(2, '0')}`,
+        included: index === 29 ? 1.25 : 0,
+        additional: index === 29 ? 0.75 : 0,
+      })),
+      ...Array.from({ length: 31 }, (_, index) => ({
+        date: `2026-07-${String(index + 1).padStart(2, '0')}`,
+        included: 0,
+        additional: 0,
+      })),
+    ]);
+
+    const period = screen.getByLabelText('Billing Period');
+    for (const option of within(period).getAllByRole<HTMLOptionElement>('option')) {
+      option.selected = option.value === '2026-06';
+    }
+    fireEvent.change(period);
+    const chartData = JSON.parse(screen.getByTestId('daily-consumption-chart').textContent ?? '');
+    expect(chartData).toHaveLength(30);
+    expect(chartData[0]).toEqual({ date: '2026-06-01', included: 0, additional: 0 });
+    expect(chartData[29]).toEqual({ date: '2026-06-30', included: 1.25, additional: 0.75 });
+  });
+
   it('places daily consumption below product costs and filters its reported amounts by billing month', () => {
     const ingestionResult = createIngestionResultFromRawRows([
       {
@@ -122,8 +185,16 @@ describe('DataAnalysis billing summary', () => {
     expect(productHeading.compareDocumentPosition(consumption) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(consumption).getByText('Included and additional usage by day in USD')).toBeInTheDocument();
     expect(JSON.parse(screen.getByTestId('daily-consumption-chart').textContent ?? '')).toEqual([
-      { date: '2026-06-30', included: 1.25, additional: 0.75 },
-      { date: '2026-07-01', included: 2.5, additional: 1.5 },
+      ...Array.from({ length: 30 }, (_, index) => ({
+        date: `2026-06-${String(index + 1).padStart(2, '0')}`,
+        included: index === 29 ? 1.25 : 0,
+        additional: index === 29 ? 0.75 : 0,
+      })),
+      ...Array.from({ length: 31 }, (_, index) => ({
+        date: `2026-07-${String(index + 1).padStart(2, '0')}`,
+        included: index === 0 ? 2.5 : 0,
+        additional: index === 0 ? 1.5 : 0,
+      })),
     ]);
 
     const period = screen.getByLabelText('Billing Period');
@@ -131,9 +202,13 @@ describe('DataAnalysis billing summary', () => {
       option.selected = option.value === '2026-07';
     }
     fireEvent.change(period);
-    expect(JSON.parse(screen.getByTestId('daily-consumption-chart').textContent ?? '')).toEqual([
-      { date: '2026-07-01', included: 2.5, additional: 1.5 },
-    ]);
+    expect(JSON.parse(screen.getByTestId('daily-consumption-chart').textContent ?? '')).toEqual(
+      Array.from({ length: 31 }, (_, index) => ({
+        date: `2026-07-${String(index + 1).padStart(2, '0')}`,
+        included: index === 0 ? 2.5 : 0,
+        additional: index === 0 ? 1.5 : 0,
+      }))
+    );
   });
 
   it('omits daily consumption when commercial fields are absent', () => {
