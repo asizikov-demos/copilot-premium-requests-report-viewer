@@ -1,12 +1,17 @@
 import type { ProcessedData } from '@/types/csv';
 
+import { enumerateDatesInclusive } from './dateKeys';
+
 export interface DailyConsumptionDatum {
   date: string;
   included: number;
   additional: number;
 }
 
-export function aggregateDailyConsumption(rows: ProcessedData[]): DailyConsumptionDatum[] {
+export function aggregateDailyConsumption(
+  rows: ProcessedData[],
+  periodRows: ProcessedData[] = rows
+): DailyConsumptionDatum[] {
   const byDay = new Map<string, DailyConsumptionDatum>();
 
   for (const row of rows) {
@@ -24,5 +29,17 @@ export function aggregateDailyConsumption(rows: ProcessedData[]): DailyConsumpti
     byDay.set(row.dateKey, day);
   }
 
-  return [...byDay.values()].sort((left, right) => left.date.localeCompare(right.date));
+  if (byDay.size === 0 || periodRows.length === 0) {
+    return [];
+  }
+
+  const months = periodRows.map(row => row.monthKey).sort();
+  const start = `${months[0]}-01`;
+  const end = new Date(`${months[months.length - 1]}-01T00:00:00Z`);
+  end.setUTCMonth(end.getUTCMonth() + 1);
+  end.setUTCDate(0);
+
+  return enumerateDatesInclusive(start, end.toISOString().slice(0, 10)).map(date =>
+    byDay.get(date) ?? { date, included: 0, additional: 0 }
+  );
 }

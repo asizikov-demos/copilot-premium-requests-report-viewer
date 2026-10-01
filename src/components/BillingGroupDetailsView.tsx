@@ -2,10 +2,12 @@
 
 import React, { useMemo, useState } from 'react';
 
+import { DailyConsumptionChart } from '@/components/charts/DailyConsumptionChart';
 import { ModelDailyStackedChart } from '@/components/charts/ModelDailyStackedChart';
 import type { ProcessedData } from '@/types/csv';
 import type { BillingCostLabels } from '@/utils/billingLabels';
 import { enumerateDatesInclusive } from '@/utils/dateKeys';
+import { aggregateDailyConsumption } from '@/utils/dailyConsumption';
 import { formatCurrency, formatDecimalQuantity } from '@/utils/formatters';
 import {
   accumulateProductCost,
@@ -60,6 +62,8 @@ export interface BillingGroupDetailsViewProps {
   /** Prefix for the generated daily breakdown detail element ids. */
   detailIdPrefix: string;
   rows: ProcessedData[];
+  /** Report-wide filtered rows that determine the full billing-period timeline. */
+  periodRows?: ProcessedData[];
   quantityColumnLabel: string;
   costLabels: BillingCostLabels;
   hasAicGross: boolean;
@@ -128,6 +132,7 @@ export function BillingGroupDetailsView({
   groupsLabel,
   detailIdPrefix,
   rows,
+  periodRows = rows,
   quantityColumnLabel,
   costLabels,
   hasAicGross,
@@ -139,6 +144,10 @@ export function BillingGroupDetailsView({
   const [userPage, setUserPage] = useState(0);
 
   const productCosts = useMemo(() => aggregateProductCosts(rows), [rows]);
+  const dailyConsumption = useMemo(
+    () => aggregateDailyConsumption(rows, periodRows),
+    [rows, periodRows]
+  );
   const dailyRows = useMemo(() => buildDailyRows(rows), [rows]);
 
   const userCount = useMemo(() => {
@@ -303,6 +312,20 @@ export function BillingGroupDetailsView({
           </tbody>
         </table>
       </div>
+
+      {dailyConsumption.length > 0 && (
+        <section aria-labelledby={`${detailIdPrefix}-usd-consumption-title`} className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden min-h-[20rem]">
+          <div className="px-5 py-4 border-b border-[#d1d9e0]">
+            <h3 id={`${detailIdPrefix}-usd-consumption-title`} className="text-sm font-medium text-[#1f2328]">Daily Consumption (USD)</h3>
+            <p className="text-xs text-[#636c76] mt-1">Included and additional usage by day in USD</p>
+          </div>
+          <div className="p-5">
+            <div className="h-72 sm:h-96 2xl:h-[28rem] w-full">
+              <DailyConsumptionChart data={dailyConsumption} />
+            </div>
+          </div>
+        </section>
+      )}
 
       <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
         <div className="px-5 py-4 border-b border-[#d1d9e0]">
