@@ -37,3 +37,22 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+
+<!-- github-knowledge-base-start -->
+## Knowledge Base
+
+### Purpose
+
+This repository uses the Knowledge Base at [https://github.com/asizikov-demos/copilot-premium-requests-report-viewer](https://github.com/asizikov-demos/copilot-premium-requests-report-viewer) on branch `main`.
+
+### Required behavior
+
+1. Before changing code, read `docs/index.md` from that branch.
+2. Use the index to open only the knowledge files relevant to the task.
+3. If the index is unavailable, stop and report that the Knowledge Base could not be loaded.
+
+### Source of truth
+
+Generated knowledge tracks the code. When the knowledge and code disagree, trust the code.
+<!-- github-knowledge-base-end -->
