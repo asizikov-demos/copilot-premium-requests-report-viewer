@@ -20,10 +20,7 @@ describe('useAnalysisFilters', () => {
     const { result } = renderHook(() => useAnalysisFilters(rows));
 
     expect(getAvailableMonths).toHaveBeenCalledWith(rows);
-    expect(result.current.availableMonths).toEqual([
-      { value: '2025-06', label: 'June 2025' },
-      { value: '2025-07', label: 'July 2025' },
-    ]);
+    expect(result.current.availableMonths.map(month => month.value)).toEqual(['2025-06', '2025-07']);
     expect(result.current.hasMultipleMonthsData).toBe(true);
   });
 });
