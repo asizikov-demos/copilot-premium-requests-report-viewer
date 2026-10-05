@@ -2,8 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 
 import type { ProcessedData } from '@/types/csv';
 import { DailyBucketsArtifacts, buildMonthListFromArtifacts } from '@/utils/ingestion';
-import { getMonthKey } from '@/utils/analytics/filters';
-import { monthKeyToLabel } from '@/utils/dateKeys';
+import { getAvailableMonths } from '@/utils/analytics/filters';
 
 /**
  * Hook managing analysis filter state (billing period month selection).
@@ -20,12 +19,7 @@ export function useAnalysisFilters(processedData: ProcessedData[], dailyBucketsA
       return { availableMonths, hasMultipleMonthsData: availableMonths.length > 1 };
     }
     // Legacy fallback: derive months from processedData using the shared UTC-safe helpers.
-    const monthsSet = new Set<string>();
-    for (const row of processedData) {
-      monthsSet.add(getMonthKey(row));
-    }
-    const sorted = Array.from(monthsSet).sort();
-    const availableMonths = sorted.map(key => ({ value: key, label: monthKeyToLabel(key) }));
+    const availableMonths = getAvailableMonths(processedData);
     return { availableMonths, hasMultipleMonthsData: availableMonths.length > 1 };
   }, [processedData, dailyBucketsArtifacts]);
 
