@@ -1,17 +1,12 @@
 import { renderHook } from '@testing-library/react';
 
 import { useAnalysisFilters } from '@/hooks/useAnalysisFilters';
-import { getAvailableMonths } from '@/utils/analytics/filters';
 
+import { makeDailyBucketsArtifacts } from '../helpers/makeArtifacts';
 import { makeProcessedData } from '../helpers/testUtils';
 
-jest.mock('@/utils/analytics/filters', () => {
-  const actual = jest.requireActual<typeof import('@/utils/analytics/filters')>('@/utils/analytics/filters');
-  return { ...actual, getAvailableMonths: jest.fn(actual.getAvailableMonths) };
-});
-
 describe('useAnalysisFilters', () => {
-  it('uses the shared UTC-safe month list for legacy processed data', () => {
+  it('returns sorted, deduplicated UTC month keys for legacy processed data', () => {
     const rows = [
       makeProcessedData({ timestamp: new Date('2025-07-01T00:00:00Z'), monthKey: '' }),
       makeProcessedData({ timestamp: new Date('2025-06-30T23:59:59Z'), monthKey: '' }),
@@ -19,8 +14,43 @@ describe('useAnalysisFilters', () => {
     ];
     const { result } = renderHook(() => useAnalysisFilters(rows));
 
-    expect(getAvailableMonths).toHaveBeenCalledWith(rows);
     expect(result.current.availableMonths.map(month => month.value)).toEqual(['2025-06', '2025-07']);
     expect(result.current.hasMultipleMonthsData).toBe(true);
+  });
+
+  it('returns no months for empty processed data', () => {
+    const { result } = renderHook(() => useAnalysisFilters([]));
+
+    expect(result.current.availableMonths).toEqual([]);
+    expect(result.current.hasMultipleMonthsData).toBe(false);
+  });
+
+  it('does not flag duplicate rows in a single month as multi-month data', () => {
+    const rows = [
+      makeProcessedData({ timestamp: new Date('2025-06-01T00:00:00Z'), monthKey: '' }),
+      makeProcessedData({ timestamp: new Date('2025-06-30T23:59:59Z'), monthKey: '' }),
+    ];
+    const { result } = renderHook(() => useAnalysisFilters(rows));
+
+    expect(result.current.availableMonths.map(month => month.value)).toEqual(['2025-06']);
+    expect(result.current.hasMultipleMonthsData).toBe(false);
+  });
+
+  it('prefers artifact months over processed data', () => {
+    const rows = [makeProcessedData({ timestamp: new Date('2025-06-01T00:00:00Z') })];
+    const artifacts = makeDailyBucketsArtifacts([], { months: ['2025-07', '2025-08'] });
+    const { result } = renderHook(() => useAnalysisFilters(rows, artifacts));
+
+    expect(result.current.availableMonths.map(month => month.value)).toEqual(['2025-07', '2025-08']);
+    expect(result.current.hasMultipleMonthsData).toBe(true);
+  });
+
+  it('falls back to processed data when artifact months are empty', () => {
+    const rows = [makeProcessedData({ timestamp: new Date('2025-06-30T23:59:59Z'), monthKey: '' })];
+    const artifacts = makeDailyBucketsArtifacts();
+    const { result } = renderHook(() => useAnalysisFilters(rows, artifacts));
+
+    expect(result.current.availableMonths.map(month => month.value)).toEqual(['2025-06']);
+    expect(result.current.hasMultipleMonthsData).toBe(false);
   });
 });
