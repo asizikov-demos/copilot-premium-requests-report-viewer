@@ -3,15 +3,6 @@
 ## Fonts
 - **Body:** Inter (loaded via `next/font/google` as `--font-inter`)
 - **Monospace:** Geist Mono (loaded as `--font-geist-mono`)
-- Applied globally: `font-family: var(--font-inter), system-ui, -apple-system, sans-serif`
-- Font smoothing: `-webkit-font-smoothing: antialiased` (WebKit) and `-moz-osx-font-smoothing: grayscale` (Firefox on macOS)
-
-## Heading Style
-All headings use:
-```css
-letter-spacing: -0.01em;
-font-weight: 700;
-```
 
 ## Text Scale (Tailwind classes used in the project)
 
@@ -33,4 +24,3 @@ font-weight: 700;
 ## Special Classes
 
 - **`tabular-nums`** — Use on all numeric data cells and stat figures so digits align vertically in tables and grids. This is a standard CSS `font-variant-numeric` feature; Tailwind exposes it as a utility.
-- **`display-heading`** — Used on hero/page-level headings (e.g., the upload screen title, cost optimization title). Currently referenced in code but not defined as a custom CSS class — it serves as a semantic marker and may be styled in future.

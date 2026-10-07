@@ -2,7 +2,7 @@
 
 ## Cards
 
-The fundamental container. Always flat with a 1px border — never use heavy shadows.
+The fundamental container.
 
 ```tsx
 {/* Standard card */}
@@ -76,11 +76,7 @@ GitHub-style data tables:
 ```
 
 Key details:
-- Header row: `bg-[#f6f8fa]`, 11px uppercase, semibold, wider tracking
 - Body rows: white bg, hover → `#fcfdff`, 150ms transition
-- Numeric/monetary cells: right-aligned, `font-mono`
-- First column (identifier): `font-medium text-[#1f2328]`
-- Other columns: `text-[#636c76]`
 
 ## Badges / Pills
 
@@ -100,10 +96,6 @@ Key details:
 <span className="badge badge-blue">Info Label</span>
 ```
 
-Badge CSS from globals.css:
-- `.badge`: `inline-flex, items-center, px-3, py-1, rounded-full, text-xs, font-medium, tracking-[0.01em]`
-- `.badge-amber`: amber bg `#fef3c7`, text `#92400e`, border `#fcd34d`
-- `.badge-blue`: blue bg `#dbeafe`, text `#1e40af`, border `#93c5fd`
 
 ## Buttons
 
@@ -168,7 +160,6 @@ Use the `ExpandableSection` primitive from `src/components/primitives/Expandable
 </ExpandableSection>
 ```
 
-Pattern: white card with border, clickable header with chevron rotation, content area below.
 
 ## Tooltips
 
@@ -180,7 +171,6 @@ Use the `Tooltip` primitive from `src/components/primitives/Tooltip.tsx`:
 </Tooltip>
 ```
 
-Tooltip appearance: dark bg `#24292f`, white text, `text-xs`, rounded-md, max-w-xs.
 
 ## Breadcrumbs
 
@@ -213,9 +203,6 @@ GitHub-style breadcrumb navigation with copy-to-clipboard:
 ```
 
 Key details:
-- Back link: `text-[#0969da]` (GitHub blue), `hover:underline`
-- Separator: `text-[#8c959f]`
-- Current item: same size as page title, with copy icon that changes color on `group-hover`
 
 ## Filter Dropdowns
 
