@@ -2,7 +2,6 @@
 
 ## Page Structure (Sidebar + Content)
 
-The main analysis view uses a sidebar navigation + content area:
 
 ```tsx
 <div className="flex gap-6">
@@ -73,7 +72,6 @@ The main analysis view uses a sidebar navigation + content area:
 
 ## App Header (dark top bar)
 
-The global header uses GitHub's dark chrome:
 
 ```tsx
 <header className="bg-[#24292f] sticky top-0 z-50">
@@ -94,8 +92,3 @@ The global header uses GitHub's dark chrome:
   </div>
 </header>
 ```
-
-Key details:
-- Background: `#24292f` (GitHub's dark header)
-- Height: `h-16`, sticky with `z-50`
-- Ghost button: transparent bg, `hover:bg-white/[0.08]`, `border-[#57606a]`

@@ -36,7 +36,6 @@ Use `feat!:` or `fix!:` for breaking changes.
 
 Rules:
 - If this is the first commit in a batch and any non-Markdown code/config file changed, run `npm run build && npm run lint && npm run test` before creating commits. If all changed files are Markdown (`*.md`), skip build/lint/test and state that validation was skipped because the change is docs-only. If any validation step fails, abort immediately and return the failure to the caller. Do not attempt to fix unrelated issues from inside this skill.
-- One logical change per commit — do not bundle unrelated changes
 - Keep the subject line under 72 characters
 - No period at the end of the subject line
 - Always include this trailer at the end of every commit message:
@@ -76,7 +75,6 @@ When a branch already has an open PR and you push additional commits:
 5. If the PR body does not already contain a summary table, add one without removing the rest of the description.
 6. Before running `gh pr edit`, verify the updated body still contains the important sections from the original PR description.
 
-Never leave the PR description stale after pushing fixes to an existing PR.
 
 ## History Rewrites
 
