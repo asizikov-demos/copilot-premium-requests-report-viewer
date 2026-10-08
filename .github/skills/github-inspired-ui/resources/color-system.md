@@ -63,8 +63,6 @@ Use these consistently for categorized content (badges, cards, callouts, advisor
 
 ## How to Reference Colors in Tailwind Classes
 
-Use bracket notation with the hex values from the token system:
-
 ```tsx
 // ✅ Correct — uses the project's token values
 <div className="bg-[#f6f8fa] border border-[#d1d9e0] text-[#1f2328]">

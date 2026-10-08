@@ -23,7 +23,6 @@ CSS delay classes are also available: `.delay-1` (50ms) through `.delay-5` (250m
 
 ## Transition Patterns
 
-All interactive elements use short, consistent transitions:
 ```
 transition-colors duration-150     /* Hover state color changes */
 transition-all duration-150        /* Multi-property transitions */
