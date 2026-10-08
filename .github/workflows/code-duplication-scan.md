@@ -7,6 +7,10 @@ on:
   workflow_dispatch:
   schedule: weekly on friday around 9am
 
+engine:
+  id: copilot
+  model: gpt-5.6-luna
+
 permissions:
   contents: read
   issues: read
