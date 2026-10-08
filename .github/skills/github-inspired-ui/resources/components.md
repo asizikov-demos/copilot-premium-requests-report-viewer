@@ -226,8 +226,6 @@ Key details:
 </th>
 ```
 
-Active sort column uses `bg-[#eef1f4]` instead of `bg-[#f6f8fa]`.
-
 ## Pagination
 
 ```tsx
