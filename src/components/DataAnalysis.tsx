@@ -17,7 +17,7 @@ import { CostCentersOverview } from './CostCentersOverview';
 import { CostOptimizationInsights } from './CostOptimizationInsights';
 import { DailyConsumptionChart } from './charts/DailyConsumptionChart';
 import { InsightsOverview } from './InsightsOverview';
-import { ModelCreditsBarChart } from './charts/ModelCreditsBarChart';
+import { ModelCreditsTreemap } from './charts/ModelCreditsTreemap';
 import { ModelUsageTrendsOverview } from './ModelUsageTrendsOverview';
 import { OrganizationsOverview } from './OrganizationsOverview';
 import { UsersOverview } from './UsersOverview';
@@ -224,14 +224,12 @@ function DataAnalysisInner() {
   const showModelQuantity = true;
   const modelChartData = useMemo(() => (
     modelRows.map((item) => ({
-      model: item.model.length > 20 ? `${item.model.substring(0, 20)}...` : item.model,
       fullModel: item.model,
-      credits: Math.round(item.credits * 100) / 100,
+      credits: item.credits,
     }))
   ), [modelRows]);
   const modelChartTotal = modelRows.reduce((sum, model) => sum + model.credits, 0);
   const modelChartTitle = 'AI Credits by Model';
-  const modelChartValueLabel = 'AI Credits';
   const modelChartUnitLabel = 'AI Credits';
   const modelChartTotalDisplay = modelChartTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -555,17 +553,14 @@ function DataAnalysisInner() {
               )}
 
               <div className="bg-white border border-[#d1d9e0] rounded-md p-6 opacity-0 animate-scale-in" style={{ animationDelay: '200ms' }}>
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                   <h3 className="text-lg font-semibold text-[#1f2328]">{modelChartTitle}</h3>
                   <span className="text-xs text-[#636c76] font-medium">Total: {modelChartTotalDisplay} {modelChartUnitLabel}</span>
                 </div>
-                <div className="h-72 xl:h-80 2xl:h-96">
-                  <ModelCreditsBarChart
-                    data={modelChartData}
-                    valueLabel={modelChartValueLabel}
-                    valueUnitLabel={modelChartUnitLabel}
-                  />
-                </div>
+                <p className="text-xs text-[#636c76] mb-6">
+                  Tile area represents each model&apos;s share of AI Credits. Hover or focus a tile for exact usage.
+                </p>
+                <ModelCreditsTreemap data={modelChartData} />
               </div>
 
               <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
