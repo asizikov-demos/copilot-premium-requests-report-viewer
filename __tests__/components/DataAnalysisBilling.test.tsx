@@ -575,7 +575,7 @@ describe('DataAnalysis billing summary', () => {
       expect(screen.getAllByRole('columnheader', { name: 'Included Credits' }).length).toBeGreaterThanOrEqual(2);
       expect(screen.getAllByRole('columnheader', { name: 'Additional usage' }).length).toBeGreaterThanOrEqual(2);
       expect(screen.getAllByRole('button', { name: 'Insights' }).length).toBeGreaterThan(0);
-      expect(screen.getAllByRole('button', { name: 'Cost Optimization' }).length).toBeGreaterThan(0);
+      expect(screen.queryByRole('button', { name: 'Cost Optimization' })).not.toBeInTheDocument();
     });
 
     const productHeader = screen.getByRole('columnheader', { name: 'Product' });
@@ -636,10 +636,7 @@ describe('DataAnalysis billing summary', () => {
     });
   });
 
-  it.each([
-    { buttonName: 'Insights', headingName: 'Consumption Insights' },
-    { buttonName: 'Cost Optimization', headingName: 'Cost Optimization' },
-  ])('keeps $buttonName available when switching AI-credit reports', async ({ buttonName, headingName }) => {
+  it('keeps Insights available when switching AI-credit reports', async () => {
     const usageBasedRows: CSVData[] = [
       {
         date: '2026-06-01',
@@ -664,21 +661,20 @@ describe('DataAnalysis billing summary', () => {
       <DataAnalysis ingestionResult={firstReport} filename="first-report.csv" onReset={() => {}} />
     );
 
-    fireEvent.click(screen.getAllByRole('button', { name: buttonName })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Insights' })[0]);
 
     await waitFor(() => {
-      expect(screen.getAllByRole('button', { name: buttonName }).length).toBeGreaterThan(0);
+      expect(screen.getByRole('heading', { name: 'Consumption Insights' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Cost Optimization' })).not.toBeInTheDocument();
     });
 
     rerender(<DataAnalysis ingestionResult={usageBasedReport} filename="usage-based.csv" onReset={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByText('usage-based.csv')).toBeInTheDocument();
-      if (buttonName === 'Insights') {
-        expect(screen.getByRole('heading', { name: headingName })).toBeInTheDocument();
-      }
+      expect(screen.getByRole('heading', { name: 'Consumption Insights' })).toBeInTheDocument();
       expect(screen.getAllByRole('button', { name: 'Insights' }).length).toBeGreaterThan(0);
-      expect(screen.getAllByRole('button', { name: 'Cost Optimization' }).length).toBeGreaterThan(0);
+      expect(screen.queryByRole('button', { name: 'Cost Optimization' })).not.toBeInTheDocument();
     });
   });
 
