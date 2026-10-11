@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useCallback } from 'react';
 
-import { PRICING } from '@/constants/pricing';
 import { getQuotaTier, isKnownQuotaValue } from '@/utils/analytics/quota';
 import { getBillingCostLabels } from '@/utils/billingLabels';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -209,27 +208,6 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
     defaultSort: { column: 'totalCredits', direction: 'desc' }
   });
   
-  // Memoize quota types calculation for chart display - NOW using O(1) quota map!
-  const quotaInfo = useMemo(() => {
-    const quotaTypes = new Set<number>();
-    filteredUserData.forEach(user => {
-      const userQuota = getUserQuota(quotaArtifacts, user.user);
-      if (typeof userQuota === 'number' && getQuotaTier(userQuota) !== null) {
-        quotaTypes.add(userQuota);
-      }
-    });
-    const hasMixedQuotas = quotaTypes.size > 1;
-    return { quotaTypes, hasMixedQuotas };
-  }, [filteredUserData, quotaArtifacts]);
-
-  const { quotaTypes, hasMixedQuotas } = quotaInfo;
-  
-  // Derive currentQuota from detected quota types for chart reference lines
-  // A fallback provides a chart domain when no quota is reported.
-  const currentQuota = quotaTypes.size > 0 
-    ? Array.from(quotaTypes)[0] 
-    : PRICING.BUSINESS_AI_CREDIT_QUOTA;
-
   const chartUsers = useMemo(() => {
     return filteredUserData.map((user) => user.user);
   }, [filteredUserData]);
@@ -406,7 +384,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
         )}
       </div>
 
-      {/* Quota Consumption Card */}
+      {/* AI Credits Consumption Card */}
       {(!isMobile || showChart) && (
         <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
           <div className="px-5 py-4 border-b border-[#d1d9e0]">
@@ -435,10 +413,6 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
               <UsersConsumptionHeatmap
                 dailyCumulativeData={dailyCumulativeData}
                 users={chartUsers}
-                currentQuota={currentQuota}
-                quotaTypes={quotaTypes}
-                hasMixedQuotas={hasMixedQuotas}
-                showQuotaReference={!hasMultipleMonths && quotaTypes.size > 0}
                 title={heatmapTitle}
                 valueAxisLabel="AI Credits Used"
                 valueUnitLabel="AI Credits"

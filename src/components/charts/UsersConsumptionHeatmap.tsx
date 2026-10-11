@@ -2,21 +2,14 @@
 
 import React, { useMemo } from 'react';
 
-import { getQuotaTier } from '@/utils/analytics/quota';
-
 import { utcDateTickFormatter } from './chartTooltipStyles';
 
 export interface UsersConsumptionHeatmapProps {
   dailyCumulativeData: { date: string; [user: string]: string | number }[];
   users: string[];
-  currentQuota: number;
-  quotaTypes: Set<number>;
-  hasMixedQuotas: boolean;
-  showQuotaReference?: boolean;
   title?: string;
   valueAxisLabel?: string;
   valueUnitLabel?: string;
-  referenceLabelSuffix?: string;
   formatValue?: (value: number) => string;
 }
 
@@ -80,24 +73,13 @@ function getHeatmapColor(percentage: number): string {
 export function UsersConsumptionHeatmap({
   dailyCumulativeData,
   users,
-  currentQuota,
-  quotaTypes,
-  hasMixedQuotas,
-  showQuotaReference = true,
   title,
   valueAxisLabel = 'AI Credits Used',
   valueUnitLabel = 'AI Credits',
-  referenceLabelSuffix = 'quota',
   formatValue = (value) => Math.round(value).toString()
 }: UsersConsumptionHeatmapProps) {
-  const { heatmapData, maxConsumption, binSize } = useMemo(() => {
-    let maxValue = currentQuota * 1.2;
-
-    if (showQuotaReference) {
-      for (const quota of quotaTypes) {
-        maxValue = Math.max(maxValue, quota * 1.2);
-      }
-    }
+  const { heatmapData, binSize } = useMemo(() => {
+    let maxValue = 0;
     
     // Find max consumption without spreading thousands of values
     for (const day of dailyCumulativeData) {
@@ -109,11 +91,13 @@ export function UsersConsumptionHeatmap({
       }
     }
 
+    // Keep a nonzero domain for reports with no consumption.
+    maxValue = maxValue > 0 ? maxValue : 1;
     const data = calculateHeatmapData(dailyCumulativeData, users, maxValue);
     const calculatedBinSize = maxValue / CONSUMPTION_BINS;
 
-    return { heatmapData: data, maxConsumption: maxValue, binSize: calculatedBinSize };
-  }, [dailyCumulativeData, users, currentQuota, quotaTypes, showQuotaReference]);
+    return { heatmapData: data, binSize: calculatedBinSize };
+  }, [dailyCumulativeData, users]);
 
   const dates = useMemo(() => 
     dailyCumulativeData.map(d => d.date as string),
@@ -123,7 +107,7 @@ export function UsersConsumptionHeatmap({
   const leftMargin = 80;
   const topMargin = 40;
   const bottomMargin = 80;
-  const rightMargin = 120;
+  const rightMargin = 20;
   
   // Use percentages to fit width, fixed height for bins
   const cellHeight = 15;
@@ -162,32 +146,6 @@ export function UsersConsumptionHeatmap({
     }
     return indices;
   }, []);
-
-  const quotaLineYPositions = useMemo(() => {
-    const lines: Array<{ y: number; label: string; color: string }> = [];
-    
-    if (!showQuotaReference) {
-      return lines;
-    }
-
-    const referenceQuotas = hasMixedQuotas ? Array.from(quotaTypes).sort((a, b) => a - b) : [currentQuota];
-
-    for (const quota of referenceQuotas) {
-      const tier = getQuotaTier(quota);
-      const binIndex = (quota / maxConsumption) * CONSUMPTION_BINS;
-      const label = hasMixedQuotas
-        ? `${formatValue(quota)} ${tier === 'business' ? 'Business' : tier === 'enterprise' ? 'Enterprise' : referenceLabelSuffix}`
-        : `${formatValue(quota)} ${referenceLabelSuffix}`;
-
-      lines.push({
-        y: chartHeight - (binIndex * cellHeight),
-        label,
-        color: tier === 'business' ? '#f97316' : tier === 'enterprise' ? '#dc2626' : '#ef4444'
-      });
-    }
-    
-    return lines;
-  }, [hasMixedQuotas, quotaTypes, currentQuota, maxConsumption, chartHeight, showQuotaReference, formatValue, referenceLabelSuffix]);
 
   return (
     <div className="w-full h-full">
@@ -239,33 +197,6 @@ export function UsersConsumptionHeatmap({
                     {utcDateTickFormatter(cell.date)}: {formatBinLabel(cell.bin)} {valueUnitLabel}
                     {'\n'}{cell.count} users ({cell.percentage.toFixed(1)}%)
                   </title>
-                </g>
-              );
-            })}
-
-            {/* Quota reference lines */}
-            {quotaLineYPositions.map((line, idx) => {
-              const chartWidth = 1000 - leftMargin - rightMargin;
-              return (
-                <g key={idx}>
-                  <line
-                    x1={0}
-                    y1={line.y}
-                    x2={chartWidth}
-                    y2={line.y}
-                    stroke={line.color}
-                    strokeWidth={2}
-                    strokeDasharray="5,5"
-                  />
-                  <text
-                    x={chartWidth + 5}
-                    y={line.y + 4}
-                    className="text-xs"
-                    fill="#636c76"
-                    style={{ fontSize: '11px' }}
-                  >
-                    {line.label}
-                  </text>
                 </g>
               );
             })}
