@@ -11,7 +11,9 @@ import { makeProcessedData } from '../helpers/testUtils';
 
 describe('AI-credit quota excess', () => {
   it('returns zero within quota, preserves fractional excess, and ignores unknown quotas', () => {
+    expect(calculateExcessCredits(PRICING.BUSINESS_AI_CREDIT_QUOTA - 50, PRICING.BUSINESS_AI_CREDIT_QUOTA)).toBe(0);
     expect(calculateExcessCredits(PRICING.BUSINESS_AI_CREDIT_QUOTA, PRICING.BUSINESS_AI_CREDIT_QUOTA)).toBe(0);
+    expect(calculateExcessCredits(PRICING.BUSINESS_AI_CREDIT_QUOTA + 150, PRICING.BUSINESS_AI_CREDIT_QUOTA)).toBe(150);
     expect(calculateExcessCredits(PRICING.BUSINESS_AI_CREDIT_QUOTA + 12.5, PRICING.BUSINESS_AI_CREDIT_QUOTA)).toBeCloseTo(12.5);
     expect(calculateExcessCredits(PRICING.ENTERPRISE_AI_CREDIT_QUOTA + 25, PRICING.ENTERPRISE_AI_CREDIT_QUOTA)).toBe(25);
     expect(calculateExcessCredits(5000, 'unknown')).toBe(0);
