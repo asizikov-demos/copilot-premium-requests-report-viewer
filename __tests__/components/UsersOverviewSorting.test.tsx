@@ -76,7 +76,7 @@ function makeUsage(users: UserSummary[]): UsageArtifacts {
 }
 
 describe('UsersOverview - sorting', () => {
-  it('hides monthly quota badges and chart thresholds when the report spans months', () => {
+  it('hides monthly overage badges for multi-month reports and never shows heatmap thresholds', () => {
     const userData: UserSummary[] = [{
       user: 'test-user-one',
       totalCredits: 3000,
@@ -106,7 +106,7 @@ describe('UsersOverview - sorting', () => {
     expect(within(screen.getByRole('table', { name: 'Users' })).queryByText('(+1100.0)')).not.toBeInTheDocument();
 
     rerender(<UsersOverview {...props} processedData={[processedData[0]]} />);
-    expect(screen.getByText('1,900 quota')).toBeInTheDocument();
+    expect(screen.queryByText('1,900 quota')).not.toBeInTheDocument();
     expect(within(screen.getByRole('table', { name: 'Users' })).getByText('(+1100.0)')).toBeInTheDocument();
   });
 
@@ -327,8 +327,8 @@ describe('UsersOverview - sorting', () => {
     expect(screen.getByText('AI Credits Consumption')).toBeInTheDocument();
     expect(screen.getByText('Daily cumulative AI Credits usage')).toBeInTheDocument();
     expect(screen.getByText('AI Credits Used')).toBeInTheDocument();
-    expect(screen.getByText('1,900 Business')).toBeInTheDocument();
-    expect(screen.getByText('3,900 Enterprise')).toBeInTheDocument();
+    expect(screen.queryByText('1,900 Business')).not.toBeInTheDocument();
+    expect(screen.queryByText('3,900 Enterprise')).not.toBeInTheDocument();
 
     const table = screen.getByRole('table', { name: 'Users' });
     expect(within(table).getByRole('columnheader', { name: /Quota/ })).toBeInTheDocument();

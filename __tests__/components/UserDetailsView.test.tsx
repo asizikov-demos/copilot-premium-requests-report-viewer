@@ -26,7 +26,7 @@ jest.mock('recharts', () => ({
   LineChart: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Legend: () => <div />,
   XAxis: () => <div data-testid="x-axis" />,
-  YAxis: () => <div data-testid="y-axis" />,
+  YAxis: ({ domain }: { domain?: unknown }) => <div data-testid="y-axis" data-domain={JSON.stringify(domain)} />,
   CartesianGrid: () => <div data-testid="cartesian-grid" />,
   Tooltip: () => <div data-testid="tooltip" />,
   ReferenceLine: ({ y, label }: { y?: number | string; label?: { value?: string } }) => (
@@ -283,6 +283,27 @@ describe('UserDetailsView', () => {
     });
   });
 
+  it.each([PRICING.BUSINESS_AI_CREDIT_QUOTA, PRICING.ENTERPRISE_AI_CREDIT_QUOTA, 'unknown'] as const)(
+    'shows only daily model bars for quota %s',
+    (quotaValue) => {
+      render(
+        <UserDetailsView
+          user="test-user-one"
+          processedData={createMockProcessedData([quotaValue])}
+          userQuotaValue={quotaValue}
+          onBack={mockOnBack}
+        />
+      );
+
+      const chart = screen.getByTestId('composed-chart');
+      expect(within(chart).queryByTestId('reference-line')).not.toBeInTheDocument();
+      expect(within(chart).queryByTestId('line')).not.toBeInTheDocument();
+      expect(within(chart).getByTestId('bar')).toBeInTheDocument();
+      expect(within(chart).getByTestId('y-axis')).toHaveAttribute('data-domain', '[0,"dataMax"]');
+      expect(screen.queryByText(/Red line: quota|quota limit|Black line: cumulative/)).not.toBeInTheDocument();
+    }
+  );
+
   it('renders github-style breadcrumbs and navigates back', async () => {
     render(
       <UserDetailsView
@@ -300,7 +321,12 @@ describe('UserDetailsView', () => {
     await waitFor(() => {
       expect(screen.getAllByText('test-user-one').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText(/Copilot Business/)).toBeInTheDocument();
-      expect(screen.getByText(new RegExp(`\\d+(\\.\\d+)?\\s*\\/\\s*${PRICING.BUSINESS_AI_CREDIT_QUOTA}`))).toBeInTheDocument();
+      expect(screen.getByText('Included consumption')).toBeInTheDocument();
+      expect(screen.getByText('Additional consumption')).toBeInTheDocument();
+      expect(screen.getByText('Total consumption')).toBeInTheDocument();
+      expect(screen.getByText('Days active')).toBeInTheDocument();
+      expect(screen.getByText('Cloud agent')).toBeInTheDocument();
+      expect(screen.getByText('Code review agent')).toBeInTheDocument();
     });
   });
 
@@ -316,16 +342,38 @@ describe('UserDetailsView', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Unknown/)).toBeInTheDocument();
-      expect(screen.getByText(/\d+(\.\d+)?\s*\/\s*Unknown/)).toBeInTheDocument();
+      expect(screen.getByText('Consumed')).toBeInTheDocument();
+      expect(screen.queryByText('Included consumption')).not.toBeInTheDocument();
     });
   });
 
-  it('uses the filtered user aggregate for organization and cost center metadata', () => {
+  it('lists every organization and cost center found in the user rows', () => {
+    const processedData = createMockProcessedData([PRICING.BUSINESS_AI_CREDIT_QUOTA, PRICING.BUSINESS_AI_CREDIT_QUOTA]).map((row, index) => ({
+      ...row,
+      user: 'test-user-one',
+      organization: index % 2 === 0 ? 'test-org-one' : 'test-org-two',
+      costCenter: 'test-cost-center-one',
+    }));
+
+    render(
+      <UserDetailsView
+        user="test-user-one"
+        processedData={processedData}
+        userQuotaValue={PRICING.BUSINESS_AI_CREDIT_QUOTA}
+        onBack={mockOnBack}
+      />
+    );
+
+    expect(screen.getByText('test-org-one, test-org-two')).toBeInTheDocument();
+    expect(screen.getAllByText(/test-cost-center-one/).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('falls back to the filtered user aggregate for organization and cost center metadata', () => {
     const processedData = createMockProcessedData([PRICING.BUSINESS_AI_CREDIT_QUOTA]).map((row) => ({
       ...row,
       user: 'test-user-one',
-      organization: 'test-org-row',
-      costCenter: 'test-cost-center-row',
+      organization: undefined,
+      costCenter: undefined,
     }));
 
     render(
@@ -346,8 +394,6 @@ describe('UserDetailsView', () => {
 
     expect(screen.getByText(/test-org-artifact/)).toBeInTheDocument();
     expect(screen.getByText(/test-cost-center-artifact/)).toBeInTheDocument();
-    expect(screen.queryByText(/test-org-row/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/test-cost-center-row/)).not.toBeInTheDocument();
   });
 
   it('does not use full-upload metadata when the filtered user is absent', () => {
@@ -376,7 +422,7 @@ describe('UserDetailsView', () => {
 
     expect(screen.queryByText(/test-org-full-upload/)).not.toBeInTheDocument();
     expect(screen.queryByText(/test-cost-center-full-upload/)).not.toBeInTheDocument();
-    expect(screen.getByText(new RegExp(`0\\s*\\/\\s*${PRICING.BUSINESS_AI_CREDIT_QUOTA}`))).toBeInTheDocument();
+    expect(screen.getByText('Copilot Business')).toBeInTheDocument();
   });
 
   it.each([
@@ -600,7 +646,7 @@ describe('UserDetailsView', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Cost per Product')).toBeInTheDocument();
-      expect(screen.getByText('Bars: daily AI Credits by model · Black line: cumulative · Red line: quota')).toBeInTheDocument();
+      expect(screen.getByText('Daily AI Credits by model')).toBeInTheDocument();
       expect(screen.getByText('Daily Model Usage Breakdown')).toBeInTheDocument();
       expect(screen.getAllByRole('columnheader', { name: 'AI Credits' })).toHaveLength(3);
       expect(screen.getAllByRole('columnheader', { name: 'Gross Amount' })).toHaveLength(2);
@@ -619,10 +665,7 @@ describe('UserDetailsView', () => {
     const chartData = screen.getByTestId('composed-chart').getAttribute('data-chart') ?? '';
     expect(chartData).toContain('"Auto: Claude Haiku 4.5":42.5');
     expect(chartData).toContain('"totalCumulative":42.5');
-    expect(screen.getByTestId('reference-line')).toHaveAttribute(
-      'data-y',
-      PRICING.BUSINESS_AI_CREDIT_QUOTA.toString()
-    );
+    expect(screen.queryByTestId('reference-line')).not.toBeInTheDocument();
   });
 
   it('enumerates the full UTC date range inclusively in fallback chart data', () => {

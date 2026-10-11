@@ -4,21 +4,11 @@ import {
   buildUsageArtifactsFromProcessedData,
 } from '@/utils/ingestion';
 import { buildUsersExceedingQuota } from '@/utils/ingestion/analytics';
-import { calculateExcessCredits } from '@/utils/userCalculations';
 
 import { makeDailyBucketsArtifacts, makeQuotaArtifacts } from '../helpers/makeArtifacts';
 import { makeProcessedData } from '../helpers/testUtils';
 
 describe('AI-credit quota excess', () => {
-  it('returns zero within quota, preserves fractional excess, and ignores unknown quotas', () => {
-    expect(calculateExcessCredits(PRICING.BUSINESS_AI_CREDIT_QUOTA - 50, PRICING.BUSINESS_AI_CREDIT_QUOTA)).toBe(0);
-    expect(calculateExcessCredits(PRICING.BUSINESS_AI_CREDIT_QUOTA, PRICING.BUSINESS_AI_CREDIT_QUOTA)).toBe(0);
-    expect(calculateExcessCredits(PRICING.BUSINESS_AI_CREDIT_QUOTA + 150, PRICING.BUSINESS_AI_CREDIT_QUOTA)).toBe(150);
-    expect(calculateExcessCredits(PRICING.BUSINESS_AI_CREDIT_QUOTA + 12.5, PRICING.BUSINESS_AI_CREDIT_QUOTA)).toBeCloseTo(12.5);
-    expect(calculateExcessCredits(PRICING.ENTERPRISE_AI_CREDIT_QUOTA + 25, PRICING.ENTERPRISE_AI_CREDIT_QUOTA)).toBe(25);
-    expect(calculateExcessCredits(5000, 'unknown')).toBe(0);
-  });
-
   it('does not combine usage from separate UTC billing months to infer excess consumption', () => {
     const quotaValue = PRICING.BUSINESS_AI_CREDIT_QUOTA;
     const daily = makeDailyBucketsArtifacts([
@@ -58,6 +48,6 @@ describe('AI-credit quota excess', () => {
     const quota = buildQuotaArtifactsFromProcessedData(rows);
     const usage = buildUsageArtifactsFromProcessedData(rows);
     expect(quota.quotaByUser.get('test-user-one')).toBe(PRICING.ENTERPRISE_AI_CREDIT_QUOTA);
-    expect(calculateExcessCredits(usage.users[0].totalCredits, quota.quotaByUser.get('test-user-one')!)).toBe(0);
+    expect(usage.users[0].totalCredits).toBeLessThanOrEqual(PRICING.ENTERPRISE_AI_CREDIT_QUOTA);
   });
 });
