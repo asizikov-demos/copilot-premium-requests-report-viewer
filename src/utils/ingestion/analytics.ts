@@ -13,7 +13,6 @@ import { PRICING } from '@/constants/pricing';
 import type { AnalysisResults, ProcessedData } from '@/types/csv';
 import type { CodeReviewAnalysis } from '@/types/csv';
 import { CodingAgentAnalysis, UserDailyData } from '@/types/csv';
-import { buildAdvisoriesFromCategories, type Advisory } from '@/utils/analytics/advisory';
 import { classifyConsumptionUser } from '@/utils/analytics/insights';
 import type { FeatureUtilizationStats, InsightsOverviewData, UserConsumptionCategory } from '@/utils/analytics/insights';
 import { classifyQuotaMap, isKnownQuotaValue } from '@/utils/analytics/quota';
@@ -492,23 +491,6 @@ export function buildConsumptionCategoriesFromArtifacts(
     averageUsers: categorized.filter(c => c.category === 'average'),
     lowAdoptionUsers: categorized.filter(c => c.category === 'low')
   };
-}
-
-// -----------------------------
-// Advisories From Artifacts
-// -----------------------------
-/**
- * Build advisories leveraging artifact-derived consumption categories.
- * Builds advisories without raw row scans.
- */
-export function buildAdvisoriesFromArtifacts(
-  categories: InsightsOverviewData,
-  usage: UsageArtifacts
-): Advisory[] {
-  const totalUsers = usage.userCount;
-  if (totalUsers === 0) return [];
-
-  return buildAdvisoriesFromCategories(categories.lowAdoptionUsers, totalUsers);
 }
 
 // -----------------------------

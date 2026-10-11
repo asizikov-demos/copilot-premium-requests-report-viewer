@@ -91,6 +91,59 @@ function createIngestionResultWithBillingArtifacts(billingArtifacts: BillingArti
   };
 }
 
+function makeBillingRow(overrides: Partial<CSVData> = {}): CSVData {
+  return {
+    date: '2026-03-01',
+    username: 'test-user-one',
+    product: 'copilot',
+    sku: 'copilot_ai_credit',
+    model: 'Coding Agent model',
+    quantity: '2',
+    total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
+    applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
+    ...overrides,
+  };
+}
+
+function makeAicRows(): CSVData[] {
+  return [
+    makeBillingRow({
+      gross_amount: '0.08', discount_amount: '0.08', net_amount: '0',
+      organization: 'test-org-one', cost_center_name: '',
+      aic_quantity: '8.68986', aic_gross_amount: '0.08689859999999999',
+    }),
+    makeBillingRow({
+      username: 'test-user-two',
+      gross_amount: '0.08', discount_amount: '0.08', net_amount: '0',
+      organization: 'test-org-two', cost_center_name: 'test-cost-center-two',
+      aic_quantity: '18.33306', aic_gross_amount: '0.1833306',
+    }),
+    makeBillingRow({
+      date: '2026-03-02', username: 'test-user-three', model: 'Claude Opus 4.6', quantity: '24',
+      gross_amount: '0.96', discount_amount: '0.96', net_amount: '0',
+      organization: 'test-org-three', cost_center_name: '',
+      aic_quantity: '12.3146', aic_gross_amount: '0.123146',
+    }),
+  ];
+}
+
+function makeUsageBasedRows(): CSVData[] {
+  return [
+    makeBillingRow({
+      date: '2026-06-01', model: 'Auto: Claude Haiku 4.5', quantity: '42.5', unit_type: 'ai-credits',
+      gross_amount: '0.425', discount_amount: '0.425', net_amount: '0',
+      organization: 'test-org-one', cost_center_name: 'test-cost-center-one',
+    }),
+    makeBillingRow({
+      date: '2026-06-01', username: 'test-user-two', model: 'Auto: Claude Haiku 4.5',
+      quantity: '3', unit_type: 'requests',
+      total_monthly_quota: String(PRICING.BUSINESS_AI_CREDIT_QUOTA),
+      gross_amount: '0.12', discount_amount: '0', net_amount: '0.12',
+      organization: 'test-org-one', cost_center_name: 'test-cost-center-one',
+    }),
+  ];
+}
+
 describe('DataAnalysis billing summary', () => {
   it.each([
     { view: 'Cost Centers', groupName: 'test-cost-center-one' },
@@ -274,62 +327,8 @@ describe('DataAnalysis billing summary', () => {
     expect(screen.queryByRole('region', { name: 'Daily Consumption' })).not.toBeInTheDocument();
   });
 
-  it('renders AI Credits callout and overview card when AIC fields are present', async () => {
-    const aicRows: CSVData[] = [
-      {
-        date: '2026-03-01',
-        username: 'test-user-one',
-        product: 'copilot',
-        sku: 'copilot_ai_credit',
-        model: 'Coding Agent model',
-        quantity: '2',
-        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
-        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
-        gross_amount: '0.08',
-        discount_amount: '0.08',
-        net_amount: '0',
-        organization: 'test-org-one',
-        cost_center_name: '',
-        aic_quantity: '8.68986',
-        aic_gross_amount: '0.08689859999999999',
-      },
-      {
-        date: '2026-03-01',
-        username: 'test-user-two',
-        product: 'copilot',
-        sku: 'copilot_ai_credit',
-        model: 'Coding Agent model',
-        quantity: '2',
-        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
-        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
-        gross_amount: '0.08',
-        discount_amount: '0.08',
-        net_amount: '0',
-        organization: 'test-org-two',
-        cost_center_name: 'test-cost-center-two',
-        aic_quantity: '18.33306',
-        aic_gross_amount: '0.1833306',
-      },
-      {
-        date: '2026-03-02',
-        username: 'test-user-three',
-        product: 'copilot',
-        sku: 'copilot_ai_credit',
-        model: 'Claude Opus 4.6',
-        quantity: '24',
-        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
-        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
-        gross_amount: '0.96',
-        discount_amount: '0.96',
-        net_amount: '0',
-        organization: 'test-org-three',
-        cost_center_name: '',
-        aic_quantity: '12.3146',
-        aic_gross_amount: '0.123146',
-      },
-    ];
-
-    const ingestionResult = createIngestionResultFromRawRows(aicRows);
+  it('renders AI Credits overview without legacy billing preview links or gross columns', async () => {
+    const ingestionResult = createIngestionResultFromRawRows(makeAicRows());
     render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
 
     await waitFor(() => {
@@ -343,7 +342,11 @@ describe('DataAnalysis billing summary', () => {
       expect(screen.queryByRole('columnheader', { name: 'AI Credits Gross' })).not.toBeInTheDocument();
       expect(screen.getAllByRole('button', { name: 'AI Usage' }).length).toBeGreaterThan(0);
     });
+  });
 
+  it('renders the AI Credits group heatmap on AI Usage', async () => {
+    const ingestionResult = createIngestionResultFromRawRows(makeAicRows());
+    render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
     fireEvent.click(screen.getAllByRole('button', { name: 'AI Usage' })[0]);
 
     await waitFor(() => {
@@ -352,33 +355,29 @@ describe('DataAnalysis billing summary', () => {
       expect(screen.getByRole('table', { name: 'AI Credits user group heatmap' })).toBeInTheDocument();
       expect(screen.getByText('Users by group')).toBeInTheDocument();
     });
+  });
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Cost Centers' })[0]);
+  it.each([
+    { view: 'Cost Centers', group: 'test-cost-center-two', product: 'Cloud Agent' },
+    { view: 'Organizations', group: 'test-org-three', product: 'Copilot' },
+  ])('renders AI Credits columns and product details for $view', async ({ view, group, product }) => {
+    const ingestionResult = createIngestionResultFromRawRows(makeAicRows());
+    render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
+    fireEvent.click(screen.getAllByRole('button', { name: view })[0]);
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Cost Centers' })).toBeInTheDocument();
-      expect(screen.getAllByRole('columnheader', { name: 'AI Credits' }).length).toBeGreaterThan(0);
+      expect(screen.getByRole('heading', { name: view })).toBeInTheDocument();
+      expect(screen.getByRole('columnheader', { name: 'AI Credits' })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /test-cost-center-two/i }));
+    const groupButton = screen.getByRole('button', { name: group });
+    const groupRow = groupButton.closest('tr')!;
+    fireEvent.click(groupButton);
 
     await waitFor(() => {
-      expect(screen.getAllByText('Cloud Agent').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Cloud Agent').length).toBeGreaterThan(0);
-    });
-
-    fireEvent.click(screen.getAllByRole('button', { name: 'Organizations' })[0]);
-
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Organizations' })).toBeInTheDocument();
-      expect(screen.getAllByRole('columnheader', { name: 'AI Credits' }).length).toBeGreaterThan(0);
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: /test-org-three/i }));
-
-    await waitFor(() => {
-      expect(screen.getAllByText('Copilot').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Copilot').length).toBeGreaterThan(0);
+      expect(groupButton).toHaveAttribute('aria-expanded', 'true');
+      const table = within(groupRow.nextElementSibling as HTMLElement).getByRole('table');
+      expect(within(table).getByText(product)).toBeInTheDocument();
     });
   });
 
@@ -552,42 +551,7 @@ describe('DataAnalysis billing summary', () => {
   });
 
   it('renames discount and net billing labels for usage-based AI Credits reports', async () => {
-    const usageBasedRows: CSVData[] = [
-      {
-        date: '2026-06-01',
-        username: 'test-user-one',
-        product: 'copilot',
-        sku: 'copilot_ai_credit',
-        model: 'Auto: Claude Haiku 4.5',
-        quantity: '42.5',
-        unit_type: 'ai-credits',
-        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
-        gross_amount: '0.425',
-        discount_amount: '0.425',
-        net_amount: '0',
-        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
-        organization: 'test-org-one',
-        cost_center_name: 'test-cost-center-one',
-      },
-      {
-        date: '2026-06-01',
-        username: 'test-user-two',
-        product: 'copilot',
-        sku: 'copilot_ai_credit',
-        model: 'Auto: Claude Haiku 4.5',
-        quantity: '3',
-        unit_type: 'requests',
-        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
-        gross_amount: '0.12',
-        discount_amount: '0',
-        net_amount: '0.12',
-        total_monthly_quota: String(PRICING.BUSINESS_AI_CREDIT_QUOTA),
-        organization: 'test-org-one',
-        cost_center_name: 'test-cost-center-one',
-      },
-    ];
-
-    const ingestionResult = createIngestionResultFromRawRows(usageBasedRows);
+    const ingestionResult = createIngestionResultFromRawRows(makeUsageBasedRows());
     render(<DataAnalysis ingestionResult={ingestionResult} filename="usage-based.csv" onReset={() => {}} />);
 
     await waitFor(() => {
@@ -643,7 +607,11 @@ describe('DataAnalysis billing summary', () => {
     expect(within(modelDetailsTable).queryByRole('columnheader', { name: 'Gross' })).not.toBeInTheDocument();
     expect(within(modelDetailsTable).getByText('42.50')).toBeInTheDocument();
     expect(within(modelDetailsTable).queryByText('45.50')).not.toBeInTheDocument();
+  });
 
+  it('renders AI-credit model trends while rejecting request-unit rows', async () => {
+    const ingestionResult = createIngestionResultFromRawRows(makeUsageBasedRows());
+    render(<DataAnalysis ingestionResult={ingestionResult} filename="usage-based.csv" onReset={() => {}} />);
     fireEvent.click(screen.getAllByRole('button', { name: 'Models' })[0]);
 
     await waitFor(() => {
@@ -651,22 +619,15 @@ describe('DataAnalysis billing summary', () => {
       expect(screen.getByText('Daily stacked AI Credits by model (UTC)')).toBeInTheDocument();
       expect(screen.queryByText('No model usage data available for the selected period.')).not.toBeInTheDocument();
     });
+  });
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Cost Centers' })[0]);
-
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Cost Centers' })).toBeInTheDocument();
-      expect(screen.getByRole('columnheader', { name: 'Gross Amount' })).toBeInTheDocument();
-      expect(screen.getByRole('columnheader', { name: 'Included Credits' })).toBeInTheDocument();
-      expect(screen.getByRole('columnheader', { name: 'Additional usage' })).toBeInTheDocument();
-      expect(screen.queryByRole('columnheader', { name: 'AI Credits Gross' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('columnheader', { name: 'Gross' })).not.toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getAllByRole('button', { name: 'Organizations' })[0]);
+  it.each(['Cost Centers', 'Organizations'])('uses usage-based billing labels in %s', async (view) => {
+    const ingestionResult = createIngestionResultFromRawRows(makeUsageBasedRows());
+    render(<DataAnalysis ingestionResult={ingestionResult} filename="usage-based.csv" onReset={() => {}} />);
+    fireEvent.click(screen.getAllByRole('button', { name: view })[0]);
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Organizations' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: view })).toBeInTheDocument();
       expect(screen.getByRole('columnheader', { name: 'Gross Amount' })).toBeInTheDocument();
       expect(screen.getByRole('columnheader', { name: 'Included Credits' })).toBeInTheDocument();
       expect(screen.getByRole('columnheader', { name: 'Additional usage' })).toBeInTheDocument();
@@ -688,11 +649,11 @@ describe('DataAnalysis billing summary', () => {
         model: 'Auto: Claude Haiku 4.5',
         quantity: '42.5',
         unit_type: 'ai-credits',
-        applied_cost_per_quantity: '0.01',
+        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
         gross_amount: '0.425',
         discount_amount: '0.425',
         net_amount: '0',
-        total_monthly_quota: '3900',
+        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
         organization: 'test-org-one',
         cost_center_name: 'test-cost-center-one',
       },
@@ -787,7 +748,7 @@ describe('DataAnalysis billing summary', () => {
         model: 'Claude Sonnet 4.6',
         quantity: '51.28584',
         total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
-        applied_cost_per_quantity: '0.01',
+        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
         gross_amount: '0.5128584',
         discount_amount: '0.000',
         net_amount: '0.5128584',
@@ -847,36 +808,29 @@ describe('DataAnalysis billing summary', () => {
     });
   });
 
-  it('shows Spark as a separate product inside cost center breakdowns', async () => {
+  it.each([
+    { product: 'spark', label: 'Spark', sku: 'copilot_ai_credit', model: 'Claude Sonnet 4.5', quantity: '4', amount: '0.160' },
+    { product: 'code_quality', label: 'Code Quality', sku: 'code_quality_ai_credit', model: 'Claude Sonnet 4.6', quantity: '51.28584', amount: '0.5128584' },
+  ])('shows $label as a separate product inside cost center breakdowns', async ({ product, label, sku, model, quantity, amount }) => {
     const billingRows: CSVData[] = [
-      {
+      makeBillingRow({
         date: '2025-10-01',
-        username: 'test-user-one',
-        product: 'copilot',
-        sku: 'copilot_ai_credit',
         model: 'Claude Sonnet 4',
         quantity: '1',
-        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
-        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
         gross_amount: '0.040',
         discount_amount: '0.000',
         net_amount: '0.040',
         cost_center_name: 'test-cost-center-one',
-      },
-      {
+      }),
+      makeBillingRow({
         date: '2025-10-02',
         username: 'test-user-two',
-        product: 'spark',
-        sku: 'copilot_ai_credit',
-        model: 'Claude Sonnet 4.5',
-        quantity: '4',
-        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
-        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
-        gross_amount: '0.160',
+        product, sku, model, quantity,
+        gross_amount: amount,
         discount_amount: '0.000',
-        net_amount: '0.160',
+        net_amount: amount,
         cost_center_name: 'test-cost-center-one',
-      },
+      }),
     ];
 
     const ingestionResult = createIngestionResultFromRawRows(billingRows);
@@ -892,64 +846,15 @@ describe('DataAnalysis billing summary', () => {
       expect(screen.getByRole('button', { name: /test-cost-center-one/i })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /test-cost-center-one/i }));
+    const groupButton = screen.getByRole('button', { name: /test-cost-center-one/i });
+    const groupRow = groupButton.closest('tr')!;
+    fireEvent.click(groupButton);
 
     await waitFor(() => {
-      expect(screen.getAllByText('Spark').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Copilot').length).toBeGreaterThan(0);
-    });
-  });
-
-  it('shows Code Quality as a separate product inside cost center breakdowns', async () => {
-    const billingRows: CSVData[] = [
-      {
-        date: '2025-10-01',
-        username: 'test-user-one',
-        product: 'copilot',
-        sku: 'copilot_ai_credit',
-        model: 'Claude Sonnet 4',
-        quantity: '1',
-        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
-        applied_cost_per_quantity: String(PRICING.AI_CREDIT_USD_VALUE),
-        gross_amount: '0.040',
-        discount_amount: '0.000',
-        net_amount: '0.040',
-        cost_center_name: 'test-cost-center-one',
-      },
-      {
-        date: '2025-10-02',
-        username: 'test-user-two',
-        product: 'code_quality',
-        sku: 'code_quality_ai_credit',
-        model: 'Claude Sonnet 4.6',
-        quantity: '51.28584',
-        total_monthly_quota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
-        applied_cost_per_quantity: '0.01',
-        gross_amount: '0.5128584',
-        discount_amount: '0.000',
-        net_amount: '0.5128584',
-        cost_center_name: 'test-cost-center-one',
-      },
-    ];
-
-    const ingestionResult = createIngestionResultFromRawRows(billingRows);
-    render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
-
-    await waitFor(() => {
-      expect(screen.getAllByRole('button', { name: 'Cost Centers' }).length).toBeGreaterThan(0);
-    });
-
-    fireEvent.click(screen.getAllByRole('button', { name: 'Cost Centers' })[0]);
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /test-cost-center-one/i })).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: /test-cost-center-one/i }));
-
-    await waitFor(() => {
-      expect(screen.getAllByText('Code Quality').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Copilot').length).toBeGreaterThan(0);
+      expect(groupButton).toHaveAttribute('aria-expanded', 'true');
+      const table = within(groupRow.nextElementSibling as HTMLElement).getByRole('table');
+      expect(within(table).getByText(label)).toBeInTheDocument();
+      expect(within(table).getByText('Copilot')).toBeInTheDocument();
     });
   });
 

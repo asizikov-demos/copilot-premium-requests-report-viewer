@@ -260,24 +260,18 @@ describe('UserDetailsView', () => {
   });
 
   const createMockProcessedData = (quotaValues: Array<number | 'unknown'>): ProcessedData[] => {
-    return quotaValues.map((quotaValue, index) => {
-      const timestamp = new Date(`2025-06-${10 + index}T10:00:00Z`);
-      const iso = timestamp.toISOString();
-      return {
-        timestamp,
-        user: 'test-user-one',
+    return quotaValues.map((quotaValue, index) =>
+      makeProcessedData({
+        timestamp: new Date(`2025-06-${10 + index}T10:00:00Z`),
         model: 'gpt-4',
         creditsUsed: 1,
-        totalQuota: quotaValue === 'unknown' ? 'Unknown' : quotaValue.toString(),
         quotaValue,
-        iso,
-        dateKey: iso.slice(0, 10),
-        monthKey: iso.slice(0, 7),
-        epoch: timestamp.getTime(),
-        organization: 'Org1',
-        costCenter: 'CC-123',
-      } as ProcessedData;
-    });
+        unitType: undefined,
+        usageUnit: undefined,
+        organization: 'test-org-one',
+        costCenter: 'test-cost-center-one',
+      })
+    );
   };
 
   beforeEach(() => {
@@ -306,7 +300,7 @@ describe('UserDetailsView', () => {
     await waitFor(() => {
       expect(screen.getAllByText('test-user-one').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText(/Copilot Business/)).toBeInTheDocument();
-      expect(screen.getByText(/\d+(\.\d+)?\s*\/\s*1900/)).toBeInTheDocument();
+      expect(screen.getByText(new RegExp(`\\d+(\\.\\d+)?\\s*\\/\\s*${PRICING.BUSINESS_AI_CREDIT_QUOTA}`))).toBeInTheDocument();
     });
   });
 
@@ -382,88 +376,42 @@ describe('UserDetailsView', () => {
 
     expect(screen.queryByText(/test-org-full-upload/)).not.toBeInTheDocument();
     expect(screen.queryByText(/test-cost-center-full-upload/)).not.toBeInTheDocument();
-    expect(screen.getByText(/0\s*\/\s*1900/)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`0\\s*\\/\\s*${PRICING.BUSINESS_AI_CREDIT_QUOTA}`))).toBeInTheDocument();
   });
 
-  it('renders Spark as a separate billing product bucket', async () => {
-    const timestamp = new Date('2025-06-10T10:00:00Z');
-    const iso = timestamp.toISOString();
-    const processedData: ProcessedData[] = [
-      {
-        timestamp,
-        user: 'test-user-one',
-        model: 'Claude Sonnet 4.5',
-        creditsUsed: 4,
-        totalQuota: '1000',
+  it.each([
+    { product: 'spark', label: 'Spark', sku: 'copilot_ai_credit', model: 'Claude Sonnet 4.5', creditsUsed: 4, amount: 0.16 },
+    { product: 'code_quality', label: 'Code Quality', sku: 'code_quality_ai_credit', model: 'Claude Sonnet 4.6', creditsUsed: 51.28584, amount: 0.5128584 },
+  ])('renders $label as a separate billing product bucket', async ({ product, label, sku, model, creditsUsed, amount }) => {
+    const processedData = [
+      makeProcessedData({
+        timestamp: new Date('2025-06-10T10:00:00Z'),
+        model, creditsUsed, product, sku,
         quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
-        iso,
-        dateKey: iso.slice(0, 10),
-        monthKey: iso.slice(0, 7),
-        epoch: timestamp.getTime(),
-        product: 'spark',
-        sku: 'copilot_ai_credit',
-        organization: 'Org1',
-        costCenter: 'CC-123',
-        grossAmount: 0.16,
-        discountAmount: 0,
-        netAmount: 0.16,
-      },
-    ];
-
-    render(
-      <UserDetailsView
-        user="test-user-one"
-        processedData={processedData}
-        userQuotaValue={1000}
-        onBack={mockOnBack}
-      />
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText('Cost per Product')).toBeInTheDocument();
-      expect(screen.getByText('Spark')).toBeInTheDocument();
-      expect(screen.queryByText('Copilot')).not.toBeInTheDocument();
-    });
-  });
-
-  it('renders Code Quality as a separate billing product bucket', async () => {
-    const timestamp = new Date('2025-06-10T10:00:00Z');
-    const iso = timestamp.toISOString();
-    const processedData: ProcessedData[] = [
-      {
-        timestamp,
-        user: 'test-user-one',
-        model: 'Claude Sonnet 4.6',
-        creditsUsed: 51.28584,
-        totalQuota: '1000',
-        quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
-        iso,
-        dateKey: iso.slice(0, 10),
-        monthKey: iso.slice(0, 7),
-        epoch: timestamp.getTime(),
-        product: 'code_quality',
-        sku: 'code_quality_ai_credit',
+        unitType: undefined,
+        usageUnit: undefined,
         organization: 'test-org-one',
         costCenter: 'test-cost-center-one',
-        grossAmount: 0.5128584,
+        grossAmount: amount,
         discountAmount: 0,
-        netAmount: 0.5128584,
-      },
+        netAmount: amount,
+      }),
     ];
 
     render(
       <UserDetailsView
         user="test-user-one"
         processedData={processedData}
-        userQuotaValue={1000}
+        userQuotaValue={PRICING.ENTERPRISE_AI_CREDIT_QUOTA}
         onBack={mockOnBack}
       />
     );
 
     await waitFor(() => {
       expect(screen.getByText('Cost per Product')).toBeInTheDocument();
-      expect(screen.getByText('Code Quality')).toBeInTheDocument();
-      expect(screen.queryByText('Copilot')).not.toBeInTheDocument();
+      const table = screen.getByRole('columnheader', { name: 'Product' }).closest('table')!;
+      expect(within(table).getByText(label)).toBeInTheDocument();
+      expect(within(table).queryByText('Copilot')).not.toBeInTheDocument();
     });
   });
 
@@ -476,23 +424,17 @@ describe('UserDetailsView', () => {
       discountAmount: number,
       netAmount: number
     ): ProcessedData => {
-      const timestamp = new Date(`${date}T00:00:00Z`);
-      return {
-        timestamp,
-        user: 'test-user-one',
+      return makeProcessedData({
+        timestamp: new Date(`${date}T00:00:00Z`),
         model: 'test-model-one',
         creditsUsed,
-        totalQuota: PRICING.BUSINESS_AI_CREDIT_QUOTA.toString(),
-        quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA,
-        iso: timestamp.toISOString(),
-        dateKey: date,
-        monthKey: date.slice(0, 7),
-        epoch: timestamp.getTime(),
+        unitType: undefined,
+        usageUnit: undefined,
         costCenter,
         grossAmount,
         discountAmount,
         netAmount,
-      };
+      });
     };
     const processedData = [
       makeRow('2026-03-01', 'test-cost-center-one', 10, 0.4, 0.1, 0.3),
@@ -583,49 +525,26 @@ describe('UserDetailsView', () => {
     expect(costCenterRow).toHaveTextContent('45.50');
   });
 
-  it('renders billed gross in product and daily model breakdown tables', async () => {
-    const firstTimestamp = new Date('2026-03-01T00:00:00Z');
-    const secondTimestamp = new Date('2026-03-02T00:00:00Z');
-    const firstIso = firstTimestamp.toISOString();
-    const secondIso = secondTimestamp.toISOString();
-    const processedData: ProcessedData[] = [
-      {
-        timestamp: firstTimestamp,
-        user: 'test-user-one',
-        model: 'Coding Agent model',
-        creditsUsed: 2,
-        totalQuota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
-        quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
-        iso: firstIso,
-        dateKey: firstIso.slice(0, 10),
-        monthKey: firstIso.slice(0, 7),
-        epoch: firstTimestamp.getTime(),
-        product: 'copilot',
-        sku: 'copilot_ai_credit',
-        grossAmount: 2 * PRICING.AI_CREDIT_USD_VALUE,
-        discountAmount: 2 * PRICING.AI_CREDIT_USD_VALUE,
-        netAmount: 0,
-        aicGrossAmount: 1.23,
-      },
-      {
-        timestamp: secondTimestamp,
-        user: 'test-user-one',
-        model: 'Claude Opus 4.6',
-        creditsUsed: 24,
-        totalQuota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
-        quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
-        iso: secondIso,
-        dateKey: secondIso.slice(0, 10),
-        monthKey: secondIso.slice(0, 7),
-        epoch: secondTimestamp.getTime(),
-        product: 'copilot',
-        sku: 'copilot_ai_credit',
-        grossAmount: 24 * PRICING.AI_CREDIT_USD_VALUE,
-        discountAmount: 24 * PRICING.AI_CREDIT_USD_VALUE,
-        netAmount: 0,
-        aicGrossAmount: 4.56,
-      },
+  it.each([
+    { label: 'nonzero auxiliary gross amounts', aicGrossAmounts: [1.23, 4.56] },
+    { label: 'zero auxiliary gross amounts', aicGrossAmounts: [0, 0] },
+  ])('renders billed gross with zero net spend despite $label', async ({ aicGrossAmounts }) => {
+    const models = [
+      { timestamp: new Date('2026-03-01T00:00:00Z'), model: 'Coding Agent model', creditsUsed: 2 },
+      { timestamp: new Date('2026-03-02T00:00:00Z'), model: 'Claude Opus 4.6', creditsUsed: 24 },
     ];
+    const processedData = models.map((row, index) => makeProcessedData({
+      ...row,
+      quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
+      unitType: undefined,
+      usageUnit: undefined,
+      product: 'copilot',
+      sku: 'copilot_ai_credit',
+      grossAmount: row.creditsUsed * PRICING.AI_CREDIT_USD_VALUE,
+      discountAmount: row.creditsUsed * PRICING.AI_CREDIT_USD_VALUE,
+      netAmount: 0,
+      aicGrossAmount: aicGrossAmounts[index],
+    }));
 
     render(
       <UserDetailsView
@@ -644,72 +563,20 @@ describe('UserDetailsView', () => {
       expect(document.body).not.toHaveTextContent('$4.56');
     });
 
-    const codingAgentDailyRow = screen.getByText('- Coding Agent model').closest('tr');
-    expect(codingAgentDailyRow).not.toBeNull();
-    const codingAgentDailyCells = within(codingAgentDailyRow as HTMLElement).getAllByRole('cell');
-    expect(codingAgentDailyCells[3]).toHaveTextContent('$0.02');
-
-    const opusDailyRow = screen.getByText('- Claude Opus 4.6').closest('tr');
-    expect(opusDailyRow).not.toBeNull();
-    const opusDailyCells = within(opusDailyRow as HTMLElement).getAllByRole('cell');
-    expect(opusDailyCells[3]).toHaveTextContent('$0.24');
-  });
-
-  it('renders gross billing with zero net spend', async () => {
-    const timestamp = new Date('2026-03-01T00:00:00Z');
-    const iso = timestamp.toISOString();
-    const processedData: ProcessedData[] = [{
-      timestamp,
-      user: 'test-user-one',
-      model: 'Claude Opus 4.6',
-      creditsUsed: 24,
-      totalQuota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
-      quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
-      iso,
-      dateKey: iso.slice(0, 10),
-      monthKey: iso.slice(0, 7),
-      epoch: timestamp.getTime(),
-      product: 'copilot',
-      sku: 'copilot_ai_credit',
-      grossAmount: 24 * PRICING.AI_CREDIT_USD_VALUE,
-      discountAmount: 24 * PRICING.AI_CREDIT_USD_VALUE,
-      netAmount: 0,
-      aicGrossAmount: 0,
-    }];
-
-    render(
-      <UserDetailsView
-        user="test-user-one"
-        processedData={processedData}
-        userQuotaValue={PRICING.ENTERPRISE_AI_CREDIT_QUOTA}
-        onBack={mockOnBack}
-      />
-    );
-
-    await waitFor(() => {
-      expect(screen.getAllByRole('columnheader', { name: 'Gross Amount' })).toHaveLength(2);
-    });
-
-    const opusDailyRow = screen.getByText('- Claude Opus 4.6').closest('tr');
-    expect(opusDailyRow).not.toBeNull();
-    const opusDailyCells = within(opusDailyRow as HTMLElement).getAllByRole('cell');
-    expect(opusDailyCells[3]).toHaveTextContent('$0.24');
+    const dailyTable = screen.getByRole('table', { name: 'Daily Model Usage Breakdown' });
+    for (const { model, creditsUsed } of models) {
+      const dailyRow = within(dailyTable).getByText(`- ${model}`).closest('tr');
+      expect(dailyRow).not.toBeNull();
+      const cells = within(dailyRow!).getAllByRole('cell');
+      expect(cells[3]).toHaveTextContent(`$${(creditsUsed * PRICING.AI_CREDIT_USD_VALUE).toFixed(2)}`);
+    }
   });
 
   it('uses usage-based billing columns in product and daily model breakdown tables', async () => {
-    const timestamp = new Date('2026-06-01T00:00:00Z');
-    const iso = timestamp.toISOString();
-    const processedData: ProcessedData[] = [{
-      timestamp,
-      user: 'test-user-one',
+    const processedData = [makeProcessedData({
+      timestamp: new Date('2026-06-01T00:00:00Z'),
       model: 'Auto: Claude Haiku 4.5',
       creditsUsed: 42.5,
-      totalQuota: PRICING.BUSINESS_AI_CREDIT_QUOTA.toString(),
-      quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA,
-      iso,
-      dateKey: iso.slice(0, 10),
-      monthKey: iso.slice(0, 7),
-      epoch: timestamp.getTime(),
       product: 'copilot',
       sku: 'copilot_ai_credit',
       unitType: 'ai-credits',
@@ -720,7 +587,7 @@ describe('UserDetailsView', () => {
       discountAmount: 0.425,
       netAmount: 0,
       aicGrossAmount: 0.425,
-    }];
+    })];
 
     render(
       <UserDetailsView
@@ -760,19 +627,15 @@ describe('UserDetailsView', () => {
 
   it('enumerates the full UTC date range inclusively in fallback chart data', () => {
     const createRow = (iso: string, user: string, creditsUsed: number): ProcessedData => {
-      const timestamp = new Date(iso);
-      return {
-        timestamp,
+      return makeProcessedData({
+        timestamp: new Date(iso),
         user,
         model: 'test-model-one',
         creditsUsed,
-        totalQuota: PRICING.BUSINESS_AI_CREDIT_QUOTA.toString(),
-        quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA,
+        unitType: undefined,
+        usageUnit: undefined,
         iso,
-        dateKey: iso.slice(0, 10),
-        monthKey: iso.slice(0, 7),
-        epoch: timestamp.getTime(),
-      } as ProcessedData;
+      });
     };
     const processedData = [
       createRow('2025-06-30T23:59:59Z', 'test-user-one', 2),

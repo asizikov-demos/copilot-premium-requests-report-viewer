@@ -13,13 +13,3 @@ export function getEffectiveAicQuantity(row: AicFields): number {
 
   return Math.max(quantity, quantityDerivedFromGross);
 }
-
-export function hasAicFields(rows: Iterable<AicFields>): boolean {
-  for (const row of rows) {
-    if (row.aicGrossAmount !== undefined) {
-      return true;
-    }
-  }
-
-  return false;
-}

@@ -47,6 +47,9 @@ describe('classifyQuotaMap', () => {
       ['test-user-one', PRICING.BUSINESS_AI_CREDIT_QUOTA],
       ['test-user-three', PRICING.ENTERPRISE_AI_CREDIT_QUOTA],
     ]));
+    expect(result.business).toEqual(['test-user-one']);
+    expect(result.enterprise).toEqual(['test-user-three']);
+    expect(result.unknown).toEqual([]);
     expect(result.mixed).toBe(true);
     expect(result.suggestedPlan).toBeNull();
   });
@@ -72,17 +75,5 @@ describe('classifyQuotaMap', () => {
       mixed: false,
       suggestedPlan: null,
     });
-  });
-
-  test('buckets current AI Credits quota values by Copilot tier', () => {
-    const result = classifyQuotaMap(new Map<string, number | 'unknown'>([
-      ['test-user-one', PRICING.BUSINESS_AI_CREDIT_QUOTA],
-      ['test-user-two', PRICING.ENTERPRISE_AI_CREDIT_QUOTA],
-    ]));
-
-    expect(result.business).toEqual(['test-user-one']);
-    expect(result.enterprise).toEqual(['test-user-two']);
-    expect(result.unknown).toEqual([]);
-    expect(result.mixed).toBe(true);
   });
 });

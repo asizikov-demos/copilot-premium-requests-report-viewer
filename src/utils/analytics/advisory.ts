@@ -1,7 +1,4 @@
-import type { ProcessedData } from '@/types/csv';
-
-import { categorizeUserConsumption, CONSUMPTION_THRESHOLDS, type UserConsumptionCategory } from './insights';
-import type { UserSummary } from './types';
+import { CONSUMPTION_THRESHOLDS, type UserConsumptionCategory } from './insights';
 
 export interface Advisory {
   type: 'training';
@@ -15,7 +12,7 @@ export interface Advisory {
 }
 
 /**
- * Build the training advisory shared by the row and artifact paths.
+ * Build the training advisory from consumption categories.
  */
 function buildTrainingAdvisory(
   lowAdoptionUsers: UserConsumptionCategory[],
@@ -51,16 +48,4 @@ export function buildAdvisoriesFromCategories(
   }
 
   return advisories;
-}
-
-export function generateAdvisories(
-  userData: UserSummary[],
-  processedData: ProcessedData[]
-): Advisory[] {
-  const totalUsers = userData.length;
-  if (totalUsers === 0) return [];
-
-  const { lowAdoptionUsers } = categorizeUserConsumption(userData, processedData);
-
-  return buildAdvisoriesFromCategories(lowAdoptionUsers, totalUsers);
 }

@@ -1,17 +1,8 @@
-import { render, RenderOptions } from '@testing-library/react';
-import { ReactElement } from 'react';
-
 import { PRICING } from '@/constants/pricing';
 import type { CSVData, ProcessedData } from '@/types/csv';
 import { buildDateKeys } from '@/utils/dateKeys';
 
 import { makeDailyBucketsArtifacts } from './makeArtifacts';
-
-// Custom render function with providers if needed
-export const customRender = (
-  ui: ReactElement,
-  options?: Omit<RenderOptions, 'wrapper'>
-) => render(ui, { ...options });
 
 export const createMockFile = (content: string, name: string, type: string = 'text/csv') => {
   return new File([content], name, { type });
@@ -55,20 +46,6 @@ export const makeProcessedData = (partial: Partial<ProcessedData> = {}): Process
     epoch,
     ...partial,
   };
-};
-
-// Helper to create multiple mock CSV entries
-export const createMockCSVDataArray = (count: number, overrides: Partial<CSVData> = {}): CSVData[] => {
-  return Array.from({ length: count }, (_, index) => {
-    const date = new Date(2025, 5, 3 + index);
-    const dateStr = date.toISOString().slice(0, 10); // YYYY-MM-DD
-    return createMockCSVData({
-      ...overrides,
-      username: `test-user-${index + 1}`,
-      date: dateStr,
-      quantity: (Math.random() * 5).toFixed(2)
-    });
-  });
 };
 
 export const buildMinimalDailyBucketsArtifact = (processed: ProcessedData[]) => {

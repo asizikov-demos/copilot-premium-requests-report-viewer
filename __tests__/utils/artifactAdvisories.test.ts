@@ -1,11 +1,10 @@
 import { PRICING } from '@/constants/pricing';
-import { generateAdvisories } from '@/utils/analytics/advisory';
-import { buildConsumptionCategoriesFromArtifacts, buildAdvisoriesFromArtifacts } from '@/utils/ingestion/analytics';
+import { buildAdvisoriesFromCategories } from '@/utils/analytics/advisory';
+import { buildConsumptionCategoriesFromArtifacts } from '@/utils/ingestion/analytics';
 
 import { makeUsageArtifacts, makeQuotaArtifacts } from '../helpers/makeArtifacts';
-import { makeProcessedData } from '../helpers/testUtils';
 
-describe('buildAdvisoriesFromArtifacts', () => {
+describe('buildAdvisoriesFromCategories', () => {
   it.each([0, 1, 2, 5])('preserves the 40%% adoption advisory threshold with %i low-consumption users', lowCount => {
     const users = Array.from({ length: 5 }, (_, index) => ({
       user: `test-user-${index}`,
@@ -14,7 +13,7 @@ describe('buildAdvisoriesFromArtifacts', () => {
     const usage = makeUsageArtifacts(users);
     const quota = makeQuotaArtifacts(users.map(user => ({ user: user.user, quota: PRICING.BUSINESS_AI_CREDIT_QUOTA })));
     const categories = buildConsumptionCategoriesFromArtifacts(usage, quota);
-    const advisories = buildAdvisoriesFromArtifacts(categories, usage);
+    const advisories = buildAdvisoriesFromCategories(categories.lowAdoptionUsers, usage.userCount);
 
     expect(advisories).toHaveLength(lowCount >= 2 ? 1 : 0);
     if (lowCount >= 2) {
@@ -22,14 +21,12 @@ describe('buildAdvisoriesFromArtifacts', () => {
       expect(advisories[0].description).toContain('less than 45%');
     }
 
-    const rows = users.map(user => makeProcessedData({ user: user.user, creditsUsed: user.totalCredits }));
-    expect(generateAdvisories(usage.users, rows)).toEqual(advisories);
   });
 
   it('has no adoption recommendations for empty or unknown-quota data', () => {
     const usage = makeUsageArtifacts([{ user: 'test-user-one', totalCredits: 1 }]);
     const categories = buildConsumptionCategoriesFromArtifacts(usage, makeQuotaArtifacts([]));
-    expect(buildAdvisoriesFromArtifacts(categories, usage)).toEqual([]);
-    expect(generateAdvisories([], [])).toEqual([]);
+    expect(buildAdvisoriesFromCategories(categories.lowAdoptionUsers, usage.userCount)).toEqual([]);
+    expect(buildAdvisoriesFromCategories([], 0)).toEqual([]);
   });
 });
