@@ -2,6 +2,7 @@
 
 import React, { useContext, useMemo } from 'react';
 
+import { UserDetailsHeader } from '@/components/UserDetailsHeader';
 import { UserConsumptionMetrics } from '@/components/UserConsumptionMetrics';
 import { TOKEN_COLUMNS, TokenValue } from '@/components/TokenValue';
 import { DailyConsumptionChart } from '@/components/charts/DailyConsumptionChart';
@@ -16,7 +17,6 @@ import {
   buildUserDailyModelDataFromArtifacts,
   buildTokenArtifactsFromProcessedData,
   type TokenTotals,
-  type BillingArtifacts,
   DailyBucketsArtifacts,
   getUserQuota,
   QuotaArtifacts,
@@ -28,9 +28,8 @@ import { enumerateDatesInclusive } from '@/utils/dateKeys';
 import { aggregateDailyConsumption } from '@/utils/dailyConsumption';
 import { formatCurrency } from '@/utils/formatters';
 import { aggregateProductCosts } from '@/utils/productCosts';
+import { buildUserHeaderSummary } from '@/utils/userHeaderSummary';
 import {
-  calculateExcessCredits,
-  calculateUserTotalCredits,
   getUserData,
   getUserOrgMetadata,
 } from '@/utils/userCalculations';
@@ -69,7 +68,6 @@ function UserDailyUsageTooltip({ active, payload, label, valueUnitLabel = 'AI Cr
   if (active && payload && payload.length && label) {
     const formattedDate = utcDateLabelFormatter(label);
 
-    const cumulativeData = payload.find((entry: TooltipEntry) => entry.dataKey === 'totalCumulative');
     const modelData = payload.filter(
       (entry: TooltipEntry) => entry.dataKey !== 'totalCumulative' && entry.value > 0
     );
@@ -94,12 +92,6 @@ function UserDailyUsageTooltip({ active, payload, label, valueUnitLabel = 'AI Cr
         ) : (
           <p className="text-xs text-[#636c76] mb-2">No {valueUnitLabel}</p>
         )}
-
-        {cumulativeData && (
-          <p className="text-xs text-indigo-600 font-medium border-t border-[#d1d9e0] pt-2">
-            Cumulative: {cumulativeData.value.toFixed(1)} {valueUnitLabel}
-          </p>
-        )}
       </div>
     );
   }
@@ -119,13 +111,11 @@ export function UserDetailsView({
   const usageArtifacts = analysisCtx?.usageArtifacts as UsageArtifacts | undefined;
   const dailyBucketsArtifacts = analysisCtx?.dailyBucketsArtifacts as DailyBucketsArtifacts | undefined;
   const quotaArtifacts = analysisCtx?.quotaArtifacts as QuotaArtifacts | undefined;
-  const billingArtifacts = analysisCtx?.billingArtifacts as BillingArtifacts | undefined;
 
   const artifactUserQuota = quotaArtifacts ? getUserQuota(quotaArtifacts, user) : undefined;
   const effectiveUserQuotaValue = artifactUserQuota !== undefined ? artifactUserQuota : userQuotaValue;
 
   const userData = useMemo(() => getUserData(processedData, user), [processedData, user]);
-  const spansMultipleMonths = new Set(userData.map((row) => row.monthKey)).size > 1;
   const hasBillingData = useMemo(
     () => userData.some(
       (row) =>
@@ -139,10 +129,6 @@ export function UserDetailsView({
   const userQuantityColumnLabel = 'AI Credits';
   const chartValueUnitLabel = 'AI Credits';
   const userCostLabels = useMemo(() => getBillingCostLabels(), []);
-  const userBillingQuantity = useMemo(
-    () => userData.reduce((total, row) => total + (row.billingQuantity ?? row.creditsUsed), 0),
-    [userData]
-  );
 
   const userDailyData = useMemo(() => {
     if (usageArtifacts && dailyBucketsArtifacts?.dailyUserModelTotals) {
@@ -230,20 +216,9 @@ export function UserDetailsView({
   const userModels = useMemo(() => Array.from(new Set(userData.map((entry) => entry.model))).sort(), [userData]);
   const modelColors = useMemo(() => generateModelColors(userModels), [userModels]);
 
-  const userTotalCredits = useMemo(() => {
-    if (effectiveUserAggregate) {
-      return effectiveUserAggregate.totalCredits;
-    }
-
-    return calculateUserTotalCredits(processedData, user);
-  }, [effectiveUserAggregate, processedData, user]);
-
   const quotaValue = isKnownQuotaValue(effectiveUserQuotaValue)
     ? effectiveUserQuotaValue
     : 'unknown';
-  const chartQuotaValue = quotaValue;
-  const excessCredits = spansMultipleMonths ? 0 : calculateExcessCredits(userTotalCredits, quotaValue);
-  const billedAdditionalUsage = billingArtifacts?.userMap.get(user)?.net;
 
   const modelUsageTotals = useMemo(() => {
     const totals: Record<string, number> = {};
@@ -401,6 +376,18 @@ export function UserDetailsView({
     return effectiveUserQuotaValue < 650 ? 'business' : 'enterprise';
   }, [effectiveUserQuotaValue]);
 
+  const headerSummary = useMemo(
+    () => {
+      const summary = buildUserHeaderSummary(userData, quotaValue, hasBillingData);
+      return {
+        ...summary,
+        organizations: summary.organizations.length > 0 ? summary.organizations : organization ? [organization] : [],
+        costCenters: summary.costCenters.length > 0 ? summary.costCenters : costCenter ? [costCenter] : [],
+      };
+    },
+    [userData, quotaValue, hasBillingData, organization, costCenter]
+  );
+
   const handleCopyUser = async () => {
     try {
       await navigator.clipboard.writeText(user);
@@ -411,67 +398,17 @@ export function UserDetailsView({
 
   return (
     <div className="space-y-6">
-      {/* Header — breadcrumbs + secondary stats, no background */}
-      <div>
-        <nav aria-label="Breadcrumb">
-          <ol className="flex items-center gap-2">
-            <li>
-                <button
-                  type="button"
-                  onClick={onBack}
-                  className="text-2xl font-semibold tracking-tight text-[#0969da] hover:underline focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white rounded-sm"
-                >
-                  users
-                </button>
-            </li>
-            <li aria-hidden="true" className="text-2xl font-semibold tracking-tight text-[#8c959f]">/</li>
-            <li>
-                <button
-                  type="button"
-                  onClick={handleCopyUser}
-                  title="Click to copy username"
-                  className="text-2xl font-semibold tracking-tight text-[#1f2328] hover:text-indigo-600 transition-colors duration-150 focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white rounded-sm inline-flex items-center gap-2 group"
-                >
-                {user}
-                <svg
-                  className="w-5 h-5 text-[#636c76] group-hover:text-indigo-600 transition-colors duration-150"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
-                  />
-                </svg>
-              </button>
-            </li>
-          </ol>
-        </nav>
-
-        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-1">
-          <p className="text-sm text-[#636c76]">
-            {userActualPlan === 'unknown'
-              ? 'Unknown'
-              : planInfo[userActualPlan as 'business' | 'enterprise'].name}
-            {organization ? ` • ${organization}` : ''}
-            {costCenter ? ` • ${costCenter}` : ''}
-            {' • '}
-            {spansMultipleMonths
-              ? `${userBillingQuantity.toFixed(1)} AI Credits across multiple months`
-              : `${userBillingQuantity.toFixed(1)} / ${quotaValue === 'unknown' ? 'Unknown' : quotaValue} AI Credits consumed`}
-          </p>
-          {excessCredits > 0 && (
-            <p className="text-sm text-red-600 font-medium" role="alert">
-              Above included quota: {excessCredits.toFixed(1)} AI Credits
-              {billedAdditionalUsage !== undefined && ` · ${formatCurrency(billedAdditionalUsage)} additional usage billed`}
-            </p>
-          )}
-        </div>
-
-      </div>
+      <UserDetailsHeader
+        user={user}
+        planName={
+          userActualPlan === 'unknown'
+            ? 'Unknown'
+            : planInfo[userActualPlan as 'business' | 'enterprise'].name
+        }
+        summary={headerSummary}
+        onBack={onBack}
+        onCopyUser={handleCopyUser}
+      />
 
       {/* Cost per Cost Center — standalone card */}
       {costCenterCosts.length > 0 && (
@@ -569,7 +506,7 @@ export function UserDetailsView({
       <div className="bg-white border border-[#d1d9e0] rounded-md p-5">
         <h3 className="text-sm font-medium text-[#1f2328] mb-1">Daily Model Usage</h3>
         <p className="text-xs text-[#636c76] mb-4">
-          Bars: daily {userQuantityColumnLabel} by model · Black line: cumulative · Red line: quota
+          Daily {userQuantityColumnLabel} by model
         </p>
 
         {userDailyData.length > 0 ? (
@@ -579,7 +516,6 @@ export function UserDetailsView({
                 data={userDailyData}
                 models={userModels}
                 modelColors={modelColors}
-                quotaValue={chartQuotaValue}
                 tooltip={<UserDailyUsageTooltip valueUnitLabel={chartValueUnitLabel} />}
               />
             </div>
