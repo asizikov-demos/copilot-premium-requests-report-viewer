@@ -13,7 +13,7 @@ Try the Sample Data option on the upload screen to see how it works without need
 ## Features
 
 - Per-user AI Credit consumption and monthly quota status
-- Model usage distribution and token breakdowns
+- Model usage distribution in a flat-color treemap (tile area proportional to AI Credits), plus token breakdowns
 - Billed costs and daily included vs. additional usage in USD
 - Cost center and organization breakdowns
 - Consumption groups, feature adoption insights, and recommendations
