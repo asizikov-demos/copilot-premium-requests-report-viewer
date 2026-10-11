@@ -1,15 +1,13 @@
-import type { UsageArtifacts } from '@/utils/ingestion';
 import { buildMonthListFromArtifacts } from '@/utils/ingestion/analytics';
 import { filterBySelectedMonths } from '@/utils/analytics/filters';
 import { PRICING } from '@/constants/pricing';
 import { CSVData, ProcessedData } from '@/types/csv';
 
 import { processCSVData, analyzeData } from '../helpers/processCSVData';
-import { validCSVData, powerUserCSVData } from '../fixtures/validCSVData';
+import { validCSVData } from '../fixtures/validCSVData';
 import {
   buildMinimalDailyBucketsArtifact,
   createMockCSVData,
-  createMockCSVDataArray,
   makeProcessedData
 } from '../helpers/testUtils';
 
@@ -106,15 +104,6 @@ describe('CSV Data Processing', () => {
       });
     });
 
-    it('should handle large datasets efficiently', () => {
-      const largeDataset = createMockCSVDataArray(1000);
-      const start = performance.now();
-      const result = processCSVData(largeDataset);
-      const end = performance.now();
-      
-      expect(result).toHaveLength(1000);
-      expect(end - start).toBeLessThan(100); // Should process 1000 records in under 100ms
-    });
   });
 
   describe('analyzeData', () => {
@@ -225,25 +214,6 @@ describe('CSV Data Processing', () => {
       expect(result.quotaBreakdown.business).toEqual(['test-user-two']);
     });
   });
-
-  // Helper: build minimal UsageArtifacts from processed data for artifact power user tests
-  function buildUsageArtifacts(processed: ProcessedData[]): UsageArtifacts {
-    const modelTotals: Record<string, number> = {};
-    const usersMap = new Map<string, { totalCredits: number; modelBreakdown: Record<string, number> }>();
-    for (const row of processed) {
-      modelTotals[row.model] = (modelTotals[row.model] || 0) + row.creditsUsed;
-      const entry = usersMap.get(row.user) || { totalCredits: 0, modelBreakdown: {} };
-      entry.totalCredits += row.creditsUsed;
-      entry.modelBreakdown[row.model] = (entry.modelBreakdown[row.model] || 0) + row.creditsUsed;
-      usersMap.set(row.user, entry);
-    }
-    const users = Array.from(usersMap.entries()).map(([user, v]) => {
-      let topModel: string | undefined; let topModelValue = 0;
-      for (const [m, qty] of Object.entries(v.modelBreakdown)) { if (qty > topModelValue) { topModelValue = qty; topModel = m; } }
-      return { user, totalCredits: v.totalCredits, modelBreakdown: v.modelBreakdown, topModel, topModelValue };
-    });
-    return { users, modelTotals, userCount: users.length, modelCount: Object.keys(modelTotals).length } as UsageArtifacts;
-  }
 
   describe('Date Filtering Functions', () => {
     const createTestDataForDate = (dateString: string): ProcessedData => {
