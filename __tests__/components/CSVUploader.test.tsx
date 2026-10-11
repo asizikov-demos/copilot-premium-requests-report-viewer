@@ -59,7 +59,7 @@ describe('CSVUploader', () => {
     expect(screen.getByText(/Accepted:/i)).toBeInTheDocument();
     expect(screen.getByText('Accepted: .csv files from the GitHub Copilot AI Usage report')).toBeInTheDocument();
   });
-  it('should handle CSV parsing', async () => {
+  it('forwards ingestion completion with the filename and includes the tokens aggregator', async () => {
     const mockFile = createMockFile('new-format.csv content', 'new-format.csv');
     const { ingestStream } = jest.requireMock('@/utils/ingestion');
     ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onComplete: (result: IngestionResult) => void }) => {
@@ -82,25 +82,6 @@ describe('CSVUploader', () => {
     );
   });
 
-  it('should handle successful CSV parsing', async () => {
-    const mockFile = createMockFile(validCSVString, 'test.csv');
-    const { ingestStream } = jest.requireMock('@/utils/ingestion');
-    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onComplete: (result: IngestionResult) => void }) => {
-      setTimeout(() => {
-        options.onComplete(createMockIngestionResult(validCSVData));
-      }, 0);
-    });
-
-    render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
-    
-    const hiddenInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    await user.upload(hiddenInput, mockFile);
-
-    await waitFor(() => {
-      expect(mockOnDataLoad).toHaveBeenCalledWith(expect.objectContaining({ rowsProcessed: validCSVData.length }), 'test.csv');
-    });
-  });
-
   it('should handle file validation errors for non-CSV files', async () => {
     const mockFile = createMockFile('test content', 'test.txt', 'text/plain');
     
@@ -120,13 +101,16 @@ describe('CSVUploader', () => {
     });
   });
 
-  it('should handle missing required columns', async () => {
-    const mockFile = createMockFile(invalidCSVData.missingColumns, 'test.csv');
+  it.each([
+    ['Missing required columns: quantity', invalidCSVData.missingColumns],
+    ['Missing required columns: date', invalidCSVData.missingRequiredColumns],
+  ])('forwards the ingestion error callback: %s', async (error, content) => {
+    const mockFile = createMockFile(content, 'test.csv');
     
     const { ingestStream } = jest.requireMock('@/utils/ingestion');
     ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onError: (error: string) => void }) => {
       setTimeout(() => {
-        options.onError('Missing required columns: quantity');
+        options.onError(error);
       }, 0);
     });
 
@@ -136,9 +120,7 @@ describe('CSVUploader', () => {
     await user.upload(hiddenInput, mockFile);
 
     await waitFor(() => {
-      expect(mockOnError).toHaveBeenCalledWith(
-        expect.stringContaining('Missing required columns')
-      );
+      expect(mockOnError).toHaveBeenCalledWith(error);
     });
   });
 
@@ -358,26 +340,6 @@ describe('CSVUploader', () => {
     const docLink = screen.getByText(/how to get this report/i);
     expect(docLink).toBeInTheDocument();
     expect(docLink.closest('a')).toHaveAttribute('href', expect.stringContaining('docs.github.com'));
-  });
-
-  it('should validate all required columns are present', async () => {
-    const mockFile = createMockFile(invalidCSVData.missingRequiredColumns, 'test.csv');
-    const { ingestStream } = jest.requireMock('@/utils/ingestion');
-    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onError: (error: string) => void }) => {
-      setTimeout(() => {
-        options.onError('Missing required columns: date');
-      }, 0);
-    });
-
-    render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
-    const hiddenInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    await user.upload(hiddenInput, mockFile);
-
-    await waitFor(() => {
-      expect(mockOnError).toHaveBeenCalledWith(
-        expect.stringContaining('Missing required columns: date')
-      );
-    });
   });
 
   it('should accept files with extra columns', async () => {
