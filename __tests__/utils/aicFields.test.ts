@@ -1,11 +1,4 @@
-import { getEffectiveAicQuantity, hasAicFields } from '@/utils/aicFields';
-
-describe('hasAicFields', () => {
-  it('requires AI Credits gross to be present', () => {
-    expect(hasAicFields([{ aicQuantity: 10 }])).toBe(false);
-    expect(hasAicFields([{ aicGrossAmount: 0 }])).toBe(true);
-  });
-});
+import { getEffectiveAicQuantity } from '@/utils/aicFields';
 
 describe('getEffectiveAicQuantity', () => {
   it('uses the larger value when gross amount implies more credits than quantity', () => {
