@@ -12,6 +12,7 @@ import {
   PeopleIcon,
   SparkleFillIcon,
 } from '@primer/octicons-react';
+import { NavList, UnderlineNav } from '@primer/react';
 
 import { PRICING } from '@/constants/pricing';
 import { AnalysisProvider, useAnalysisContext } from '@/context/AnalysisContext';
@@ -205,24 +206,19 @@ function DataAnalysisInner() {
 
       {/* Mobile Navigation */}
       <div className="lg:hidden mb-6">
-        <nav aria-label="Report sections" className="flex flex-wrap gap-2">
+        <UnderlineNav aria-label="Report sections">
           {navItems.map((item) => (
-            <button
-              type="button"
+            <UnderlineNav.Item
               key={item.key}
-              onClick={() => setView(item.key)}
+              as="button"
+              type="button"
               aria-current={view === item.key ? 'page' : undefined}
-              className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md transition-all duration-150 ${
-                view === item.key
-                  ? 'bg-(--bgColor-default) text-(--fgColor-default) border-b-2 border-(--underlineNav-borderColor-active) font-semibold'
-                  : 'bg-(--bgColor-default) text-(--fgColor-muted) hover:bg-(--control-transparent-bgColor-hover) border border-(--borderColor-default) hover:border-(--borderColor-default)'
-              }`}
+              onSelect={() => setView(item.key)}
             >
-              <item.icon size={16} />
               {item.label}
-            </button>
+            </UnderlineNav.Item>
           ))}
-        </nav>
+        </UnderlineNav>
       </div>
 
       {/* Desktop Layout: Sidebar + Content */}
@@ -231,24 +227,24 @@ function DataAnalysisInner() {
         <aside className="hidden lg:block w-56 shrink-0">
           <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md sticky top-24 opacity-0 animate-slide-in-right" style={{ animationDelay: '100ms' }}>
             {/* Navigation */}
-            <nav aria-label="Report sections" className="p-3 space-y-1">
-              {navItems.map((item) => (
-                <button
-                  type="button"
-                  key={item.key}
-                  onClick={() => setView(item.key)}
-                  aria-current={view === item.key ? 'page' : undefined}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-150 ${
-                    view === item.key
-                      ? 'bg-(--bgColor-muted) text-(--fgColor-default) font-semibold'
-                      : 'text-(--fgColor-muted) hover:bg-(--control-transparent-bgColor-hover) hover:text-(--fgColor-default)'
-                  }`}
-                >
-                  <item.icon size={16} />
-                  {item.label}
-                </button>
-              ))}
-            </nav>
+            <div className="py-2">
+              <NavList aria-label="Report sections">
+                {navItems.map((item) => (
+                  <NavList.Item
+                    key={item.key}
+                    as="button"
+                    type="button"
+                    aria-current={view === item.key ? 'page' : undefined}
+                    onClick={() => setView(item.key)}
+                  >
+                    <NavList.LeadingVisual>
+                      <item.icon />
+                    </NavList.LeadingVisual>
+                    {item.label}
+                  </NavList.Item>
+                ))}
+              </NavList>
+            </div>
 
             {/* Billing Period Filter */}
             {hasMultipleMonthsData && (
