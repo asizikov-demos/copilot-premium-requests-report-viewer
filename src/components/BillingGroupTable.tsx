@@ -204,7 +204,7 @@ export function BillingGroupTable<T extends BillingGroupRow>({
                             aria-controls={detailsId}
                             onClick={() => setExpandedGroup(isExpanded ? null : row.name)}
                           >
-                            <svg
+                            <svg aria-hidden="true"
                               className={`w-3.5 h-3.5 text-(--fgColor-muted) transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`}
                               fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"
                             >
