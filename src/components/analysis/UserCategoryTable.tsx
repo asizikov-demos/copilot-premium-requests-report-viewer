@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Button } from '@primer/react';
 
 import type { UserConsumptionCategory } from '@/utils/analytics/insights';
 import { formatDecimalQuantity } from '@/utils/formatters';
@@ -42,7 +43,7 @@ export function UserCategoryTable({ users }: UserCategoryTableProps) {
           </tbody>
         </table>
       </div>
-      {matchingUsers.length > 6 && <div className="flex items-center justify-between px-5 py-3"><span className="text-xs text-(--fgColor-muted)">Showing {visibleUsers.length} of {matchingUsers.length}</span><button onClick={() => setShowAll(!showAll)} className="rounded-md border border-(--borderColor-default) bg-(--bgColor-default) px-3 py-1.5 text-xs font-medium text-(--fgColor-default) hover:bg-(--control-transparent-bgColor-hover)">{showAll ? 'Show fewer' : `Show all ${matchingUsers.length}`}</button></div>}
+      {matchingUsers.length > 6 && <div className="flex items-center justify-between px-5 py-3"><span className="text-xs text-(--fgColor-muted)">Showing {visibleUsers.length} of {matchingUsers.length}</span><Button size="small" onClick={() => setShowAll(!showAll)}>{showAll ? 'Show fewer' : `Show all ${matchingUsers.length}`}</Button></div>}
     </div>
   );
 }

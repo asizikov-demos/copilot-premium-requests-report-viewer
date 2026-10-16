@@ -1,5 +1,8 @@
 'use client';
 
+import { ArrowRightIcon } from '@primer/octicons-react';
+import { Button } from '@primer/react';
+
 import type { Advisory } from '@/utils/analytics/advisory';
 
 interface AdvisorySectionProps {
@@ -29,7 +32,7 @@ export function AdvisorySection({ advisories, onExplore }: AdvisorySectionProps)
                 <p className="font-medium text-(--fgColor-default)">Suggested next steps</p>
                 <ul className="list-disc space-y-1 pl-5">{advisory.actionItems.map(action => <li key={action}>{action}</li>)}</ul>
                 <div className="flex flex-wrap items-center gap-4">
-                  <button onClick={onExplore} className="rounded-md border border-(--borderColor-default) bg-(--bgColor-default) px-3 py-1.5 text-xs font-medium text-(--fgColor-default) hover:bg-(--control-transparent-bgColor-hover)">Explore low-adoption users &rarr;</button>
+                  <Button size="small" trailingVisual={ArrowRightIcon} onClick={onExplore}>Explore low-adoption users</Button>
                   {advisory.documentationLink && <a href={advisory.documentationLink} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-(--fgColor-accent) hover:underline">View documentation &rarr;</a>}
                 </div>
               </div>

@@ -1,6 +1,8 @@
 'use client';
 
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeftIcon } from '@primer/octicons-react';
+import { Button } from '@primer/react';
 
 import { AnalysisContext } from '@/context/AnalysisContext';
 import type { ProcessedData } from '@/types/csv';
@@ -75,9 +77,9 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
         </div>
       ) : selected && selectedCategory ? (
         <div className="space-y-4">
-          <button onClick={() => setSelectedCategory(null)} className="rounded-md border border-(--borderColor-default) bg-(--bgColor-default) px-3 py-1.5 text-sm font-medium text-(--fgColor-muted) hover:bg-(--control-transparent-bgColor-hover)">
-            &larr; Back to overview
-          </button>
+          <Button leadingVisual={ArrowLeftIcon} onClick={() => setSelectedCategory(null)}>
+            Back to overview
+          </Button>
           <section className="overflow-hidden rounded-md border border-(--borderColor-default) bg-(--bgColor-default)">
             <div className="border-b border-(--borderColor-default) px-5 py-4">
               <h3 ref={detailHeading} tabIndex={-1} className="text-sm font-semibold text-(--fgColor-default)">{selected.title}</h3>

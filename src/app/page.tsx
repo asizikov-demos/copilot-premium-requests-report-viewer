@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { MarkGithubIcon } from '@primer/octicons-react';
+import { Button } from '@primer/react';
 
 import { CSVUploader } from '@/components/CSVUploader';
 import { DataAnalysis } from '@/components/DataAnalysis';
@@ -45,12 +46,7 @@ export default function Home() {
               </h1>
             </div>
             {isDataLoaded && (
-              <button
-                onClick={handleReset}
-                className="px-4 py-2 text-sm font-medium text-(--header-fgColor-logo) bg-transparent hover:bg-(--fgColor-onEmphasis)/10 rounded-md transition-all duration-150 border border-(--header-borderColor-divider)"
-              >
-                New Report
-              </button>
+              <Button onClick={handleReset}>New Report</Button>
             )}
           </div>
         </div>

@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
+import { ArrowLeftIcon, ArrowRightIcon, ChevronLeftIcon, ChevronRightIcon, XIcon } from '@primer/octicons-react';
+import { Button, IconButton, Link } from '@primer/react';
 
 import { getQuotaTier, isKnownQuotaValue } from '@/utils/analytics/quota';
 import { getBillingCostLabels } from '@/utils/billingLabels';
@@ -255,12 +257,9 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
 
         <div className="flex flex-col sm:flex-row gap-2">
           {isMobile && (
-            <button
-              onClick={() => setShowChart(!showChart)}
-              className="px-3 py-1.5 text-sm font-medium text-(--fgColor-muted) bg-(--bgColor-muted) hover:bg-(--control-transparent-bgColor-active) rounded-md transition-colors duration-150"
-            >
+            <Button size="small" onClick={() => setShowChart(!showChart)}>
               {showChart ? 'Show Table' : 'Show Chart'}
-            </button>
+            </Button>
           )}
 
         </div>
@@ -399,13 +398,13 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                 </p>
               </div>
               {isMobile && (
-                <button
-                  onClick={() => setShowChart(false)}
-                  className="text-(--fgColor-muted) hover:text-(--fgColor-default)"
+                <IconButton
+                  icon={XIcon}
+                  variant="invisible"
+                  size="small"
                   aria-label="Hide chart"
-                >
-                  <span aria-hidden="true">✕</span>
-                </button>
+                  onClick={() => setShowChart(false)}
+                />
               )}
             </div>
           </div>
@@ -480,25 +479,27 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
               {/* Mobile Pagination */}
               {totalPages > 1 && (
                 <nav aria-label="Users pagination" className="flex items-center justify-between pt-3 border-t border-(--borderColor-default)">
-                  <button
-                    type="button"
+                  <Button
+                    variant="invisible"
+                    size="small"
+                    leadingVisual={ArrowLeftIcon}
                     onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
                     disabled={activePage === 0}
-                    className="px-3 py-1.5 text-sm font-medium text-(--fgColor-muted) hover:text-(--fgColor-default) disabled:opacity-40"
                   >
-                    <span aria-hidden="true">←</span> Previous
-                  </button>
+                    Previous
+                  </Button>
                   <span className="text-xs text-(--fgColor-muted)">
                     Page {activePage + 1} of {totalPages}
                   </span>
-                  <button
-                    type="button"
+                  <Button
+                    variant="invisible"
+                    size="small"
+                    trailingVisual={ArrowRightIcon}
                     onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
                     disabled={activePage === totalPages - 1}
-                    className="px-3 py-1.5 text-sm font-medium text-(--fgColor-muted) hover:text-(--fgColor-default) disabled:opacity-40"
                   >
-                    Next <span aria-hidden="true">→</span>
-                  </button>
+                    Next
+                  </Button>
                 </nav>
               )}
             </div>
@@ -563,13 +564,14 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                 return (
                 <tr key={user.user} className="group hover:bg-(--bgColor-muted) transition-colors duration-150">
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-medium sticky left-0 z-10 bg-(--bgColor-default) group-hover:bg-(--bgColor-muted) transition-colors duration-150 border-r border-(--borderColor-default)">
-                    <button
+                    <Link
+                      as="button"
+                      type="button"
                       onClick={() => setSelectedUser(user.user)}
-                      className="text-(--fgColor-accent)  hover:underline"
                       title={`View ${user.user}'s details`}
                     >
                       {user.user}
-                    </button>
+                    </Link>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-(--fgColor-muted) text-right font-mono tabular-nums">
                     {quotaDisplay}
@@ -616,17 +618,13 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                 {activePage * ROWS_PER_PAGE + 1}–{Math.min((activePage + 1) * ROWS_PER_PAGE, sortedUserData.length)} of {sortedUserData.length}
               </p>
               <nav aria-label="Users pagination" className="flex items-center gap-1">
-                <button
-                  type="button"
+                <IconButton
+                  icon={ChevronLeftIcon}
+                  variant="invisible"
+                  aria-label="Previous page"
                   onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
                   disabled={activePage === 0}
-                  aria-label="Previous page"
-                  className="p-1.5 text-(--fgColor-muted) hover:text-(--fgColor-default) disabled:opacity-40 transition-colors duration-150"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
+                />
 
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   let pageNum;
@@ -658,17 +656,13 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                   );
                 })}
 
-                <button
-                  type="button"
+                <IconButton
+                  icon={ChevronRightIcon}
+                  variant="invisible"
+                  aria-label="Next page"
                   onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
                   disabled={activePage === totalPages - 1}
-                  aria-label="Next page"
-                  className="p-1.5 text-(--fgColor-muted) hover:text-(--fgColor-default) disabled:opacity-40 transition-colors duration-150"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
+                />
               </nav>
             </div>
           )}

@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { ChevronRightIcon } from '@primer/octicons-react';
+import { Link } from '@primer/react';
 
 import type { ProcessedData } from '@/types/csv';
 import type { BillingGroupTotals } from '@/utils/ingestion';
@@ -108,13 +109,9 @@ export function createDetailsColumn<T extends BillingGroupRow>(
     key: 'details',
     header: 'Details',
     render: (row) => (
-      <button
-        type="button"
-        onClick={() => onSelect(row.name)}
-        className="text-(--fgColor-accent)  hover:underline font-medium rounded-sm"
-      >
+      <Link as="button" type="button" className="font-medium" onClick={() => onSelect(row.name)}>
         View details
-      </button>
+      </Link>
     ),
   };
 }

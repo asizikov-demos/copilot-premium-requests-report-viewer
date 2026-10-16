@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { ChevronRightIcon, CopyIcon } from '@primer/octicons-react';
+import { ChevronLeftIcon, ChevronRightIcon, CopyIcon } from '@primer/octicons-react';
+import { IconButton } from '@primer/react';
 
 import { DailyConsumptionChart } from '@/components/charts/DailyConsumptionChart';
 import { ModelDailyStackedChart } from '@/components/charts/ModelDailyStackedChart';
@@ -455,31 +456,23 @@ export function BillingGroupDetailsView({
                     )} of {filteredUserRows.length}
                   </p>
                   <nav aria-label="Users pagination" className="flex items-center gap-1">
-                    <button
-                      type="button"
+                    <IconButton
+                      icon={ChevronLeftIcon}
+                      variant="invisible"
+                      aria-label="Previous users page"
                       onClick={() => setUserPage((page) => Math.max(0, page - 1))}
                       disabled={activeUserPage === 0}
-                      aria-label="Previous users page"
-                      className="p-1.5 text-(--fgColor-muted) hover:text-(--fgColor-default) disabled:opacity-40 transition-colors duration-150"
-                    >
-                      <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
-                      </svg>
-                    </button>
+                    />
                     <span className="px-2 text-sm text-(--fgColor-muted)">
                       {activeUserPage + 1} / {totalUserPages}
                     </span>
-                    <button
-                      type="button"
+                    <IconButton
+                      icon={ChevronRightIcon}
+                      variant="invisible"
+                      aria-label="Next users page"
                       onClick={() => setUserPage((page) => Math.min(totalUserPages - 1, page + 1))}
                       disabled={activeUserPage === totalUserPages - 1}
-                      aria-label="Next users page"
-                      className="p-1.5 text-(--fgColor-muted) hover:text-(--fgColor-default) disabled:opacity-40 transition-colors duration-150"
-                    >
-                      <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="m9 5 7 7-7 7" />
-                      </svg>
-                    </button>
+                    />
                   </nav>
                 </div>
               )}

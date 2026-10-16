@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { LockIcon, UploadIcon } from '@primer/octicons-react';
+import { Button } from '@primer/react';
 
 import {
   ingestStream,
@@ -304,13 +305,14 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
 
         {/* Sample data button */}
         <div className="mt-5 text-center opacity-0 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-          <button
+          <Button
+            variant="primary"
+            size="large"
             onClick={(e) => { e.stopPropagation(); loadSampleData(); }}
             disabled={isBusy}
-            className="px-5 py-2.5 text-sm font-semibold text-(--button-primary-fgColor-rest) bg-(--button-primary-bgColor-rest) hover:bg-(--button-primary-bgColor-hover) active:bg-(--button-primary-bgColor-active) border border-(--button-primary-borderColor-rest) rounded-md transition-all duration-150 disabled:bg-(--button-primary-bgColor-disabled) disabled:border-(--button-primary-borderColor-disabled) disabled:text-(--button-primary-fgColor-disabled)"
           >
             Try with sample data
-          </button>
+          </Button>
         </div>
 
         {/* Inline privacy info */}
