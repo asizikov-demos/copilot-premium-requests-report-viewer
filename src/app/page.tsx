@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { MarkGithubIcon } from '@primer/octicons-react';
-import { Button } from '@primer/react';
+import { Banner, Button } from '@primer/react';
 
 import { CSVUploader } from '@/components/CSVUploader';
 import { DataAnalysis } from '@/components/DataAnalysis';
@@ -56,15 +56,7 @@ export default function Home() {
       <div className={`flex-1 ${!isDataLoaded ? 'flex flex-col items-center justify-center' : ''} px-6 py-8 pb-12`}>
         {error && (
           <div className="w-full max-w-xl mb-6 animate-fade-in-up">
-            <div className="flex items-start gap-3 p-4 bg-(--bgColor-danger-muted) border border-(--borderColor-danger-muted) rounded-md">
-              <svg aria-hidden="true" className="w-5 h-5 text-(--fgColor-danger) flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-              <div>
-                <p className="text-sm font-semibold text-(--fgColor-danger)">Error processing file</p>
-                <p className="text-sm text-(--fgColor-danger)/80 mt-0.5">{error}</p>
-              </div>
-            </div>
+            <Banner variant="critical" title="Error processing file" description={error} />
           </div>
         )}
 

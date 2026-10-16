@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { CopyIcon } from '@primer/octicons-react';
+import { ProgressBar } from '@primer/react';
 
 import type { UserHeaderSummary } from '@/utils/userHeaderSummary';
 import { formatCurrency } from '@/utils/formatters';
@@ -137,9 +138,13 @@ export function UserDetailsHeader({ user, planName, summary, onBack, onCopyUser 
             <Label>Days active</Label>
             <div className="flex items-center gap-3 mt-1">
               {daysPercent !== null && (
-                <div className="flex-1 h-1.5 rounded-sm bg-(--progressBar-track-bgColor) overflow-hidden">
-                  <div className="h-full bg-(--progressBar-bgColor-success)" style={{ width: `${daysPercent}%` }} />
-                </div>
+                <ProgressBar
+                  className="flex-1"
+                  barSize="small"
+                  progress={daysPercent}
+                  aria-label="Days active"
+                  aria-valuetext={`${summary.daysActive} of ${summary.daysInPeriod} days`}
+                />
               )}
               <span className="text-sm text-(--fgColor-default) tabular-nums">
                 {summary.daysInPeriod ? `${summary.daysActive} / ${summary.daysInPeriod}` : summary.daysActive}

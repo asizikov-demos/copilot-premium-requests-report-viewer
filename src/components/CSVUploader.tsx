@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { LockIcon, UploadIcon } from '@primer/octicons-react';
-import { Button } from '@primer/react';
+import { Button, ProgressBar, Spinner } from '@primer/react';
 
 import {
   ingestStream,
@@ -253,7 +253,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
                 }
               `}>
                 {isLoading ? (
-                  <div className="w-7 h-7 border-2 border-(--borderColor-default) border-t-(--fgColor-accent) rounded-full animate-spin" />
+                  <Spinner size="medium" srText={null} className="text-(--fgColor-accent)" />
                 ) : (
                   <UploadIcon
                     size={24}
@@ -268,12 +268,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
                   <div className="space-y-4">
                     <p className="text-base font-semibold text-(--fgColor-default)">Processing file...</p>
                     <div className="w-56 mx-auto">
-                      <div className="h-2 bg-(--progressBar-track-bgColor) rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-(--progressBar-bgColor-accent) rounded-full transition-all duration-150"
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
+                      <ProgressBar progress={progress} bg="accent.emphasis" aria-label="File processing progress" />
                     </div>
                     {totalRowsProcessed > 0 && (
                       <p className="text-sm text-(--fgColor-muted)">
