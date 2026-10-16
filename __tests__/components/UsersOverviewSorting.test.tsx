@@ -215,7 +215,7 @@ describe('UsersOverview - sorting', () => {
     };
 
     const grossHeader = within(table).getByRole('columnheader', { name: /Gross Amount/ });
-    fireEvent.click(grossHeader);
+    fireEvent.click(within(grossHeader).getByRole('button'));
     expect(getRowUserOrder()).toEqual(['test-user-two', 'test-user-three', 'test-user-one']);
   });
 
@@ -388,17 +388,22 @@ describe('UsersOverview - sorting', () => {
     // Default sort is totalCredits desc.
     expect(getRowUserOrder()).toEqual(['test-user-three', 'test-user-two', 'test-user-one']);
 
-    const quotaHeader = within(table).getByText('Quota');
-    const quotaTh = quotaHeader.closest('th');
-    expect(quotaTh).toBeTruthy();
+    const quotaHeader = within(table).getByRole('columnheader', { name: 'Quota' });
+    const totalCreditsHeader = within(table).getByRole('columnheader', { name: 'Total AI Credits' });
+    const quotaSortButton = within(quotaHeader).getByRole('button', { name: 'Quota' });
+    expect(quotaHeader).toHaveAttribute('aria-sort', 'none');
+    expect(totalCreditsHeader).toHaveAttribute('aria-sort', 'descending');
 
     // First click selects quota sorting desc: higher known quotas first, Unknown last.
-    fireEvent.click(quotaTh as HTMLElement);
+    fireEvent.click(quotaSortButton);
     expect(getRowUserOrder()).toEqual(['test-user-three', 'test-user-two', 'test-user-one']);
+    expect(quotaHeader).toHaveAttribute('aria-sort', 'descending');
+    expect(totalCreditsHeader).toHaveAttribute('aria-sort', 'none');
 
     // Second click toggles to asc: Unknown first, then lowest known quota.
-    fireEvent.click(quotaTh as HTMLElement);
+    fireEvent.click(quotaSortButton);
     expect(getRowUserOrder()).toEqual(['test-user-one', 'test-user-two', 'test-user-three']);
+    expect(quotaHeader).toHaveAttribute('aria-sort', 'ascending');
   });
 
   it('filters users by organization and cost center when metadata is available', () => {

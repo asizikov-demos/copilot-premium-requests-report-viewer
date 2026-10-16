@@ -19,6 +19,7 @@ import {
 
 import { UsersConsumptionHeatmap } from './charts/UsersConsumptionHeatmap';
 import { UserDetailsView } from './UserDetailsView';
+import { SortableColumnHeader } from './primitives/SortableColumnHeader';
 
 type DailyCumulativeData = { date: string; [user: string]: string | number };
 const ALL_FILTERS_VALUE = '__all__';
@@ -303,7 +304,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
         <label className="flex flex-col gap-1.5 text-sm text-(--fgColor-muted)">
           <span className="font-medium text-(--fgColor-default)">Search users</span>
           <div className="relative">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-(--fgColor-muted)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-(--fgColor-muted)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
             </svg>
             <input
@@ -403,7 +404,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                   className="text-(--fgColor-muted) hover:text-(--fgColor-default)"
                   aria-label="Hide chart"
                 >
-                  ✕
+                  <span aria-hidden="true">✕</span>
                 </button>
               )}
             </div>
@@ -478,25 +479,27 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
 
               {/* Mobile Pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between pt-3 border-t border-(--borderColor-default)">
+                <nav aria-label="Users pagination" className="flex items-center justify-between pt-3 border-t border-(--borderColor-default)">
                   <button
+                    type="button"
                     onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
                     disabled={activePage === 0}
                     className="px-3 py-1.5 text-sm font-medium text-(--fgColor-muted) hover:text-(--fgColor-default) disabled:opacity-40"
                   >
-                    ← Previous
+                    <span aria-hidden="true">←</span> Previous
                   </button>
                   <span className="text-xs text-(--fgColor-muted)">
-                    {activePage + 1} / {totalPages}
+                    Page {activePage + 1} of {totalPages}
                   </span>
                   <button
+                    type="button"
                     onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
                     disabled={activePage === totalPages - 1}
                     className="px-3 py-1.5 text-sm font-medium text-(--fgColor-muted) hover:text-(--fgColor-default) disabled:opacity-40"
                   >
-                    Next →
+                    Next <span aria-hidden="true">→</span>
                   </button>
-                </div>
+                </nav>
               )}
             </div>
           )}
@@ -506,76 +509,46 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
             <table className="min-w-full" aria-label="Users">
             <thead className="bg-(--bgColor-muted) sticky top-0 z-20">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-(--fgColor-muted) uppercase tracking-[0.05em] bg-(--bgColor-muted) sticky left-0 z-30 min-w-40 border-r border-(--borderColor-default)">
+                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-(--fgColor-muted) uppercase tracking-[0.05em] bg-(--bgColor-muted) sticky left-0 z-30 min-w-40 border-r border-(--borderColor-default)">
                   User
                 </th>
-                <th
-                  className={`px-4 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-[0.05em] min-w-24 cursor-pointer hover:bg-(--control-transparent-bgColor-hover) select-none transition-colors duration-150 ${
-                    sortBy === 'quota' ? 'bg-(--control-transparent-bgColor-selected)' : 'bg-(--bgColor-muted)'
-                  }`}
-                  onClick={() => handleSortWithReset('quota')}
-                >
-                  <div className="flex items-center gap-1 justify-end">
-                    Quota
-                    <span className="text-(--fgColor-muted)">
-                      {sortBy === 'quota' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
-                    </span>
-                  </div>
-                </th>
-                <th
-                    className={`px-4 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-[0.05em] min-w-32 cursor-pointer hover:bg-(--control-transparent-bgColor-hover) select-none transition-colors duration-150 ${
-                      sortBy === 'totalCredits' ? 'bg-(--bgColor-muted)' : 'bg-(--bgColor-muted)'
-                    }`}
-                    onClick={() => handleSortWithReset('totalCredits')}
-                  >
-                    <div className="flex items-center gap-1 justify-end">
-                      Total AI Credits
-                      <span className="text-(--fgColor-muted)">
-                        {sortBy === 'totalCredits' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
-                      </span>
-                    </div>
-                </th>
+                <SortableColumnHeader
+                  label="Quota"
+                  active={sortBy === 'quota'}
+                  direction={sortDirection}
+                  onSort={() => handleSortWithReset('quota')}
+                  className="min-w-24"
+                />
+                <SortableColumnHeader
+                  label="Total AI Credits"
+                  active={sortBy === 'totalCredits'}
+                  direction={sortDirection}
+                  onSort={() => handleSortWithReset('totalCredits')}
+                  className="min-w-32"
+                />
                 {hasCosts && (
                   <>
-                    <th
-                      className={`px-4 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-[0.05em] min-w-28 cursor-pointer hover:bg-(--control-transparent-bgColor-hover) select-none transition-colors duration-150 ${
-                        sortBy === 'gross' ? 'bg-(--control-transparent-bgColor-selected)' : 'bg-(--bgColor-muted)'
-                      }`}
-                      onClick={() => handleSortWithReset('gross')}
-                    >
-                      <div className="flex items-center gap-1 justify-end">
-                        {costLabels.gross}
-                        <span className="text-(--fgColor-muted)">
-                          {sortBy === 'gross' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
-                        </span>
-                      </div>
-                    </th>
-                    <th
-                      className={`px-4 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-[0.05em] min-w-28 cursor-pointer hover:bg-(--control-transparent-bgColor-hover) select-none transition-colors duration-150 ${
-                        sortBy === 'discount' ? 'bg-(--control-transparent-bgColor-selected)' : 'bg-(--bgColor-muted)'
-                      }`}
-                      onClick={() => handleSortWithReset('discount')}
-                    >
-                      <div className="flex items-center gap-1 justify-end">
-                        {costLabels.discount}
-                        <span className="text-(--fgColor-muted)">
-                          {sortBy === 'discount' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
-                        </span>
-                      </div>
-                    </th>
-                    <th
-                      className={`px-4 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-[0.05em] min-w-24 cursor-pointer hover:bg-(--control-transparent-bgColor-hover) select-none transition-colors duration-150 ${
-                        sortBy === 'net' ? 'bg-(--control-transparent-bgColor-selected)' : 'bg-(--bgColor-muted)'
-                      }`}
-                      onClick={() => handleSortWithReset('net')}
-                    >
-                      <div className="flex items-center gap-1 justify-end">
-                        {costLabels.net}
-                        <span className="text-(--fgColor-muted)">
-                          {sortBy === 'net' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
-                        </span>
-                      </div>
-                    </th>
+                    <SortableColumnHeader
+                      label={costLabels.gross}
+                      active={sortBy === 'gross'}
+                      direction={sortDirection}
+                      onSort={() => handleSortWithReset('gross')}
+                      className="min-w-28"
+                    />
+                    <SortableColumnHeader
+                      label={costLabels.discount}
+                      active={sortBy === 'discount'}
+                      direction={sortDirection}
+                      onSort={() => handleSortWithReset('discount')}
+                      className="min-w-28"
+                    />
+                    <SortableColumnHeader
+                      label={costLabels.net}
+                      active={sortBy === 'net'}
+                      direction={sortDirection}
+                      onSort={() => handleSortWithReset('net')}
+                      className="min-w-24"
+                    />
                   </>
                 )}
               </tr>
@@ -593,7 +566,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                     <button
                       onClick={() => setSelectedUser(user.user)}
                       className="text-(--fgColor-accent)  hover:underline"
-                      title={`View ${user.user}&apos;s details`}
+                      title={`View ${user.user}'s details`}
                     >
                       {user.user}
                     </button>
@@ -642,13 +615,15 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
               <p className="text-sm text-(--fgColor-muted)">
                 {activePage * ROWS_PER_PAGE + 1}–{Math.min((activePage + 1) * ROWS_PER_PAGE, sortedUserData.length)} of {sortedUserData.length}
               </p>
-              <div className="flex items-center gap-1">
+              <nav aria-label="Users pagination" className="flex items-center gap-1">
                 <button
+                  type="button"
                   onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
                   disabled={activePage === 0}
+                  aria-label="Previous page"
                   className="p-1.5 text-(--fgColor-muted) hover:text-(--fgColor-default) disabled:opacity-40 transition-colors duration-150"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
@@ -667,8 +642,11 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
 
                   return (
                     <button
+                      type="button"
                       key={pageNum}
                       onClick={() => setCurrentPage(pageNum)}
+                      aria-label={`Page ${pageNum + 1}`}
+                      aria-current={activePage === pageNum ? 'page' : undefined}
                       className={`w-8 h-8 text-sm font-medium rounded-md border transition-colors duration-150 ${
                         activePage === pageNum
                           ? 'bg-(--bgColor-accent-emphasis) text-(--fgColor-onEmphasis) border-(--borderColor-accent-emphasis)'
@@ -681,15 +659,17 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                 })}
 
                 <button
+                  type="button"
                   onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
                   disabled={activePage === totalPages - 1}
+                  aria-label="Next page"
                   className="p-1.5 text-(--fgColor-muted) hover:text-(--fgColor-default) disabled:opacity-40 transition-colors duration-150"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
-              </div>
+              </nav>
             </div>
           )}
           </div>
