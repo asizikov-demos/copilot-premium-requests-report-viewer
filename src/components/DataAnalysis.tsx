@@ -314,7 +314,7 @@ function DataAnalysisInner() {
                     const selected = Array.from(e.target.selectedOptions, option => option.value);
                     setSelectedMonths(selected);
                   }}
-                  className="block h-(--control-large-size) w-full px-3 py-2 text-sm text-(--fgColor-default) bg-(--bgColor-default) border border-(--borderColor-default) rounded-md shadow-(--shadow-inset) focus:border-(--borderColor-accent-emphasis)"
+                  className="block w-full px-3 py-2 text-sm text-(--fgColor-default) bg-(--bgColor-default) border border-(--borderColor-default) rounded-md shadow-(--shadow-inset) focus:border-(--borderColor-accent-emphasis)"
                   size={Math.min(availableMonths.length, 4)}
                 >
                   {availableMonths.map(month => (

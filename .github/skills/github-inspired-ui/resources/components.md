@@ -158,7 +158,7 @@ Use `Tooltip` from `src/components/primitives/Tooltip.tsx` (`bg-(--tooltip-bgCol
 
 The Primer focus outline comes from `globals.css`; do not add `outline-none` or `focus:ring-*`.
 
-Always set an explicit control height (`h-(--control-large-size)`, or `--control-medium-size` for compact UIs) on inputs and selects. Safari ignores padding on native `<select>` elements, so padding alone gives inconsistent heights.
+Always set an explicit control height (`h-(--control-large-size)`, or `--control-medium-size` for compact UIs) on inputs and selects. Safari ignores padding on native `<select>` elements, so padding alone gives inconsistent heights. Do not set a fixed height on `<select multiple>` or listboxes with `size`; their row count determines the height.
 
 ## Pagination (Primer: Pagination)
 
