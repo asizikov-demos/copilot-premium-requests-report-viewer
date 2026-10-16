@@ -12,7 +12,7 @@ import {
   PeopleIcon,
   SparkleFillIcon,
 } from '@primer/octicons-react';
-import { NavList, UnderlineNav } from '@primer/react';
+import { Checkbox, NavList, UnderlineNav } from '@primer/react';
 
 import { PRICING } from '@/constants/pricing';
 import { AnalysisProvider, useAnalysisContext } from '@/context/AnalysisContext';
@@ -259,8 +259,7 @@ function DataAnalysisInner() {
                         key={month.value}
                         className="flex items-center gap-2 px-1 py-1 text-sm text-(--fgColor-default) rounded-md cursor-pointer hover:bg-(--control-transparent-bgColor-hover)"
                       >
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           value={month.value}
                           checked={selectedMonths.includes(month.value)}
                           onChange={(e) => {
@@ -269,7 +268,6 @@ function DataAnalysisInner() {
                               .map(option => option.value)
                               .filter(option => option === value ? checked : selectedMonths.includes(option)));
                           }}
-                          className="size-4 accent-(--bgColor-accent-emphasis)"
                         />
                         {month.label}
                       </label>

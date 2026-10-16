@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@primer/react';
+import { SearchIcon } from '@primer/octicons-react';
+import { Button, FormControl, TextInput } from '@primer/react';
 
 import type { UserConsumptionCategory } from '@/utils/analytics/insights';
 import { formatDecimalQuantity } from '@/utils/formatters';
@@ -19,10 +20,10 @@ export function UserCategoryTable({ users }: UserCategoryTableProps) {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
-        <label className="max-w-full">
-          <span className="sr-only">Search users in this group</span>
-          <input type="search" value={query} onChange={event => { setQuery(event.target.value); setShowAll(false); }} placeholder="Find a user..." className="w-56 max-w-full rounded-md border border-(--borderColor-default) bg-(--bgColor-muted) px-3 py-2 text-sm text-(--fgColor-default)" />
-        </label>
+        <FormControl className="max-w-full">
+          <FormControl.Label visuallyHidden>Search users in this group</FormControl.Label>
+          <TextInput type="search" leadingVisual={SearchIcon} value={query} onChange={event => { setQuery(event.target.value); setShowAll(false); }} placeholder="Find a user..." className="w-56 max-w-full" />
+        </FormControl>
         <span className="text-xs text-(--fgColor-muted)" role="status">{matchingUsers.length} matching {matchingUsers.length === 1 ? 'user' : 'users'}</span>
       </div>
       <div className="overflow-x-auto">

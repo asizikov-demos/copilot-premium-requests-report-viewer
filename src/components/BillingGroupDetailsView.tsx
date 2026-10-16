@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { ChevronLeftIcon, ChevronRightIcon, CopyIcon } from '@primer/octicons-react';
-import { IconButton } from '@primer/react';
+import { ChevronLeftIcon, ChevronRightIcon, CopyIcon, SearchIcon } from '@primer/octicons-react';
+import { FormControl, IconButton, TextInput } from '@primer/react';
 
 import { DailyConsumptionChart } from '@/components/charts/DailyConsumptionChart';
 import { ModelDailyStackedChart } from '@/components/charts/ModelDailyStackedChart';
@@ -383,31 +383,20 @@ export function BillingGroupDetailsView({
                 Showing {filteredUserRows.length} of {userRows.length} {userRows.length === 1 ? 'user' : 'users'} in this {groupLabel}.
               </p>
             </div>
-            <label className="flex flex-col gap-1.5 text-sm text-(--fgColor-muted)">
-              <span className="sr-only">Search users</span>
-              <div className="relative">
-                <svg
-                  aria-hidden="true"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-(--fgColor-muted)"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                </svg>
-                <input
-                  type="text"
-                  value={userSearch}
-                  onChange={(event) => {
-                    setUserSearch(event.target.value);
-                    setUserPage(0);
-                  }}
-                  placeholder="Filter by username..."
-                  aria-label="Search users"
-                  className="w-full min-w-56 rounded-md border border-(--borderColor-default) bg-(--bgColor-default) pl-9 pr-3 py-2 text-sm text-(--fgColor-default) shadow-(--shadow-inset) transition duration-150 focus:border-(--borderColor-accent-emphasis) placeholder:text-(--fgColor-muted)"
-                />
-              </div>
-            </label>
+            <FormControl>
+              <FormControl.Label visuallyHidden>Search users</FormControl.Label>
+              <TextInput
+                block
+                leadingVisual={SearchIcon}
+                value={userSearch}
+                onChange={(event) => {
+                  setUserSearch(event.target.value);
+                  setUserPage(0);
+                }}
+                placeholder="Filter by username..."
+                className="min-w-56"
+              />
+            </FormControl>
           </div>
           {filteredUserRows.length > 0 ? (
             <div className="overflow-x-auto">

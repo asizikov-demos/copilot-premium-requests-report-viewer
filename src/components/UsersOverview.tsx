@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { ArrowLeftIcon, ArrowRightIcon, ChevronLeftIcon, ChevronRightIcon, XIcon } from '@primer/octicons-react';
-import { Button, IconButton, Link } from '@primer/react';
+import { ArrowLeftIcon, ArrowRightIcon, ChevronLeftIcon, ChevronRightIcon, SearchIcon, XIcon } from '@primer/octicons-react';
+import { Button, FormControl, IconButton, Link, Select, TextInput } from '@primer/react';
 
 import { getQuotaTier, isKnownQuotaValue } from '@/utils/analytics/quota';
 import { getBillingCostLabels } from '@/utils/billingLabels';
@@ -300,87 +300,87 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
 
       {/* Filters */}
       <div className="flex flex-col lg:flex-row lg:items-end gap-3">
-        <label className="flex flex-col gap-1.5 text-sm text-(--fgColor-muted)">
-          <span className="font-medium text-(--fgColor-default)">Search users</span>
-          <div className="relative">
-            <svg aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-(--fgColor-muted)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-            </svg>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(0); }}
-              placeholder="Filter by username..."
-              className="h-(--control-large-size) w-full min-w-56 rounded-md border border-(--borderColor-default) bg-(--bgColor-default) pl-9 pr-3 py-2 text-sm text-(--fgColor-default) shadow-(--shadow-inset) transition duration-150 focus:border-(--borderColor-accent-emphasis) placeholder:text-(--fgColor-muted)"
-            />
-          </div>
-        </label>
+        <FormControl>
+          <FormControl.Label>Search users</FormControl.Label>
+          <TextInput
+            block
+            size="large"
+            leadingVisual={SearchIcon}
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(0); }}
+            placeholder="Filter by username..."
+            className="min-w-56"
+          />
+        </FormControl>
 
         {organizationOptions.length > 0 && (
-          <label className="flex flex-col gap-1.5 text-sm text-(--fgColor-muted)">
-            <span className="font-medium text-(--fgColor-default)">Organization</span>
-            <select
+          <FormControl>
+            <FormControl.Label>Organization</FormControl.Label>
+            <Select
               value={effectiveSelectedOrganization}
               onChange={(event) => {
                 setSelectedOrganization(event.target.value);
                 setCurrentPage(0);
               }}
-              aria-label="Organization"
-              className="h-(--control-large-size) min-w-56 rounded-md border border-(--borderColor-default) bg-(--bgColor-default) px-3 py-2 text-sm text-(--fgColor-default) shadow-(--shadow-inset) transition duration-150 focus:border-(--borderColor-accent-emphasis)"
+              block
+              size="large"
+              className="min-w-56"
             >
-              <option value={ALL_FILTERS_VALUE}>All organizations</option>
+              <Select.Option value={ALL_FILTERS_VALUE}>All organizations</Select.Option>
               {organizationOptions.map((organization) => (
-                <option key={organization} value={organization}>
+                <Select.Option key={organization} value={organization}>
                   {organization}
-                </option>
+                </Select.Option>
               ))}
-            </select>
-          </label>
+            </Select>
+          </FormControl>
         )}
 
         {costCenterOptions.length > 0 && (
-          <label className="flex flex-col gap-1.5 text-sm text-(--fgColor-muted)">
-            <span className="font-medium text-(--fgColor-default)">Cost center</span>
-            <select
+          <FormControl>
+            <FormControl.Label>Cost center</FormControl.Label>
+            <Select
               value={effectiveSelectedCostCenter}
               onChange={(event) => {
                 setSelectedCostCenter(event.target.value);
                 setCurrentPage(0);
               }}
-              aria-label="Cost center"
-              className="h-(--control-large-size) min-w-56 rounded-md border border-(--borderColor-default) bg-(--bgColor-default) px-3 py-2 text-sm text-(--fgColor-default) shadow-(--shadow-inset) transition duration-150 focus:border-(--borderColor-accent-emphasis)"
+              block
+              size="large"
+              className="min-w-56"
             >
-              <option value={ALL_FILTERS_VALUE}>All cost centers</option>
-              <option value={NO_COST_CENTERS_FILTER_VALUE}>No cost centers</option>
+              <Select.Option value={ALL_FILTERS_VALUE}>All cost centers</Select.Option>
+              <Select.Option value={NO_COST_CENTERS_FILTER_VALUE}>No cost centers</Select.Option>
               {costCenterOptions.map((costCenter) => (
-                <option key={costCenter} value={costCenter}>
+                <Select.Option key={costCenter} value={costCenter}>
                   {costCenter}
-                </option>
+                </Select.Option>
               ))}
-            </select>
-          </label>
+            </Select>
+          </FormControl>
         )}
 
         {planOptions.length > 1 && (
-          <label className="flex flex-col gap-1.5 text-sm text-(--fgColor-muted)">
-            <span className="font-medium text-(--fgColor-default)">Copilot Plan</span>
-            <select
+          <FormControl>
+            <FormControl.Label>Copilot Plan</FormControl.Label>
+            <Select
               value={effectiveSelectedPlan}
               onChange={(event) => {
                 setSelectedPlan(event.target.value);
                 setCurrentPage(0);
               }}
-              aria-label="Copilot Plan"
-              className="h-(--control-large-size) min-w-56 rounded-md border border-(--borderColor-default) bg-(--bgColor-default) px-3 py-2 text-sm text-(--fgColor-default) shadow-(--shadow-inset) transition duration-150 focus:border-(--borderColor-accent-emphasis)"
+              block
+              size="large"
+              className="min-w-56"
             >
-              <option value={ALL_FILTERS_VALUE}>All plans</option>
+              <Select.Option value={ALL_FILTERS_VALUE}>All plans</Select.Option>
               {planOptions.map((plan) => (
-                <option key={plan} value={plan}>
+                <Select.Option key={plan} value={plan}>
                   {plan}
-                </option>
+                </Select.Option>
               ))}
-            </select>
-          </label>
+            </Select>
+          </FormControl>
         )}
       </div>
 
