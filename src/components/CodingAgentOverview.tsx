@@ -101,8 +101,8 @@ export function CodingAgentOverview({
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-[#1f2328]">Copilot Cloud Agent Adoption</h2>
-          <p className="text-sm text-[#636c76] mt-1">
+          <h2 className="text-2xl font-semibold tracking-tight text-(--fgColor-default)">Copilot Cloud Agent Adoption</h2>
+          <p className="text-sm text-(--fgColor-muted) mt-1">
             {adoptionRate.toFixed(0)}% adoption ({codingAgentUsers.length} of {totalUniqueUsers} users)
           </p>
         </div>
@@ -110,7 +110,7 @@ export function CodingAgentOverview({
           {isMobile && (
             <button
               onClick={() => setShowChart(!showChart)}
-              className="px-3 py-1.5 text-sm font-medium text-[#636c76] bg-[#f6f8fa] hover:bg-[#d1d9e0] rounded-md transition-colors"
+              className="px-3 py-1.5 text-sm font-medium text-(--fgColor-muted) bg-(--bgColor-muted) hover:bg-(--control-transparent-bgColor-active) rounded-md transition-colors"
             >
               {showChart ? 'Table' : 'Chart'}
             </button>
@@ -120,9 +120,9 @@ export function CodingAgentOverview({
 
       {/* Chart */}
       {(!isMobile || showChart) && dailyCodingAgentData.length > 0 && (
-        <div className="bg-white border border-[#d1d9e0] rounded-md p-5">
-          <h3 className="text-sm font-medium text-[#1f2328]">Usage Over Time</h3>
-          <p className="text-xs text-[#636c76] mt-0.5 mb-4">
+        <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md p-5">
+          <h3 className="text-sm font-medium text-(--fgColor-default)">Usage Over Time</h3>
+          <p className="text-xs text-(--fgColor-muted) mt-0.5 mb-4">
             Daily and cumulative {valueUnitLabel} usage
           </p>
           <div className="h-56 sm:h-72">
@@ -149,17 +149,17 @@ export function CodingAgentOverview({
       {codeReviewAnalysis.users.length > 0 && (
         <>
           <div className="pt-4">
-            <h2 className="text-2xl font-semibold tracking-tight text-[#1f2328]">Copilot Code Review Agent Adoption</h2>
-            <p className="text-sm text-[#636c76] mt-1">
+            <h2 className="text-2xl font-semibold tracking-tight text-(--fgColor-default)">Copilot Code Review Agent Adoption</h2>
+            <p className="text-sm text-(--fgColor-muted) mt-1">
               {codeReviewAnalysis.adoptionRate.toFixed(0)}% adoption ({codeReviewAnalysis.totalUsers} of {codeReviewAnalysis.totalUniqueUsers} users)
             </p>
           </div>
 
           {/* Code Review Chart */}
           {(!isMobile || showChart) && dailyCodeReviewData.length > 0 && (
-            <div className="bg-white border border-[#d1d9e0] rounded-md p-5">
-              <h3 className="text-sm font-medium text-[#1f2328]">Usage Over Time</h3>
-              <p className="text-xs text-[#636c76] mt-0.5 mb-4">
+            <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md p-5">
+              <h3 className="text-sm font-medium text-(--fgColor-default)">Usage Over Time</h3>
+              <p className="text-xs text-(--fgColor-muted) mt-0.5 mb-4">
                 Daily and cumulative {valueUnitLabel} usage
               </p>
               <div className="h-56 sm:h-72">

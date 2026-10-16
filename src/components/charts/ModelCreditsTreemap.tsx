@@ -4,6 +4,7 @@ import { useId, useState } from 'react';
 import { ResponsiveContainer, Tooltip, Treemap } from 'recharts';
 import type { TreemapNode } from 'recharts';
 
+import { bgColor } from '@/constants/primerTokens';
 import { getModelColor } from '@/utils/modelColors';
 
 import { chartTooltipContentStyle, chartTooltipLabelStyle } from './chartTooltipStyles';
@@ -43,7 +44,7 @@ export function ModelCreditsTreemap({ data }: ModelCreditsTreemapProps) {
   return (
     <div className="relative h-72 sm:h-80 2xl:h-96 w-full">
       {tiles.length === 0 ? (
-        <div className="flex h-full items-center justify-center rounded-md bg-[#f6f8fa] text-sm text-[#636c76]">
+        <div className="flex h-full items-center justify-center rounded-md bg-(--bgColor-muted) text-sm text-(--fgColor-muted)">
           No AI Credits usage for the selected filters.
         </div>
       ) : (
@@ -60,7 +61,7 @@ export function ModelCreditsTreemap({ data }: ModelCreditsTreemapProps) {
               const description = `${node.name}: ${formatCredits(node.value)} AI Credits (${formatShare(node.value)})`;
               return (
                 <g
-                  className="group outline-none"
+                  className="group"
                   tabIndex={0}
                   role="img"
                   aria-label={description}
@@ -75,9 +76,9 @@ export function ModelCreditsTreemap({ data }: ModelCreditsTreemapProps) {
                     width={node.width}
                     height={node.height}
                     fill={color}
-                    stroke="#ffffff"
+                    stroke={bgColor.default}
                     strokeWidth={2}
-                    className="group-hover:opacity-90 group-focus:stroke-[#1f2328]"
+                    className="group-hover:opacity-90 group-focus:stroke-(--fgColor-default)"
                   />
                   {node.width >= 72 && node.height >= 48 && (
                     <foreignObject
@@ -87,7 +88,7 @@ export function ModelCreditsTreemap({ data }: ModelCreditsTreemapProps) {
                       height={node.height - 16}
                       pointerEvents="none"
                     >
-                      <div className={`h-full overflow-hidden text-xs ${usesDarkText(color) ? 'text-[#1f2328]' : 'text-white'}`}>
+                      <div className={`h-full overflow-hidden text-xs ${usesDarkText(color) ? 'text-(--fgColor-default)' : 'text-(--fgColor-onEmphasis)'}`}>
                         <p className="line-clamp-2 break-words font-semibold">{node.name}</p>
                         {node.height >= 80 && (
                           <p className="mt-1 truncate tabular-nums">
@@ -120,7 +121,7 @@ export function ModelCreditsTreemap({ data }: ModelCreditsTreemapProps) {
         <div
           id={tooltipId}
           role="tooltip"
-          className="pointer-events-none absolute bottom-2 left-2 right-2 z-10 rounded-md border border-[#d1d9e0] bg-white px-3 py-2 text-xs text-[#1f2328]"
+          className="pointer-events-none absolute bottom-2 left-2 right-2 z-10 rounded-md border border-(--borderColor-default) bg-(--bgColor-default) px-3 py-2 text-xs text-(--fgColor-default)"
         >
           {focusedDescription}
         </div>

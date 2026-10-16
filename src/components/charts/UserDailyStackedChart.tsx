@@ -3,6 +3,8 @@
 import React from 'react';
 import { ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
+import { borderColor, fgColor } from '@/constants/primerTokens';
+
 import { utcDateTickFormatter } from './chartTooltipStyles';
 
 export interface UserDailyDatum {
@@ -27,14 +29,14 @@ export function UserDailyStackedChart({ data, models, modelColors, tooltip, heig
   return (
     <ResponsiveContainer width="100%" height={height}>
       <ComposedChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+        <CartesianGrid strokeDasharray="3 3" stroke={borderColor.muted} />
         <XAxis 
           dataKey="date" 
-          tick={{ fill: '#636c76', fontSize: 11 }}
+          tick={{ fill: fgColor.muted, fontSize: 12 }}
           tickFormatter={utcDateTickFormatter}
         />
         <YAxis 
-          tick={{ fill: '#636c76', fontSize: 11 }}
+          tick={{ fill: fgColor.muted, fontSize: 12 }}
           domain={[0, 'dataMax']}
         />
   <Tooltip content={tooltip} />

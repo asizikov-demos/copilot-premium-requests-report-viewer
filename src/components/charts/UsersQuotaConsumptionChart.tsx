@@ -4,6 +4,7 @@ import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
 import { PRICING } from '@/constants/pricing';
+import { borderColor, fgColor } from '@/constants/primerTokens';
 
 import { chartTooltipContentStyle, chartTooltipLabelStyle, utcDateLabelFormatter, utcDateTickFormatter } from './chartTooltipStyles';
 
@@ -31,14 +32,14 @@ export function UsersQuotaConsumptionChart({
   return (
     <ResponsiveContainer width="100%" height="100%">
       <LineChart data={dailyCumulativeData} aria-label={`users-quota-consumption-${hasMixedLicenses ? 'mixed-licenses' : 'uniform-license'}`}> 
-        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+        <CartesianGrid strokeDasharray="3 3" stroke={borderColor.muted} />
         <XAxis 
           dataKey="date" 
-          tick={{ fill: '#636c76', fontSize: 11 }}
+          tick={{ fill: fgColor.muted, fontSize: 12 }}
           tickFormatter={utcDateTickFormatter}
         />
         <YAxis 
-          tick={{ fill: '#636c76', fontSize: 11 }}
+          tick={{ fill: fgColor.muted, fontSize: 12 }}
           domain={[0, (dataMax: number) => showQuotaReference ? Math.max(currentQuota, dataMax) : dataMax]}
         />
         <Tooltip 
@@ -57,7 +58,7 @@ export function UsersQuotaConsumptionChart({
             {quotaTypes.has(PRICING.BUSINESS_AI_CREDIT_QUOTA) && (
               <ReferenceLine 
                 y={PRICING.BUSINESS_AI_CREDIT_QUOTA}
-                stroke="#f97316" 
+                stroke={fgColor.severe} 
                 strokeWidth={2}
                 strokeDasharray="5 5"
                 label={{ value: `${PRICING.BUSINESS_AI_CREDIT_QUOTA} Business quota`, position: "insideTopRight" }}
@@ -66,7 +67,7 @@ export function UsersQuotaConsumptionChart({
             {quotaTypes.has(PRICING.ENTERPRISE_AI_CREDIT_QUOTA) && (
               <ReferenceLine 
                 y={PRICING.ENTERPRISE_AI_CREDIT_QUOTA}
-                stroke="#dc2626" 
+                stroke={fgColor.danger} 
                 strokeWidth={2}
                 strokeDasharray="5 5"
                 label={{ value: `${PRICING.ENTERPRISE_AI_CREDIT_QUOTA} Enterprise quota`, position: "insideTopRight" }}
@@ -76,7 +77,7 @@ export function UsersQuotaConsumptionChart({
         ) : (
           <ReferenceLine 
             y={currentQuota} 
-            stroke="#ef4444" 
+            stroke={fgColor.danger} 
             strokeWidth={2}
             strokeDasharray="5 5"
             label={{ value: `${currentQuota} quota limit`, position: "insideTopRight" }}

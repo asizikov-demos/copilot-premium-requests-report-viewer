@@ -249,14 +249,14 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-[#1f2328]">Users Overview</h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-(--fgColor-default)">Users Overview</h2>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2">
           {isMobile && (
             <button
               onClick={() => setShowChart(!showChart)}
-              className="px-3 py-1.5 text-sm font-medium text-[#636c76] bg-[#f6f8fa] hover:bg-[#d1d9e0] rounded-md transition-colors duration-150"
+              className="px-3 py-1.5 text-sm font-medium text-(--fgColor-muted) bg-(--bgColor-muted) hover:bg-(--control-transparent-bgColor-active) rounded-md transition-colors duration-150"
             >
               {showChart ? 'Show Table' : 'Show Chart'}
             </button>
@@ -265,34 +265,34 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
         </div>
       </div>
 
-      <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
+      <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden">
         <table className="min-w-full" aria-label="Copilot plan summary">
           <thead>
-            <tr className="border-b border-[#d1d9e0]">
-              <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
+            <tr className="border-b border-(--borderColor-default)">
+              <th className="px-5 py-3 text-left text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">
                 Plan
               </th>
-              <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
+              <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">
                 Users
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#d1d9e0]">
-            <tr className="hover:bg-[#fcfdff] transition-colors duration-150">
-              <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-[#1f2328]">Copilot Business</td>
-              <td className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-[#636c76] text-right">{formatUserCount(planSummary.businessUsers)}</td>
+          <tbody className="divide-y divide-(--borderColor-default)">
+            <tr className="hover:bg-(--bgColor-muted) transition-colors duration-150">
+              <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-(--fgColor-default)">Copilot Business</td>
+              <td className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-(--fgColor-muted) text-right">{formatUserCount(planSummary.businessUsers)}</td>
             </tr>
-            <tr className="hover:bg-[#fcfdff] transition-colors duration-150">
-              <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-[#1f2328]">Copilot Enterprise</td>
-              <td className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-[#636c76] text-right">{formatUserCount(planSummary.enterpriseUsers)}</td>
+            <tr className="hover:bg-(--bgColor-muted) transition-colors duration-150">
+              <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-(--fgColor-default)">Copilot Enterprise</td>
+              <td className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-(--fgColor-muted) text-right">{formatUserCount(planSummary.enterpriseUsers)}</td>
             </tr>
-            <tr className="hover:bg-[#fcfdff] transition-colors duration-150">
-              <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-[#1f2328]">Others</td>
-              <td className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-[#636c76] text-right">{formatUserCount(planSummary.otherUsers)}</td>
+            <tr className="hover:bg-(--bgColor-muted) transition-colors duration-150">
+              <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-(--fgColor-default)">Others</td>
+              <td className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-(--fgColor-muted) text-right">{formatUserCount(planSummary.otherUsers)}</td>
             </tr>
-            <tr className="bg-[#f6f8fa]">
-              <td className="px-5 py-3 whitespace-nowrap text-sm font-semibold text-[#1f2328]">Total</td>
-              <td className="px-5 py-3 whitespace-nowrap text-sm font-mono font-semibold tabular-nums text-[#1f2328] text-right">{formatUserCount(planSummary.totalUsers)}</td>
+            <tr className="bg-(--bgColor-muted)">
+              <td className="px-5 py-3 whitespace-nowrap text-sm font-semibold text-(--fgColor-default)">Total</td>
+              <td className="px-5 py-3 whitespace-nowrap text-sm font-mono font-semibold tabular-nums text-(--fgColor-default) text-right">{formatUserCount(planSummary.totalUsers)}</td>
             </tr>
           </tbody>
         </table>
@@ -300,10 +300,10 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
 
       {/* Filters */}
       <div className="flex flex-col lg:flex-row lg:items-end gap-3">
-        <label className="flex flex-col gap-1.5 text-sm text-[#636c76]">
-          <span className="font-medium text-[#1f2328]">Search users</span>
+        <label className="flex flex-col gap-1.5 text-sm text-(--fgColor-muted)">
+          <span className="font-medium text-(--fgColor-default)">Search users</span>
           <div className="relative">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#636c76]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-(--fgColor-muted)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
             </svg>
             <input
@@ -311,14 +311,14 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(0); }}
               placeholder="Filter by username..."
-              className="w-full min-w-56 rounded-md border border-[#d1d9e0] bg-white pl-9 pr-3 py-2 text-sm text-[#1f2328] shadow-sm outline-none transition duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 placeholder:text-[#636c76]"
+              className="h-(--control-large-size) w-full min-w-56 rounded-md border border-(--borderColor-default) bg-(--bgColor-default) pl-9 pr-3 py-2 text-sm text-(--fgColor-default) shadow-(--shadow-inset) transition duration-150 focus:border-(--borderColor-accent-emphasis) placeholder:text-(--fgColor-muted)"
             />
           </div>
         </label>
 
         {organizationOptions.length > 0 && (
-          <label className="flex flex-col gap-1.5 text-sm text-[#636c76]">
-            <span className="font-medium text-[#1f2328]">Organization</span>
+          <label className="flex flex-col gap-1.5 text-sm text-(--fgColor-muted)">
+            <span className="font-medium text-(--fgColor-default)">Organization</span>
             <select
               value={effectiveSelectedOrganization}
               onChange={(event) => {
@@ -326,7 +326,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                 setCurrentPage(0);
               }}
               aria-label="Organization"
-              className="min-w-56 rounded-md border border-[#d1d9e0] bg-white px-3 py-2 text-sm text-[#1f2328] shadow-sm outline-none transition duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              className="h-(--control-large-size) min-w-56 rounded-md border border-(--borderColor-default) bg-(--bgColor-default) px-3 py-2 text-sm text-(--fgColor-default) shadow-(--shadow-inset) transition duration-150 focus:border-(--borderColor-accent-emphasis)"
             >
               <option value={ALL_FILTERS_VALUE}>All organizations</option>
               {organizationOptions.map((organization) => (
@@ -339,8 +339,8 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
         )}
 
         {costCenterOptions.length > 0 && (
-          <label className="flex flex-col gap-1.5 text-sm text-[#636c76]">
-            <span className="font-medium text-[#1f2328]">Cost center</span>
+          <label className="flex flex-col gap-1.5 text-sm text-(--fgColor-muted)">
+            <span className="font-medium text-(--fgColor-default)">Cost center</span>
             <select
               value={effectiveSelectedCostCenter}
               onChange={(event) => {
@@ -348,7 +348,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                 setCurrentPage(0);
               }}
               aria-label="Cost center"
-              className="min-w-56 rounded-md border border-[#d1d9e0] bg-white px-3 py-2 text-sm text-[#1f2328] shadow-sm outline-none transition duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              className="h-(--control-large-size) min-w-56 rounded-md border border-(--borderColor-default) bg-(--bgColor-default) px-3 py-2 text-sm text-(--fgColor-default) shadow-(--shadow-inset) transition duration-150 focus:border-(--borderColor-accent-emphasis)"
             >
               <option value={ALL_FILTERS_VALUE}>All cost centers</option>
               <option value={NO_COST_CENTERS_FILTER_VALUE}>No cost centers</option>
@@ -362,8 +362,8 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
         )}
 
         {planOptions.length > 1 && (
-          <label className="flex flex-col gap-1.5 text-sm text-[#636c76]">
-            <span className="font-medium text-[#1f2328]">Copilot Plan</span>
+          <label className="flex flex-col gap-1.5 text-sm text-(--fgColor-muted)">
+            <span className="font-medium text-(--fgColor-default)">Copilot Plan</span>
             <select
               value={effectiveSelectedPlan}
               onChange={(event) => {
@@ -371,7 +371,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                 setCurrentPage(0);
               }}
               aria-label="Copilot Plan"
-              className="min-w-56 rounded-md border border-[#d1d9e0] bg-white px-3 py-2 text-sm text-[#1f2328] shadow-sm outline-none transition duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              className="h-(--control-large-size) min-w-56 rounded-md border border-(--borderColor-default) bg-(--bgColor-default) px-3 py-2 text-sm text-(--fgColor-default) shadow-(--shadow-inset) transition duration-150 focus:border-(--borderColor-accent-emphasis)"
             >
               <option value={ALL_FILTERS_VALUE}>All plans</option>
               {planOptions.map((plan) => (
@@ -386,21 +386,21 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
 
       {/* AI Credits Consumption Card */}
       {(!isMobile || showChart) && (
-        <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
-          <div className="px-5 py-4 border-b border-[#d1d9e0]">
+        <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden">
+          <div className="px-5 py-4 border-b border-(--borderColor-default)">
             <div className="flex justify-between items-center">
               <div>
-                <h3 className="text-sm font-medium text-[#1f2328]">
+                <h3 className="text-sm font-medium text-(--fgColor-default)">
                   AI Credits Consumption
                 </h3>
-                <p className="text-xs text-[#636c76] mt-0.5">
+                <p className="text-xs text-(--fgColor-muted) mt-0.5">
                   Daily cumulative AI Credits usage
                 </p>
               </div>
               {isMobile && (
                 <button
                   onClick={() => setShowChart(false)}
-                  className="text-[#636c76] hover:text-[#1f2328]"
+                  className="text-(--fgColor-muted) hover:text-(--fgColor-default)"
                   aria-label="Hide chart"
                 >
                   ✕
@@ -425,10 +425,10 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
 
       {/* Users Table Card */}
       {(!isMobile || !showChart) && (
-        <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
-          <div className="px-5 py-4 border-b border-[#d1d9e0]">
-            <h3 className="text-sm font-medium text-[#1f2328]">Users</h3>
-            <p className="text-xs text-[#636c76] mt-0.5">
+        <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden">
+          <div className="px-5 py-4 border-b border-(--borderColor-default)">
+            <h3 className="text-sm font-medium text-(--fgColor-default)">Users</h3>
+            <p className="text-xs text-(--fgColor-muted) mt-0.5">
               Showing {filteredUserData.length} of {userData.length} users
             </p>
           </div>
@@ -448,29 +448,29 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                 <button
                   key={user.user}
                   onClick={() => setSelectedUser(user.user)}
-                  className="w-full bg-[#f6f8fa] rounded-md p-4 hover:bg-[#eef1f4] transition-colors duration-150 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full bg-(--bgColor-muted) rounded-md p-4 hover:bg-(--bgColor-neutral-muted) transition-colors duration-150 text-left"
                 >
                   <div className="flex justify-between items-start mb-1">
-                    <span className="font-medium text-[#1f2328] truncate flex-1 mr-2">
+                    <span className="font-medium text-(--fgColor-default) truncate flex-1 mr-2">
                       {user.user}
                     </span>
-                    <span className={`text-sm font-mono ${isOverQuota ? 'text-red-600' : 'text-[#1f2328]'}`}>
+                    <span className={`text-sm font-mono ${isOverQuota ? 'text-(--fgColor-danger)' : 'text-(--fgColor-default)'}`}>
                       {credits.toFixed(1)}
                     </span>
                   </div>
-                  <div className="text-xs text-[#636c76]">
+                  <div className="text-xs text-(--fgColor-muted)">
                       {planDisplay} · Quota: {quotaDisplay} AI Credits
                       {isOverQuota && (
-                        <span className="text-red-500 ml-2">
+                        <span className="text-(--fgColor-danger) ml-2">
                           +{(credits - (userQuota as number)).toFixed(1)} over
                         </span>
                       )}
                     </div>
                   {hasCosts && ((costs?.gross ?? 0) > 0 || (costs?.discount ?? 0) > 0 || (costs?.net ?? 0) > 0) && (
                     <div className="flex items-center gap-3 mt-1.5 text-xs font-mono tabular-nums">
-                      <span className="text-[#636c76]">{formatCurrency(costs?.gross ?? 0)}</span>
-                      <span className="text-emerald-600">-{formatCurrency(costs?.discount ?? 0)}</span>
-                      <span className="font-semibold text-[#1f2328]">{formatCurrency(costs?.net ?? 0)}</span>
+                      <span className="text-(--fgColor-muted)">{formatCurrency(costs?.gross ?? 0)}</span>
+                      <span className="text-(--fgColor-success)">-{formatCurrency(costs?.discount ?? 0)}</span>
+                      <span className="font-semibold text-(--fgColor-default)">{formatCurrency(costs?.net ?? 0)}</span>
                     </div>
                   )}
                 </button>
@@ -478,21 +478,21 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
 
               {/* Mobile Pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between pt-3 border-t border-[#d1d9e0]">
+                <div className="flex items-center justify-between pt-3 border-t border-(--borderColor-default)">
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
                     disabled={activePage === 0}
-                    className="px-3 py-1.5 text-sm font-medium text-[#636c76] hover:text-[#1f2328] disabled:opacity-40"
+                    className="px-3 py-1.5 text-sm font-medium text-(--fgColor-muted) hover:text-(--fgColor-default) disabled:opacity-40"
                   >
                     ← Previous
                   </button>
-                  <span className="text-xs text-[#636c76]">
+                  <span className="text-xs text-(--fgColor-muted)">
                     {activePage + 1} / {totalPages}
                   </span>
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
                     disabled={activePage === totalPages - 1}
-                    className="px-3 py-1.5 text-sm font-medium text-[#636c76] hover:text-[#1f2328] disabled:opacity-40"
+                    className="px-3 py-1.5 text-sm font-medium text-(--fgColor-muted) hover:text-(--fgColor-default) disabled:opacity-40"
                   >
                     Next →
                   </button>
@@ -504,33 +504,33 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
           {/* Desktop Table */}
           <div className="hidden sm:block overflow-auto">
             <table className="min-w-full" aria-label="Users">
-            <thead className="bg-[#f6f8fa] sticky top-0 z-20">
+            <thead className="bg-(--bgColor-muted) sticky top-0 z-20">
               <tr>
-                <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-[0.05em] bg-[#f6f8fa] sticky left-0 z-30 min-w-40 border-r border-[#d1d9e0]">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-(--fgColor-muted) uppercase tracking-[0.05em] bg-(--bgColor-muted) sticky left-0 z-30 min-w-40 border-r border-(--borderColor-default)">
                   User
                 </th>
                 <th
-                  className={`px-4 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-[0.05em] min-w-24 cursor-pointer hover:bg-[#f6f8fa] select-none transition-colors duration-150 ${
-                    sortBy === 'quota' ? 'bg-[#eef1f4]' : 'bg-[#f6f8fa]'
+                  className={`px-4 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-[0.05em] min-w-24 cursor-pointer hover:bg-(--control-transparent-bgColor-hover) select-none transition-colors duration-150 ${
+                    sortBy === 'quota' ? 'bg-(--control-transparent-bgColor-selected)' : 'bg-(--bgColor-muted)'
                   }`}
                   onClick={() => handleSortWithReset('quota')}
                 >
                   <div className="flex items-center gap-1 justify-end">
                     Quota
-                    <span className="text-[#636c76]">
+                    <span className="text-(--fgColor-muted)">
                       {sortBy === 'quota' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
                     </span>
                   </div>
                 </th>
                 <th
-                    className={`px-4 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-[0.05em] min-w-32 cursor-pointer hover:bg-[#f6f8fa] select-none transition-colors duration-150 ${
-                      sortBy === 'totalCredits' ? 'bg-[#f6f8fa]' : 'bg-[#f6f8fa]'
+                    className={`px-4 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-[0.05em] min-w-32 cursor-pointer hover:bg-(--control-transparent-bgColor-hover) select-none transition-colors duration-150 ${
+                      sortBy === 'totalCredits' ? 'bg-(--bgColor-muted)' : 'bg-(--bgColor-muted)'
                     }`}
                     onClick={() => handleSortWithReset('totalCredits')}
                   >
                     <div className="flex items-center gap-1 justify-end">
                       Total AI Credits
-                      <span className="text-[#636c76]">
+                      <span className="text-(--fgColor-muted)">
                         {sortBy === 'totalCredits' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
                       </span>
                     </div>
@@ -538,40 +538,40 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                 {hasCosts && (
                   <>
                     <th
-                      className={`px-4 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-[0.05em] min-w-28 cursor-pointer hover:bg-[#f6f8fa] select-none transition-colors duration-150 ${
-                        sortBy === 'gross' ? 'bg-[#eef1f4]' : 'bg-[#f6f8fa]'
+                      className={`px-4 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-[0.05em] min-w-28 cursor-pointer hover:bg-(--control-transparent-bgColor-hover) select-none transition-colors duration-150 ${
+                        sortBy === 'gross' ? 'bg-(--control-transparent-bgColor-selected)' : 'bg-(--bgColor-muted)'
                       }`}
                       onClick={() => handleSortWithReset('gross')}
                     >
                       <div className="flex items-center gap-1 justify-end">
                         {costLabels.gross}
-                        <span className="text-[#636c76]">
+                        <span className="text-(--fgColor-muted)">
                           {sortBy === 'gross' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
                         </span>
                       </div>
                     </th>
                     <th
-                      className={`px-4 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-[0.05em] min-w-28 cursor-pointer hover:bg-[#f6f8fa] select-none transition-colors duration-150 ${
-                        sortBy === 'discount' ? 'bg-[#eef1f4]' : 'bg-[#f6f8fa]'
+                      className={`px-4 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-[0.05em] min-w-28 cursor-pointer hover:bg-(--control-transparent-bgColor-hover) select-none transition-colors duration-150 ${
+                        sortBy === 'discount' ? 'bg-(--control-transparent-bgColor-selected)' : 'bg-(--bgColor-muted)'
                       }`}
                       onClick={() => handleSortWithReset('discount')}
                     >
                       <div className="flex items-center gap-1 justify-end">
                         {costLabels.discount}
-                        <span className="text-[#636c76]">
+                        <span className="text-(--fgColor-muted)">
                           {sortBy === 'discount' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
                         </span>
                       </div>
                     </th>
                     <th
-                      className={`px-4 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-[0.05em] min-w-24 cursor-pointer hover:bg-[#f6f8fa] select-none transition-colors duration-150 ${
-                        sortBy === 'net' ? 'bg-[#eef1f4]' : 'bg-[#f6f8fa]'
+                      className={`px-4 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-[0.05em] min-w-24 cursor-pointer hover:bg-(--control-transparent-bgColor-hover) select-none transition-colors duration-150 ${
+                        sortBy === 'net' ? 'bg-(--control-transparent-bgColor-selected)' : 'bg-(--bgColor-muted)'
                       }`}
                       onClick={() => handleSortWithReset('net')}
                     >
                       <div className="flex items-center gap-1 justify-end">
                         {costLabels.net}
-                        <span className="text-[#636c76]">
+                        <span className="text-(--fgColor-muted)">
                           {sortBy === 'net' ? (sortDirection === 'desc' ? '↓' : '↑') : '↕'}
                         </span>
                       </div>
@@ -580,7 +580,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                 )}
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#f6f8fa]">
+            <tbody className="divide-y divide-(--borderColor-muted)">
               {paginatedUserData.map((user) => {
                 const userQuota = getUserQuota(quotaArtifacts, user.user);
                 const credits = userCredits.get(user.user) ?? user.totalCredits;
@@ -588,25 +588,25 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                 const quotaDisplay = userQuota === 'unknown' ? 'Unknown' : userQuota.toString();
 
                 return (
-                <tr key={user.user} className="hover:bg-[#fcfdff] transition-colors duration-150">
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium sticky left-0 z-10 bg-white border-r border-[#d1d9e0]">
+                <tr key={user.user} className="group hover:bg-(--bgColor-muted) transition-colors duration-150">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium sticky left-0 z-10 bg-(--bgColor-default) group-hover:bg-(--bgColor-muted) transition-colors duration-150 border-r border-(--borderColor-default)">
                     <button
                       onClick={() => setSelectedUser(user.user)}
-                      className="text-indigo-600 hover:text-indigo-800 hover:underline focus:outline-none"
+                      className="text-(--fgColor-accent)  hover:underline"
                       title={`View ${user.user}&apos;s details`}
                     >
                       {user.user}
                     </button>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-[#636c76] text-right font-mono tabular-nums">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-(--fgColor-muted) text-right font-mono tabular-nums">
                     {quotaDisplay}
                   </td>
                   <td className={`px-4 py-3 whitespace-nowrap text-sm font-mono font-medium tabular-nums text-right ${
-                      isOverQuota ? 'text-red-600' : 'text-[#1f2328]'
+                      isOverQuota ? 'text-(--fgColor-danger)' : 'text-(--fgColor-default)'
                     }`}>
                       {credits.toFixed(2)}
                       {isOverQuota && (
-                        <span className="ml-1.5 text-xs text-red-500 font-normal">
+                        <span className="ml-1.5 text-xs text-(--fgColor-danger) font-normal">
                           (+{(credits - (userQuota as number)).toFixed(1)})
                         </span>
                       )}
@@ -617,13 +617,13 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                       <>
                         {hasCosts && (
                           <>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-[#636c76] font-mono tabular-nums text-right">
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-(--fgColor-muted) font-mono tabular-nums text-right">
                               {formatCurrency(costs?.gross ?? 0)}
                             </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-emerald-600 font-mono tabular-nums text-right">
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-(--fgColor-success) font-mono tabular-nums text-right">
                               -{formatCurrency(costs?.discount ?? 0)}
                             </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-[#1f2328] font-mono tabular-nums text-right">
+                            <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-(--fgColor-default) font-mono tabular-nums text-right">
                               {formatCurrency(costs?.net ?? 0)}
                             </td>
                           </>
@@ -638,15 +638,15 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
 
           {/* Desktop Pagination */}
           {totalPages > 1 && (
-            <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-[#d1d9e0]">
-              <p className="text-sm text-[#636c76]">
+            <div className="bg-(--bgColor-default) px-4 py-3 flex items-center justify-between border-t border-(--borderColor-default)">
+              <p className="text-sm text-(--fgColor-muted)">
                 {activePage * ROWS_PER_PAGE + 1}–{Math.min((activePage + 1) * ROWS_PER_PAGE, sortedUserData.length)} of {sortedUserData.length}
               </p>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
                   disabled={activePage === 0}
-                  className="p-1.5 text-[#636c76] hover:text-[#1f2328] disabled:opacity-40 transition-colors duration-150"
+                  className="p-1.5 text-(--fgColor-muted) hover:text-(--fgColor-default) disabled:opacity-40 transition-colors duration-150"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
@@ -671,8 +671,8 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                       onClick={() => setCurrentPage(pageNum)}
                       className={`w-8 h-8 text-sm font-medium rounded-md border transition-colors duration-150 ${
                         activePage === pageNum
-                          ? 'bg-indigo-500 text-white border-indigo-500'
-                          : 'text-[#636c76] border-[#d1d9e0] hover:bg-[#f6f8fa]'
+                          ? 'bg-(--bgColor-accent-emphasis) text-(--fgColor-onEmphasis) border-(--borderColor-accent-emphasis)'
+                          : 'text-(--fgColor-muted) border-(--borderColor-default) hover:bg-(--control-transparent-bgColor-hover)'
                       }`}
                     >
                       {pageNum + 1}
@@ -683,7 +683,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
                   disabled={activePage === totalPages - 1}
-                  className="p-1.5 text-[#636c76] hover:text-[#1f2328] disabled:opacity-40 transition-colors duration-150"
+                  className="p-1.5 text-(--fgColor-muted) hover:text-(--fgColor-default) disabled:opacity-40 transition-colors duration-150"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
@@ -697,13 +697,13 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
       )}
 
       {userData.length === 0 && (
-        <div className="bg-white border border-[#d1d9e0] rounded-md px-6 py-8 text-center text-[#636c76]">
+        <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md px-6 py-8 text-center text-(--fgColor-muted)">
           No user data available
         </div>
       )}
 
       {userData.length > 0 && filteredUserData.length === 0 && (
-        <div className="bg-white border border-[#d1d9e0] rounded-md px-6 py-8 text-center text-[#636c76]">
+        <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md px-6 py-8 text-center text-(--fgColor-muted)">
           No users match the current filters
         </div>
       )}

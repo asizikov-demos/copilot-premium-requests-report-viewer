@@ -110,7 +110,7 @@ export function createDetailsColumn<T extends BillingGroupRow>(
       <button
         type="button"
         onClick={() => onSelect(row.name)}
-        className="text-indigo-600 hover:text-indigo-800 hover:underline font-medium focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white rounded-sm"
+        className="text-(--fgColor-accent)  hover:underline font-medium rounded-sm"
       >
         View details
       </button>
@@ -154,48 +154,48 @@ export function BillingGroupTable<T extends BillingGroupRow>({
 
   return (
     <div className="space-y-6">
-      <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '50ms' }}>
-        <div className="px-6 py-4 border-b border-[#d1d9e0] bg-[#f6f8fa]">
-          <h3 className="text-lg font-semibold text-[#1f2328]">{title}</h3>
-          <p className="text-xs text-[#636c76] mt-1">{rows.length} {singularLabel}{rows.length !== 1 ? 's' : ''}</p>
+      <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '50ms' }}>
+        <div className="px-6 py-4 border-b border-(--borderColor-default) bg-(--bgColor-muted)">
+          <h3 className="text-lg font-semibold text-(--fgColor-default)">{title}</h3>
+          <p className="text-xs text-(--fgColor-muted) mt-1">{rows.length} {singularLabel}{rows.length !== 1 ? 's' : ''}</p>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full">
             <thead>
-              <tr className="border-b border-[#d1d9e0]">
-                <th className="px-6 py-3 text-left text-xs font-bold text-[#636c76] uppercase tracking-wider">{nameColumnLabel}</th>
+              <tr className="border-b border-(--borderColor-default)">
+                <th className="px-6 py-3 text-left text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">{nameColumnLabel}</th>
                 {extraColumns.map((column) => (
-                  <th key={column.key} className={column.headerClassName ?? 'px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider'}>
+                  <th key={column.key} className={column.headerClassName ?? 'px-6 py-3 text-right text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider'}>
                     {column.header}
                   </th>
                 ))}
-                <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{quantityColumnLabel}</th>
+                <th className="px-6 py-3 text-right text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">{quantityColumnLabel}</th>
                 {hasAicGross && (
-                  <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">AI Credits Gross</th>
+                  <th className="px-6 py-3 text-right text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">AI Credits Gross</th>
                 )}
                 {hasCosts && (
                   <>
-                    <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{grossColumnLabel}</th>
-                    <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{discountColumnLabel}</th>
-                    <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{netColumnLabel}</th>
+                    <th className="px-6 py-3 text-right text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">{grossColumnLabel}</th>
+                    <th className="px-6 py-3 text-right text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">{discountColumnLabel}</th>
+                    <th className="px-6 py-3 text-right text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">{netColumnLabel}</th>
                   </>
                 )}
                 {endColumns.map((column) => (
-                  <th key={column.key} className={column.headerClassName ?? 'px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider'}>
+                  <th key={column.key} className={column.headerClassName ?? 'px-6 py-3 text-right text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider'}>
                     {column.header}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#d1d9e0]">
+            <tbody className="divide-y divide-(--borderColor-default)">
               {rows.map((row, index) => {
                 const detailsId = `${detailIdPrefix}-${index}`;
                 const isExpanded = expandedGroup === row.name;
 
                 return (
                   <React.Fragment key={row.name}>
-                    <tr className="table-row-hover transition-colors duration-150">
-                      <td className="px-6 py-3.5 text-sm font-medium text-[#1f2328]">
+                    <tr className="hover:bg-(--bgColor-muted) transition-colors duration-150">
+                      <td className="px-6 py-3.5 text-sm font-medium text-(--fgColor-default)">
                         {row.products.length > 0 ? (
                           <button
                             type="button"
@@ -205,7 +205,7 @@ export function BillingGroupTable<T extends BillingGroupRow>({
                             onClick={() => setExpandedGroup(isExpanded ? null : row.name)}
                           >
                             <svg
-                              className={`w-3.5 h-3.5 text-[#636c76] transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`}
+                              className={`w-3.5 h-3.5 text-(--fgColor-muted) transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`}
                               fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"
                             >
                               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -217,27 +217,27 @@ export function BillingGroupTable<T extends BillingGroupRow>({
                         )}
                       </td>
                       {extraColumns.map((column) => (
-                        <td key={column.key} className={column.cellClassName ?? 'px-6 py-3.5 text-sm text-[#636c76] text-right font-mono'}>
+                        <td key={column.key} className={column.cellClassName ?? 'px-6 py-3.5 text-sm text-(--fgColor-muted) text-right font-mono'}>
                           {column.render(row)}
                         </td>
                       ))}
-                      <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
+                      <td className="px-6 py-3.5 text-sm text-(--fgColor-muted) text-right font-mono">
                         {formatDecimalQuantity(row.credits)}
                       </td>
                       {hasAicGross && (
-                        <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
+                        <td className="px-6 py-3.5 text-sm text-(--fgColor-muted) text-right font-mono">
                           {formatCurrency(row.aicGrossAmount)}
                         </td>
                       )}
                       {hasCosts && (
                         <>
-                          <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
+                          <td className="px-6 py-3.5 text-sm text-(--fgColor-muted) text-right font-mono">
                             {formatCurrency(row.gross)}
                           </td>
-                          <td className="px-6 py-3.5 text-sm text-emerald-600 text-right font-mono">
+                          <td className="px-6 py-3.5 text-sm text-(--fgColor-success) text-right font-mono">
                             -{formatCurrency(row.discount)}
                           </td>
-                          <td className="px-6 py-3.5 text-sm font-semibold text-[#1f2328] text-right font-mono">
+                          <td className="px-6 py-3.5 text-sm font-semibold text-(--fgColor-default) text-right font-mono">
                             {formatCurrency(row.net)}
                           </td>
                         </>
@@ -251,45 +251,45 @@ export function BillingGroupTable<T extends BillingGroupRow>({
                     {isExpanded && row.products.length > 0 && (
                       <tr>
                         <td id={detailsId} colSpan={detailColSpan} className="px-0 py-0">
-                          <div className="bg-[#f6f8fa] border-t border-[#d1d9e0]">
+                          <div className="bg-(--bgColor-muted) border-t border-(--borderColor-default)">
                             <table className="min-w-full">
                               <thead>
-                                <tr className="border-b border-[#d1d9e0]">
-                                  <th className="px-10 py-2 text-left text-xs font-bold text-[#636c76] uppercase tracking-wider">Product</th>
-                                  <th className="px-6 py-2 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{quantityColumnLabel}</th>
+                                <tr className="border-b border-(--borderColor-default)">
+                                  <th className="px-10 py-2 text-left text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">Product</th>
+                                  <th className="px-6 py-2 text-right text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">{quantityColumnLabel}</th>
                                   {hasAicGross && (
-                                    <th className="px-6 py-2 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">AI Credits Gross</th>
+                                    <th className="px-6 py-2 text-right text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">AI Credits Gross</th>
                                   )}
                                   {hasCosts && (
                                     <>
-                                      <th className="px-6 py-2 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{grossColumnLabel}</th>
-                                      <th className="px-6 py-2 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{discountColumnLabel}</th>
-                                      <th className="px-6 py-2 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{netColumnLabel}</th>
+                                      <th className="px-6 py-2 text-right text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">{grossColumnLabel}</th>
+                                      <th className="px-6 py-2 text-right text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">{discountColumnLabel}</th>
+                                      <th className="px-6 py-2 text-right text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">{netColumnLabel}</th>
                                     </>
                                   )}
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-[#e8ecf0]">
+                              <tbody className="divide-y divide-(--borderColor-muted)">
                                 {row.products.map((product) => (
                                   <tr key={product.label}>
-                                    <td className="px-10 py-2.5 text-sm text-[#636c76]">{product.label}</td>
-                                    <td className="px-6 py-2.5 text-sm text-[#636c76] text-right font-mono">
+                                    <td className="px-10 py-2.5 text-sm text-(--fgColor-muted)">{product.label}</td>
+                                    <td className="px-6 py-2.5 text-sm text-(--fgColor-muted) text-right font-mono">
                                       {formatDecimalQuantity(product.credits)}
                                     </td>
                                     {hasAicGross && (
-                                      <td className="px-6 py-2.5 text-sm text-[#636c76] text-right font-mono">
+                                      <td className="px-6 py-2.5 text-sm text-(--fgColor-muted) text-right font-mono">
                                         {formatCurrency(product.aicGrossAmount)}
                                       </td>
                                     )}
                                     {hasCosts && (
                                       <>
-                                        <td className="px-6 py-2.5 text-sm text-[#636c76] text-right font-mono">
+                                        <td className="px-6 py-2.5 text-sm text-(--fgColor-muted) text-right font-mono">
                                           {formatCurrency(product.gross)}
                                         </td>
-                                        <td className="px-6 py-2.5 text-sm text-emerald-600 text-right font-mono">
+                                        <td className="px-6 py-2.5 text-sm text-(--fgColor-success) text-right font-mono">
                                           -{formatCurrency(product.discount)}
                                         </td>
-                                        <td className="px-6 py-2.5 text-sm font-semibold text-[#1f2328] text-right font-mono">
+                                        <td className="px-6 py-2.5 text-sm font-semibold text-(--fgColor-default) text-right font-mono">
                                           {formatCurrency(product.net)}
                                         </td>
                                       </>

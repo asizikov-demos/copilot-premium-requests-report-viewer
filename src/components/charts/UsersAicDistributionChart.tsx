@@ -18,24 +18,24 @@ interface GroupStyle {
 
 const GROUP_STYLES: Record<UserAicGroupKey, GroupStyle> = {
   nearZero: {
-    dotClassName: 'bg-[#d1d9e0]',
-    segmentClassName: 'bg-[#d1d9e0]',
+    dotClassName: 'bg-(--data-gray-color-muted)',
+    segmentClassName: 'bg-(--data-gray-color-muted)',
   },
   light: {
-    dotClassName: 'bg-[#bfdbfe]',
-    segmentClassName: 'bg-[#bfdbfe]',
+    dotClassName: 'bg-(--data-blue-color-muted)',
+    segmentClassName: 'bg-(--data-blue-color-muted)',
   },
   typical: {
-    dotClassName: 'bg-[#60a5fa]',
-    segmentClassName: 'bg-[#60a5fa]',
+    dotClassName: 'bg-(--data-blue-color-emphasis)/50',
+    segmentClassName: 'bg-(--data-blue-color-emphasis)/50',
   },
   heavy: {
-    dotClassName: 'bg-indigo-500',
-    segmentClassName: 'bg-indigo-500',
+    dotClassName: 'bg-(--data-blue-color-emphasis)',
+    segmentClassName: 'bg-(--data-blue-color-emphasis)',
   },
   power: {
-    dotClassName: 'bg-[#8b5cf6]',
-    segmentClassName: 'bg-[#8b5cf6]',
+    dotClassName: 'bg-(--data-purple-color-emphasis)',
+    segmentClassName: 'bg-(--data-purple-color-emphasis)',
   },
 };
 
@@ -44,23 +44,23 @@ function formatPercentage(value: number): string {
 }
 
 function getHeatmapCellClass(value: number, maxValue: number): string {
-  if (value === 0 || maxValue === 0) return 'bg-[#f9fafb] text-[#636c76]';
+  if (value === 0 || maxValue === 0) return 'bg-(--bgColor-muted) text-(--fgColor-muted)';
 
   const intensity = value / maxValue;
 
-  if (intensity >= 0.8) return 'bg-[#1d4ed8] text-white';
-  if (intensity >= 0.6) return 'bg-[#3b82f6] text-white';
-  if (intensity >= 0.4) return 'bg-[#60a5fa] text-[#1f2328]';
-  if (intensity >= 0.2) return 'bg-[#93c5fd] text-[#1f2328]';
-  if (intensity >= 0.05) return 'bg-[#bfdbfe] text-[#1f2328]';
+  if (intensity >= 0.8) return 'bg-(--data-blue-color-emphasis) text-(--fgColor-onEmphasis)';
+  if (intensity >= 0.6) return 'bg-(--data-blue-color-emphasis)/75 text-(--fgColor-default)';
+  if (intensity >= 0.4) return 'bg-(--data-blue-color-emphasis)/55 text-(--fgColor-default)';
+  if (intensity >= 0.2) return 'bg-(--data-blue-color-emphasis)/35 text-(--fgColor-default)';
+  if (intensity >= 0.05) return 'bg-(--data-blue-color-emphasis)/20 text-(--fgColor-default)';
 
-  return 'bg-[#dbeafe] text-[#1f2328]';
+  return 'bg-(--data-blue-color-muted) text-(--fgColor-default)';
 }
 
 function getSegmentLabelClass(groupKey: UserAicGroupKey): string {
-  if (groupKey === 'heavy' || groupKey === 'power') return 'text-white';
+  if (groupKey === 'heavy' || groupKey === 'power') return 'text-(--fgColor-onEmphasis)';
 
-  return 'text-[#1f2328]';
+  return 'text-(--fgColor-default)';
 }
 
 function DistributionBar({
@@ -75,10 +75,10 @@ function DistributionBar({
   return (
     <div>
       <div className="mb-2 flex items-center justify-between gap-3">
-        <p className="text-sm font-medium text-[#1f2328]">{title}</p>
-        <p className="text-xs text-[#636c76]">100% stacked distribution</p>
+        <p className="text-sm font-medium text-(--fgColor-default)">{title}</p>
+        <p className="text-xs text-(--fgColor-muted)">100% stacked distribution</p>
       </div>
-      <div className="h-10 flex overflow-hidden rounded-md border border-[#d1d9e0] bg-[#f6f8fa]">
+      <div className="h-10 flex overflow-hidden rounded-md border border-(--borderColor-default) bg-(--bgColor-muted)">
         {groups.map((group) => {
           const share = group[metric];
 
@@ -87,7 +87,7 @@ function DistributionBar({
           return (
             <div
               key={group.key}
-              className={`${GROUP_STYLES[group.key].segmentClassName} flex items-center justify-center border-r border-[#ffffff] last:border-r-0`}
+              className={`${GROUP_STYLES[group.key].segmentClassName} flex items-center justify-center border-r border-(--bgColor-default) last:border-r-0`}
               style={{ width: `${share}%` }}
               title={`${group.label}: ${formatPercentage(share)}`}
             >
@@ -114,7 +114,7 @@ export function UsersAicDistributionChart({ users }: UsersAicDistributionChartPr
 
   if (users.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64 text-[#636c76] text-sm">
+      <div className="flex items-center justify-center h-64 text-(--fgColor-muted) text-sm">
         No users match the current filters
       </div>
     );
@@ -122,10 +122,10 @@ export function UsersAicDistributionChart({ users }: UsersAicDistributionChartPr
 
   return (
     <div className="space-y-5">
-      <div className="space-y-4 rounded-md border border-[#d1d9e0] bg-white p-4">
+      <div className="space-y-4 rounded-md border border-(--borderColor-default) bg-(--bgColor-default) p-4">
         <DistributionBar groups={distribution.groups} metric="shareOfUsers" title="Users by group" />
         <DistributionBar groups={distribution.groups} metric="shareOfGrossCost" title="Gross cost by group" />
-        <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-[#636c76]">
+        <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-(--fgColor-muted)">
           {distribution.groups.map((group) => (
             <span key={group.key} className="inline-flex items-center gap-2">
               <span className={`w-2.5 h-2.5 rounded-full ${GROUP_STYLES[group.key].dotClassName}`} aria-hidden="true" />
@@ -135,39 +135,39 @@ export function UsersAicDistributionChart({ users }: UsersAicDistributionChartPr
         </div>
       </div>
 
-      <div className="overflow-auto border border-[#d1d9e0] rounded-md">
+      <div className="overflow-auto border border-(--borderColor-default) rounded-md">
         <table className="min-w-full" aria-label="AI Credits user group heatmap">
           <thead>
-            <tr className="border-b border-[#d1d9e0]">
-              <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
+            <tr className="border-b border-(--borderColor-default)">
+              <th className="px-5 py-3 text-left text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">
                 Group
               </th>
-              <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
+              <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">
                 Users
               </th>
-              <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
+              <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">
                 User share
               </th>
-              <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
+              <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">
                 Avg gross cost
               </th>
-              <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
+              <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">
                 Gross cost
               </th>
-              <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
+              <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">
                 Gross share
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#d1d9e0]">
+          <tbody className="divide-y divide-(--borderColor-default)">
             {distribution.groups.map((group) => (
-              <tr key={group.key} className="hover:bg-[#fcfdff] transition-colors">
-                <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-[#1f2328]">
+              <tr key={group.key} className="hover:bg-(--bgColor-muted) transition-colors">
+                <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-(--fgColor-default)">
                   <span className="inline-flex items-center gap-2">
                     <span className={`w-2.5 h-2.5 rounded-full ${GROUP_STYLES[group.key].dotClassName}`} aria-hidden="true" />
                     {group.label}
                   </span>
-                  <p className="mt-0.5 text-xs font-normal text-[#636c76]">{group.description}</p>
+                  <p className="mt-0.5 text-xs font-normal text-(--fgColor-muted)">{group.description}</p>
                 </td>
                 <td className={`px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-right ${getHeatmapCellClass(group.users, maxUsers)}`}>
                   {group.users.toLocaleString()}

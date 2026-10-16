@@ -2,6 +2,8 @@
 
 import React, { useMemo } from 'react';
 
+import { bgColor, borderColor, dataVizScale, fgColor } from '@/constants/primerTokens';
+
 import { utcDateTickFormatter } from './chartTooltipStyles';
 
 export interface UsersConsumptionHeatmapProps {
@@ -59,15 +61,15 @@ function calculateHeatmapData(
 }
 
 function getHeatmapColor(percentage: number): string {
-  if (percentage === 0) return '#f9fafb';
-  if (percentage < 1) return '#dbeafe';
-  if (percentage < 2) return '#bfdbfe';
-  if (percentage < 5) return '#93c5fd';
-  if (percentage < 10) return '#60a5fa';
-  if (percentage < 15) return '#3b82f6';
-  if (percentage < 20) return '#2563eb';
-  if (percentage < 30) return '#1d4ed8';
-  return '#1e40af';
+  if (percentage === 0) return bgColor.muted;
+  if (percentage < 1) return dataVizScale('blue', 0);
+  if (percentage < 2) return dataVizScale('blue', 0.15);
+  if (percentage < 5) return dataVizScale('blue', 0.3);
+  if (percentage < 10) return dataVizScale('blue', 0.45);
+  if (percentage < 15) return dataVizScale('blue', 0.6);
+  if (percentage < 20) return dataVizScale('blue', 0.75);
+  if (percentage < 30) return dataVizScale('blue', 0.9);
+  return dataVizScale('blue', 1);
 }
 
 export function UsersConsumptionHeatmap({
@@ -156,7 +158,7 @@ export function UsersConsumptionHeatmap({
             y="20"
             textAnchor="middle"
             className="text-sm font-medium"
-            fill="#1f2328"
+            fill={fgColor.default}
           >
             {title ?? `User Consumption Density Over Time (${users.length} users)`}
           </text>
@@ -168,7 +170,7 @@ export function UsersConsumptionHeatmap({
             textAnchor="middle"
             transform={`rotate(-90, 20, ${topMargin + chartHeight / 2})`}
             className="text-xs font-medium"
-            fill="#636c76"
+            fill={fgColor.muted}
           >
             {valueAxisLabel}
           </text>
@@ -190,7 +192,7 @@ export function UsersConsumptionHeatmap({
                     width={cellWidth}
                     height={cellHeight}
                     fill={getHeatmapColor(cell.percentage)}
-                    stroke="#fff"
+                    stroke={bgColor.default}
                     strokeWidth={0.5}
                   />
                   <title>
@@ -211,7 +213,7 @@ export function UsersConsumptionHeatmap({
                     y1={y}
                     x2={0}
                     y2={y}
-                    stroke="#636c76"
+                    stroke={borderColor.emphasis}
                     strokeWidth={1}
                   />
                   <text
@@ -219,7 +221,7 @@ export function UsersConsumptionHeatmap({
                     y={y + 4}
                     textAnchor="end"
                     className="text-xs"
-                    fill="#636c76"
+                    fill={fgColor.muted}
                   >
                     {formatValue(binIndex * binSize)}
                   </text>
@@ -233,7 +235,7 @@ export function UsersConsumptionHeatmap({
               y1={chartHeight}
               x2={1000 - leftMargin - rightMargin}
               y2={chartHeight}
-              stroke="#636c76"
+              stroke={borderColor.emphasis}
               strokeWidth={1}
             />
 
@@ -249,7 +251,7 @@ export function UsersConsumptionHeatmap({
                     y1={chartHeight}
                     x2={x}
                     y2={chartHeight + 5}
-                    stroke="#636c76"
+                    stroke={borderColor.emphasis}
                     strokeWidth={1}
                   />
                   <text
@@ -257,7 +259,7 @@ export function UsersConsumptionHeatmap({
                     y={chartHeight + 20}
                     textAnchor="middle"
                     className="text-xs"
-                    fill="#636c76"
+                    fill={fgColor.muted}
                     transform={`rotate(-45, ${x}, ${chartHeight + 20})`}
                   >
                     {utcDateTickFormatter(dates[dateIndex])}
@@ -272,24 +274,24 @@ export function UsersConsumptionHeatmap({
               y1={0}
               x2={0}
               y2={chartHeight}
-              stroke="#636c76"
+              stroke={borderColor.emphasis}
               strokeWidth={1}
             />
           </g>
 
           {/* Legend */}
           <g transform={`translate(${leftMargin}, ${topMargin + chartHeight + 60})`}>
-            <text x={0} y={0} className="text-xs font-medium" fill="#1f2328">
+            <text x={0} y={0} className="text-xs font-medium" fill={fgColor.default}>
               User Density:
             </text>
             {[
-              { label: '0%', color: '#f9fafb' },
-              { label: '<1%', color: '#dbeafe' },
-              { label: '1-5%', color: '#93c5fd' },
-              { label: '5-10%', color: '#60a5fa' },
-              { label: '10-20%', color: '#3b82f6' },
-              { label: '20-30%', color: '#1d4ed8' },
-              { label: '>30%', color: '#1e40af' }
+              { label: '0%', color: getHeatmapColor(0) },
+              { label: '<1%', color: getHeatmapColor(0.5) },
+              { label: '1-5%', color: getHeatmapColor(2) },
+              { label: '5-10%', color: getHeatmapColor(5) },
+              { label: '10-20%', color: getHeatmapColor(15) },
+              { label: '20-30%', color: getHeatmapColor(20) },
+              { label: '>30%', color: getHeatmapColor(30) }
             ].map((item, idx) => (
               <g key={idx} transform={`translate(${idx * 85}, 10)`}>
                 <rect
@@ -298,10 +300,10 @@ export function UsersConsumptionHeatmap({
                   width={20}
                   height={12}
                   fill={item.color}
-                  stroke="#d1d5db"
+                  stroke={borderColor.default}
                   strokeWidth={1}
                 />
-                <text x={25} y={10} className="text-xs" fill="#636c76">
+                <text x={25} y={10} className="text-xs" fill={fgColor.muted}>
                   {item.label}
                 </text>
               </g>

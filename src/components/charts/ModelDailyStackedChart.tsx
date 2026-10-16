@@ -2,6 +2,9 @@
 
 import React from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+
+import { borderColor, dataVizColor, fgColor } from '@/constants/primerTokens';
+
 import { chartTooltipContentStyle, chartTooltipLabelStyle, utcDateTickFormatter } from './chartTooltipStyles';
 
 export interface ModelDailyDatum {
@@ -30,13 +33,13 @@ export function ModelDailyStackedChart({
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+        <CartesianGrid strokeDasharray="3 3" stroke={borderColor.muted} />
         <XAxis
           dataKey="date"
-          tick={{ fill: '#636c76', fontSize: 11 }}
+          tick={{ fill: fgColor.muted, fontSize: 12 }}
           tickFormatter={utcDateTickFormatter}
         />
-        <YAxis tick={{ fill: '#636c76', fontSize: 11 }} />
+        <YAxis tick={{ fill: fgColor.muted, fontSize: 12 }} />
         <Tooltip
           contentStyle={chartTooltipContentStyle}
           labelStyle={chartTooltipLabelStyle}
@@ -47,13 +50,13 @@ export function ModelDailyStackedChart({
           ]}
           wrapperStyle={{ zIndex: 1000 }}
         />
-        <Legend wrapperStyle={{ fontSize: 12, color: '#636c76' }} />
+        <Legend wrapperStyle={{ fontSize: 12, color: fgColor.muted }} />
         {models.map((model) => (
           <Bar
             key={model}
             dataKey={model}
             stackId="models"
-            fill={modelColors[model] ?? '#3b82f6'}
+            fill={modelColors[model] ?? dataVizColor('blue')}
             name={model}
           />
         ))}

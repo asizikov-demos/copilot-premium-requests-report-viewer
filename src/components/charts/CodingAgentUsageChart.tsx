@@ -3,6 +3,8 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
+import { borderColor, dataVizColor, fgColor } from '@/constants/primerTokens';
+
 import { chartTooltipContentStyle, chartTooltipLabelStyle, utcDateLabelFormatter, utcDateTickFormatter } from './chartTooltipStyles';
 
 export interface CodingAgentUsageDatum {
@@ -26,13 +28,13 @@ export function CodingAgentUsageChart({ data, height = '100%', valueUnitLabel = 
   return (
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+        <CartesianGrid strokeDasharray="3 3" stroke={borderColor.muted} />
         <XAxis 
           dataKey="date" 
-          tick={{ fill: '#636c76', fontSize: 11 }}
+          tick={{ fill: fgColor.muted, fontSize: 12 }}
           tickFormatter={utcDateTickFormatter}
         />
-        <YAxis tick={{ fill: '#636c76', fontSize: 11 }} />
+        <YAxis tick={{ fill: fgColor.muted, fontSize: 12 }} />
         <Tooltip 
           labelFormatter={utcDateLabelFormatter}
           formatter={(value, name) => [
@@ -46,7 +48,7 @@ export function CodingAgentUsageChart({ data, height = '100%', valueUnitLabel = 
         <Line
           type="monotone"
           dataKey="cumulativeCredits"
-          stroke="#6366f1"
+          stroke={dataVizColor('blue')}
           strokeWidth={2}
           dot={{ r: 3 }}
           activeDot={{ r: 5 }}
@@ -55,7 +57,7 @@ export function CodingAgentUsageChart({ data, height = '100%', valueUnitLabel = 
         <Line
           type="monotone"
           dataKey="dailyCredits"
-          stroke="#22c55e"
+          stroke={dataVizColor('green')}
           strokeWidth={2}
           dot={{ r: 3 }}
           activeDot={{ r: 5 }}

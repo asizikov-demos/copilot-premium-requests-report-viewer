@@ -586,7 +586,7 @@ describe('DataAnalysis billing summary', () => {
     expect(within(productTable!).queryByRole('columnheader', { name: 'AI Credits Gross' })).not.toBeInTheDocument();
 
     const autoModeSavingsHeading = screen.getByRole('heading', { name: 'Auto Mode Savings' });
-    const autoModeSavingsCard = autoModeSavingsHeading.closest('.bg-white');
+    const autoModeSavingsCard = autoModeSavingsHeading.closest('[class*="bg-(--bgColor-default)"]');
     expect(autoModeSavingsCard).not.toBeNull();
     const autoModeSavingsTable = within(autoModeSavingsCard as HTMLElement).getByRole('table');
     expect(within(autoModeSavingsTable).getByRole('columnheader', { name: 'AI Credits' })).toBeInTheDocument();
@@ -595,7 +595,7 @@ describe('DataAnalysis billing summary', () => {
     expect(within(autoModeSavingsTable).queryByText('45.50')).not.toBeInTheDocument();
 
     const modelDetailsHeading = screen.getByRole('heading', { name: 'Model Details' });
-    const modelDetailsCard = modelDetailsHeading.closest('.bg-white');
+    const modelDetailsCard = modelDetailsHeading.closest('[class*="bg-(--bgColor-default)"]');
     expect(modelDetailsCard).not.toBeNull();
     const modelDetailsTable = within(modelDetailsCard as HTMLElement).getByRole('table');
     expect(within(modelDetailsTable).getByRole('columnheader', { name: 'AI Credits' })).toBeInTheDocument();
