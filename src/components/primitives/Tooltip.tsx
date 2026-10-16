@@ -59,6 +59,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   className = ''
 }) => {
   const [visible, setVisible] = useState(false);
+  const [opening, setOpening] = useState(false);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const triggerRef = useRef<HTMLSpanElement | null>(null);
@@ -73,11 +74,17 @@ export const Tooltip: React.FC<TooltipProps> = ({
 
   const show = useCallback(() => {
     clearTimer();
-    timerRef.current = setTimeout(() => setVisible(true), delay);
+    setOpening(true);
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      setOpening(false);
+      setVisible(true);
+    }, delay);
   }, [delay]);
 
   const hide = useCallback(() => {
     clearTimer();
+    setOpening(false);
     setVisible(false);
   }, []);
 
@@ -98,19 +105,24 @@ export const Tooltip: React.FC<TooltipProps> = ({
     };
   }, [visible, side]);
 
+  // Listen while opening too, so Escape during the show delay cancels the pending tooltip.
   useEffect(() => {
-    if (!visible) return;
+    if (!visible && !opening) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') hide();
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [visible, hide]);
+  }, [visible, opening, hide]);
 
-  const describedBy = visible ? tooltipId : undefined;
-  const trigger = isValidElement<{ 'aria-describedby'?: string }>(children)
-    ? cloneElement(children, { 'aria-describedby': describedBy })
-    : children;
+  let trigger: ReactNode = children;
+  if (isValidElement<{ 'aria-describedby'?: string }>(children)) {
+    const existingDescribedBy = children.props['aria-describedby'];
+    const describedBy = [existingDescribedBy, visible ? tooltipId : undefined]
+      .filter(Boolean)
+      .join(' ') || undefined;
+    trigger = cloneElement(children, { 'aria-describedby': describedBy });
+  }
 
   return (
     <span
