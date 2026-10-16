@@ -1,5 +1,21 @@
 # Icons, Interaction & Accessibility
 
+## Focus
+
+- A global Primer focus style lives in `globals.css`: `*:focus-visible { outline: var(--focus-outline); outline-offset: var(--focus-outline-offset); }`.
+- **Never** add `outline-none`, `focus:outline-none`, or custom `focus:ring-*` utilities — they remove or duplicate the Primer focus indicator.
+- Text inputs/selects may additionally set `focus:border-(--borderColor-accent-emphasis)`.
+
+## Hover / Selected States
+
+| Element | Token |
+| --- | --- |
+| Nav items, ghost buttons, expandable headers | `hover:bg-(--control-transparent-bgColor-hover)` |
+| Selected nav item / sorted column | `bg-(--control-transparent-bgColor-selected)` |
+| Table rows | `hover:bg-(--bgColor-muted)` (sticky cells: add `group` on `<tr>` + `group-hover:bg-(--bgColor-muted)` on the sticky `<td>`) |
+| Cards (interactive) | `hover:border-(--borderColor-emphasis)` |
+| Links | `text-(--fgColor-accent) hover:underline` |
+
 ## SVG Icons
 
 ```tsx
@@ -8,23 +24,14 @@
 </svg>
 ```
 
-Conventions:
-- Size: `w-4 h-4` for nav/button icons, `w-5 h-5` for callout icons, `w-7 h-7` for hero icons
-- Style: outline (`fill="none" stroke="currentColor"`)
-- Stroke width: `1.5` for UI icons, `2` inside filled icon containers
-- Always include `aria-hidden="true"` on decorative icons
-- Color inherited from parent via `currentColor`
-
-## Hover States
-
-- Cards: border darkens to `#c5cdd6`
-- Table rows: `bg-[#fcfdff]`
-- Nav items: `bg-[#f6f8fa]`, text → `#1f2328`
-- Buttons (secondary): `bg-[#f6f8fa]`
-- Links: color transition, sometimes underline
+- Size: `w-4 h-4` (16px) for nav/button icons, `w-5 h-5` for callout icons
+- Color inherited via `currentColor`; set color on the parent with a `text-(--fgColor-*)` token
+- Always `aria-hidden="true"` on decorative icons
+- Octicons (`@primer/octicons-react`) are the long-term target; prefer them when adding new icons once adopted
 
 ## ARIA Patterns
 
-- Expandable sections use `aria-expanded`, `aria-controls`, `aria-labelledby`
-- Tooltips use `aria-describedby` and `role="tooltip"`
-- Navigation buttons indicate active state via styling (font-semibold + bg change)
+- Expandable sections: `aria-expanded`, `aria-controls`, `aria-labelledby`
+- Tooltips: `aria-describedby` and `role="tooltip"`
+- Navigation: indicate the active item with `aria-current="page"` in addition to styling
+- Sortable table headers: put the click handler on a `<button>` inside `<th>` and set `aria-sort` on the `<th>`
