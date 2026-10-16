@@ -1,54 +1,56 @@
 # Chart Styling
 
-## Model Color System (`src/utils/modelColors.ts`)
+All chart colors come from Primer tokens via `src/constants/primerTokens.ts`. Never hard-code series, axis, or grid colors.
 
-Use `getModelColor(modelName)` from `@/utils/modelColors` for single lookups and `generateModelColors(models)` for batch.
+## Model Colors (`src/utils/modelColors.ts`)
+
+Use `getModelColor(modelName)` for single lookups and `generateModelColors(models)` for batch. Known models map to Primer data-viz hues (`dataVizColor(hue)`); unknown models get a stable hue from a 17-hue fallback palette. For text drawn on a model-colored fill (e.g. treemap labels), use `getModelTextColor(modelName)`; never parse token strings as hex to compute contrast.
+
+## Other Categorical Series
+
+Use `dataVizColor(hue)` with a distinct hue per series, e.g. `TOKEN_COLUMNS` in `src/components/TokenValue.tsx` and `PRODUCT_CATEGORY_COLORS` in `BillingGroupDetailsView.tsx`.
 
 ## Chart Tooltip Styling (`src/components/charts/chartTooltipStyles.ts`)
 
-Import and apply `chartTooltipContentStyle` and `chartTooltipLabelStyle`.
+Apply `contentStyle={chartTooltipContentStyle} labelStyle={chartTooltipLabelStyle}`. They use `bgColor.default`, `borderColor.default`, `fgColor.default`, and `shadow.floatingSmall`.
 
 ## Shared Chart Element Colors
 
-| Element            | Color                           |
-| ------------------ | ------------------------------- |
-| Grid lines         | `#e2e8f0`                       |
-| Axis text          | `#636c76`                       |
-| Axis lines         | `#d1d9e0`                       |
-| Cursor hover fill  | `rgba(99, 102, 241, 0.05)`     |
-| Cumulative line    | `#1f2328` (foreground)          |
-| Quota line (single)| `#ef4444` (red)                |
-| Quota line (biz)   | `#f97316` (orange)             |
-| Quota line (ent)   | `#dc2626` (dark red)           |
+| Element | Value |
+| --- | --- |
+| Grid lines | `borderColor.muted` |
+| Axis tick text | `fgColor.muted`, `fontSize: 12` |
+| Axis lines | `borderColor.default` (SVG charts: `borderColor.emphasis`) |
+| Cursor hover fill | `bgColor.neutralMuted` |
+| Included / additional usage bars | `bgColor.successEmphasis` / `bgColor.dangerEmphasis` |
+| Quota line (single, enterprise) | `fgColor.danger` |
+| Quota line (business) | `fgColor.severe` |
+| Cell separators | `bgColor.default` |
 
-## Heatmap Gradient (blue scale)
+## Sequential Scales (heatmaps, intensity)
 
-```
-0%:      #f9fafb
-<1%:     #dbeafe
-1-2%:    #bfdbfe
-2-5%:    #93c5fd
-5-10%:   #60a5fa
-10-15%:  #3b82f6
-15-20%:  #2563eb
-20-30%:  #1d4ed8
->30%:    #1e40af
-```
+- **JS / SVG:** `dataVizScale('blue', intensity)` where `intensity` is 0..1 (muted → emphasis). Zero values use `bgColor.muted`. Build legends from the same function so they never drift.
+- **Class-based:** `bg-(--data-blue-color-muted)` for the lightest step, then `bg-(--data-blue-color-emphasis)/20 … /75`, and `bg-(--data-blue-color-emphasis)` for the strongest. Use `text-(--fgColor-onEmphasis)` only on the full-emphasis step; keep `text-(--fgColor-default)` elsewhere for contrast.
 
 ## Recharts Conventions
 
-- Use `<ResponsiveContainer>` for all charts
-- Grid lines via `<CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />`
-- Tooltip uses imported styles: `contentStyle={chartTooltipContentStyle} labelStyle={chartTooltipLabelStyle}`
-- Axis styling: `tick={{ fontSize: 12, fill: '#636c76' }}` and `axisLine={{ stroke: '#d1d9e0' }}`
-- Model colors via `getModelColor()` — never hard-code chart series colors
+```tsx
+import { borderColor, fgColor } from '@/constants/primerTokens';
+
+<ResponsiveContainer>
+  <BarChart data={data}>
+    <CartesianGrid strokeDasharray="3 3" stroke={borderColor.muted} />
+    <XAxis tick={{ fill: fgColor.muted, fontSize: 12 }} axisLine={{ stroke: borderColor.default }} />
+    <Tooltip contentStyle={chartTooltipContentStyle} labelStyle={chartTooltipLabelStyle} />
+    <Bar dataKey="value" fill={getModelColor(model)} />
+  </BarChart>
+</ResponsiveContainer>
+```
 
 ## Chart Container Heights
 
-Use responsive heights for chart wrappers:
-
 ```tsx
-{/* Standard chart (most pages) */}
+{/* Standard chart */}
 <div className="h-72 sm:h-96 2xl:h-[28rem] w-full">
 
 {/* Shorter chart (model trends) */}

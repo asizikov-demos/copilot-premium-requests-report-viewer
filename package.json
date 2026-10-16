@@ -13,6 +13,7 @@
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
+    "@primer/primitives": "^11.10.0",
     "@types/papaparse": "^5.3.16",
     "next": "16.3.8",
     "papaparse": "^5.5.3",

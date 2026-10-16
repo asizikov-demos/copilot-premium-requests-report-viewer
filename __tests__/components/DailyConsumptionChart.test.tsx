@@ -27,15 +27,15 @@ describe('DailyConsumptionChart', () => {
     expect([...container.querySelectorAll('.recharts-legend-item-text')].map((item) => item.textContent))
       .toEqual(['Included usage', 'Additional usage']);
     expect(container.querySelector('.recharts-legend-wrapper'))
-      .toHaveStyle({ fontSize: '12px', color: '#636c76' });
+      .toHaveStyle({ fontSize: '12px', color: 'var(--fgColor-muted)' });
 
     await waitFor(() => {
       const series = container.querySelectorAll('.recharts-bar');
       expect(series).toHaveLength(2);
       const included = series[0].querySelector('.recharts-rectangle');
       const additional = series[1].querySelector('.recharts-rectangle');
-      expect(included).toHaveAttribute('fill', '#2da44e');
-      expect(additional).toHaveAttribute('fill', '#cf222e');
+      expect(included).toHaveAttribute('fill', 'var(--bgColor-success-emphasis)');
+      expect(additional).toHaveAttribute('fill', 'var(--bgColor-danger-emphasis)');
       expect(Number(additional?.getAttribute('y'))).toBeLessThan(Number(included?.getAttribute('y')));
       expect(Number(additional?.getAttribute('y')) + Number(additional?.getAttribute('height')))
         .toBeCloseTo(Number(included?.getAttribute('y')));

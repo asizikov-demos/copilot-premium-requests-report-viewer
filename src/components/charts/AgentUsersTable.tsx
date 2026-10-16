@@ -41,7 +41,7 @@ interface AgentUsersTableProps {
 }
 
 const headerCellClassName =
-  'px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]';
+  'px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)';
 
 export function AgentUsersTable({
   tableTitle,
@@ -57,15 +57,15 @@ export function AgentUsersTable({
   const hasMore = rows.length > previewCount;
 
   return (
-    <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
-      <div className="px-5 py-4 border-b border-[#d1d9e0]">
-        <h3 className="text-sm font-medium text-[#1f2328]">{tableTitle}</h3>
+    <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden">
+      <div className="px-5 py-4 border-b border-(--borderColor-default)">
+        <h3 className="text-sm font-medium text-(--fgColor-default)">{tableTitle}</h3>
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-full">
           <thead>
-            <tr className="border-b border-[#d1d9e0]">
-              <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
+            <tr className="border-b border-(--borderColor-default)">
+              <th className="px-5 py-3 text-left text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">
                 User
               </th>
               <th className={headerCellClassName}>{quantityColumnLabel}</th>
@@ -78,24 +78,24 @@ export function AgentUsersTable({
               )}
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#d1d9e0]">
+          <tbody className="divide-y divide-(--borderColor-default)">
             {visibleRows.map((user) => (
-              <tr key={user.user} className="hover:bg-[#fcfdff] transition-colors">
-                <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-[#1f2328]">
+              <tr key={user.user} className="hover:bg-(--bgColor-muted) transition-colors">
+                <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-(--fgColor-default)">
                   {user.user}
                 </td>
-                <td className="px-5 py-3 whitespace-nowrap text-sm font-mono text-[#1f2328] text-right">
+                <td className="px-5 py-3 whitespace-nowrap text-sm font-mono text-(--fgColor-default) text-right">
                   {formatUsageQuantity(user.quantity)}
                 </td>
                 {showCosts && (
                   <>
-                    <td className="px-5 py-3 whitespace-nowrap text-sm font-mono text-[#636c76] text-right">
+                    <td className="px-5 py-3 whitespace-nowrap text-sm font-mono text-(--fgColor-muted) text-right">
                       {formatCurrency(user.gross)}
                     </td>
-                    <td className="px-5 py-3 whitespace-nowrap text-sm font-mono text-emerald-600 text-right">
+                    <td className="px-5 py-3 whitespace-nowrap text-sm font-mono text-(--fgColor-success) text-right">
                       -{formatCurrency(user.included)}
                     </td>
-                    <td className="px-5 py-3 whitespace-nowrap text-sm font-mono font-semibold text-[#1f2328] text-right">
+                    <td className="px-5 py-3 whitespace-nowrap text-sm font-mono font-semibold text-(--fgColor-default) text-right">
                       {formatCurrency(user.additional)}
                     </td>
                   </>
@@ -106,10 +106,10 @@ export function AgentUsersTable({
         </table>
       </div>
       {hasMore && (
-        <div className="px-5 py-3 border-t border-[#d1d9e0]">
+        <div className="px-5 py-3 border-t border-(--borderColor-default)">
           <button
             onClick={onToggleShowAll}
-            className="text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
+            className="text-sm font-medium text-(--fgColor-accent)  transition-colors"
           >
             {showAll ? `Show top ${previewCount}` : `Show all ${rows.length} users`}
           </button>

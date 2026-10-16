@@ -247,13 +247,13 @@ function DataAnalysisInner() {
   return (
     <div className="w-full">
       {/* Info Bar — attached to header */}
-      <div className="-mx-6 -mt-8 mb-6 px-6 py-3 bg-[#f6f8fa] border-b border-[#d1d9e0]">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[#636c76]">
-          <span>File: <span className="font-semibold text-[#1f2328]">{filename}</span></span>
-          <span className="hidden sm:inline text-[#d1d9e0]">|</span>
-          <span>Report window: <span className="font-semibold text-[#1f2328]">{analysis.timeFrame.start} to {analysis.timeFrame.end}</span></span>
-          <span className="hidden sm:inline text-[#d1d9e0]">|</span>
-          <span>Total rows: <span className="font-semibold text-[#1f2328]">{aggregateProcessedData.length.toLocaleString()}</span></span>
+      <div className="-mx-6 -mt-8 mb-6 px-6 py-3 bg-(--bgColor-muted) border-b border-(--borderColor-default)">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-(--fgColor-muted)">
+          <span>File: <span className="font-semibold text-(--fgColor-default)">{filename}</span></span>
+          <span className="hidden sm:inline text-(--fgColor-disabled)">|</span>
+          <span>Report window: <span className="font-semibold text-(--fgColor-default)">{analysis.timeFrame.start} to {analysis.timeFrame.end}</span></span>
+          <span className="hidden sm:inline text-(--fgColor-disabled)">|</span>
+          <span>Total rows: <span className="font-semibold text-(--fgColor-default)">{aggregateProcessedData.length.toLocaleString()}</span></span>
         </div>
       </div>
 
@@ -266,8 +266,8 @@ function DataAnalysisInner() {
               onClick={() => setView(item.key)}
               className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md transition-all duration-150 ${
                 view === item.key
-                  ? 'bg-white text-[#1f2328] shadow-sm border-b-2 border-indigo-500 font-semibold'
-                  : 'bg-white text-[#636c76] hover:bg-[#f6f8fa] border border-[#d1d9e0] hover:border-[#d1d9e0]'
+                  ? 'bg-(--bgColor-default) text-(--fgColor-default) border-b-2 border-(--underlineNav-borderColor-active) font-semibold'
+                  : 'bg-(--bgColor-default) text-(--fgColor-muted) hover:bg-(--control-transparent-bgColor-hover) border border-(--borderColor-default) hover:border-(--borderColor-default)'
               }`}
             >
               {item.icon}
@@ -281,7 +281,7 @@ function DataAnalysisInner() {
       <div className="flex gap-6">
         {/* Left Sidebar */}
         <aside className="hidden lg:block w-56 shrink-0">
-          <div className="bg-white border border-[#d1d9e0] rounded-md sticky top-24 opacity-0 animate-slide-in-right" style={{ animationDelay: '100ms' }}>
+          <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md sticky top-24 opacity-0 animate-slide-in-right" style={{ animationDelay: '100ms' }}>
             {/* Navigation */}
             <nav className="p-3 space-y-1">
               {navItems.map((item) => (
@@ -290,8 +290,8 @@ function DataAnalysisInner() {
                   onClick={() => setView(item.key)}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-150 ${
                     view === item.key
-                      ? 'bg-[#f6f8fa] text-[#1f2328] font-semibold'
-                      : 'text-[#636c76] hover:bg-[#f6f8fa] hover:text-[#1f2328]'
+                      ? 'bg-(--bgColor-muted) text-(--fgColor-default) font-semibold'
+                      : 'text-(--fgColor-muted) hover:bg-(--control-transparent-bgColor-hover) hover:text-(--fgColor-default)'
                   }`}
                 >
                   {item.icon}
@@ -302,8 +302,8 @@ function DataAnalysisInner() {
 
             {/* Billing Period Filter */}
             {hasMultipleMonthsData && (
-              <div className="border-t border-[#d1d9e0] p-4">
-                <label htmlFor="billing-period" className="block text-xs font-bold text-[#636c76] uppercase tracking-wider mb-2">
+              <div className="border-t border-(--borderColor-default) p-4">
+                <label htmlFor="billing-period" className="block text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider mb-2">
                   Billing Period
                 </label>
                 <select
@@ -314,7 +314,7 @@ function DataAnalysisInner() {
                     const selected = Array.from(e.target.selectedOptions, option => option.value);
                     setSelectedMonths(selected);
                   }}
-                  className="block w-full px-3 py-2 text-sm text-[#1f2328] bg-white border border-[#d1d9e0] rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm"
+                  className="block w-full px-3 py-2 text-sm text-(--fgColor-default) bg-(--bgColor-default) border border-(--borderColor-default) rounded-md shadow-(--shadow-inset) focus:border-(--borderColor-accent-emphasis)"
                   size={Math.min(availableMonths.length, 4)}
                 >
                   {availableMonths.map(month => (
@@ -323,7 +323,7 @@ function DataAnalysisInner() {
                     </option>
                   ))}
                 </select>
-                <p className="mt-2 text-xs text-[#636c76]">
+                <p className="mt-2 text-xs text-(--fgColor-muted)">
                   Hold Ctrl/Cmd to select multiple
                 </p>
               </div>
@@ -370,33 +370,33 @@ function DataAnalysisInner() {
               {costMetricsAvailable && aggregatedCosts && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 opacity-0 animate-fade-in-up" style={{ animationDelay: '50ms' }}>
                   {/* Current Billing */}
-                  <div className="bg-white border border-[#d1d9e0] rounded-md p-5">
-                    <p className="text-xs font-bold text-[#636c76] uppercase tracking-wider text-center mb-3">Current Billing</p>
-                    <p className="text-3xl font-bold text-[#1f2328] text-center">
+                  <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md p-5">
+                    <p className="text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider text-center mb-3">Current Billing</p>
+                    <p className="text-3xl font-bold text-(--fgColor-default) text-center">
                       {formatCurrency(aggregatedCosts.net)}
                     </p>
-                    <p className="text-sm text-[#636c76] text-center mt-1">
+                    <p className="text-sm text-(--fgColor-muted) text-center mt-1">
                       {aggregateProcessedData.reduce((sum, r) => sum + r.creditsUsed, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} AI Credits
                     </p>
-                    <p className="text-xs text-[#636c76] text-center mt-0.5">
+                    <p className="text-xs text-(--fgColor-muted) text-center mt-0.5">
                       {unitCostLabel}
                     </p>
-                    <div className="mt-4 pt-4 border-t border-[#d1d9e0] space-y-2 text-sm" aria-label="billing-summary">
+                    <div className="mt-4 pt-4 border-t border-(--borderColor-default) space-y-2 text-sm" aria-label="billing-summary">
                       <div className="flex justify-between">
-                        <span className="text-[#636c76]">Gross cost</span>
-                        <span className="font-mono font-medium text-[#1f2328]">
+                        <span className="text-(--fgColor-muted)">Gross cost</span>
+                        <span className="font-mono font-medium text-(--fgColor-default)">
                           {formatCurrency(aggregatedCosts.gross)}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-[#636c76]">{costLabels.discountSummary}</span>
-                        <span className="font-mono font-medium text-[#1f2328]">
+                        <span className="text-(--fgColor-muted)">{costLabels.discountSummary}</span>
+                        <span className="font-mono font-medium text-(--fgColor-default)">
                           &minus;{formatCurrency(aggregatedCosts.discount)}
                         </span>
                       </div>
-                      <div className="flex justify-between pt-2 mt-2 border-t-2 border-[#d1d9e0]">
-                        <span className="text-[#1f2328] font-bold">{costLabels.netSummary}</span>
-                        <span className="font-mono font-bold text-[#1f2328]">
+                      <div className="flex justify-between pt-2 mt-2 border-t-2 border-(--borderColor-default)">
+                        <span className="text-(--fgColor-default) font-bold">{costLabels.netSummary}</span>
+                        <span className="font-mono font-bold text-(--fgColor-default)">
                           {formatCurrency(aggregatedCosts.net)}
                         </span>
                       </div>
@@ -404,29 +404,29 @@ function DataAnalysisInner() {
                   </div>
 
                   {/* Licenses */}
-                  <div className="bg-white border border-[#d1d9e0] rounded-md p-5">
-                    <p className="text-xs font-bold text-[#636c76] uppercase tracking-wider text-center mb-3">Licenses</p>
-                    <p className="text-3xl font-bold text-[#1f2328] text-center">
+                  <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md p-5">
+                    <p className="text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider text-center mb-3">Licenses</p>
+                    <p className="text-3xl font-bold text-(--fgColor-default) text-center">
                       {analysis.totalUniqueUsers}
                     </p>
-                    <p className="text-sm text-[#636c76] text-center mt-1">total users</p>
-                    <div className="mt-4 pt-4 border-t border-[#d1d9e0] space-y-2 text-sm">
+                    <p className="text-sm text-(--fgColor-muted) text-center mt-1">total users</p>
+                    <div className="mt-4 pt-4 border-t border-(--borderColor-default) space-y-2 text-sm">
                       {analysis.quotaBreakdown.enterprise.length > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-[#636c76]">Copilot Enterprise</span>
-                          <span className="font-mono font-medium text-[#1f2328]">{analysis.quotaBreakdown.enterprise.length}</span>
+                          <span className="text-(--fgColor-muted)">Copilot Enterprise</span>
+                          <span className="font-mono font-medium text-(--fgColor-default)">{analysis.quotaBreakdown.enterprise.length}</span>
                         </div>
                       )}
                       {analysis.quotaBreakdown.business.length > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-[#636c76]">Copilot Business</span>
-                          <span className="font-mono font-medium text-[#1f2328]">{analysis.quotaBreakdown.business.length}</span>
+                          <span className="text-(--fgColor-muted)">Copilot Business</span>
+                          <span className="font-mono font-medium text-(--fgColor-default)">{analysis.quotaBreakdown.business.length}</span>
                         </div>
                       )}
                       {analysis.quotaBreakdown.unknown.length > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-[#636c76]">Unknown</span>
-                          <span className="font-mono font-medium text-[#1f2328]">{analysis.quotaBreakdown.unknown.length}</span>
+                          <span className="text-(--fgColor-muted)">Unknown</span>
+                          <span className="font-mono font-medium text-(--fgColor-default)">{analysis.quotaBreakdown.unknown.length}</span>
                         </div>
                       )}
                     </div>
@@ -437,37 +437,37 @@ function DataAnalysisInner() {
 
               {/* Cost per Product */}
               {productCosts.length > 0 && (
-                <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-                  <div className="px-6 py-4 border-b border-[#d1d9e0] bg-[#f6f8fa]">
-                    <h3 className="text-lg font-semibold text-[#1f2328]">Cost per Product</h3>
+                <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+                  <div className="px-6 py-4 border-b border-(--borderColor-default) bg-(--bgColor-muted)">
+                    <h3 className="text-lg font-semibold text-(--fgColor-default)">Cost per Product</h3>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="min-w-full">
                       <thead>
-                        <tr className="border-b border-[#d1d9e0]">
-                          <th className="px-6 py-3 text-left text-xs font-bold text-[#636c76] uppercase tracking-wider">Product</th>
-                          <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{quantityColumnLabel}</th>
+                        <tr className="border-b border-(--borderColor-default)">
+                          <th className="px-6 py-3 text-left text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">Product</th>
+                          <th className="px-6 py-3 text-right text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">{quantityColumnLabel}</th>
                           {showProductCosts && (
                             <>
-                              <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Gross</th>
-                              <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{costLabels.discount}</th>
-                              <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{costLabels.net}</th>
+                              <th className="px-6 py-3 text-right text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">Gross</th>
+                              <th className="px-6 py-3 text-right text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">{costLabels.discount}</th>
+                              <th className="px-6 py-3 text-right text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">{costLabels.net}</th>
                             </>
                           )}
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#d1d9e0]">
+                      <tbody className="divide-y divide-(--borderColor-default)">
                         {productCosts.map((product) => (
-                          <tr key={product.label} className="table-row-hover transition-colors duration-150">
-                            <td className="px-6 py-3.5 text-sm font-medium text-[#1f2328]">{product.label}</td>
-                            <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
+                          <tr key={product.label} className="hover:bg-(--bgColor-muted) transition-colors duration-150">
+                            <td className="px-6 py-3.5 text-sm font-medium text-(--fgColor-default)">{product.label}</td>
+                            <td className="px-6 py-3.5 text-sm text-(--fgColor-muted) text-right font-mono">
                               {product.credits.toFixed(2)}
                             </td>
                             {showProductCosts && (
                               <>
-                                <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">{formatCurrency(product.gross)}</td>
-                                <td className="px-6 py-3.5 text-sm text-emerald-600 text-right font-mono">-{formatCurrency(product.discount)}</td>
-                                <td className="px-6 py-3.5 text-sm font-semibold text-[#1f2328] text-right font-mono">{formatCurrency(product.net)}</td>
+                                <td className="px-6 py-3.5 text-sm text-(--fgColor-muted) text-right font-mono">{formatCurrency(product.gross)}</td>
+                                <td className="px-6 py-3.5 text-sm text-(--fgColor-success) text-right font-mono">-{formatCurrency(product.discount)}</td>
+                                <td className="px-6 py-3.5 text-sm font-semibold text-(--fgColor-default) text-right font-mono">{formatCurrency(product.net)}</td>
                               </>
                             )}
                           </tr>
@@ -479,10 +479,10 @@ function DataAnalysisInner() {
               )}
 
               {costMetricsAvailable && dailyConsumption.length > 0 && (
-                <section aria-labelledby="daily-consumption-title" className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden min-h-[20rem]">
-                  <div className="px-6 py-4 border-b border-[#d1d9e0] bg-[#f6f8fa]">
-                    <h3 id="daily-consumption-title" className="text-lg font-semibold text-[#1f2328]">Daily Consumption</h3>
-                    <p className="text-sm text-[#636c76] mt-0.5">Included and additional usage by day in USD</p>
+                <section aria-labelledby="daily-consumption-title" className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden min-h-[20rem]">
+                  <div className="px-6 py-4 border-b border-(--borderColor-default) bg-(--bgColor-muted)">
+                    <h3 id="daily-consumption-title" className="text-lg font-semibold text-(--fgColor-default)">Daily Consumption</h3>
+                    <p className="text-sm text-(--fgColor-muted) mt-0.5">Included and additional usage by day in USD</p>
                   </div>
                   <div className="p-5">
                     <div className="h-72 sm:h-96 2xl:h-[28rem] w-full">
@@ -493,16 +493,16 @@ function DataAnalysisInner() {
               )}
 
               {autoModeSavingsRows.length > 0 && costMetricsAvailable && (
-                <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '150ms' }}>
-                  <div className="px-6 py-4 border-b border-[#d1d9e0] bg-[#f6f8fa]">
+                <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '150ms' }}>
+                  <div className="px-6 py-4 border-b border-(--borderColor-default) bg-(--bgColor-muted)">
                     <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <h3 className="text-lg font-semibold text-[#1f2328]">Auto Mode Savings</h3>
-                        <p className="text-sm text-[#636c76] mt-0.5">
+                        <h3 className="text-lg font-semibold text-(--fgColor-default)">Auto Mode Savings</h3>
+                        <p className="text-sm text-(--fgColor-muted) mt-0.5">
                           Savings compare billed cost with the cost before Auto Mode&apos;s {PRICING.AUTO_MODE_DISCOUNT_RATE * 100}% AI Credits discount.
                         </p>
                       </div>
-                      <span className="text-sm font-semibold text-[#2da44e]">
+                      <span className="text-sm font-semibold text-(--fgColor-success)">
                         {formatCurrency(autoModeSavingsTotal.savings)} saved
                       </span>
                     </div>
@@ -510,29 +510,29 @@ function DataAnalysisInner() {
                   <div className="overflow-x-auto">
                     <table className="min-w-full">
                       <thead>
-                        <tr className="border-b border-[#d1d9e0]">
-                          <th className="px-6 py-3 text-left text-xs font-bold text-[#636c76] uppercase tracking-wider">Model</th>
-                          <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{quantityColumnLabel}</th>
-                          <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Cost Before Auto</th>
-                          <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">Savings</th>
+                        <tr className="border-b border-(--borderColor-default)">
+                          <th className="px-6 py-3 text-left text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">Model</th>
+                          <th className="px-6 py-3 text-right text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">{quantityColumnLabel}</th>
+                          <th className="px-6 py-3 text-right text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">Cost Before Auto</th>
+                          <th className="px-6 py-3 text-right text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">Savings</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#d1d9e0]">
+                      <tbody className="divide-y divide-(--borderColor-default)">
                         {autoModeSavingsRows.map((item) => (
-                          <tr key={item.model} className="table-row-hover transition-colors duration-150">
-                            <td className="px-6 py-3.5 text-sm font-medium text-[#1f2328]">{item.model}</td>
-                            <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">{item.quantity.toFixed(2)}</td>
-                            <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">{formatCurrency(item.costBeforeAuto)}</td>
-                            <td className="px-6 py-3.5 text-sm font-semibold text-[#2da44e] text-right font-mono">{formatCurrency(item.savings)}</td>
+                          <tr key={item.model} className="hover:bg-(--bgColor-muted) transition-colors duration-150">
+                            <td className="px-6 py-3.5 text-sm font-medium text-(--fgColor-default)">{item.model}</td>
+                            <td className="px-6 py-3.5 text-sm text-(--fgColor-muted) text-right font-mono">{item.quantity.toFixed(2)}</td>
+                            <td className="px-6 py-3.5 text-sm text-(--fgColor-muted) text-right font-mono">{formatCurrency(item.costBeforeAuto)}</td>
+                            <td className="px-6 py-3.5 text-sm font-semibold text-(--fgColor-success) text-right font-mono">{formatCurrency(item.savings)}</td>
                           </tr>
                         ))}
                       </tbody>
                       <tfoot>
-                        <tr className="border-t-2 border-[#d1d9e0] bg-[#f6f8fa]">
-                          <td className="px-6 py-3.5 text-sm font-bold text-[#1f2328]">Total</td>
-                          <td className="px-6 py-3.5 text-sm font-bold text-[#1f2328] text-right font-mono">{autoModeSavingsTotal.quantity.toFixed(2)}</td>
-                          <td className="px-6 py-3.5 text-sm font-bold text-[#1f2328] text-right font-mono">{formatCurrency(autoModeSavingsTotal.costBeforeAuto)}</td>
-                          <td className="px-6 py-3.5 text-sm font-bold text-[#2da44e] text-right font-mono">{formatCurrency(autoModeSavingsTotal.savings)}</td>
+                        <tr className="border-t-2 border-(--borderColor-default) bg-(--bgColor-muted)">
+                          <td className="px-6 py-3.5 text-sm font-bold text-(--fgColor-default)">Total</td>
+                          <td className="px-6 py-3.5 text-sm font-bold text-(--fgColor-default) text-right font-mono">{autoModeSavingsTotal.quantity.toFixed(2)}</td>
+                          <td className="px-6 py-3.5 text-sm font-bold text-(--fgColor-default) text-right font-mono">{formatCurrency(autoModeSavingsTotal.costBeforeAuto)}</td>
+                          <td className="px-6 py-3.5 text-sm font-bold text-(--fgColor-success) text-right font-mono">{formatCurrency(autoModeSavingsTotal.savings)}</td>
                         </tr>
                       </tfoot>
                     </table>
@@ -540,62 +540,62 @@ function DataAnalysisInner() {
                 </div>
               )}
 
-              <div className="bg-white border border-[#d1d9e0] rounded-md p-6 opacity-0 animate-scale-in" style={{ animationDelay: '200ms' }}>
+              <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md p-6 opacity-0 animate-scale-in" style={{ animationDelay: '200ms' }}>
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                  <h3 className="text-lg font-semibold text-[#1f2328]">{modelChartTitle}</h3>
-                  <span className="text-xs text-[#636c76] font-medium">Total: {modelChartTotalDisplay} {modelChartUnitLabel}</span>
+                  <h3 className="text-lg font-semibold text-(--fgColor-default)">{modelChartTitle}</h3>
+                  <span className="text-xs text-(--fgColor-muted) font-medium">Total: {modelChartTotalDisplay} {modelChartUnitLabel}</span>
                 </div>
-                <p className="text-xs text-[#636c76] mb-6">
+                <p className="text-xs text-(--fgColor-muted) mb-6">
                   Tile area represents each model&apos;s share of AI Credits. Hover or focus a tile for exact usage.
                 </p>
                 <ModelCreditsTreemap data={modelChartData} />
               </div>
 
-              <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-                <div className="px-6 py-4 border-b border-[#d1d9e0] bg-[#f6f8fa]">
-                  <h3 className="text-lg font-semibold text-[#1f2328]">Model Details</h3>
+              <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+                <div className="px-6 py-4 border-b border-(--borderColor-default) bg-(--bgColor-muted)">
+                  <h3 className="text-lg font-semibold text-(--fgColor-default)">Model Details</h3>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="min-w-full">
                     <thead>
-                      <tr className="border-b border-[#d1d9e0]">
-                        <th className="px-6 py-3 text-left text-xs font-bold text-[#636c76] uppercase tracking-wider">Model</th>
+                      <tr className="border-b border-(--borderColor-default)">
+                        <th className="px-6 py-3 text-left text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">Model</th>
                         {showModelQuantity && (
-                          <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{quantityColumnLabel}</th>
+                          <th className="px-6 py-3 text-right text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">{quantityColumnLabel}</th>
                         )}
                         {hasModelCosts && (
                           <>
-                            <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{costLabels.gross}</th>
-                            <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{costLabels.discount}</th>
-                            <th className="px-6 py-3 text-right text-xs font-bold text-[#636c76] uppercase tracking-wider">{costLabels.net}</th>
+                            <th className="px-6 py-3 text-right text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">{costLabels.gross}</th>
+                            <th className="px-6 py-3 text-right text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">{costLabels.discount}</th>
+                            <th className="px-6 py-3 text-right text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">{costLabels.net}</th>
                           </>
                         )}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#d1d9e0]">
+                    <tbody className="divide-y divide-(--borderColor-default)">
                       {modelRows.map((item, index) => {
                         return (
-                          <tr key={index} className="table-row-hover transition-colors duration-150">
-                            <td className="px-6 py-3.5 text-sm font-medium text-[#1f2328]">
+                          <tr key={index} className="hover:bg-(--bgColor-muted) transition-colors duration-150">
+                            <td className="px-6 py-3.5 text-sm font-medium text-(--fgColor-default)">
                               <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getModelColor(item.model) }}></div>
                                 {item.model}
                               </div>
                             </td>
                             {showModelQuantity && (
-                              <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
+                              <td className="px-6 py-3.5 text-sm text-(--fgColor-muted) text-right font-mono">
                                 {item.credits.toFixed(2)}
                               </td>
                             )}
                             {hasModelCosts && (
                               <>
-                                <td className="px-6 py-3.5 text-sm text-[#636c76] text-right font-mono">
+                                <td className="px-6 py-3.5 text-sm text-(--fgColor-muted) text-right font-mono">
                                   {formatCurrency(item.gross)}
                                 </td>
-                                <td className="px-6 py-3.5 text-sm text-emerald-600 text-right font-mono">
+                                <td className="px-6 py-3.5 text-sm text-(--fgColor-success) text-right font-mono">
                                   -{formatCurrency(item.discount)}
                                 </td>
-                                <td className="px-6 py-3.5 text-sm font-semibold text-[#1f2328] text-right font-mono">
+                                <td className="px-6 py-3.5 text-sm font-semibold text-(--fgColor-default) text-right font-mono">
                                   {formatCurrency(item.net)}
                                 </td>
                               </>
@@ -613,19 +613,19 @@ function DataAnalysisInner() {
 
         {/* Right Summary Panel */}
         <aside className="hidden xl:block w-56 shrink-0">
-          <div className="bg-white border border-[#d1d9e0] rounded-md p-5 sticky top-24 opacity-0 animate-slide-in-right" style={{ animationDelay: '250ms' }}>
+          <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md p-5 sticky top-24 opacity-0 animate-slide-in-right" style={{ animationDelay: '250ms' }}>
             <div className="space-y-4">
-              <h3 className="text-xs font-bold text-[#636c76] uppercase tracking-wider">Summary</h3>
+              <h3 className="text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">Summary</h3>
 
-              <div className="flex items-center justify-between p-3 bg-[#f6f8fa] rounded-md border border-[#d1d9e0]">
-                <span className="text-xs font-medium text-[#636c76]">Monthly Quota</span>
-                <span className="text-sm font-bold text-[#1f2328]">
+              <div className="flex items-center justify-between p-3 bg-(--bgColor-muted) rounded-md border border-(--borderColor-default)">
+                <span className="text-xs font-medium text-(--fgColor-muted)">Monthly Quota</span>
+                <span className="text-sm font-bold text-(--fgColor-default)">
                   {monthlyQuotaDisplay}
                 </span>
               </div>
 
               {analysis.quotaBreakdown.suggestedPlan && !analysis.quotaBreakdown.mixed && (
-                <div className="badge-blue p-3 rounded-md">
+                <div className="p-3 rounded-md border border-(--borderColor-accent-muted) bg-(--bgColor-accent-muted) text-(--fgColor-default)">
                   <p className="text-xs">
                     Auto-selected <span className="font-semibold">{planInfo[analysis.quotaBreakdown.suggestedPlan].name}</span>
                   </p>

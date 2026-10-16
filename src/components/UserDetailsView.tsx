@@ -74,23 +74,23 @@ function UserDailyUsageTooltip({ active, payload, label, valueUnitLabel = 'AI Cr
     const dailyTotal = modelData.reduce((sum: number, entry: TooltipEntry) => sum + entry.value, 0);
 
     return (
-      <div className="bg-white p-3 border border-[#d1d9e0] rounded-md shadow-sm">
-        <p className="font-medium text-[#1f2328] mb-2">{formattedDate}</p>
+      <div className="bg-(--bgColor-default) p-3 border border-(--borderColor-default) rounded-md shadow-(--shadow-floating-small)">
+        <p className="font-medium text-(--fgColor-default) mb-2">{formattedDate}</p>
 
         {modelData.length > 0 ? (
           <div className="mb-2">
-            <p className="text-xs font-medium text-[#636c76] mb-1">Daily Usage</p>
+            <p className="text-xs font-medium text-(--fgColor-muted) mb-1">Daily Usage</p>
             {modelData.map((entry: TooltipEntry, entryIndex: number) => (
               <p key={entryIndex} className="text-xs ml-2" style={{ color: entry.color }}>
                 {entry.dataKey}: {entry.value.toFixed(1)} {valueUnitLabel}
               </p>
             ))}
-            <p className="text-xs font-semibold text-[#1f2328] ml-2 mt-1">
+            <p className="text-xs font-semibold text-(--fgColor-default) ml-2 mt-1">
               Total: {dailyTotal.toFixed(1)} {valueUnitLabel}
             </p>
           </div>
         ) : (
-          <p className="text-xs text-[#636c76] mb-2">No {valueUnitLabel}</p>
+          <p className="text-xs text-(--fgColor-muted) mb-2">No {valueUnitLabel}</p>
         )}
       </div>
     );
@@ -412,35 +412,35 @@ export function UserDetailsView({
 
       {/* Cost per Cost Center — standalone card */}
       {costCenterCosts.length > 0 && (
-        <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
-          <div className="px-5 py-4 border-b border-[#d1d9e0]">
-            <h3 className="text-sm font-medium text-[#1f2328]">Cost per Cost Center</h3>
+        <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden">
+          <div className="px-5 py-4 border-b border-(--borderColor-default)">
+            <h3 className="text-sm font-medium text-(--fgColor-default)">Cost per Cost Center</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full" aria-label="Cost per Cost Center">
               <thead>
-                <tr className="border-b border-[#d1d9e0]">
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Cost Center</th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{userQuantityColumnLabel}</th>
+                <tr className="border-b border-(--borderColor-default)">
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">Cost Center</th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">{userQuantityColumnLabel}</th>
                   {showAicGross && (
-                    <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">AI Credits Gross</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">AI Credits Gross</th>
                   )}
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{userCostLabels.gross}</th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{userCostLabels.discount}</th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{userCostLabels.net}</th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">{userCostLabels.gross}</th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">{userCostLabels.discount}</th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">{userCostLabels.net}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#d1d9e0]">
+              <tbody className="divide-y divide-(--borderColor-default)">
                 {costCenterCosts.map((costCenter) => (
-                  <tr key={costCenter.name} className="hover:bg-[#fcfdff] transition-colors">
-                    <td className="px-5 py-3 text-sm font-medium text-[#1f2328]">{costCenter.name}</td>
-                    <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono">{costCenter.quantity.toFixed(2)}</td>
+                  <tr key={costCenter.name} className="hover:bg-(--bgColor-muted) transition-colors">
+                    <td className="px-5 py-3 text-sm font-medium text-(--fgColor-default)">{costCenter.name}</td>
+                    <td className="px-5 py-3 text-sm text-(--fgColor-muted) text-right font-mono">{costCenter.quantity.toFixed(2)}</td>
                     {showAicGross && (
-                      <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono">{formatCurrency(costCenter.aicGrossAmount)}</td>
+                      <td className="px-5 py-3 text-sm text-(--fgColor-muted) text-right font-mono">{formatCurrency(costCenter.aicGrossAmount)}</td>
                     )}
-                    <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono">{formatCurrency(costCenter.gross)}</td>
-                    <td className="px-5 py-3 text-sm text-emerald-600 text-right font-mono">-{formatCurrency(costCenter.discount)}</td>
-                    <td className="px-5 py-3 text-sm font-semibold text-[#1f2328] text-right font-mono">{formatCurrency(costCenter.net)}</td>
+                    <td className="px-5 py-3 text-sm text-(--fgColor-muted) text-right font-mono">{formatCurrency(costCenter.gross)}</td>
+                    <td className="px-5 py-3 text-sm text-(--fgColor-success) text-right font-mono">-{formatCurrency(costCenter.discount)}</td>
+                    <td className="px-5 py-3 text-sm font-semibold text-(--fgColor-default) text-right font-mono">{formatCurrency(costCenter.net)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -451,35 +451,35 @@ export function UserDetailsView({
 
       {/* Cost per Product — standalone card */}
       {productCosts.length > 0 && (
-        <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
-          <div className="px-5 py-4 border-b border-[#d1d9e0]">
-            <h3 className="text-sm font-medium text-[#1f2328]">Cost per Product</h3>
+        <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden">
+          <div className="px-5 py-4 border-b border-(--borderColor-default)">
+            <h3 className="text-sm font-medium text-(--fgColor-default)">Cost per Product</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full">
               <thead>
-                <tr className="border-b border-[#d1d9e0]">
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Product</th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{userQuantityColumnLabel}</th>
+                <tr className="border-b border-(--borderColor-default)">
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">Product</th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">{userQuantityColumnLabel}</th>
                   {showAicGross && (
-                    <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">AI Credits Gross</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">AI Credits Gross</th>
                   )}
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{userCostLabels.gross}</th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{userCostLabels.discount}</th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{userCostLabels.net}</th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">{userCostLabels.gross}</th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">{userCostLabels.discount}</th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">{userCostLabels.net}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#d1d9e0]">
+              <tbody className="divide-y divide-(--borderColor-default)">
                 {productCosts.map((product) => (
-                  <tr key={product.label} className="hover:bg-[#fcfdff] transition-colors">
-                    <td className="px-5 py-3 text-sm font-medium text-[#1f2328]">{product.label}</td>
-                    <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono">{product.credits.toFixed(2)}</td>
+                  <tr key={product.label} className="hover:bg-(--bgColor-muted) transition-colors">
+                    <td className="px-5 py-3 text-sm font-medium text-(--fgColor-default)">{product.label}</td>
+                    <td className="px-5 py-3 text-sm text-(--fgColor-muted) text-right font-mono">{product.credits.toFixed(2)}</td>
                     {showAicGross && (
-                      <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono">{formatCurrency(product.aicGrossAmount)}</td>
+                      <td className="px-5 py-3 text-sm text-(--fgColor-muted) text-right font-mono">{formatCurrency(product.aicGrossAmount)}</td>
                     )}
-                    <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono">{formatCurrency(product.gross)}</td>
-                    <td className="px-5 py-3 text-sm text-emerald-600 text-right font-mono">-{formatCurrency(product.discount)}</td>
-                    <td className="px-5 py-3 text-sm font-semibold text-[#1f2328] text-right font-mono">{formatCurrency(product.net)}</td>
+                    <td className="px-5 py-3 text-sm text-(--fgColor-muted) text-right font-mono">{formatCurrency(product.gross)}</td>
+                    <td className="px-5 py-3 text-sm text-(--fgColor-success) text-right font-mono">-{formatCurrency(product.discount)}</td>
+                    <td className="px-5 py-3 text-sm font-semibold text-(--fgColor-default) text-right font-mono">{formatCurrency(product.net)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -489,10 +489,10 @@ export function UserDetailsView({
       )}
 
       {dailyConsumption.length > 0 && (
-        <section aria-labelledby="user-daily-consumption-title" className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden min-h-[20rem]">
-          <div className="px-5 py-4 border-b border-[#d1d9e0]">
-            <h3 id="user-daily-consumption-title" className="text-sm font-medium text-[#1f2328]">Daily Consumption</h3>
-            <p className="text-xs text-[#636c76] mt-1">Included and additional usage by day in USD</p>
+        <section aria-labelledby="user-daily-consumption-title" className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden min-h-[20rem]">
+          <div className="px-5 py-4 border-b border-(--borderColor-default)">
+            <h3 id="user-daily-consumption-title" className="text-sm font-medium text-(--fgColor-default)">Daily Consumption</h3>
+            <p className="text-xs text-(--fgColor-muted) mt-1">Included and additional usage by day in USD</p>
           </div>
           <div className="p-5">
             <div className="h-72 sm:h-96 2xl:h-[28rem] w-full">
@@ -503,9 +503,9 @@ export function UserDetailsView({
       )}
 
       {/* Daily Model Usage chart — standalone card */}
-      <div className="bg-white border border-[#d1d9e0] rounded-md p-5">
-        <h3 className="text-sm font-medium text-[#1f2328] mb-1">Daily Model Usage</h3>
-        <p className="text-xs text-[#636c76] mb-4">
+      <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md p-5">
+        <h3 className="text-sm font-medium text-(--fgColor-default) mb-1">Daily Model Usage</h3>
+        <p className="text-xs text-(--fgColor-muted) mb-4">
           Daily {userQuantityColumnLabel} by model
         </p>
 
@@ -521,8 +521,8 @@ export function UserDetailsView({
             </div>
 
             {userModels.length > 0 && (
-              <div className="border-t border-[#d1d9e0] pt-4 mt-4">
-                <h4 className="text-[11px] font-semibold text-[#636c76] uppercase tracking-[0.05em] mb-2">Models Used</h4>
+              <div className="border-t border-(--borderColor-default) pt-4 mt-4">
+                <h4 className="text-xs font-semibold text-(--fgColor-muted) uppercase tracking-[0.05em] mb-2">Models Used</h4>
                 <div className="flex flex-wrap gap-x-4 gap-y-1">
                   {sortedModels.map((model) => (
                     <div key={model} className="flex items-center gap-1.5">
@@ -530,10 +530,10 @@ export function UserDetailsView({
                         className="w-2 h-2 rounded-sm"
                         style={{ backgroundColor: modelColors[model] }}
                       />
-                      <span className="text-xs text-[#636c76] truncate max-w-[140px]" title={model}>
+                      <span className="text-xs text-(--fgColor-muted) truncate max-w-[140px]" title={model}>
                         {model.length > 18 ? `${model.substring(0, 18)}...` : model}
                       </span>
-                      <span className="text-xs text-[#636c76] font-mono">
+                      <span className="text-xs text-(--fgColor-muted) font-mono">
                         {modelUsageTotals[model]?.toFixed(1)}
                       </span>
                     </div>
@@ -543,7 +543,7 @@ export function UserDetailsView({
             )}
           </>
         ) : (
-          <div className="flex items-center justify-center h-64 text-[#636c76] text-sm">
+          <div className="flex items-center justify-center h-64 text-(--fgColor-muted) text-sm">
             No data available
           </div>
         )}
@@ -553,11 +553,11 @@ export function UserDetailsView({
 
       {/* Daily Model Usage Breakdown table — standalone card */}
       {dailyBreakdownRows.length > 0 && (
-        <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
-          <div className="px-5 py-4 border-b border-[#d1d9e0]">
-            <h3 className="text-sm font-medium text-[#1f2328]">Daily Model Usage Breakdown</h3>
+        <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden">
+          <div className="px-5 py-4 border-b border-(--borderColor-default)">
+            <h3 className="text-sm font-medium text-(--fgColor-default)">Daily Model Usage Breakdown</h3>
             {showTokens && (
-              <p className="text-xs text-[#636c76] mt-1">
+              <p className="text-xs text-(--fgColor-muted) mt-1">
                 Token counts: — means not reported. Partial totals include only rows with reported counts.
               </p>
             )}
@@ -565,59 +565,59 @@ export function UserDetailsView({
           <div className="overflow-x-auto">
             <table className="min-w-full" aria-label="Daily Model Usage Breakdown">
               <thead>
-                <tr className="border-b border-[#d1d9e0]">
-                  <th className="px-5 py-3 w-28 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">Date</th>
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Model</th>
+                <tr className="border-b border-(--borderColor-default)">
+                  <th className="px-5 py-3 w-28 text-left text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted) whitespace-nowrap">Date</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">Model</th>
                   {hasUserCostCenters && (
-                    <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">Cost Center</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted) whitespace-nowrap">Cost Center</th>
                   )}
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">{userQuantityColumnLabel}</th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted) whitespace-nowrap">{userQuantityColumnLabel}</th>
                   {showTokens && TOKEN_COLUMNS.map(({ field, label }) => (
-                    <th key={field} scope="col" className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">
+                    <th key={field} scope="col" className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted) whitespace-nowrap">
                       {label}
                     </th>
                   ))}
                   {showAicGross && (
-                    <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">AI Credits Gross</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted) whitespace-nowrap">AI Credits Gross</th>
                   )}
                   {hasBillingData && (
                     <>
-                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">{userCostLabels.gross}</th>
-                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">{userCostLabels.discountSummary}</th>
-                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">{userCostLabels.netSummary}</th>
+                      <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted) whitespace-nowrap">{userCostLabels.gross}</th>
+                      <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted) whitespace-nowrap">{userCostLabels.discountSummary}</th>
+                      <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted) whitespace-nowrap">{userCostLabels.netSummary}</th>
                     </>
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#d1d9e0]">
+              <tbody className="divide-y divide-(--borderColor-default)">
                 {dailyBreakdownRows.map((row, idx) => (
-                  <tr key={`${row.date}-${row.model}-${idx}`} className="hover:bg-[#fcfdff] transition-colors">
+                  <tr key={`${row.date}-${row.model}-${idx}`} className="hover:bg-(--bgColor-muted) transition-colors">
                     {row.isFirstInDate ? (
                       <td
                         rowSpan={row.rowSpan}
-                        className="px-5 py-3 w-28 text-sm font-medium text-[#1f2328] whitespace-nowrap align-top"
+                        className="px-5 py-3 w-28 text-sm font-medium text-(--fgColor-default) whitespace-nowrap align-top"
                       >
                         {row.date}
                       </td>
                     ) : null}
-                    <td className="px-5 py-3 text-sm text-[#636c76]">- {row.model}</td>
+                    <td className="px-5 py-3 text-sm text-(--fgColor-muted)">- {row.model}</td>
                     {hasUserCostCenters && (
-                      <td className="px-5 py-3 text-sm text-[#636c76] whitespace-nowrap">{row.costCenter ?? '—'}</td>
+                      <td className="px-5 py-3 text-sm text-(--fgColor-muted) whitespace-nowrap">{row.costCenter ?? '—'}</td>
                     )}
-                    <td className="px-5 py-3 text-sm font-mono text-[#1f2328] text-right">{row.credits.toFixed(2)}</td>
+                    <td className="px-5 py-3 text-sm font-mono text-(--fgColor-default) text-right">{row.credits.toFixed(2)}</td>
                     {showTokens && TOKEN_COLUMNS.map(({ field }) => (
-                        <td key={field} className="px-5 py-3 text-sm font-mono tabular-nums text-[#636c76] text-right whitespace-nowrap">
+                        <td key={field} className="px-5 py-3 text-sm font-mono tabular-nums text-(--fgColor-muted) text-right whitespace-nowrap">
                           <TokenValue totals={row.tokens} field={field} />
                         </td>
                     ))}
                     {showAicGross && (
-                      <td className="px-5 py-3 text-sm font-mono text-[#636c76] text-right">{formatCurrency(row.aicGrossAmount)}</td>
+                      <td className="px-5 py-3 text-sm font-mono text-(--fgColor-muted) text-right">{formatCurrency(row.aicGrossAmount)}</td>
                     )}
                     {hasBillingData && (
                       <>
-                        <td className="px-5 py-3 text-sm font-mono text-[#636c76] text-right">{formatCurrency(row.gross)}</td>
-                        <td className="px-5 py-3 text-sm font-mono text-emerald-600 text-right">-{formatCurrency(row.discount)}</td>
-                        <td className="px-5 py-3 text-sm font-mono font-semibold text-[#1f2328] text-right">{formatCurrency(row.net)}</td>
+                        <td className="px-5 py-3 text-sm font-mono text-(--fgColor-muted) text-right">{formatCurrency(row.gross)}</td>
+                        <td className="px-5 py-3 text-sm font-mono text-(--fgColor-success) text-right">-{formatCurrency(row.discount)}</td>
+                        <td className="px-5 py-3 text-sm font-mono font-semibold text-(--fgColor-default) text-right">{formatCurrency(row.net)}</td>
                       </>
                     )}
                   </tr>

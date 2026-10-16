@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react';
 
 import { DailyConsumptionChart } from '@/components/charts/DailyConsumptionChart';
 import { ModelDailyStackedChart } from '@/components/charts/ModelDailyStackedChart';
+import { dataVizColor } from '@/constants/primerTokens';
 import type { ProcessedData } from '@/types/csv';
 import type { BillingCostLabels } from '@/utils/billingLabels';
 import { enumerateDatesInclusive } from '@/utils/dateKeys';
@@ -19,11 +20,11 @@ import {
 import type { ProductCategory } from '@/utils/productClassification';
 
 const PRODUCT_CATEGORY_COLORS: Record<ProductCategory, string> = {
-  'Copilot': '#6366f1',
-  'Spark': '#f59e0b',
-  'Coding Agent': '#06b6d4',
-  'Code Review': '#8b5cf6',
-  'Code Quality': '#22c55e',
+  'Copilot': dataVizColor('blue'),
+  'Spark': dataVizColor('yellow'),
+  'Coding Agent': dataVizColor('teal'),
+  'Code Review': dataVizColor('purple'),
+  'Code Quality': dataVizColor('green'),
 };
 const USERS_PER_PAGE = 50;
 
@@ -255,22 +256,22 @@ export function BillingGroupDetailsView({
               <button
                 type="button"
                 onClick={onBack}
-                className="text-2xl font-semibold tracking-tight text-[#0969da] hover:underline focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white rounded-sm"
+                className="text-2xl font-semibold tracking-tight text-(--fgColor-accent) hover:underline rounded-sm"
               >
                 {groupsLabel}
               </button>
             </li>
-            <li aria-hidden="true" className="text-2xl font-semibold tracking-tight text-[#8c959f]">/</li>
+            <li aria-hidden="true" className="text-2xl font-semibold tracking-tight text-(--fgColor-muted)">/</li>
             <li>
               <button
                 type="button"
                 onClick={handleCopyGroupName}
                 title={`Click to copy ${groupLabel}`}
-                className="text-2xl font-semibold tracking-tight text-[#1f2328] hover:text-indigo-600 transition-colors duration-150 focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white rounded-sm inline-flex items-center gap-2 group"
+                className="text-2xl font-semibold tracking-tight text-(--fgColor-default) hover:text-(--fgColor-accent) transition-colors duration-150 rounded-sm inline-flex items-center gap-2 group"
               >
                 {groupName}
                 <svg
-                  className="w-5 h-5 text-[#636c76] group-hover:text-indigo-600 transition-colors duration-150"
+                  className="w-5 h-5 text-(--fgColor-muted) group-hover:text-(--fgColor-accent) transition-colors duration-150"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -287,37 +288,37 @@ export function BillingGroupDetailsView({
           </ol>
         </nav>
 
-        <p className="text-sm text-[#636c76] mt-1">
+        <p className="text-sm text-(--fgColor-muted) mt-1">
           {userCount} {userCount === 1 ? 'user' : 'users'}
         </p>
       </div>
 
-      <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
+      <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden">
         <table className="min-w-full" aria-label="Summary">
           <thead>
-            <tr className="border-b border-[#d1d9e0]">
-              <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{quantityColumnLabel}</th>
-              <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{costLabels.gross}</th>
-              <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{costLabels.discountSummary}</th>
-              <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{costLabels.netSummary}</th>
+            <tr className="border-b border-(--borderColor-default)">
+              <th className="px-5 py-3 text-left text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">{quantityColumnLabel}</th>
+              <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">{costLabels.gross}</th>
+              <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">{costLabels.discountSummary}</th>
+              <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">{costLabels.netSummary}</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td className="px-5 py-3 text-sm font-semibold text-[#1f2328] font-mono tabular-nums">{formatDecimalQuantity(totals.quantity)}</td>
-              <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono tabular-nums">{formatCurrency(totals.gross)}</td>
-              <td className="px-5 py-3 text-sm text-emerald-600 text-right font-mono tabular-nums">-{formatCurrency(totals.discount)}</td>
-              <td className="px-5 py-3 text-sm font-semibold text-[#1f2328] text-right font-mono tabular-nums">{formatCurrency(totals.net)}</td>
+              <td className="px-5 py-3 text-sm font-semibold text-(--fgColor-default) font-mono tabular-nums">{formatDecimalQuantity(totals.quantity)}</td>
+              <td className="px-5 py-3 text-sm text-(--fgColor-muted) text-right font-mono tabular-nums">{formatCurrency(totals.gross)}</td>
+              <td className="px-5 py-3 text-sm text-(--fgColor-success) text-right font-mono tabular-nums">-{formatCurrency(totals.discount)}</td>
+              <td className="px-5 py-3 text-sm font-semibold text-(--fgColor-default) text-right font-mono tabular-nums">{formatCurrency(totals.net)}</td>
             </tr>
           </tbody>
         </table>
       </div>
 
       {dailyConsumption.length > 0 && (
-        <section aria-labelledby={`${detailIdPrefix}-usd-consumption-title`} className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden min-h-[20rem]">
-          <div className="px-5 py-4 border-b border-[#d1d9e0]">
-            <h3 id={`${detailIdPrefix}-usd-consumption-title`} className="text-sm font-medium text-[#1f2328]">Daily Consumption (USD)</h3>
-            <p className="text-xs text-[#636c76] mt-1">Included and additional usage by day in USD</p>
+        <section aria-labelledby={`${detailIdPrefix}-usd-consumption-title`} className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden min-h-[20rem]">
+          <div className="px-5 py-4 border-b border-(--borderColor-default)">
+            <h3 id={`${detailIdPrefix}-usd-consumption-title`} className="text-sm font-medium text-(--fgColor-default)">Daily Consumption (USD)</h3>
+            <p className="text-xs text-(--fgColor-muted) mt-1">Included and additional usage by day in USD</p>
           </div>
           <div className="p-5">
             <div className="h-72 sm:h-96 2xl:h-[28rem] w-full">
@@ -327,10 +328,10 @@ export function BillingGroupDetailsView({
         </section>
       )}
 
-      <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
-        <div className="px-5 py-4 border-b border-[#d1d9e0]">
-          <h3 className="text-sm font-medium text-[#1f2328]">Spend per Product</h3>
-          <p className="text-xs text-[#636c76] mt-0.5">
+      <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden">
+        <div className="px-5 py-4 border-b border-(--borderColor-default)">
+          <h3 className="text-sm font-medium text-(--fgColor-default)">Spend per Product</h3>
+          <p className="text-xs text-(--fgColor-muted) mt-0.5">
             AI credit consumption attributed to this {groupLabel}.
           </p>
         </div>
@@ -338,34 +339,34 @@ export function BillingGroupDetailsView({
           <div className="overflow-x-auto">
             <table className="min-w-full" aria-label="Spend per product">
               <thead>
-                <tr className="border-b border-[#d1d9e0]">
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Product</th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{quantityColumnLabel}</th>
+                <tr className="border-b border-(--borderColor-default)">
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">Product</th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">{quantityColumnLabel}</th>
                   {hasAicGross && (
-                    <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">AI Credits Gross</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">AI Credits Gross</th>
                   )}
                   {showCosts && (
                     <>
-                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{costLabels.gross}</th>
-                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{costLabels.discount}</th>
-                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{costLabels.net}</th>
+                      <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">{costLabels.gross}</th>
+                      <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">{costLabels.discount}</th>
+                      <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">{costLabels.net}</th>
                     </>
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#d1d9e0]">
+              <tbody className="divide-y divide-(--borderColor-default)">
                 {productCosts.map((product) => (
-                  <tr key={product.label} className="hover:bg-[#fcfdff] transition-colors duration-150">
-                    <td className="px-5 py-3 text-sm font-medium text-[#1f2328]">{product.label}</td>
-                    <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono tabular-nums">{formatDecimalQuantity(product.credits)}</td>
+                  <tr key={product.label} className="hover:bg-(--bgColor-muted) transition-colors duration-150">
+                    <td className="px-5 py-3 text-sm font-medium text-(--fgColor-default)">{product.label}</td>
+                    <td className="px-5 py-3 text-sm text-(--fgColor-muted) text-right font-mono tabular-nums">{formatDecimalQuantity(product.credits)}</td>
                     {hasAicGross && (
-                      <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono tabular-nums">{formatCurrency(product.aicGrossAmount)}</td>
+                      <td className="px-5 py-3 text-sm text-(--fgColor-muted) text-right font-mono tabular-nums">{formatCurrency(product.aicGrossAmount)}</td>
                     )}
                     {showCosts && (
                       <>
-                        <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono tabular-nums">{formatCurrency(product.gross)}</td>
-                        <td className="px-5 py-3 text-sm text-emerald-600 text-right font-mono tabular-nums">-{formatCurrency(product.discount)}</td>
-                        <td className="px-5 py-3 text-sm font-semibold text-[#1f2328] text-right font-mono tabular-nums">{formatCurrency(product.net)}</td>
+                        <td className="px-5 py-3 text-sm text-(--fgColor-muted) text-right font-mono tabular-nums">{formatCurrency(product.gross)}</td>
+                        <td className="px-5 py-3 text-sm text-(--fgColor-success) text-right font-mono tabular-nums">-{formatCurrency(product.discount)}</td>
+                        <td className="px-5 py-3 text-sm font-semibold text-(--fgColor-default) text-right font-mono tabular-nums">{formatCurrency(product.net)}</td>
                       </>
                     )}
                   </tr>
@@ -374,27 +375,27 @@ export function BillingGroupDetailsView({
             </table>
           </div>
         ) : (
-          <div className="flex items-center justify-center h-64 text-[#636c76] text-sm">
+          <div className="flex items-center justify-center h-64 text-(--fgColor-muted) text-sm">
             No data available
           </div>
         )}
       </div>
 
       {showUsers && (
-        <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
-          <div className="px-5 py-4 border-b border-[#d1d9e0] flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden">
+          <div className="px-5 py-4 border-b border-(--borderColor-default) flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h3 className="text-sm font-medium text-[#1f2328]">Users</h3>
-              <p className="text-xs text-[#636c76] mt-0.5">
+              <h3 className="text-sm font-medium text-(--fgColor-default)">Users</h3>
+              <p className="text-xs text-(--fgColor-muted) mt-0.5">
                 Showing {filteredUserRows.length} of {userRows.length} {userRows.length === 1 ? 'user' : 'users'} in this {groupLabel}.
               </p>
             </div>
-            <label className="flex flex-col gap-1.5 text-sm text-[#636c76]">
+            <label className="flex flex-col gap-1.5 text-sm text-(--fgColor-muted)">
               <span className="sr-only">Search users</span>
               <div className="relative">
                 <svg
                   aria-hidden="true"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#636c76]"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-(--fgColor-muted)"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -410,7 +411,7 @@ export function BillingGroupDetailsView({
                   }}
                   placeholder="Filter by username..."
                   aria-label="Search users"
-                  className="w-full min-w-56 rounded-md border border-[#d1d9e0] bg-white pl-9 pr-3 py-2 text-sm text-[#1f2328] shadow-sm outline-none transition duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 placeholder:text-[#636c76]"
+                  className="w-full min-w-56 rounded-md border border-(--borderColor-default) bg-(--bgColor-default) pl-9 pr-3 py-2 text-sm text-(--fgColor-default) shadow-(--shadow-inset) transition duration-150 focus:border-(--borderColor-accent-emphasis) placeholder:text-(--fgColor-muted)"
                 />
               </div>
             </label>
@@ -419,34 +420,34 @@ export function BillingGroupDetailsView({
             <div className="overflow-x-auto">
               <table className="min-w-full" aria-label="Users">
                 <thead>
-                  <tr className="border-b border-[#d1d9e0]">
-                    <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">User</th>
-                    <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{quantityColumnLabel}</th>
+                  <tr className="border-b border-(--borderColor-default)">
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">User</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">{quantityColumnLabel}</th>
                     {hasAicGross && (
-                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">AI Credits Gross</th>
+                      <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">AI Credits Gross</th>
                     )}
                     {showCosts && (
                       <>
-                        <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{costLabels.gross}</th>
-                        <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{costLabels.discount}</th>
-                        <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{costLabels.net}</th>
+                        <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">{costLabels.gross}</th>
+                        <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">{costLabels.discount}</th>
+                        <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">{costLabels.net}</th>
                       </>
                     )}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#d1d9e0]">
+                <tbody className="divide-y divide-(--borderColor-default)">
                   {paginatedUserRows.map((row) => (
-                    <tr key={row.user} className="hover:bg-[#fcfdff] transition-colors duration-150">
-                      <td className="px-5 py-3 text-sm font-medium text-[#1f2328]">{row.user}</td>
-                      <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono tabular-nums">{formatDecimalQuantity(row.quantity)}</td>
+                    <tr key={row.user} className="hover:bg-(--bgColor-muted) transition-colors duration-150">
+                      <td className="px-5 py-3 text-sm font-medium text-(--fgColor-default)">{row.user}</td>
+                      <td className="px-5 py-3 text-sm text-(--fgColor-muted) text-right font-mono tabular-nums">{formatDecimalQuantity(row.quantity)}</td>
                       {hasAicGross && (
-                        <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono tabular-nums">{formatCurrency(row.aicGrossAmount)}</td>
+                        <td className="px-5 py-3 text-sm text-(--fgColor-muted) text-right font-mono tabular-nums">{formatCurrency(row.aicGrossAmount)}</td>
                       )}
                       {showCosts && (
                         <>
-                          <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono tabular-nums">{formatCurrency(row.gross)}</td>
-                          <td className="px-5 py-3 text-sm text-emerald-600 text-right font-mono tabular-nums">-{formatCurrency(row.discount)}</td>
-                          <td className="px-5 py-3 text-sm font-semibold text-[#1f2328] text-right font-mono tabular-nums">{formatCurrency(row.net)}</td>
+                          <td className="px-5 py-3 text-sm text-(--fgColor-muted) text-right font-mono tabular-nums">{formatCurrency(row.gross)}</td>
+                          <td className="px-5 py-3 text-sm text-(--fgColor-success) text-right font-mono tabular-nums">-{formatCurrency(row.discount)}</td>
+                          <td className="px-5 py-3 text-sm font-semibold text-(--fgColor-default) text-right font-mono tabular-nums">{formatCurrency(row.net)}</td>
                         </>
                       )}
                     </tr>
@@ -454,8 +455,8 @@ export function BillingGroupDetailsView({
                 </tbody>
               </table>
               {totalUserPages > 1 && (
-                <div className="bg-white px-5 py-3 flex items-center justify-between border-t border-[#d1d9e0]">
-                  <p className="text-sm text-[#636c76]">
+                <div className="bg-(--bgColor-default) px-5 py-3 flex items-center justify-between border-t border-(--borderColor-default)">
+                  <p className="text-sm text-(--fgColor-muted)">
                     {activeUserPage * USERS_PER_PAGE + 1}–{Math.min(
                       (activeUserPage + 1) * USERS_PER_PAGE,
                       filteredUserRows.length
@@ -467,13 +468,13 @@ export function BillingGroupDetailsView({
                       onClick={() => setUserPage((page) => Math.max(0, page - 1))}
                       disabled={activeUserPage === 0}
                       aria-label="Previous users page"
-                      className="p-1.5 text-[#636c76] hover:text-[#1f2328] disabled:opacity-40 transition-colors duration-150"
+                      className="p-1.5 text-(--fgColor-muted) hover:text-(--fgColor-default) disabled:opacity-40 transition-colors duration-150"
                     >
                       <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
                       </svg>
                     </button>
-                    <span className="px-2 text-sm text-[#636c76]">
+                    <span className="px-2 text-sm text-(--fgColor-muted)">
                       {activeUserPage + 1} / {totalUserPages}
                     </span>
                     <button
@@ -481,7 +482,7 @@ export function BillingGroupDetailsView({
                       onClick={() => setUserPage((page) => Math.min(totalUserPages - 1, page + 1))}
                       disabled={activeUserPage === totalUserPages - 1}
                       aria-label="Next users page"
-                      className="p-1.5 text-[#636c76] hover:text-[#1f2328] disabled:opacity-40 transition-colors duration-150"
+                      className="p-1.5 text-(--fgColor-muted) hover:text-(--fgColor-default) disabled:opacity-40 transition-colors duration-150"
                     >
                       <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="m9 5 7 7-7 7" />
@@ -492,16 +493,16 @@ export function BillingGroupDetailsView({
               )}
             </div>
           ) : (
-            <div className="flex items-center justify-center h-64 text-[#636c76] text-sm">
+            <div className="flex items-center justify-center h-64 text-(--fgColor-muted) text-sm">
               {userRows.length === 0 ? 'No data available' : `No users match "${userSearch}"`}
             </div>
           )}
         </div>
       )}
 
-      <div className="bg-white border border-[#d1d9e0] rounded-md p-5">
-        <h3 className="text-sm font-medium text-[#1f2328] mb-1">Daily Consumption</h3>
-        <p className="text-xs text-[#636c76] mb-4">Daily {quantityColumnLabel.toLowerCase()} stacked by product.</p>
+      <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md p-5">
+        <h3 className="text-sm font-medium text-(--fgColor-default) mb-1">Daily Consumption</h3>
+        <p className="text-xs text-(--fgColor-muted) mb-4">Daily {quantityColumnLabel.toLowerCase()} stacked by product.</p>
         {chartData.length > 0 ? (
           <div className="h-72 sm:h-96 w-full">
             <ModelDailyStackedChart
@@ -512,45 +513,45 @@ export function BillingGroupDetailsView({
             />
           </div>
         ) : (
-          <div className="flex items-center justify-center h-64 text-[#636c76] text-sm">
+          <div className="flex items-center justify-center h-64 text-(--fgColor-muted) text-sm">
             No data available
           </div>
         )}
       </div>
 
       {dailyRows.length > 0 && (
-        <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
-          <div className="px-5 py-4 border-b border-[#d1d9e0]">
-            <h3 className="text-sm font-medium text-[#1f2328]">Daily Consumption Breakdown</h3>
-            <p className="text-xs text-[#636c76] mt-0.5">Expand a day to view consumption by product.</p>
+        <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden">
+          <div className="px-5 py-4 border-b border-(--borderColor-default)">
+            <h3 className="text-sm font-medium text-(--fgColor-default)">Daily Consumption Breakdown</h3>
+            <p className="text-xs text-(--fgColor-muted) mt-0.5">Expand a day to view consumption by product.</p>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full" aria-label="Daily consumption breakdown">
               <thead>
-                <tr className="border-b border-[#d1d9e0]">
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Date</th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{quantityColumnLabel}</th>
+                <tr className="border-b border-(--borderColor-default)">
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">Date</th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">{quantityColumnLabel}</th>
                   {hasAicGross && (
-                    <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">AI Credits Gross</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">AI Credits Gross</th>
                   )}
                   {showCosts && (
                     <>
-                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{costLabels.gross}</th>
-                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{costLabels.discount}</th>
-                      <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">{costLabels.net}</th>
+                      <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">{costLabels.gross}</th>
+                      <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">{costLabels.discount}</th>
+                      <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">{costLabels.net}</th>
                     </>
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#d1d9e0]">
+              <tbody className="divide-y divide-(--borderColor-default)">
                 {dailyRows.map((row, index) => {
                   const isExpanded = expandedDate === row.date;
                   const detailsId = `${detailIdPrefix}-${index}`;
 
                   return (
                     <React.Fragment key={row.date}>
-                      <tr className="hover:bg-[#fcfdff] transition-colors duration-150">
-                        <td className="px-5 py-3.5 text-sm font-medium text-[#1f2328]">
+                      <tr className="hover:bg-(--bgColor-muted) transition-colors duration-150">
+                        <td className="px-5 py-3.5 text-sm font-medium text-(--fgColor-default)">
                           {row.products.length > 0 ? (
                             <button
                               type="button"
@@ -561,7 +562,7 @@ export function BillingGroupDetailsView({
                             >
                               <svg
                                 aria-hidden="true"
-                                className={`h-4 w-4 shrink-0 text-[#636c76] transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`}
+                                className={`h-4 w-4 shrink-0 text-(--fgColor-muted) transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`}
                                 fill="none"
                                 stroke="currentColor"
                                 strokeWidth={1.5}
@@ -575,53 +576,53 @@ export function BillingGroupDetailsView({
                             <span className="flex items-center gap-3 pl-7">{formatUtcDate(row.date)}</span>
                           )}
                         </td>
-                        <td className="px-5 py-3.5 text-sm font-semibold text-[#1f2328] text-right font-mono tabular-nums">
+                        <td className="px-5 py-3.5 text-sm font-semibold text-(--fgColor-default) text-right font-mono tabular-nums">
                           {formatDecimalQuantity(row.quantity)}
                         </td>
                         {hasAicGross && (
-                          <td className="px-5 py-3.5 text-sm text-[#636c76] text-right font-mono tabular-nums">{formatCurrency(row.aicGrossAmount)}</td>
+                          <td className="px-5 py-3.5 text-sm text-(--fgColor-muted) text-right font-mono tabular-nums">{formatCurrency(row.aicGrossAmount)}</td>
                         )}
                         {showCosts && (
                           <>
-                            <td className="px-5 py-3.5 text-sm text-[#636c76] text-right font-mono tabular-nums">{formatCurrency(row.gross)}</td>
-                            <td className="px-5 py-3.5 text-sm text-emerald-600 text-right font-mono tabular-nums">-{formatCurrency(row.discount)}</td>
-                            <td className="px-5 py-3.5 text-sm font-semibold text-[#1f2328] text-right font-mono tabular-nums">{formatCurrency(row.net)}</td>
+                            <td className="px-5 py-3.5 text-sm text-(--fgColor-muted) text-right font-mono tabular-nums">{formatCurrency(row.gross)}</td>
+                            <td className="px-5 py-3.5 text-sm text-(--fgColor-success) text-right font-mono tabular-nums">-{formatCurrency(row.discount)}</td>
+                            <td className="px-5 py-3.5 text-sm font-semibold text-(--fgColor-default) text-right font-mono tabular-nums">{formatCurrency(row.net)}</td>
                           </>
                         )}
                       </tr>
                       {isExpanded && row.products.length > 0 && (
                         <tr>
                           <td id={detailsId} colSpan={detailColSpan} className="p-0">
-                            <table className="min-w-full bg-[#f6f8fa]" aria-label={`${formatUtcDate(row.date)} product consumption`}>
+                            <table className="min-w-full bg-(--bgColor-muted)" aria-label={`${formatUtcDate(row.date)} product consumption`}>
                               <thead>
-                                <tr className="border-y border-[#d1d9e0]">
-                                  <th className="px-12 py-2.5 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider">Product</th>
-                                  <th className="px-5 py-2.5 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider">{quantityColumnLabel}</th>
+                                <tr className="border-y border-(--borderColor-default)">
+                                  <th className="px-12 py-2.5 text-left text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider">Product</th>
+                                  <th className="px-5 py-2.5 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider">{quantityColumnLabel}</th>
                                   {hasAicGross && (
-                                    <th className="px-5 py-2.5 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider">AI Credits Gross</th>
+                                    <th className="px-5 py-2.5 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider">AI Credits Gross</th>
                                   )}
                                   {showCosts && (
                                     <>
-                                      <th className="px-5 py-2.5 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider">{costLabels.gross}</th>
-                                      <th className="px-5 py-2.5 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider">{costLabels.discount}</th>
-                                      <th className="px-5 py-2.5 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider">{costLabels.net}</th>
+                                      <th className="px-5 py-2.5 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider">{costLabels.gross}</th>
+                                      <th className="px-5 py-2.5 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider">{costLabels.discount}</th>
+                                      <th className="px-5 py-2.5 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider">{costLabels.net}</th>
                                     </>
                                   )}
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-[#d1d9e0]">
+                              <tbody className="divide-y divide-(--borderColor-default)">
                                 {row.products.map((product) => (
                                   <tr key={product.label}>
-                                    <td className="px-12 py-3 text-sm font-medium text-[#1f2328]">{product.label}</td>
-                                    <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono tabular-nums">{formatDecimalQuantity(product.credits)}</td>
+                                    <td className="px-12 py-3 text-sm font-medium text-(--fgColor-default)">{product.label}</td>
+                                    <td className="px-5 py-3 text-sm text-(--fgColor-muted) text-right font-mono tabular-nums">{formatDecimalQuantity(product.credits)}</td>
                                     {hasAicGross && (
-                                      <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono tabular-nums">{formatCurrency(product.aicGrossAmount)}</td>
+                                      <td className="px-5 py-3 text-sm text-(--fgColor-muted) text-right font-mono tabular-nums">{formatCurrency(product.aicGrossAmount)}</td>
                                     )}
                                     {showCosts && (
                                       <>
-                                        <td className="px-5 py-3 text-sm text-[#636c76] text-right font-mono tabular-nums">{formatCurrency(product.gross)}</td>
-                                        <td className="px-5 py-3 text-sm text-emerald-600 text-right font-mono tabular-nums">-{formatCurrency(product.discount)}</td>
-                                        <td className="px-5 py-3 text-sm font-semibold text-[#1f2328] text-right font-mono tabular-nums">{formatCurrency(product.net)}</td>
+                                        <td className="px-5 py-3 text-sm text-(--fgColor-muted) text-right font-mono tabular-nums">{formatCurrency(product.gross)}</td>
+                                        <td className="px-5 py-3 text-sm text-(--fgColor-success) text-right font-mono tabular-nums">-{formatCurrency(product.discount)}</td>
+                                        <td className="px-5 py-3 text-sm font-semibold text-(--fgColor-default) text-right font-mono tabular-nums">{formatCurrency(product.net)}</td>
                                       </>
                                     )}
                                   </tr>

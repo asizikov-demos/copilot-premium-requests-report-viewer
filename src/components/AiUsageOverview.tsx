@@ -96,8 +96,8 @@ export function AiUsageOverview() {
     return (
       <div className="w-full space-y-6">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-[#1f2328]">AI Usage</h2>
-          <p className="text-sm text-[#636c76] mt-1">
+          <h2 className="text-2xl font-semibold tracking-tight text-(--fgColor-default)">AI Usage</h2>
+          <p className="text-sm text-(--fgColor-muted) mt-1">
             AI Credits data is not available for the selected report.
           </p>
         </div>
@@ -108,16 +108,16 @@ export function AiUsageOverview() {
   return (
     <div className="w-full space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight text-[#1f2328]">AI Usage</h2>
-        <p className="text-sm text-[#636c76] mt-1">
+        <h2 className="text-2xl font-semibold tracking-tight text-(--fgColor-default)">AI Usage</h2>
+        <p className="text-sm text-(--fgColor-muted) mt-1">
           AI Credits consumption patterns across users, including credit volume and gross usage.
         </p>
       </div>
 
-      <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
-        <div className="px-5 py-4 border-b border-[#d1d9e0]">
-          <h3 className="text-sm font-medium text-[#1f2328]">AI Credits Group Heatmap</h3>
-          <p className="text-xs text-[#636c76] mt-0.5">
+      <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden">
+        <div className="px-5 py-4 border-b border-(--borderColor-default)">
+          <h3 className="text-sm font-medium text-(--fgColor-default)">AI Credits Group Heatmap</h3>
+          <p className="text-xs text-(--fgColor-muted) mt-0.5">
             Consumption groups compared by user population and AI Credits concentration
           </p>
         </div>
@@ -126,52 +126,52 @@ export function AiUsageOverview() {
         </div>
       </div>
 
-      <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
-        <div className="px-5 py-4 border-b border-[#d1d9e0]">
-          <h3 className="text-sm font-medium text-[#1f2328]">AI Credits Concentration</h3>
-          <p className="text-xs text-[#636c76] mt-0.5">
+      <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden">
+        <div className="px-5 py-4 border-b border-(--borderColor-default)">
+          <h3 className="text-sm font-medium text-(--fgColor-default)">AI Credits Concentration</h3>
+          <p className="text-xs text-(--fgColor-muted) mt-0.5">
             Share of consumed AI Credits concentrated among the highest-consuming users
           </p>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full" aria-label="AI Credits concentration by top user groups">
             <thead>
-              <tr className="border-b border-[#d1d9e0]">
-                <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
+              <tr className="border-b border-(--borderColor-default)">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">
                   Concentration
                 </th>
-                <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
+                <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">
                   Users
                 </th>
-                <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
+                <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">
                   Share of AI Credits
                 </th>
-                <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
+                <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">
                   AI Credits
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#d1d9e0]">
+            <tbody className="divide-y divide-(--borderColor-default)">
               {concentrationRows.length > 0 ? (
                 concentrationRows.map((row) => (
-                  <tr key={row.concentration} className="hover:bg-[#fcfdff] transition-colors">
-                    <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-[#1f2328]">
+                  <tr key={row.concentration} className="hover:bg-(--bgColor-muted) transition-colors">
+                    <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-(--fgColor-default)">
                       {row.concentration}
                     </td>
-                    <td className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-[#636c76] text-right">
+                    <td className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-(--fgColor-muted) text-right">
                       {row.users.toLocaleString()}
                     </td>
-                    <td className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-[#636c76] text-right">
+                    <td className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-(--fgColor-muted) text-right">
                       {formatPercentage(row.shareOfAicCredits)}
                     </td>
-                    <td className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums font-semibold text-[#1f2328] text-right">
+                    <td className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums font-semibold text-(--fgColor-default) text-right">
                       {formatAiCredits(row.aiCredits)}
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className="px-5 py-8 text-center text-sm text-[#636c76]">
+                  <td colSpan={4} className="px-5 py-8 text-center text-sm text-(--fgColor-muted)">
                     No AI Credits consumption is available for the current users
                   </td>
                 </tr>
@@ -181,52 +181,52 @@ export function AiUsageOverview() {
         </div>
       </div>
 
-      <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
-        <div className="px-5 py-4 border-b border-[#d1d9e0]">
-          <h3 className="text-sm font-medium text-[#1f2328]">Top AI Credit Consumers</h3>
-          <p className="text-xs text-[#636c76] mt-0.5">
+      <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden">
+        <div className="px-5 py-4 border-b border-(--borderColor-default)">
+          <h3 className="text-sm font-medium text-(--fgColor-default)">Top AI Credit Consumers</h3>
+          <p className="text-xs text-(--fgColor-muted) mt-0.5">
             Top 10 users ranked by AI Credits consumption
           </p>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full" aria-label="Users ranked by AI Credits consumption">
             <thead>
-              <tr className="border-b border-[#d1d9e0]">
-                <th className="w-16 px-4 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
+              <tr className="border-b border-(--borderColor-default)">
+                <th className="w-16 px-4 py-3 text-left text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">
                   Rank
                 </th>
-                <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">
                   Username
                 </th>
-                <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
+                <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">
                   AI Credits
                 </th>
-                <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">
+                <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">
                   Share
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#d1d9e0]">
+            <tbody className="divide-y divide-(--borderColor-default)">
               {topSpendDriverUsers.length > 0 ? (
                 topSpendDriverUsers.map((user, index) => (
-                  <tr key={user.user} className="hover:bg-[#fcfdff] transition-colors">
-                    <td className="w-16 px-4 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-[#636c76] text-left">
+                  <tr key={user.user} className="hover:bg-(--bgColor-muted) transition-colors">
+                    <td className="w-16 px-4 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-(--fgColor-muted) text-left">
                       {index + 1}
                     </td>
-                    <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-[#1f2328]">
+                    <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-(--fgColor-default)">
                       {user.user}
                     </td>
-                    <td className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums font-semibold text-[#1f2328] text-right">
+                    <td className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums font-semibold text-(--fgColor-default) text-right">
                       {formatAiCredits(user.aiCredits)}
                     </td>
-                    <td className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-[#636c76] text-right">
+                    <td className="px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-(--fgColor-muted) text-right">
                       {formatPercentage(user.shareOfTotal)}
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className="px-5 py-8 text-center text-sm text-[#636c76]">
+                  <td colSpan={4} className="px-5 py-8 text-center text-sm text-(--fgColor-muted)">
                     No AI Credits consumption is available for the current users
                   </td>
                 </tr>

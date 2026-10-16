@@ -17,11 +17,11 @@ const formatCredits = (value: number) =>
   value.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 const redIfPositive = (value: number | null) =>
-  value !== null && value > 0 ? 'text-red-600' : 'text-[#1f2328]';
+  value !== null && value > 0 ? 'text-(--fgColor-danger)' : 'text-(--fgColor-default)';
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[11px] font-semibold text-[#636c76] uppercase tracking-[0.05em]">{children}</p>
+    <p className="text-xs font-semibold text-(--fgColor-muted) uppercase tracking-[0.05em]">{children}</p>
   );
 }
 
@@ -29,7 +29,7 @@ function Stat({
   label,
   value,
   sub,
-  tone = 'text-[#1f2328]',
+  tone = 'text-(--fgColor-default)',
 }: {
   label: string;
   value: string;
@@ -40,7 +40,7 @@ function Stat({
     <div>
       <Label>{label}</Label>
       <p className={`text-xl font-semibold tabular-nums ${tone}`}>{value}</p>
-      {sub && <p className="text-xs text-[#636c76]">{sub}</p>}
+      {sub && <p className="text-xs text-(--fgColor-muted)">{sub}</p>}
     </div>
   );
 }
@@ -58,29 +58,29 @@ export function UserDetailsHeader({ user, planName, summary, onBack, onCopyUser 
     : null;
 
   return (
-    <div className="bg-white border border-[#d1d9e0] rounded-md p-5">
+    <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md p-5">
       <nav aria-label="Breadcrumb">
         <ol className="flex items-center gap-2">
           <li>
             <button
               type="button"
               onClick={onBack}
-              className="text-2xl font-semibold tracking-tight text-[#0969da] hover:underline focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white rounded-sm"
+              className="text-2xl font-semibold tracking-tight text-(--fgColor-accent) hover:underline rounded-sm"
             >
               users
             </button>
           </li>
-          <li aria-hidden="true" className="text-2xl font-semibold tracking-tight text-[#8c959f]">/</li>
+          <li aria-hidden="true" className="text-2xl font-semibold tracking-tight text-(--fgColor-muted)">/</li>
           <li>
             <button
               type="button"
               onClick={onCopyUser}
               title="Click to copy username"
-              className="text-2xl font-semibold tracking-tight text-[#1f2328] hover:text-indigo-600 transition-colors duration-150 focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white rounded-sm inline-flex items-center gap-2 group"
+              className="text-2xl font-semibold tracking-tight text-(--fgColor-default) hover:text-(--fgColor-accent) transition-colors duration-150 rounded-sm inline-flex items-center gap-2 group"
             >
               {user}
               <svg
-                className="w-5 h-5 text-[#636c76] group-hover:text-indigo-600 transition-colors duration-150"
+                className="w-5 h-5 text-(--fgColor-muted) group-hover:text-(--fgColor-accent) transition-colors duration-150"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -99,11 +99,11 @@ export function UserDetailsHeader({ user, planName, summary, onBack, onCopyUser 
       </nav>
 
       <div className="grid md:grid-cols-[280px_1fr] gap-x-10 gap-y-6 mt-4">
-        <dl className="space-y-2 md:border-r md:border-[#d1d9e0] md:pr-6">
+        <dl className="space-y-2 md:border-r md:border-(--borderColor-default) md:pr-6">
           {details.map((detail) => (
             <div key={detail.label}>
-              <dt className="text-xs text-[#636c76]">{detail.label}</dt>
-              <dd className="text-sm text-[#1f2328] break-words">{detail.value}</dd>
+              <dt className="text-xs text-(--fgColor-muted)">{detail.label}</dt>
+              <dd className="text-sm text-(--fgColor-default) break-words">{detail.value}</dd>
             </div>
           ))}
         </dl>
@@ -113,10 +113,10 @@ export function UserDetailsHeader({ user, planName, summary, onBack, onCopyUser 
             <Label>Total consumption</Label>
             {summary.totalCost !== null ? (
               <>
-                <p className="display-heading text-4xl font-semibold text-[#1f2328] tabular-nums">
+                <p className="display-heading text-4xl font-semibold text-(--fgColor-default) tabular-nums">
                   {formatCurrency(summary.totalCost)}
                 </p>
-                <p className="text-xs text-[#636c76]">
+                <p className="text-xs text-(--fgColor-muted)">
                   of which additional consumption:{' '}
                   <b className={redIfPositive(summary.additionalCost)}>
                     {formatCurrency(summary.additionalCost ?? 0)}
@@ -124,7 +124,7 @@ export function UserDetailsHeader({ user, planName, summary, onBack, onCopyUser 
                 </p>
               </>
             ) : (
-              <p className="text-sm text-[#636c76] mt-1">Not available in this export</p>
+              <p className="text-sm text-(--fgColor-muted) mt-1">Not available in this export</p>
             )}
           </div>
 
@@ -146,11 +146,11 @@ export function UserDetailsHeader({ user, planName, summary, onBack, onCopyUser 
             <Label>Days active</Label>
             <div className="flex items-center gap-3 mt-1">
               {daysPercent !== null && (
-                <div className="flex-1 h-1.5 rounded-sm bg-[#e8ecf0] overflow-hidden">
-                  <div className="h-full bg-[#2da44e]" style={{ width: `${daysPercent}%` }} />
+                <div className="flex-1 h-1.5 rounded-sm bg-(--progressBar-track-bgColor) overflow-hidden">
+                  <div className="h-full bg-(--progressBar-bgColor-success)" style={{ width: `${daysPercent}%` }} />
                 </div>
               )}
-              <span className="text-sm text-[#1f2328] tabular-nums">
+              <span className="text-sm text-(--fgColor-default) tabular-nums">
                 {summary.daysInPeriod ? `${summary.daysActive} / ${summary.daysInPeriod}` : summary.daysActive}
               </span>
             </div>

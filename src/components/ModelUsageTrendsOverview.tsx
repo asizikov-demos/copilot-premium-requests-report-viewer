@@ -89,42 +89,42 @@ export function ModelUsageTrendsOverview() {
   return (
     <div className="w-full space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight text-[#1f2328]">Model Usage Trends</h2>
-        <p className="text-sm text-[#636c76] mt-1">
+        <h2 className="text-2xl font-semibold tracking-tight text-(--fgColor-default)">Model Usage Trends</h2>
+        <p className="text-sm text-(--fgColor-muted) mt-1">
           Daily stacked AI Credits by model (UTC)
         </p>
       </div>
 
       {topAicModelRows.length > 0 && (
-        <div className="bg-white border border-[#d1d9e0] rounded-md overflow-hidden">
-          <div className="px-5 py-4 border-b border-[#d1d9e0]">
-            <h3 className="text-sm font-medium text-[#1f2328]">Top AI Credits Models</h3>
-            <p className="text-xs text-[#636c76] mt-0.5">Top 3 models by AI Credits consumed</p>
-            <p className="text-sm text-[#1f2328] mt-3">
+        <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden">
+          <div className="px-5 py-4 border-b border-(--borderColor-default)">
+            <h3 className="text-sm font-medium text-(--fgColor-default)">Top AI Credits Models</h3>
+            <p className="text-xs text-(--fgColor-muted) mt-0.5">Top 3 models by AI Credits consumed</p>
+            <p className="text-sm text-(--fgColor-default) mt-3">
               Top 3 models drive <span className="font-semibold">{topAicModelShare.toFixed(1)}%</span> of total AI Credits consumption.
             </p>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full" aria-label="Top AI Credits models">
               <thead>
-                <tr className="border-b border-[#d1d9e0]">
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Rank</th>
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa]">Model</th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">AI Credits</th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">AI Credits Gross</th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold text-[#636c76] uppercase tracking-wider bg-[#f6f8fa] whitespace-nowrap">Share</th>
+                <tr className="border-b border-(--borderColor-default)">
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">Rank</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted)">Model</th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted) whitespace-nowrap">AI Credits</th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted) whitespace-nowrap">AI Credits Gross</th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted) whitespace-nowrap">Share</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#d1d9e0]">
+              <tbody className="divide-y divide-(--borderColor-default)">
                 {topAicModelRows.map((row, index) => (
-                  <tr key={row.model} className="hover:bg-[#fcfdff] transition-colors">
-                    <td className="px-5 py-3 text-sm font-mono text-[#636c76]">#{index + 1}</td>
-                    <td className="px-5 py-3 text-sm font-medium text-[#1f2328]">{row.model}</td>
-                    <td className="px-5 py-3 text-sm font-mono font-semibold text-[#1f2328] text-right">
+                  <tr key={row.model} className="hover:bg-(--bgColor-muted) transition-colors">
+                    <td className="px-5 py-3 text-sm font-mono text-(--fgColor-muted)">#{index + 1}</td>
+                    <td className="px-5 py-3 text-sm font-medium text-(--fgColor-default)">{row.model}</td>
+                    <td className="px-5 py-3 text-sm font-mono font-semibold text-(--fgColor-default) text-right">
                       {row.aicQuantity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td className="px-5 py-3 text-sm font-mono text-[#636c76] text-right">{formatCurrency(row.aicGrossAmount)}</td>
-                    <td className="px-5 py-3 text-sm font-mono text-[#636c76] text-right">{row.share.toFixed(1)}%</td>
+                    <td className="px-5 py-3 text-sm font-mono text-(--fgColor-muted) text-right">{formatCurrency(row.aicGrossAmount)}</td>
+                    <td className="px-5 py-3 text-sm font-mono text-(--fgColor-muted) text-right">{row.share.toFixed(1)}%</td>
                   </tr>
                 ))}
               </tbody>
@@ -133,9 +133,9 @@ export function ModelUsageTrendsOverview() {
         </div>
       )}
 
-      <div className="bg-white border border-[#d1d9e0] rounded-md p-5 min-h-[20rem]">
+      <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md p-5 min-h-[20rem]">
         {data.length === 0 || models.length === 0 ? (
-          <p className="text-sm text-[#636c76]">No model usage data available for the selected period.</p>
+          <p className="text-sm text-(--fgColor-muted)">No model usage data available for the selected period.</p>
         ) : (
           <div className="h-80 2xl:h-96">
             <ModelDailyStackedChart

@@ -25,9 +25,9 @@ interface InsightsOverviewProps {
 type Category = 'powerUsers' | 'averageUsers' | 'lowAdoptionUsers';
 
 const categories: { id: Category; title: string; threshold: string; dot: string; description: string }[] = [
-  { id: 'powerUsers', title: 'Power users', threshold: `${CONSUMPTION_THRESHOLDS.powerMinPct}%+ of quota`, dot: 'bg-[#2da44e]', description: 'High consumption. Learn from established workflows and share useful practices.' },
-  { id: 'averageUsers', title: 'Average users', threshold: `${CONSUMPTION_THRESHOLDS.averageMinPct}% to <${CONSUMPTION_THRESHOLDS.powerMinPct}%`, dot: 'bg-[#d97706]', description: 'Moderate consumption. Look for opportunities to broaden useful workflows.' },
-  { id: 'lowAdoptionUsers', title: 'Low adoption', threshold: `<${CONSUMPTION_THRESHOLDS.averageMinPct}% of quota`, dot: 'bg-[#cf222e]', description: 'Low consumption is a conversation starter, not a measure of productivity.' },
+  { id: 'powerUsers', title: 'Power users', threshold: `${CONSUMPTION_THRESHOLDS.powerMinPct}%+ of quota`, dot: 'bg-(--bgColor-success-emphasis)', description: 'High consumption. Learn from established workflows and share useful practices.' },
+  { id: 'averageUsers', title: 'Average users', threshold: `${CONSUMPTION_THRESHOLDS.averageMinPct}% to <${CONSUMPTION_THRESHOLDS.powerMinPct}%`, dot: 'bg-(--bgColor-attention-emphasis)', description: 'Moderate consumption. Look for opportunities to broaden useful workflows.' },
+  { id: 'lowAdoptionUsers', title: 'Low adoption', threshold: `<${CONSUMPTION_THRESHOLDS.averageMinPct}% of quota`, dot: 'bg-(--bgColor-danger-emphasis)', description: 'Low consumption is a conversation starter, not a measure of productivity.' },
 ];
 
 export function InsightsOverview({ userData, processedData, quotaArtifacts, usageArtifacts, featureUsageArtifacts }: InsightsOverviewProps) {
@@ -66,62 +66,62 @@ export function InsightsOverview({ userData, processedData, quotaArtifacts, usag
   return (
     <div className="w-full space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight text-[#1f2328]">Consumption Insights</h2>
-        <p className="mt-1.5 text-sm text-[#636c76]">Understand consumption. Find the right follow-up.</p>
+        <h2 className="text-2xl font-semibold tracking-tight text-(--fgColor-default)">Consumption Insights</h2>
+        <p className="mt-1.5 text-sm text-(--fgColor-muted)">Understand consumption. Find the right follow-up.</p>
       </div>
       {monthsInScope.length > 1 ? (
-        <div className="rounded-md border border-[#d1d9e0] bg-[#f6f8fa] p-5 text-sm text-[#636c76]">
+        <div className="rounded-md border border-(--borderColor-default) bg-(--bgColor-muted) p-5 text-sm text-(--fgColor-muted)">
           Select one billing month to compare AI Credit consumption with monthly quotas.
         </div>
       ) : selected && selectedCategory ? (
         <div className="space-y-4">
-          <button onClick={() => setSelectedCategory(null)} className="rounded-md border border-[#d1d9e0] bg-white px-3 py-1.5 text-sm font-medium text-[#636c76] hover:bg-[#f6f8fa]">
+          <button onClick={() => setSelectedCategory(null)} className="rounded-md border border-(--borderColor-default) bg-(--bgColor-default) px-3 py-1.5 text-sm font-medium text-(--fgColor-muted) hover:bg-(--control-transparent-bgColor-hover)">
             &larr; Back to overview
           </button>
-          <section className="overflow-hidden rounded-md border border-[#d1d9e0] bg-white">
-            <div className="border-b border-[#d1d9e0] px-5 py-4">
-              <h3 ref={detailHeading} tabIndex={-1} className="text-sm font-semibold text-[#1f2328]">{selected.title}</h3>
-              <p className="mt-1 text-xs text-[#636c76]">{selected.description}</p>
+          <section className="overflow-hidden rounded-md border border-(--borderColor-default) bg-(--bgColor-default)">
+            <div className="border-b border-(--borderColor-default) px-5 py-4">
+              <h3 ref={detailHeading} tabIndex={-1} className="text-sm font-semibold text-(--fgColor-default)">{selected.title}</h3>
+              <p className="mt-1 text-xs text-(--fgColor-muted)">{selected.description}</p>
             </div>
             <UserCategoryTable key={selectedCategory} users={insightsData[selectedCategory]} />
           </section>
         </div>
       ) : (
         <>
-          <div className="grid gap-px overflow-hidden rounded-md border border-[#d1d9e0] bg-[#d1d9e0] sm:grid-cols-3">
+          <div className="grid gap-px overflow-hidden rounded-md border border-(--borderColor-default) bg-(--borderColor-default) sm:grid-cols-3">
             {categories.map(category => (
               <button
                 key={category.id}
                 ref={element => { if (element && returnCategory.current === category.id) returnTarget.current = element; }}
                 onClick={() => { returnCategory.current = category.id; setSelectedCategory(category.id); }}
-                className="group bg-white p-5 text-left transition-colors hover:bg-[#fcfdff]"
+                className="group bg-(--bgColor-default) p-5 text-left transition-colors hover:bg-(--bgColor-muted)"
               >
-                <span className="flex items-center gap-2 text-xs font-medium text-[#636c76]"><span className={`h-2 w-2 rounded-full ${category.dot}`} />{category.title}</span>
-                <span className="mt-3 flex items-baseline gap-2"><span className="text-3xl font-semibold tabular-nums text-[#1f2328]">{insightsData[category.id].length}</span><span className="text-xs text-[#636c76]">/ {totalUsers} users</span></span>
-                <span className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-[#636c76]">{category.threshold}<span className="text-[#0969da] group-hover:underline">Explore &rarr;</span></span>
+                <span className="flex items-center gap-2 text-xs font-medium text-(--fgColor-muted)"><span className={`h-2 w-2 rounded-full ${category.dot}`} />{category.title}</span>
+                <span className="mt-3 flex items-baseline gap-2"><span className="text-3xl font-semibold tabular-nums text-(--fgColor-default)">{insightsData[category.id].length}</span><span className="text-xs text-(--fgColor-muted)">/ {totalUsers} users</span></span>
+                <span className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-(--fgColor-muted)">{category.threshold}<span className="text-(--fgColor-accent) group-hover:underline">Explore &rarr;</span></span>
               </button>
             ))}
           </div>
-          {unknownQuotaUsers > 0 && <p className="text-xs text-[#636c76]">{unknownQuotaUsers} {unknownQuotaUsers === 1 ? 'user has' : 'users have'} an unknown quota and {unknownQuotaUsers === 1 ? 'is' : 'are'} not included in consumption groups.</p>}
-          {totalUsers === 0 && <p className="text-sm text-[#636c76]">No named-user consumption is available for this period.</p>}
+          {unknownQuotaUsers > 0 && <p className="text-xs text-(--fgColor-muted)">{unknownQuotaUsers} {unknownQuotaUsers === 1 ? 'user has' : 'users have'} an unknown quota and {unknownQuotaUsers === 1 ? 'is' : 'are'} not included in consumption groups.</p>}
+          {totalUsers === 0 && <p className="text-sm text-(--fgColor-muted)">No named-user consumption is available for this period.</p>}
           <div className="grid items-start gap-6 xl:grid-cols-2">
-            <section className="min-w-0 overflow-hidden rounded-md border border-[#d1d9e0] bg-white">
-              <div className="border-b border-[#d1d9e0] px-5 py-4">
-                <h3 className="text-sm font-semibold text-[#1f2328]">Feature reach</h3>
-                <p className="mt-1 text-xs text-[#636c76]">How many people use each specialized feature</p>
+            <section className="min-w-0 overflow-hidden rounded-md border border-(--borderColor-default) bg-(--bgColor-default)">
+              <div className="border-b border-(--borderColor-default) px-5 py-4">
+                <h3 className="text-sm font-semibold text-(--fgColor-default)">Feature reach</h3>
+                <p className="mt-1 text-xs text-(--fgColor-muted)">How many people use each specialized feature</p>
               </div>
-              <div className="divide-y divide-[#d1d9e0] px-5">
+              <div className="divide-y divide-(--borderColor-default) px-5">
                 {features.map(feature => (
                   <div key={feature.name} className="py-4">
-                    <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2"><span className="text-sm font-medium text-[#1f2328]">{feature.name}</span><span className="text-xs text-[#636c76]"><strong className="font-medium text-[#1f2328]">{feature.userCount}</strong> / {totalUsers} users</span></div>
+                    <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2"><span className="text-sm font-medium text-(--fgColor-default)">{feature.name}</span><span className="text-xs text-(--fgColor-muted)"><strong className="font-medium text-(--fgColor-default)">{feature.userCount}</strong> / {totalUsers} users</span></div>
                     <svg viewBox="0 0 240 6" preserveAspectRatio="none" className="h-1.5 w-full rounded-full" role="img" aria-label={`${feature.name}: ${feature.userCount} of ${totalUsers} users`}>
-                      <rect width="240" height="6" className="fill-[#e8ecf0]" />
-                      <rect width={totalUsers > 0 ? Math.min(feature.userCount / totalUsers, 1) * 240 : 0} height="6" className="fill-[#6366f1]" />
+                      <rect width="240" height="6" className="fill-(--progressBar-track-bgColor)" />
+                      <rect width={totalUsers > 0 ? Math.min(feature.userCount / totalUsers, 1) * 240 : 0} height="6" className="fill-(--progressBar-bgColor-accent)" />
                     </svg>
-                    <div className="mt-2 flex flex-wrap justify-between gap-1 text-xs text-[#636c76]"><span>{formatDecimalQuantity(feature.totalCredits)} AI Credits</span><span>{feature.averagePerUser.toFixed(1)} credits / active user</span></div>
+                    <div className="mt-2 flex flex-wrap justify-between gap-1 text-xs text-(--fgColor-muted)"><span>{formatDecimalQuantity(feature.totalCredits)} AI Credits</span><span>{feature.averagePerUser.toFixed(1)} credits / active user</span></div>
                   </div>
                 ))}
-                <p className="py-4 text-xs leading-5 text-[#636c76]">Users may use multiple features. Unattributed usage is included in credit totals, not user counts.</p>
+                <p className="py-4 text-xs leading-5 text-(--fgColor-muted)">Users may use multiple features. Unattributed usage is included in credit totals, not user counts.</p>
               </div>
             </section>
             <AdvisorySection advisories={advisories} onExplore={() => { returnCategory.current = 'lowAdoptionUsers'; setSelectedCategory('lowAdoptionUsers'); }} />

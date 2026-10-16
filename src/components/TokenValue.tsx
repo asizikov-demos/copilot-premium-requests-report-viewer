@@ -1,11 +1,12 @@
+import { dataVizColor } from '@/constants/primerTokens';
 import type { TokenCounts } from '@/types/tokens';
 import type { TokenTotals } from '@/utils/ingestion';
 
 export const TOKEN_COLUMNS = [
-  { field: 'inputTokens', label: 'Input Tokens', color: '#2563eb' },
-  { field: 'outputTokens', label: 'Output Tokens', color: '#2da44e' },
-  { field: 'cacheWriteTokens', label: 'Cache Write Tokens', color: '#d97706' },
-  { field: 'cacheReadTokens', label: 'Cache Read Tokens', color: '#636c76' },
+  { field: 'inputTokens', label: 'Input Tokens', color: dataVizColor('blue') },
+  { field: 'outputTokens', label: 'Output Tokens', color: dataVizColor('green') },
+  { field: 'cacheWriteTokens', label: 'Cache Write Tokens', color: dataVizColor('orange') },
+  { field: 'cacheReadTokens', label: 'Cache Read Tokens', color: dataVizColor('gray') },
 ] as const;
 
 export function TokenValue({ totals, field, overall }: {

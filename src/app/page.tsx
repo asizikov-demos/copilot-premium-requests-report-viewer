@@ -33,21 +33,21 @@ export default function Home() {
   return (
     <main className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="bg-[#24292f] sticky top-0 z-50">
+      <header className="bg-(--header-bgColor) sticky top-0 z-50">
         <div className="px-6">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <svg height="32" viewBox="0 0 16 16" width="32" fill="#fff" aria-hidden="true">
+              <svg height="32" viewBox="0 0 16 16" width="32" className="fill-(--header-fgColor-logo)" aria-hidden="true">
                 <path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z" />
               </svg>
-              <h1 className="text-lg font-semibold tracking-tight text-white">
+              <h1 className="text-lg font-semibold tracking-tight text-(--header-fgColor-logo)">
                 Copilot Billing Report Viewer
               </h1>
             </div>
             {isDataLoaded && (
               <button
                 onClick={handleReset}
-                className="px-4 py-2 text-sm font-medium text-white bg-transparent hover:bg-white/[0.08] rounded-md transition-all duration-150 border border-[#57606a]"
+                className="px-4 py-2 text-sm font-medium text-(--header-fgColor-logo) bg-transparent hover:bg-(--fgColor-onEmphasis)/10 rounded-md transition-all duration-150 border border-(--header-borderColor-divider)"
               >
                 New Report
               </button>
@@ -60,13 +60,13 @@ export default function Home() {
       <div className={`flex-1 ${!isDataLoaded ? 'flex flex-col items-center justify-center' : ''} px-6 py-8 pb-12`}>
         {error && (
           <div className="w-full max-w-xl mb-6 animate-fade-in-up">
-            <div className="flex items-start gap-3 p-4 bg-[#fef2f2] border border-[#fecdd3] rounded-md">
-              <svg className="w-5 h-5 text-[#cf222e] flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+            <div className="flex items-start gap-3 p-4 bg-(--bgColor-danger-muted) border border-(--borderColor-danger-muted) rounded-md">
+              <svg className="w-5 h-5 text-(--fgColor-danger) flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
               <div>
-                <p className="text-sm font-semibold text-[#cf222e]">Error processing file</p>
-                <p className="text-sm text-[#cf222e]/80 mt-0.5">{error}</p>
+                <p className="text-sm font-semibold text-(--fgColor-danger)">Error processing file</p>
+                <p className="text-sm text-(--fgColor-danger)/80 mt-0.5">{error}</p>
               </div>
             </div>
           </div>
@@ -81,25 +81,25 @@ export default function Home() {
 
       <footer className="space-y-3 pb-8 text-center">
         {!isDataLoaded && (
-          <p className="text-xs text-[#636c76]">
+          <p className="text-xs text-(--fgColor-muted)">
             This app processes your CSV locally in your browser and doesn&apos;t upload it. Questions?{' '}
             <a
               href="https://github.com/asizikov-demos/copilot-premium-requests-report-viewer/issues"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-indigo-500 hover:text-indigo-600 font-medium transition-colors duration-150"
+              className="text-(--fgColor-accent) hover:text-(--fgColor-accent) font-medium transition-colors duration-150"
             >
               Create an issue
             </a>
           </p>
         )}
-        <p className="text-xs text-[#636c76]">
+        <p className="text-xs text-(--fgColor-muted)">
           &copy;{' '}
           <a
             href="https://github.com/asizikov"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium text-[#636c76] underline underline-offset-2 transition-colors duration-150 hover:text-[#1f2328]"
+            className="font-medium text-(--fgColor-muted) underline underline-offset-2 transition-colors duration-150 hover:text-(--fgColor-default)"
           >
             Anton Sizikov
           </a>
