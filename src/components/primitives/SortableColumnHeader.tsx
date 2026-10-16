@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { SortAscIcon, SortDescIcon } from '@primer/octicons-react';
+
 import type { SortDirection } from '@/hooks/useSortableTable';
 
 interface SortableColumnHeaderProps {
@@ -23,7 +25,7 @@ export function SortableColumnHeader({
   className = '',
 }: SortableColumnHeaderProps) {
   const ariaSort = active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none';
-  const indicator = active ? (direction === 'desc' ? '↓' : '↑') : '↕';
+  const SortIcon = active && direction === 'desc' ? SortDescIcon : SortAscIcon;
 
   return (
     <th
@@ -34,12 +36,15 @@ export function SortableColumnHeader({
       <button
         type="button"
         onClick={onSort}
-        className={`flex w-full items-center gap-1 px-4 py-3 text-xs font-semibold text-(--fgColor-muted) uppercase tracking-[0.05em] hover:bg-(--control-transparent-bgColor-hover) hover:text-(--fgColor-default) transition-colors duration-150 ${
+        className={`group flex w-full items-center gap-2 px-4 py-3 text-xs font-semibold text-(--fgColor-muted) uppercase tracking-[0.05em] hover:bg-(--control-transparent-bgColor-hover) hover:text-(--fgColor-default) transition-colors duration-150 ${
           align === 'right' ? 'justify-end text-right' : 'justify-start text-left'
         }`}
       >
         {label}
-        <span aria-hidden="true">{indicator}</span>
+        <SortIcon
+          size={16}
+          className={`shrink-0 ${active ? '' : 'invisible group-hover:visible group-focus-visible:visible'}`}
+        />
       </button>
     </th>
   );

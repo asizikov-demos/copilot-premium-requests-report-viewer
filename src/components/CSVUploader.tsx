@@ -1,6 +1,8 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { LockIcon, UploadIcon } from '@primer/octicons-react';
+
 import {
   ingestStream,
   QuotaAggregator,
@@ -252,19 +254,10 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
                 {isLoading ? (
                   <div className="w-7 h-7 border-2 border-(--borderColor-default) border-t-(--fgColor-accent) rounded-full animate-spin" />
                 ) : (
-                  <svg aria-hidden="true"
-                    className={`w-7 h-7 transition-colors ${isDragOver ? 'text-(--fgColor-onEmphasis)' : 'text-(--fgColor-muted)'}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M9 8.25H7.5a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25H15m0-3l-3-3m0 0l-3 3m3-3v11.25"
-                    />
-                  </svg>
+                  <UploadIcon
+                    size={24}
+                    className={`transition-colors ${isDragOver ? 'text-(--fgColor-onEmphasis)' : 'text-(--fgColor-muted)'}`}
+                  />
                 )}
               </div>
 
@@ -324,9 +317,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
         <div className="mt-8 opacity-0 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
           <div className="p-4 bg-(--bgColor-muted) rounded-md border border-(--borderColor-default)">
             <div className="flex items-center gap-2 mb-3">
-              <svg width="16" height="16" viewBox="0 0 16 16" className="flex-shrink-0 fill-(--fgColor-success)" aria-hidden="true">
-                <path d="M4 4a4 4 0 0 1 8 0v2h.25c.966 0 1.75.784 1.75 1.75v5.5A1.75 1.75 0 0 1 12.25 15h-8.5A1.75 1.75 0 0 1 2 13.25v-5.5C2 6.784 2.784 6 3.75 6H4Zm8.25 3.5h-8.5a.25.25 0 0 0-.25.25v5.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-5.5a.25.25 0 0 0-.25-.25ZM10.5 6V4a2.5 2.5 0 1 0-5 0v2Z" />
-              </svg>
+              <LockIcon size={16} className="shrink-0 fill-(--fgColor-success)" />
               <span className="text-sm font-semibold text-(--fgColor-default)">Your data stays private</span>
             </div>
             <ul className="space-y-1 text-sm text-(--fgColor-muted) leading-relaxed pl-5 list-disc">

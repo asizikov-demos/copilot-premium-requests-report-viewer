@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import { ChevronRightIcon } from '@primer/octicons-react';
 
 import type { ProcessedData } from '@/types/csv';
 import type { BillingGroupTotals } from '@/utils/ingestion';
@@ -204,12 +205,10 @@ export function BillingGroupTable<T extends BillingGroupRow>({
                             aria-controls={detailsId}
                             onClick={() => setExpandedGroup(isExpanded ? null : row.name)}
                           >
-                            <svg aria-hidden="true"
-                              className={`w-3.5 h-3.5 text-(--fgColor-muted) transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`}
-                              fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                            </svg>
+                            <ChevronRightIcon
+                              size={16}
+                              className={`shrink-0 text-(--fgColor-muted) transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`}
+                            />
                             {row.name}
                           </button>
                         ) : (

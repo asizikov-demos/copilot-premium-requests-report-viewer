@@ -1,5 +1,6 @@
 "use client";
 import React, { ReactNode } from 'react';
+import { ChevronDownIcon } from '@primer/octicons-react';
 
 interface ExpandableSectionProps {
   id: string;
@@ -28,15 +29,10 @@ export const ExpandableSection: React.FC<ExpandableSectionProps> = ({ id, title,
           </h3>
           {subtitle && <p className="text-xs text-(--fgColor-muted) mt-0.5">{subtitle}</p>}
         </div>
-        <svg
-          className={`w-4 h-4 text-(--fgColor-muted) transition-transform duration-150 ${expanded ? 'rotate-180' : ''}`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
-        </svg>
+        <ChevronDownIcon
+          size={16}
+          className={`shrink-0 text-(--fgColor-muted) transition-transform duration-150 ${expanded ? 'rotate-180' : ''}`}
+        />
       </button>
       {expanded && (
         <div id={`${id}-content`} className="overflow-x-auto">
