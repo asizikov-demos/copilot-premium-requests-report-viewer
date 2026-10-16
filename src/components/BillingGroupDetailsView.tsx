@@ -270,7 +270,7 @@ export function BillingGroupDetailsView({
                 className="text-2xl font-semibold tracking-tight text-(--fgColor-default) hover:text-(--fgColor-accent) transition-colors duration-150 rounded-sm inline-flex items-center gap-2 group"
               >
                 {groupName}
-                <svg
+                <svg aria-hidden="true"
                   className="w-5 h-5 text-(--fgColor-muted) group-hover:text-(--fgColor-accent) transition-colors duration-150"
                   fill="none"
                   stroke="currentColor"
@@ -462,7 +462,7 @@ export function BillingGroupDetailsView({
                       filteredUserRows.length
                     )} of {filteredUserRows.length}
                   </p>
-                  <div className="flex items-center gap-1">
+                  <nav aria-label="Users pagination" className="flex items-center gap-1">
                     <button
                       type="button"
                       onClick={() => setUserPage((page) => Math.max(0, page - 1))}
@@ -488,7 +488,7 @@ export function BillingGroupDetailsView({
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="m9 5 7 7-7 7" />
                       </svg>
                     </button>
-                  </div>
+                  </nav>
                 </div>
               )}
             </div>

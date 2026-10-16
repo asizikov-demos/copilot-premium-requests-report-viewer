@@ -197,11 +197,12 @@ describe('DataAnalysis billing summary', () => {
       })),
     ]);
 
-    const period = screen.getByLabelText('Billing Period');
-    for (const option of within(period).getAllByRole<HTMLOptionElement>('option')) {
-      option.selected = option.value === '2026-06';
-    }
-    fireEvent.change(period);
+    const period = screen.getByRole('group', { name: 'Billing Period' });
+    const monthCheckbox = within(period)
+      .getAllByRole<HTMLInputElement>('checkbox')
+      .find((checkbox) => checkbox.value === '2026-06');
+    expect(monthCheckbox).toBeDefined();
+    fireEvent.click(monthCheckbox!);
     const chartData = JSON.parse(screen.getByTestId('daily-consumption-chart').textContent ?? '');
     expect(chartData).toHaveLength(30);
     expect(chartData[0]).toEqual({ date: '2026-06-01', included: 0, additional: 0 });
@@ -250,11 +251,13 @@ describe('DataAnalysis billing summary', () => {
       })),
     ]);
 
-    const period = screen.getByLabelText('Billing Period');
-    for (const option of within(period).getAllByRole<HTMLOptionElement>('option')) {
-      option.selected = option.value === '2026-07';
-    }
-    fireEvent.change(period);
+    const period = screen.getByRole('group', { name: 'Billing Period' });
+    const monthCheckbox = within(period)
+      .getAllByRole<HTMLInputElement>('checkbox')
+      .find((checkbox) => checkbox.value === '2026-07');
+    expect(monthCheckbox).toBeDefined();
+    fireEvent.click(monthCheckbox!);
+    expect(monthCheckbox).toBeChecked();
     expect(JSON.parse(screen.getByTestId('daily-consumption-chart').textContent ?? '')).toEqual(
       Array.from({ length: 31 }, (_, index) => ({
         date: `2026-07-${String(index + 1).padStart(2, '0')}`,
@@ -262,6 +265,33 @@ describe('DataAnalysis billing summary', () => {
         additional: index === 0 ? 1.5 : 0,
       }))
     );
+  });
+
+  it('marks the active report section with aria-current', () => {
+    const ingestionResult = createIngestionResultFromRawRows([{
+      date: '2026-06-30',
+      username: 'test-user-one',
+      product: 'copilot',
+      sku: 'copilot_ai_credit',
+      model: 'test-model-one',
+      quantity: '100',
+      discount_amount: '1.25',
+      net_amount: '0.75',
+    }]);
+    render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
+
+    for (const nav of screen.getAllByRole('navigation', { name: 'Report sections' })) {
+      expect(within(nav).getByRole('button', { name: /Overview/ })).toHaveAttribute('aria-current', 'page');
+      expect(within(nav).getByRole('button', { name: /Users/ })).not.toHaveAttribute('aria-current');
+    }
+
+    const [firstNav] = screen.getAllByRole('navigation', { name: 'Report sections' });
+    fireEvent.click(within(firstNav).getByRole('button', { name: /Users/ }));
+
+    for (const nav of screen.getAllByRole('navigation', { name: 'Report sections' })) {
+      expect(within(nav).getByRole('button', { name: /Users/ })).toHaveAttribute('aria-current', 'page');
+      expect(within(nav).getByRole('button', { name: /Overview/ })).not.toHaveAttribute('aria-current');
+    }
   });
 
   it('omits daily consumption when commercial fields are absent', () => {
