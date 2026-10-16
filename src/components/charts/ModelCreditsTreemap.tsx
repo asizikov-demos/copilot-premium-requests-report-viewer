@@ -5,7 +5,7 @@ import { ResponsiveContainer, Tooltip, Treemap } from 'recharts';
 import type { TreemapNode } from 'recharts';
 
 import { bgColor } from '@/constants/primerTokens';
-import { getModelColor } from '@/utils/modelColors';
+import { getModelColor, getModelTextColor } from '@/utils/modelColors';
 
 import { chartTooltipContentStyle, chartTooltipLabelStyle } from './chartTooltipStyles';
 
@@ -16,14 +16,6 @@ interface ModelCreditsTreemapDatum {
 
 interface ModelCreditsTreemapProps {
   data: ModelCreditsTreemapDatum[];
-}
-
-function usesDarkText(color: string): boolean {
-  const channels = [1, 3, 5].map((offset) => {
-    const channel = parseInt(color.slice(offset, offset + 2), 16) / 255;
-    return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
-  });
-  return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722 > 0.179;
 }
 
 export function ModelCreditsTreemap({ data }: ModelCreditsTreemapProps) {
@@ -88,7 +80,7 @@ export function ModelCreditsTreemap({ data }: ModelCreditsTreemapProps) {
                       height={node.height - 16}
                       pointerEvents="none"
                     >
-                      <div className={`h-full overflow-hidden text-xs ${usesDarkText(color) ? 'text-(--fgColor-default)' : 'text-(--fgColor-onEmphasis)'}`}>
+                      <div className="h-full overflow-hidden text-xs" style={{ color: getModelTextColor(node.name) }}>
                         <p className="line-clamp-2 break-words font-semibold">{node.name}</p>
                         {node.height >= 80 && (
                           <p className="mt-1 truncate tabular-nums">

@@ -4,7 +4,7 @@ All chart colors come from Primer tokens via `src/constants/primerTokens.ts`. Ne
 
 ## Model Colors (`src/utils/modelColors.ts`)
 
-Use `getModelColor(modelName)` for single lookups and `generateModelColors(models)` for batch. Known models map to Primer data-viz hues (`dataVizColor(hue)`); unknown models get a stable hue from a 17-hue fallback palette.
+Use `getModelColor(modelName)` for single lookups and `generateModelColors(models)` for batch. Known models map to Primer data-viz hues (`dataVizColor(hue)`); unknown models get a stable hue from a 17-hue fallback palette. For text drawn on a model-colored fill (e.g. treemap labels), use `getModelTextColor(modelName)`; never parse token strings as hex to compute contrast.
 
 ## Other Categorical Series
 

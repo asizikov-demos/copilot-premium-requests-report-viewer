@@ -85,6 +85,18 @@ describe('ModelCreditsTreemap', () => {
     expect(screen.queryByRole('img', { name: /test-model-one:/ })).not.toBeInTheDocument();
   });
 
+  it('uses a contrasting Primer foreground token for tile labels based on the model hue', () => {
+    render(
+      <ModelCreditsTreemap data={[
+        { fullModel: 'Claude Sonnet 4.5', credits: 50 },
+        { fullModel: 'GPT-5', credits: 50 },
+      ]} />
+    );
+    const labelColor = (name: string) => screen.getByText(name, { selector: 'p' }).parentElement!.style.color;
+    expect(labelColor('Claude Sonnet 4.5')).toBe('var(--fgColor-onEmphasis)');
+    expect(labelColor('GPT-5')).toBe('var(--fgColor-default)');
+  });
+
   it('rounds large credit labels to two decimal places without rounding tile values', () => {
     render(<ModelCreditsTreemap data={[{ fullModel: 'test-model-one', credits: 32487904.53922278 }]} />);
     expect(screen.getByText('32,487,904.54 AI Credits')).toBeInTheDocument();

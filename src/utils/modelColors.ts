@@ -1,4 +1,4 @@
-import { dataVizColor, type DataVizHue } from '@/constants/primerTokens';
+import { dataVizColor, dataVizTextColor, type DataVizHue } from '@/constants/primerTokens';
 
 /**
  * Model-specific color palette for consistent data visualization.
@@ -40,17 +40,26 @@ const FALLBACK_HUES: DataVizHue[] = [
 ];
 
 /**
- * Get a color for a specific model.
- * Returns a predefined color for known models, or generates a consistent color for unknown ones.
+ * Get the Primer data visualization hue for a model.
+ * Returns a predefined hue for known models, or a consistent hash-based hue for unknown ones.
  */
-export function getModelColor(model: string): string {
+export function getModelHue(model: string): DataVizHue {
   const hue = MODEL_HUES[model];
   if (hue) {
-    return dataVizColor(hue);
+    return hue;
   }
-  // Generate consistent color for unknown models based on model name hash
   const hash = model.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return dataVizColor(FALLBACK_HUES[hash % FALLBACK_HUES.length]);
+  return FALLBACK_HUES[hash % FALLBACK_HUES.length];
+}
+
+/** Get a color for a specific model. */
+export function getModelColor(model: string): string {
+  return dataVizColor(getModelHue(model));
+}
+
+/** Get the foreground token that contrasts with `getModelColor(model)`. */
+export function getModelTextColor(model: string): string {
+  return dataVizTextColor(getModelHue(model));
 }
 
 /**

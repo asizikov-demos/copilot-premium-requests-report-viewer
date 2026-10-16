@@ -62,6 +62,17 @@ export function dataVizColor(hue: DataVizHue, variant: 'emphasis' | 'muted' = 'e
 }
 
 /**
+ * Hues whose light-theme emphasis color has relative luminance above 0.179,
+ * where `fgColor.default` gives more contrast than `fgColor.onEmphasis`.
+ */
+const DARK_TEXT_DATA_VIZ_HUES: ReadonlySet<DataVizHue> = new Set(['gray', 'green', 'orange', 'teal', 'yellow']);
+
+/** Foreground token that contrasts best with `dataVizColor(hue, 'emphasis')`. */
+export function dataVizTextColor(hue: DataVizHue): string {
+  return DARK_TEXT_DATA_VIZ_HUES.has(hue) ? fgColor.default : fgColor.onEmphasis;
+}
+
+/**
  * Sequential scale derived from a Primer data visualization hue.
  * `intensity` is clamped to 0..1, where 0 is the muted tint and 1 is the emphasis color.
  */

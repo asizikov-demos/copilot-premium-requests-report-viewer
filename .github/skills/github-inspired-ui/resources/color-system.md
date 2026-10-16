@@ -72,7 +72,7 @@ Primer provides 17 categorical hues as `--data-{hue}-color-emphasis` / `--data-{
 
 ## JS Helpers (`src/constants/primerTokens.ts`)
 
-Exports `fgColor`, `bgColor`, `borderColor`, `shadow`, `dataVizColor`, `dataVizScale`, and the `DataVizHue` type. Values are `var(--token)` strings, valid for Recharts props, SVG `fill`/`stroke`, and inline styles. Add a key there (don't inline `var(--...)` strings in components) when a new token is needed in JS.
+Exports `fgColor`, `bgColor`, `borderColor`, `shadow`, `dataVizColor`, `dataVizTextColor` (contrasting foreground for an emphasis hue), `dataVizScale`, and the `DataVizHue` type. Values are `var(--token)` strings, valid for Recharts props, SVG `fill`/`stroke`, and inline styles. Add a key there (don't inline `var(--...)` strings in components) when a new token is needed in JS.
 
 ## ✅ / ❌
 
