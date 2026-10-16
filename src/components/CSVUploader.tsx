@@ -252,7 +252,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
                 {isLoading ? (
                   <div className="w-7 h-7 border-2 border-(--borderColor-default) border-t-(--fgColor-accent) rounded-full animate-spin" />
                 ) : (
-                  <svg
+                  <svg aria-hidden="true"
                     className={`w-7 h-7 transition-colors ${isDragOver ? 'text-(--fgColor-onEmphasis)' : 'text-(--fgColor-muted)'}`}
                     fill="none"
                     stroke="currentColor"

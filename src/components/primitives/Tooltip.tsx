@@ -1,18 +1,55 @@
 "use client";
-import React, { ReactNode, useState, useRef, useEffect, useCallback, useId } from 'react';
+import React, {
+  ReactNode,
+  cloneElement,
+  isValidElement,
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
+import { createPortal } from 'react-dom';
+
+type TooltipSide = 'top' | 'bottom' | 'left' | 'right';
+
 interface TooltipProps {
   content: ReactNode;
   children: ReactNode;
-  side?: 'top' | 'bottom' | 'left' | 'right';
+  side?: TooltipSide;
   delay?: number; // ms
   className?: string;
 }
 
+const OFFSET_PX = 8;
+
+const TRANSFORM_BY_SIDE: Record<TooltipSide, string> = {
+  top: 'translate(-50%, -100%)',
+  bottom: 'translate(-50%, 0)',
+  left: 'translate(-100%, -50%)',
+  right: 'translate(0, -50%)',
+};
+
+function getAnchorPoint(rect: DOMRect, side: TooltipSide): { top: number; left: number } {
+  switch (side) {
+    case 'bottom':
+      return { top: rect.bottom + OFFSET_PX, left: rect.left + rect.width / 2 };
+    case 'left':
+      return { top: rect.top + rect.height / 2, left: rect.left - OFFSET_PX };
+    case 'right':
+      return { top: rect.top + rect.height / 2, left: rect.right + OFFSET_PX };
+    case 'top':
+    default:
+      return { top: rect.top - OFFSET_PX, left: rect.left + rect.width / 2 };
+  }
+}
+
 /**
- * Accessible, lightweight tooltip primitive.
- * - Uses focus + hover to show
- * - Esc to dismiss while focused
- * - Positions with basic CSS (no portal yet for simplicity)
+ * Accessible, lightweight tooltip primitive (Primer Tooltip pattern).
+ * - Shows on hover and keyboard focus; Esc dismisses (WCAG 1.4.13)
+ * - Renders in a portal with fixed positioning so overflow-hidden containers cannot clip it
+ * - Links the tooltip to the trigger element via aria-describedby
  */
 export const Tooltip: React.FC<TooltipProps> = ({
   content,
@@ -22,53 +59,91 @@ export const Tooltip: React.FC<TooltipProps> = ({
   className = ''
 }) => {
   const [visible, setVisible] = useState(false);
-  const [timerId, setTimerId] = useState<NodeJS.Timeout | null>(null);
+  const [opening, setOpening] = useState(false);
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const triggerRef = useRef<HTMLSpanElement | null>(null);
-  const reactId = useId();
-  const tooltipId = `tooltip-${reactId}`;
+  const tooltipId = `tooltip-${useId()}`;
+
+  const clearTimer = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
 
   const show = useCallback(() => {
-    if (timerId) clearTimeout(timerId);
-    setTimerId(setTimeout(() => setVisible(true), delay));
-  }, [timerId, delay]);
-  const hide = useCallback(() => {
-    if (timerId) clearTimeout(timerId);
-    setVisible(false);
-  }, [timerId]);
+    clearTimer();
+    setOpening(true);
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      setOpening(false);
+      setVisible(true);
+    }, delay);
+  }, [delay]);
 
-  useEffect(() => {
-    const node = triggerRef.current;
-    if (!node) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') hide();
+  const hide = useCallback(() => {
+    clearTimer();
+    setOpening(false);
+    setVisible(false);
+  }, []);
+
+  useEffect(() => clearTimer, []);
+
+  useLayoutEffect(() => {
+    if (!visible) return;
+    const updatePosition = () => {
+      const node = triggerRef.current;
+      if (node) setPosition(getAnchorPoint(node.getBoundingClientRect(), side));
     };
-    node.addEventListener('keydown', onKey);
-    return () => node.removeEventListener('keydown', onKey);
-  }, [hide]);
+    updatePosition();
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [visible, side]);
+
+  // Listen while opening too, so Escape during the show delay cancels the pending tooltip.
+  useEffect(() => {
+    if (!visible && !opening) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') hide();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [visible, opening, hide]);
+
+  let trigger: ReactNode = children;
+  if (isValidElement<{ 'aria-describedby'?: string }>(children)) {
+    const existingDescribedBy = children.props['aria-describedby'];
+    const describedBy = [existingDescribedBy, visible ? tooltipId : undefined]
+      .filter(Boolean)
+      .join(' ') || undefined;
+    trigger = cloneElement(children, { 'aria-describedby': describedBy });
+  }
 
   return (
     <span
-      className="relative inline-flex"
+      className="inline-flex"
       ref={triggerRef}
-      aria-describedby={visible ? tooltipId : undefined}
       onMouseEnter={show}
       onMouseLeave={hide}
       onFocus={show}
       onBlur={hide}
     >
-      {children}
-      {visible && (
+      {trigger}
+      {visible && position && createPortal(
         <span
           id={tooltipId}
           role="tooltip"
-          className={`pointer-events-none absolute z-50 px-2.5 py-1.5 rounded-md bg-(--tooltip-bgColor) text-(--tooltip-fgColor) text-xs whitespace-nowrap max-w-xs ${className} ${
-            side === 'top' ? 'bottom-full left-1/2 -translate-x-1/2 mb-2' : ''
-          } ${side === 'bottom' ? 'top-full left-1/2 -translate-x-1/2 mt-2' : ''} ${
-            side === 'left' ? 'right-full top-1/2 -translate-y-1/2 mr-2' : ''
-          } ${side === 'right' ? 'left-full top-1/2 -translate-y-1/2 ml-2' : ''}`}
+          style={{ position: 'fixed', top: position.top, left: position.left, transform: TRANSFORM_BY_SIDE[side] }}
+          className={`pointer-events-none z-50 px-2.5 py-1.5 rounded-md bg-(--tooltip-bgColor) text-(--tooltip-fgColor) text-xs whitespace-nowrap max-w-xs ${className}`}
         >
           {content}
-        </span>
+        </span>,
+        document.body
       )}
     </span>
   );

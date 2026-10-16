@@ -149,9 +149,17 @@ export function UsersConsumptionHeatmap({
     return indices;
   }, []);
 
+  const chartLabel = title ?? `User Consumption Density Over Time (${users.length} users)`;
+
   return (
     <div className="w-full h-full">
-      <svg viewBox={`0 0 1000 ${totalHeight}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+      <svg
+        viewBox={`0 0 1000 ${totalHeight}`}
+        className="w-full h-full"
+        preserveAspectRatio="xMidYMid meet"
+        role="img"
+        aria-label={chartLabel}
+      >
           {/* Title */}
           <text
             x="500"
@@ -160,7 +168,7 @@ export function UsersConsumptionHeatmap({
             className="text-sm font-medium"
             fill={fgColor.default}
           >
-            {title ?? `User Consumption Density Over Time (${users.length} users)`}
+            {chartLabel}
           </text>
 
           {/* Y-axis label */}
