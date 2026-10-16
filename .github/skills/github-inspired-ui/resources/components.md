@@ -54,13 +54,19 @@ Hero/landing cards may add `shadow-(--shadow-resting-small)`.
 
 ### Sortable headers
 
+Use `SortableColumnHeader` from `src/components/primitives/SortableColumnHeader.tsx`. It renders `<th scope="col" aria-sort>` wrapping a keyboard-focusable `<button>`, hides the arrow from assistive tech, and applies the selected background to the active column:
+
 ```tsx
-<th aria-sort={sortDir === 'asc' ? 'ascending' : 'descending'} className="... bg-(--control-transparent-bgColor-selected)">
-  <button type="button" onClick={toggleSort} className="inline-flex items-center gap-1">
-    Column {sortIndicator}
-  </button>
-</th>
+<SortableColumnHeader
+  label="Total AI Credits"
+  active={sortField === 'totalCredits'}
+  direction={sortDirection}
+  onSort={() => handleSort('totalCredits')}
+  className="min-w-32"
+/>
 ```
+
+Never put `onClick` directly on a `<th>`; it is not reachable by keyboard. Give non-sortable headers `scope="col"`.
 
 ## Labels / Counters (Primer: Label, CounterLabel)
 
@@ -133,6 +139,8 @@ Use `Tooltip` from `src/components/primitives/Tooltip.tsx` (`bg-(--tooltip-bgCol
 <Tooltip content="Helpful information" side="top"><span>Hover me</span></Tooltip>
 ```
 
+The tooltip renders in a portal on `document.body` with fixed positioning, so `overflow-hidden` or scrolling ancestors never clip it. It opens on hover and focus, closes on Escape, and links itself to the trigger with `aria-describedby`. The child must be a single element that can receive focus or that wraps a focusable control.
+
 ## Breadcrumbs (Primer: Breadcrumbs)
 
 ```tsx
@@ -160,11 +168,30 @@ The Primer focus outline comes from `globals.css`; do not add `outline-none` or 
 
 Always set an explicit control height (`h-(--control-large-size)`, or `--control-medium-size` for compact UIs) on inputs and selects. Safari ignores padding on native `<select>` elements, so padding alone gives inconsistent heights. Do not set a fixed height on `<select multiple>` or listboxes with `size`; their row count determines the height.
 
-## Pagination (Primer: Pagination)
+### Multiple selection (Primer: CheckboxGroup)
+
+Do not use `<select multiple>` for user-facing multi-select: it requires Ctrl/Cmd-click and is hard to discover. Use a `fieldset` of checkboxes:
 
 ```tsx
-<button aria-current="page" className="w-8 h-8 text-sm font-medium rounded-md border bg-(--bgColor-accent-emphasis) text-(--fgColor-onEmphasis) border-(--borderColor-accent-emphasis)">1</button>
-<button className="w-8 h-8 text-sm font-medium rounded-md border border-(--borderColor-default) text-(--fgColor-muted) hover:bg-(--control-transparent-bgColor-hover)">2</button>
+<fieldset aria-describedby="period-hint" className="flex flex-col gap-1.5 text-sm">
+  <legend className="font-medium text-(--fgColor-default)">Billing Period</legend>
+  {options.map(o => (
+    <label key={o.value} className="inline-flex items-center gap-2 text-(--fgColor-default)">
+      <input type="checkbox" value={o.value} checked={selected.includes(o.value)} onChange={toggle} className="size-4 accent-(--bgColor-accent-emphasis)" />
+      {o.label}
+    </label>
+  ))}
+  <p id="period-hint" className="text-xs text-(--fgColor-muted)">Leave all unchecked to include every month</p>
+</fieldset>
+```
+
+## Pagination (Primer: Pagination)
+
+Wrap the controls in `<nav aria-label="… pagination">`. Icon-only previous/next buttons need `aria-label` ("Previous page" / "Next page"), page buttons need `aria-label="Page N"`, the current page gets `aria-current="page"`, and every button sets `type="button"`.
+
+```tsx
+<button type="button" aria-label="Page 1" aria-current="page" className="w-8 h-8 text-sm font-medium rounded-md border bg-(--bgColor-accent-emphasis) text-(--fgColor-onEmphasis) border-(--borderColor-accent-emphasis)">1</button>
+<button type="button" aria-label="Page 2" className="w-8 h-8 text-sm font-medium rounded-md border border-(--borderColor-default) text-(--fgColor-muted) hover:bg-(--control-transparent-bgColor-hover)">2</button>
 <span className="text-sm text-(--fgColor-muted)">1–25 of 142</span>
 ```
 

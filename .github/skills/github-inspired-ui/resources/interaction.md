@@ -26,12 +26,15 @@
 
 - Size: `w-4 h-4` (16px) for nav/button icons, `w-5 h-5` for callout icons
 - Color inherited via `currentColor`; set color on the parent with a `text-(--fgColor-*)` token
-- Always `aria-hidden="true"` on decorative icons
+- Always `aria-hidden="true"` on decorative icons, including icons inside buttons that already have text or an `aria-label`. Wrap decorative text glyphs (`✕`, `←`, `↕`) in `<span aria-hidden="true">`
+- Data-bearing SVG charts are not decorative: give the `<svg>` `role="img"` and an `aria-label` that summarizes it
 - Octicons (`@primer/octicons-react`) are the long-term target; prefer them when adding new icons once adopted
 
 ## ARIA Patterns
 
 - Expandable sections: `aria-expanded`, `aria-controls`, `aria-labelledby`
-- Tooltips: `aria-describedby` and `role="tooltip"`
-- Navigation: indicate the active item with `aria-current="page"` in addition to styling
-- Sortable table headers: put the click handler on a `<button>` inside `<th>` and set `aria-sort` on the `<th>`
+- Tooltips: `aria-describedby` and `role="tooltip"`, rendered in a portal, dismissible with Escape (use the `Tooltip` primitive)
+- Navigation: wrap in `<nav aria-label>` and indicate the active item with `aria-current="page"` in addition to styling
+- Sortable table headers: use `SortableColumnHeader` (a `<button>` inside `<th>` with `aria-sort` on the `<th>`)
+- Multi-select: a `fieldset` + `legend` of checkboxes, never `<select multiple>`
+- Buttons: always set `type="button"` unless the button submits a form
