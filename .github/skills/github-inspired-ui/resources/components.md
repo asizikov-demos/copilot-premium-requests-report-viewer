@@ -1,6 +1,41 @@
 # Component Patterns
 
-Hand-built components mirror their Primer React counterparts (named in each heading) so they can be swapped for `@primer/react` later. All colors are Primer tokens — see `color-system.md`.
+Interactive controls use `@primer/react`; icons use `@primer/octicons-react`. The app is wrapped in `PrimerProviders` (`src/app/providers.tsx`), so components work without extra setup. All custom colors are Primer tokens; see `color-system.md`.
+
+## Adopted Primer React Components
+
+| Need | Component | Used in |
+| --- | --- | --- |
+| Actions | `Button` (`variant="primary"` for the main CTA, `size="small"` inside cards and tables, `leadingVisual`/`trailingVisual` for Octicons) | `page.tsx`, `CSVUploader`, `InsightsOverview`, `AdvisorySection`, `UserCategoryTable`, `UsersOverview`, `CodingAgentOverview` |
+| Icon-only actions | `IconButton` with a required `aria-label` | `UsersOverview`, `BillingGroupDetailsView` |
+| Text actions inside tables and copy | `Link as="button" type="button"` | `UsersOverview`, `BillingGroupTable`, `AgentUsersTable` |
+| Labelled fields | `FormControl` + `FormControl.Label` (add `visuallyHidden` when the context already names the field) | filters and searches |
+| Text and search inputs | `TextInput` with `leadingVisual={SearchIcon}` | `UsersOverview`, `BillingGroupDetailsView`, `UserCategoryTable` |
+| Single choice | `Select` + `Select.Option` | `UsersOverview`, `UserConsumptionMetrics` |
+| Multiple choice | `Checkbox` inside a `fieldset` + `legend` | `DataAnalysis` billing periods |
+| Error and status messages | `Banner` | `page.tsx` |
+| Indeterminate loading | `Spinner` | `CSVUploader` |
+| Determinate progress or meters | `ProgressBar` | `CSVUploader`, `UserDetailsHeader` |
+| Section navigation | `NavList` (desktop) and `UnderlineNav` (mobile) | `DataAnalysis` |
+
+Primer React CSS is not inside a cascade layer, so it beats Tailwind utilities for any property it sets. Pass layout utilities only (`min-w-56`, `max-w-full`, `flex-1`) through `className`. On `TextInput` and `Select` they land on the outer wrapper. Do not restyle Primer colors, padding or typography with Tailwind.
+
+## Retained Custom Controls
+
+Keep these hand-built. Their behavior is required and the Primer counterpart does not provide it:
+
+| Control | Why it stays custom |
+| --- | --- |
+| `Tooltip` primitive | Primer `Tooltip` (v2) handles Escape only after the popover is open. Ours also cancels a pending open during the delay, renders in a portal and merges `aria-describedby` with existing IDs. |
+| `SortableColumnHeader` | Puts `aria-sort` on the `<th>` and a keyboard-focusable `<button>` inside it. The tables are not Primer `DataTable`. |
+| Numbered pagination buttons | Primer `Pagination` renders anchors with hash links and disabled `<span>`s. Our pages are in-memory state and need real `<button>`s with `disabled`. Previous/next use `IconButton`. |
+| Breadcrumb buttons | Primer `Breadcrumbs` renders links. Ours are `text-2xl` heading-sized buttons that change in-memory state. |
+| Disclosure rows and `ExpandableSection` | Table-row toggles need `aria-expanded`/`aria-controls` on a button inside the row. |
+| `AdvisorySection` `<details>` | Native disclosure with no Primer equivalent. |
+| CSV dropzone | Drag-and-drop file target wrapped around a hidden `<input type="file">`. |
+| Insight category cards and mobile summary cards | Large card-shaped buttons. `InsightsOverview` returns focus to the card when the user goes back. |
+| Compact sidebar notes (for example "Auto-selected …" in `DataAnalysis`) | A `Banner` is too large for the 224px sidebar. |
+| Recharts charts and the feature-reach SVG | Data visualization. See `chart-styling.md`. |
 
 ## Cards (Primer: Box)
 
@@ -70,56 +105,40 @@ Never put `onClick` directly on a `<th>`; it is not reachable by keyboard. Give 
 
 ## Labels / Counters (Primer: Label, CounterLabel)
 
-```tsx
-<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border border-(--borderColor-success-muted) bg-(--bgColor-success-muted) text-(--fgColor-success)">
-  95.2%
-</span>
+No labels or counters exist today. If you add one, use Primer `Label` or `CounterLabel` from `@primer/react`.
 
-<span className="px-2 py-0.5 text-xs font-medium rounded-full bg-(--bgColor-neutral-muted) text-(--fgColor-default)">
-  12
-</span>
-```
-
-## Buttons (Primer: Button)
+## Buttons (Primer: Button, IconButton)
 
 ```tsx
-{/* Primary — main CTA */}
-<button className="px-5 py-2.5 text-sm font-semibold rounded-md border transition-all duration-150
-  text-(--button-primary-fgColor-rest) bg-(--button-primary-bgColor-rest) border-(--button-primary-borderColor-rest)
-  hover:bg-(--button-primary-bgColor-hover) active:bg-(--button-primary-bgColor-active)
-  disabled:bg-(--button-primary-bgColor-disabled) disabled:text-(--button-primary-fgColor-disabled)">
-  Action
-</button>
+import { Button, IconButton } from '@primer/react';
+import { ArrowLeftIcon, ChevronLeftIcon, XIcon } from '@primer/octicons-react';
 
-{/* Default / secondary */}
-<button className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md border transition-colors duration-150
-  text-(--button-default-fgColor-rest) bg-(--button-default-bgColor-rest) border-(--button-default-borderColor-rest)
-  hover:bg-(--button-default-bgColor-hover)">
-  Back
-</button>
+<Button variant="primary" size="large" onClick={loadSample}>Try with sample data</Button>
+<Button leadingVisual={ArrowLeftIcon} onClick={onBack}>Back to overview</Button>
+<Button size="small" onClick={toggle}>Show all</Button>
+<IconButton icon={XIcon} variant="invisible" size="small" aria-label="Hide chart" onClick={hide} />
+<IconButton icon={ChevronLeftIcon} variant="invisible" aria-label="Previous page" disabled={page === 1} onClick={prev} />
 ```
+
+`Button` and `IconButton` default to `type="button"`. `IconButton` shows its `aria-label` as a Primer tooltip and names itself with `aria-labelledby`. Do not wrap it in the custom `Tooltip`. In the dark app header, use a default `Button`.
 
 ## Banners / Callouts (Primer: Banner)
 
 ```tsx
-{/* Info */}
-<div className="p-4 rounded-md border border-(--borderColor-accent-muted) bg-(--bgColor-accent-muted)">
-  <h4 className="text-xs font-semibold text-(--fgColor-accent)">Title</h4>
-  <p className="text-xs text-(--fgColor-default)">Description.</p>
-</div>
+import { Banner } from '@primer/react';
 
-{/* Error */}
-<div className="p-4 rounded-md border border-(--borderColor-danger-muted) bg-(--bgColor-danger-muted) text-(--fgColor-danger)">
-  Something went wrong.
-</div>
+<Banner variant="critical" title="Error processing file" description={error} />
+```
 
-{/* Neutral note */}
+Use `variant` `critical`, `warning`, `success`, `info` or `upsell`. `Banner` adds the matching Octicon and heading.
+
+Static explanatory notes inside cards may stay as token-styled boxes:
+
+```tsx
 <div className="p-4 rounded-md border border-(--borderColor-default) bg-(--bgColor-muted)">
   <p className="text-xs text-(--fgColor-muted)"><span className="font-semibold text-(--fgColor-default)">Note:</span> Description.</p>
 </div>
 ```
-
-Swap `accent` for `success`, `attention`, `severe`, `danger`, or `done` as needed.
 
 ## Expandable Sections (Primer: Details)
 
@@ -131,17 +150,19 @@ Use `ExpandableSection` from `src/components/primitives/ExpandableSection.tsx`:
 </ExpandableSection>
 ```
 
-## Tooltips (Primer: Tooltip)
+## Tooltips (custom primitive)
 
-Use `Tooltip` from `src/components/primitives/Tooltip.tsx` (`bg-(--tooltip-bgColor) text-(--tooltip-fgColor)`):
+Use `Tooltip` from `src/components/primitives/Tooltip.tsx` (`bg-(--tooltip-bgColor) text-(--tooltip-fgColor)`), not Primer `Tooltip`:
 
 ```tsx
 <Tooltip content="Helpful information" side="top"><span>Hover me</span></Tooltip>
 ```
 
-The tooltip renders in a portal on `document.body` with fixed positioning, so `overflow-hidden` or scrolling ancestors never clip it. It opens on hover and focus, closes on Escape, and links itself to the trigger with `aria-describedby`. The child must be a single element that can receive focus or that wraps a focusable control.
+The tooltip renders in a portal on `document.body` with fixed positioning, so `overflow-hidden` or scrolling ancestors never clip it. It opens on hover and focus, and closes on Escape. Escape also cancels an open that is still waiting for its delay. It adds its ID to the trigger's existing `aria-describedby`. The child must be a single element that can receive focus or that wraps a focusable control. Exception: `IconButton` already has its own label tooltip.
 
-## Breadcrumbs (Primer: Breadcrumbs)
+## Breadcrumbs (custom; Primer: Breadcrumbs)
+
+These stay as buttons because they change in-memory state and are heading-sized. See Retained Custom Controls.
 
 ```tsx
 <nav aria-label="Breadcrumb">
@@ -153,31 +174,40 @@ The tooltip renders in a portal on `document.body` with fixed positioning, so `o
 </nav>
 ```
 
-## Form Controls (Primer: TextInput, Select, FormControl)
+## Form Controls (Primer: FormControl, TextInput, Select)
 
 ```tsx
-<div className="flex flex-col gap-1.5 text-sm text-(--fgColor-muted)">
-  <label htmlFor="filter" className="font-medium text-(--fgColor-default)">Label</label>
-  <select id="filter" className="h-(--control-large-size) min-w-56 rounded-md border border-(--borderColor-default) bg-(--bgColor-default) px-3 py-2 text-sm text-(--fgColor-default) shadow-(--shadow-inset) transition duration-150 focus:border-(--borderColor-accent-emphasis)">
-    <option>All</option>
-  </select>
-</div>
+import { FormControl, Select, TextInput } from '@primer/react';
+import { SearchIcon } from '@primer/octicons-react';
+
+<FormControl>
+  <FormControl.Label>Search users</FormControl.Label>
+  <TextInput block size="large" leadingVisual={SearchIcon} className="min-w-56" value={query} onChange={e => setQuery(e.target.value)} />
+</FormControl>
+
+<FormControl>
+  <FormControl.Label>Copilot Plan</FormControl.Label>
+  <Select block size="large" className="min-w-56" value={plan} onChange={e => setPlan(e.target.value)}>
+    <Select.Option value="all">All plans</Select.Option>
+  </Select>
+</FormControl>
 ```
 
-The Primer focus outline comes from `globals.css`; do not add `outline-none` or `focus:ring-*`.
+- `FormControl` connects the label to the input. Do not add a redundant `aria-label`.
+- When surrounding UI already names the field, keep the label for assistive tech with `<FormControl.Label visuallyHidden>`.
+- `FormControl` lays out as a column aligned to the start. Use `block` to stretch an input across its column, and `className` (wrapper) for min/max widths.
+- Use `size="large"` in filter bars and the default `medium` in compact card headers. Primer sets control heights from `--control-*-size`.
 
-Always set an explicit control height (`h-(--control-large-size)`, or `--control-medium-size` for compact UIs) on inputs and selects. Safari ignores padding on native `<select>` elements, so padding alone gives inconsistent heights. Do not set a fixed height on `<select multiple>` or listboxes with `size`; their row count determines the height.
+### Multiple selection (Primer: Checkbox)
 
-### Multiple selection (Primer: CheckboxGroup)
-
-Do not use `<select multiple>` for user-facing multi-select: it requires Ctrl/Cmd-click and is hard to discover. Use a `fieldset` of checkboxes:
+Do not use `<select multiple>` for user-facing multi-select: it requires Ctrl/Cmd-click and is hard to discover. Use a `fieldset` of Primer checkboxes:
 
 ```tsx
 <fieldset aria-describedby="period-hint" className="flex flex-col gap-1.5 text-sm">
   <legend className="font-medium text-(--fgColor-default)">Billing Period</legend>
   {options.map(o => (
     <label key={o.value} className="inline-flex items-center gap-2 text-(--fgColor-default)">
-      <input type="checkbox" value={o.value} checked={selected.includes(o.value)} onChange={toggle} className="size-4 accent-(--bgColor-accent-emphasis)" />
+      <Checkbox value={o.value} checked={selected.includes(o.value)} onChange={toggle} />
       {o.label}
     </label>
   ))}
@@ -185,38 +215,42 @@ Do not use `<select multiple>` for user-facing multi-select: it requires Ctrl/Cm
 </fieldset>
 ```
 
-## Pagination (Primer: Pagination)
+## Pagination (custom page buttons + IconButton)
 
-Wrap the controls in `<nav aria-label="… pagination">`. Icon-only previous/next buttons need `aria-label` ("Previous page" / "Next page"), page buttons need `aria-label="Page N"`, the current page gets `aria-current="page"`, and every button sets `type="button"`.
+Wrap the controls in `<nav aria-label="… pagination">`. Previous/next use `IconButton` with `ChevronLeftIcon`/`ChevronRightIcon`, `variant="invisible"` and labels such as "Previous page"/"Next page". Numbered page buttons stay hand-built because Primer `Pagination` renders hash links. Give each one `type="button"` and `aria-label="Page N"`, and give the current page `aria-current="page"`:
 
 ```tsx
+<IconButton icon={ChevronLeftIcon} variant="invisible" aria-label="Previous page" disabled={page === 1} onClick={prev} />
 <button type="button" aria-label="Page 1" aria-current="page" className="w-8 h-8 text-sm font-medium rounded-md border bg-(--bgColor-accent-emphasis) text-(--fgColor-onEmphasis) border-(--borderColor-accent-emphasis)">1</button>
 <button type="button" aria-label="Page 2" className="w-8 h-8 text-sm font-medium rounded-md border border-(--borderColor-default) text-(--fgColor-muted) hover:bg-(--control-transparent-bgColor-hover)">2</button>
 <span className="text-sm text-(--fgColor-muted)">1–25 of 142</span>
 ```
 
-## Segmented Control (Primer: SegmentedControl)
+## Chart / Table Toggles
+
+Use a single `Button size="small"` whose label names the next view ("Show Table", "Chart"). No segmented controls exist today. If you need one, use Primer `SegmentedControl`.
+
+## Progress Bars and Loading (Primer: ProgressBar, Spinner)
 
 ```tsx
-<div className="flex bg-(--bgColor-muted) border border-(--borderColor-default) rounded-md p-0.5">
-  <button aria-pressed="true" className="px-3 py-1.5 text-sm font-medium rounded-md bg-(--bgColor-default) text-(--fgColor-default) border border-(--borderColor-default)">Chart</button>
-  <button aria-pressed="false" className="px-3 py-1.5 text-sm font-medium rounded-md text-(--fgColor-muted) hover:text-(--fgColor-default)">Table</button>
-</div>
+import { ProgressBar, Spinner } from '@primer/react';
+
+<ProgressBar progress={pct} bg="accent.emphasis" aria-label="File processing progress" />
+<ProgressBar barSize="small" progress={daysPercent} aria-label="Days active" aria-valuetext="19 of 31 days" className="flex-1" />
+<Spinner size="medium" srText={null} className="text-(--fgColor-accent)" />
 ```
 
-## Progress Bars (Primer: ProgressBar)
+Always give `ProgressBar` an `aria-label`, and add `aria-valuetext` when the percentage alone is unclear. The default fill is the success color. Pass `srText={null}` to `Spinner` only when visible text already describes the loading state.
+
+## Drill-Down Links (Primer: Link)
 
 ```tsx
-<div className="h-1.5 rounded-full bg-(--progressBar-track-bgColor) overflow-hidden">
-  <div className="h-full bg-(--progressBar-bgColor-success)" style={{ width: `${pct}%` }} />
-</div>
+import { Link } from '@primer/react';
+
+<Link as="button" type="button" className="font-medium" onClick={() => onSelect(user)}>username</Link>
 ```
 
-## Drill-Down Links
-
-```tsx
-<button className="text-(--fgColor-accent) hover:underline font-medium">username</button>
-```
+Set font size on the parent element. Primer's button-link CSS sets `font-size: inherit` and overrides `text-*` utilities.
 
 ## Empty States (Primer: Blankslate)
 
