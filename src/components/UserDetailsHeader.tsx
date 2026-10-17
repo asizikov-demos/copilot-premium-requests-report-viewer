@@ -105,7 +105,7 @@ export function UserDetailsHeader({ user, planName, summary, onBack, onCopyUser 
             <Label>Total consumption</Label>
             {summary.totalCost !== null ? (
               <>
-                <p className="display-heading text-4xl font-semibold text-(--fgColor-default) tabular-nums">
+                <p className="text-4xl font-semibold text-(--fgColor-default) tabular-nums">
                   {formatCurrency(summary.totalCost)}
                 </p>
                 <p className="text-xs text-(--fgColor-muted)">

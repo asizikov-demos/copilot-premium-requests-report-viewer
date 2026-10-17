@@ -209,7 +209,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
       <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md shadow-(--shadow-resting-small) px-8 py-10 animate-fade-in-up">
         {/* Hero section */}
         <div className="text-center mb-10">
-          <h2 className="display-heading text-4xl text-(--fgColor-default) mb-4">
+          <h2 className="text-4xl text-(--fgColor-default) mb-4">
             Analyze your usage data
           </h2>
           <p className="text-lg text-(--fgColor-muted) max-w-md mx-auto leading-relaxed">

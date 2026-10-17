@@ -9,12 +9,8 @@ const cssVar = (name: string): string => `var(--${name})`;
 export const fgColor = {
   default: cssVar('fgColor-default'),
   muted: cssVar('fgColor-muted'),
-  accent: cssVar('fgColor-accent'),
-  success: cssVar('fgColor-success'),
-  attention: cssVar('fgColor-attention'),
   severe: cssVar('fgColor-severe'),
   danger: cssVar('fgColor-danger'),
-  done: cssVar('fgColor-done'),
   onEmphasis: cssVar('fgColor-onEmphasis'),
 } as const;
 
@@ -22,7 +18,6 @@ export const bgColor = {
   default: cssVar('bgColor-default'),
   muted: cssVar('bgColor-muted'),
   neutralMuted: cssVar('bgColor-neutral-muted'),
-  accentMuted: cssVar('bgColor-accent-muted'),
   successEmphasis: cssVar('bgColor-success-emphasis'),
   dangerEmphasis: cssVar('bgColor-danger-emphasis'),
 } as const;
