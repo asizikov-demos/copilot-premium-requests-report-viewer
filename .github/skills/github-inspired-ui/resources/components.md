@@ -26,11 +26,9 @@ Keep these hand-built. Their behavior is required and the Primer counterpart doe
 
 | Control | Why it stays custom |
 | --- | --- |
-| `Tooltip` primitive | Primer `Tooltip` (v2) handles Escape only after the popover is open. Ours also cancels a pending open during the delay, renders in a portal and merges `aria-describedby` with existing IDs. |
 | `SortableColumnHeader` | Puts `aria-sort` on the `<th>` and a keyboard-focusable `<button>` inside it. The tables are not Primer `DataTable`. |
 | Numbered pagination buttons | Primer `Pagination` renders anchors with hash links and disabled `<span>`s. Our pages are in-memory state and need real `<button>`s with `disabled`. Previous/next use `IconButton`. |
 | Breadcrumb buttons | Primer `Breadcrumbs` renders links. Ours are `text-2xl` heading-sized buttons that change in-memory state. |
-| Disclosure rows and `ExpandableSection` | Table-row toggles need `aria-expanded`/`aria-controls` on a button inside the row. |
 | `AdvisorySection` `<details>` | Native disclosure with no Primer equivalent. |
 | CSV dropzone | Drag-and-drop file target wrapped around a hidden `<input type="file">`. |
 | Insight category cards and mobile summary cards | Large card-shaped buttons. `InsightsOverview` returns focus to the card when the user goes back. |
@@ -120,7 +118,7 @@ import { ArrowLeftIcon, ChevronLeftIcon, XIcon } from '@primer/octicons-react';
 <IconButton icon={ChevronLeftIcon} variant="invisible" aria-label="Previous page" disabled={page === 1} onClick={prev} />
 ```
 
-`Button` and `IconButton` default to `type="button"`. `IconButton` shows its `aria-label` as a Primer tooltip and names itself with `aria-labelledby`. Do not wrap it in the custom `Tooltip`. In the dark app header, use a default `Button`.
+`Button` and `IconButton` default to `type="button"`. `IconButton` shows its `aria-label` as a Primer tooltip and names itself with `aria-labelledby`. Do not wrap it in another tooltip. In the dark app header, use a default `Button`.
 
 ## Banners / Callouts (Primer: Banner)
 
@@ -140,25 +138,9 @@ Static explanatory notes inside cards may stay as token-styled boxes:
 </div>
 ```
 
-## Expandable Sections (Primer: Details)
+## Tooltips
 
-Use `ExpandableSection` from `src/components/primitives/ExpandableSection.tsx`:
-
-```tsx
-<ExpandableSection id="section-id" title="Title" subtitle="Optional" expanded={isExpanded} onToggle={() => setIsExpanded(e => !e)}>
-  {/* Content */}
-</ExpandableSection>
-```
-
-## Tooltips (custom primitive)
-
-Use `Tooltip` from `src/components/primitives/Tooltip.tsx` (`bg-(--tooltip-bgColor) text-(--tooltip-fgColor)`), not Primer `Tooltip`:
-
-```tsx
-<Tooltip content="Helpful information" side="top"><span>Hover me</span></Tooltip>
-```
-
-The tooltip renders in a portal on `document.body` with fixed positioning, so `overflow-hidden` or scrolling ancestors never clip it. It opens on hover and focus, and closes on Escape. Escape also cancels an open that is still waiting for its delay. It adds its ID to the trigger's existing `aria-describedby`. The child must be a single element that can receive focus or that wraps a focusable control. Exception: `IconButton` already has its own label tooltip.
+Use Primer's `Tooltip` from `@primer/react` for UI controls. Chart hover details use Recharts' `Tooltip`. `IconButton` already displays its accessible label as a tooltip, so do not wrap it in another tooltip.
 
 ## Breadcrumbs (custom; Primer: Breadcrumbs)
 
