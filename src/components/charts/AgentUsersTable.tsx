@@ -14,11 +14,7 @@ export interface AgentUsageTableRow {
   additional: number;
 }
 
-export function formatUsageQuantity(value: number): string {
-  return formatDecimalQuantity(value);
-}
-
-export function getVisibleRows<T>(
+function getVisibleRows<T>(
   rows: T[],
   showAllRows: boolean,
   previewCount: number
@@ -86,7 +82,7 @@ export function AgentUsersTable({
                   {user.user}
                 </td>
                 <td className="px-5 py-3 whitespace-nowrap text-sm font-mono text-(--fgColor-default) text-right">
-                  {formatUsageQuantity(user.quantity)}
+                  {formatDecimalQuantity(user.quantity)}
                 </td>
                 {showCosts && (
                   <>

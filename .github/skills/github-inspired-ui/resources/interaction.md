@@ -37,7 +37,7 @@ import { SearchIcon, ChevronRightIcon } from '@primer/octicons-react';
 ## ARIA Patterns
 
 - Expandable sections: `aria-expanded`, `aria-controls`, `aria-labelledby`
-- Tooltips: `aria-describedby` and `role="tooltip"`, rendered in a portal, dismissible with Escape (use the `Tooltip` primitive). Escape also cancels a pending open. `IconButton` brings its own label tooltip.
+- Tooltips: use Primer's `Tooltip` from `@primer/react`. `IconButton` brings its own label tooltip.
 - Navigation: wrap in `<nav aria-label>` and indicate the active item with `aria-current="page"` in addition to styling. `NavList` and `UnderlineNav` do this when you pass `aria-current` to the item.
 - Sortable table headers: use `SortableColumnHeader` (a `<button>` inside `<th>` with `aria-sort` on the `<th>`)
 - Multi-select: a `fieldset` + `legend` of Primer `Checkbox`es, never `<select multiple>`
