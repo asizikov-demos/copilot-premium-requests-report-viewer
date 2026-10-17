@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import { ChevronRightIcon } from '@primer/octicons-react';
 
 import { PRICING } from '@/constants/pricing';
 import type { ProcessedData } from '@/types/csv';
@@ -113,16 +114,10 @@ function buildDailyConsumptionRows(
 
 function ChevronIcon({ expanded }: { expanded: boolean }) {
   return (
-    <svg
-      aria-hidden="true"
-      className={`h-4 w-4 shrink-0 text-(--fgColor-muted) transition-transform duration-150 ${expanded ? 'rotate-90' : ''}`}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.5}
-      viewBox="0 0 24 24"
-    >
-      <path d="m9 18 6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <ChevronRightIcon
+      size={16}
+      className={`shrink-0 text-(--fgColor-muted) transition-transform duration-150 ${expanded ? 'rotate-90' : ''}`}
+    />
   );
 }
 

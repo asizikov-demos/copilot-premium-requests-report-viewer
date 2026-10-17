@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 /* Primer Primitives: https://primer.style/product/primitives/ */
+@import "@primer/primitives/dist/css/base/motion/motion.css";
 @import "@primer/primitives/dist/css/base/size/size.css";
 @import "@primer/primitives/dist/css/base/typography/typography.css";
 @import "@primer/primitives/dist/css/functional/size/border.css";

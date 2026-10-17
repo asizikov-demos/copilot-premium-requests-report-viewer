@@ -1,6 +1,7 @@
 'use client';
 
 import { useId, useMemo, useState } from 'react';
+import { FormControl, Select } from '@primer/react';
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 import { borderColor, fgColor } from '@/constants/primerTokens';
@@ -62,14 +63,13 @@ export function UserConsumptionMetrics({ rows, tokensAvailable = true }: {
               <h3 className="text-sm font-medium text-(--fgColor-default)">Token Usage Over Time</h3>
               <p className="text-xs text-(--fgColor-muted) mt-1">Daily UTC counts by token type, shown separately. Missing or partial counts leave gaps.</p>
             </div>
-            <div className="flex flex-col gap-1 text-xs text-(--fgColor-muted)">
-              <label htmlFor={filterId}>Trend model</label>
-              <select id={filterId} value={effectiveModel} onChange={event => setSelectedModel(event.target.value)}
-                className="h-(--control-large-size) max-w-full sm:max-w-64 rounded-md border border-(--borderColor-default) bg-(--bgColor-default) px-3 py-2 text-sm text-(--fgColor-default)">
-                <option value="">All models</option>
-                {models.map(model => <option key={model} value={model}>{model}</option>)}
-              </select>
-            </div>
+            <FormControl id={filterId}>
+              <FormControl.Label>Trend model</FormControl.Label>
+              <Select value={effectiveModel} onChange={event => setSelectedModel(event.target.value)} className="max-w-full sm:max-w-64">
+                <Select.Option value="">All models</Select.Option>
+                {models.map(model => <Select.Option key={model} value={model}>{model}</Select.Option>)}
+              </Select>
+            </FormControl>
           </div>
           <div className="p-5">
             <div className="h-72 sm:h-80 w-full" role="img" aria-label={`Daily token usage for ${effectiveModel || 'all models'}; incomplete values are omitted`}>

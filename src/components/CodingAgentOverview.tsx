@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { Button } from '@primer/react';
 
 import { useAnalysisContext } from '@/context/AnalysisContext';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -108,12 +109,9 @@ export function CodingAgentOverview({
         </div>
         <div className="flex gap-2">
           {isMobile && (
-            <button
-              onClick={() => setShowChart(!showChart)}
-              className="px-3 py-1.5 text-sm font-medium text-(--fgColor-muted) bg-(--bgColor-muted) hover:bg-(--control-transparent-bgColor-active) rounded-md transition-colors"
-            >
+            <Button size="small" onClick={() => setShowChart(!showChart)}>
               {showChart ? 'Table' : 'Chart'}
-            </button>
+            </Button>
           )}
         </div>
       </div>

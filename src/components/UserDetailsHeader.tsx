@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import { CopyIcon } from '@primer/octicons-react';
+import { ProgressBar } from '@primer/react';
 
 import type { UserHeaderSummary } from '@/utils/userHeaderSummary';
 import { formatCurrency } from '@/utils/formatters';
@@ -79,20 +81,10 @@ export function UserDetailsHeader({ user, planName, summary, onBack, onCopyUser 
               className="text-2xl font-semibold tracking-tight text-(--fgColor-default) hover:text-(--fgColor-accent) transition-colors duration-150 rounded-sm inline-flex items-center gap-2 group"
             >
               {user}
-              <svg
-                className="w-5 h-5 text-(--fgColor-muted) group-hover:text-(--fgColor-accent) transition-colors duration-150"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
-                />
-              </svg>
+              <CopyIcon
+                size={16}
+                className="text-(--fgColor-muted) group-hover:text-(--fgColor-accent) transition-colors duration-150"
+              />
             </button>
           </li>
         </ol>
@@ -146,9 +138,13 @@ export function UserDetailsHeader({ user, planName, summary, onBack, onCopyUser 
             <Label>Days active</Label>
             <div className="flex items-center gap-3 mt-1">
               {daysPercent !== null && (
-                <div className="flex-1 h-1.5 rounded-sm bg-(--progressBar-track-bgColor) overflow-hidden">
-                  <div className="h-full bg-(--progressBar-bgColor-success)" style={{ width: `${daysPercent}%` }} />
-                </div>
+                <ProgressBar
+                  className="flex-1"
+                  barSize="small"
+                  progress={daysPercent}
+                  aria-label="Days active"
+                  aria-valuetext={`${summary.daysActive} of ${summary.daysInPeriod} days`}
+                />
               )}
               <span className="text-sm text-(--fgColor-default) tabular-nums">
                 {summary.daysInPeriod ? `${summary.daysActive} / ${summary.daysInPeriod}` : summary.daysActive}

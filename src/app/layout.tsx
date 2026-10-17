@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { PrimerProviders } from "./providers";
 
 export const metadata: Metadata = {
   title: "Copilot Billing Report Viewer",
@@ -14,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en" data-color-mode="light" data-light-theme="light">
       <body className="antialiased">
-        {children}
+        <PrimerProviders>{children}</PrimerProviders>
       </body>
     </html>
   );

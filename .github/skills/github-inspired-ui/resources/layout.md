@@ -2,20 +2,24 @@
 
 ## Page Structure (Sidebar + Content)
 
+The desktop sidebar uses Primer `NavList`. Render each item as a button because sections are in-memory state, not routes:
+
 ```tsx
+import { NavList } from '@primer/react';
+
 <div className="flex gap-6">
   <aside className="hidden lg:block w-56 shrink-0">
     <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md sticky top-24">
-      <nav className="p-3 space-y-1">
-        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-(--fgColor-muted) hover:bg-(--control-transparent-bgColor-hover) hover:text-(--fgColor-default)">
-          <svg className="w-4 h-4" aria-hidden="true" .../>
-          Label
-        </button>
-        {/* Active state */}
-        <button aria-current="page" className="... bg-(--control-transparent-bgColor-selected) text-(--fgColor-default) font-semibold">
-          Active Item
-        </button>
-      </nav>
+      <div className="py-2">
+        <NavList aria-label="Report sections">
+          {navItems.map(item => (
+            <NavList.Item key={item.key} as="button" type="button" aria-current={view === item.key ? 'page' : undefined} onClick={() => setView(item.key)}>
+              <NavList.LeadingVisual><item.icon /></NavList.LeadingVisual>
+              {item.label}
+            </NavList.Item>
+          ))}
+        </NavList>
+      </div>
     </div>
   </aside>
 
@@ -23,21 +27,23 @@
 </div>
 ```
 
-## Mobile Navigation (underline nav)
+## Mobile Navigation (Primer: UnderlineNav)
 
 ```tsx
+import { UnderlineNav } from '@primer/react';
+
 <div className="lg:hidden mb-6">
-  <div className="flex flex-wrap gap-2">
-    <button className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md bg-(--bgColor-default) text-(--fgColor-muted) border border-(--borderColor-default) hover:bg-(--control-transparent-bgColor-hover)">
-      Tab
-    </button>
-    {/* Active tab */}
-    <button aria-current="page" className="... bg-(--bgColor-default) text-(--fgColor-default) border-b-2 border-(--underlineNav-borderColor-active) font-semibold">
-      Active Tab
-    </button>
-  </div>
+  <UnderlineNav aria-label="Report sections">
+    {navItems.map(item => (
+      <UnderlineNav.Item key={item.key} as="button" type="button" aria-current={view === item.key ? 'page' : undefined} onSelect={() => setView(item.key)}>
+        {item.label}
+      </UnderlineNav.Item>
+    ))}
+  </UnderlineNav>
 </div>
 ```
+
+`UnderlineNav` moves items that do not fit into a "More" menu. Do not pass `icon` to its items. In the overflow menu, Primer forwards `icon` to a DOM element and React logs an error.
 
 ## Grid Layouts
 
@@ -61,18 +67,17 @@
 ## App Header (Primer header tokens)
 
 ```tsx
+import { MarkGithubIcon } from '@primer/octicons-react';
+import { Button } from '@primer/react';
+
 <header className="bg-(--header-bgColor) sticky top-0 z-50">
   <div className="px-6">
     <div className="flex items-center justify-between h-16">
       <div className="flex items-center gap-3">
-        <svg height="32" viewBox="0 0 16 16" width="32" className="fill-(--header-fgColor-logo)" aria-hidden="true">
-          <path d="..." />
-        </svg>
+        <MarkGithubIcon size={32} className="fill-(--header-fgColor-logo)" />
         <h1 className="text-lg font-semibold tracking-tight text-(--header-fgColor-logo)">App Title</h1>
       </div>
-      <button className="px-4 py-2 text-sm font-medium text-(--header-fgColor-logo) bg-transparent hover:bg-(--fgColor-onEmphasis)/10 rounded-md transition-all duration-150 border border-(--header-borderColor-divider)">
-        Action
-      </button>
+      <Button onClick={onAction}>Action</Button>
     </div>
   </div>
 </header>

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Link } from '@primer/react';
 
 import type { BillingCostLabels } from '@/utils/billingLabels';
 import { formatCurrency, formatDecimalQuantity } from '@/utils/formatters';
@@ -106,13 +107,10 @@ export function AgentUsersTable({
         </table>
       </div>
       {hasMore && (
-        <div className="px-5 py-3 border-t border-(--borderColor-default)">
-          <button
-            onClick={onToggleShowAll}
-            className="text-sm font-medium text-(--fgColor-accent)  transition-colors"
-          >
+        <div className="px-5 py-3 border-t border-(--borderColor-default) text-sm">
+          <Link as="button" type="button" className="font-medium" onClick={onToggleShowAll}>
             {showAll ? `Show top ${previewCount}` : `Show all ${rows.length} users`}
-          </button>
+          </Link>
         </div>
       )}
     </div>

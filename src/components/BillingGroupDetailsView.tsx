@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import { ChevronLeftIcon, ChevronRightIcon, CopyIcon, SearchIcon } from '@primer/octicons-react';
+import { FormControl, IconButton, TextInput } from '@primer/react';
 
 import { DailyConsumptionChart } from '@/components/charts/DailyConsumptionChart';
 import { ModelDailyStackedChart } from '@/components/charts/ModelDailyStackedChart';
@@ -270,19 +272,10 @@ export function BillingGroupDetailsView({
                 className="text-2xl font-semibold tracking-tight text-(--fgColor-default) hover:text-(--fgColor-accent) transition-colors duration-150 rounded-sm inline-flex items-center gap-2 group"
               >
                 {groupName}
-                <svg aria-hidden="true"
-                  className="w-5 h-5 text-(--fgColor-muted) group-hover:text-(--fgColor-accent) transition-colors duration-150"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
-                  />
-                </svg>
+                <CopyIcon
+                  size={16}
+                  className="text-(--fgColor-muted) group-hover:text-(--fgColor-accent) transition-colors duration-150"
+                />
               </button>
             </li>
           </ol>
@@ -390,31 +383,20 @@ export function BillingGroupDetailsView({
                 Showing {filteredUserRows.length} of {userRows.length} {userRows.length === 1 ? 'user' : 'users'} in this {groupLabel}.
               </p>
             </div>
-            <label className="flex flex-col gap-1.5 text-sm text-(--fgColor-muted)">
-              <span className="sr-only">Search users</span>
-              <div className="relative">
-                <svg
-                  aria-hidden="true"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-(--fgColor-muted)"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                </svg>
-                <input
-                  type="text"
-                  value={userSearch}
-                  onChange={(event) => {
-                    setUserSearch(event.target.value);
-                    setUserPage(0);
-                  }}
-                  placeholder="Filter by username..."
-                  aria-label="Search users"
-                  className="w-full min-w-56 rounded-md border border-(--borderColor-default) bg-(--bgColor-default) pl-9 pr-3 py-2 text-sm text-(--fgColor-default) shadow-(--shadow-inset) transition duration-150 focus:border-(--borderColor-accent-emphasis) placeholder:text-(--fgColor-muted)"
-                />
-              </div>
-            </label>
+            <FormControl>
+              <FormControl.Label visuallyHidden>Search users</FormControl.Label>
+              <TextInput
+                block
+                leadingVisual={SearchIcon}
+                value={userSearch}
+                onChange={(event) => {
+                  setUserSearch(event.target.value);
+                  setUserPage(0);
+                }}
+                placeholder="Filter by username..."
+                className="min-w-56"
+              />
+            </FormControl>
           </div>
           {filteredUserRows.length > 0 ? (
             <div className="overflow-x-auto">
@@ -463,31 +445,23 @@ export function BillingGroupDetailsView({
                     )} of {filteredUserRows.length}
                   </p>
                   <nav aria-label="Users pagination" className="flex items-center gap-1">
-                    <button
-                      type="button"
+                    <IconButton
+                      icon={ChevronLeftIcon}
+                      variant="invisible"
+                      aria-label="Previous users page"
                       onClick={() => setUserPage((page) => Math.max(0, page - 1))}
                       disabled={activeUserPage === 0}
-                      aria-label="Previous users page"
-                      className="p-1.5 text-(--fgColor-muted) hover:text-(--fgColor-default) disabled:opacity-40 transition-colors duration-150"
-                    >
-                      <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
-                      </svg>
-                    </button>
+                    />
                     <span className="px-2 text-sm text-(--fgColor-muted)">
                       {activeUserPage + 1} / {totalUserPages}
                     </span>
-                    <button
-                      type="button"
+                    <IconButton
+                      icon={ChevronRightIcon}
+                      variant="invisible"
+                      aria-label="Next users page"
                       onClick={() => setUserPage((page) => Math.min(totalUserPages - 1, page + 1))}
                       disabled={activeUserPage === totalUserPages - 1}
-                      aria-label="Next users page"
-                      className="p-1.5 text-(--fgColor-muted) hover:text-(--fgColor-default) disabled:opacity-40 transition-colors duration-150"
-                    >
-                      <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="m9 5 7 7-7 7" />
-                      </svg>
-                    </button>
+                    />
                   </nav>
                 </div>
               )}
@@ -560,16 +534,10 @@ export function BillingGroupDetailsView({
                               aria-controls={detailsId}
                               onClick={() => setExpandedDate(isExpanded ? null : row.date)}
                             >
-                              <svg
-                                aria-hidden="true"
-                                className={`h-4 w-4 shrink-0 text-(--fgColor-muted) transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`}
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth={1.5}
-                                viewBox="0 0 24 24"
-                              >
-                                <path d="m9 18 6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
+                              <ChevronRightIcon
+                                size={16}
+                                className={`shrink-0 text-(--fgColor-muted) transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`}
+                              />
                               {formatUtcDate(row.date)}
                             </button>
                           ) : (
