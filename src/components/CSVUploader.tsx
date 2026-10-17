@@ -299,7 +299,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
         </p>
 
         {/* Sample data button */}
-        <div className="mt-5 text-center opacity-0 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+        <div className="mt-5 flex justify-center opacity-0 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
           <Button
             variant="primary"
             size="large"
