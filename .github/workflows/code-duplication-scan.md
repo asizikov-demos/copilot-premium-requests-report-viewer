@@ -9,7 +9,7 @@ on:
 
 engine:
   id: copilot
-  model: gpt-5.6-luna
+  model: sonnet
 
 permissions:
   contents: read
