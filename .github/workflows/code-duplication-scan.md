@@ -9,7 +9,7 @@ on:
 
 engine:
   id: copilot
-  model: gpt-5.6-luna
+  model: sonnet
 
 permissions:
   contents: read
@@ -19,6 +19,9 @@ permissions:
 network: defaults
 
 safe-outputs:
+  threat-detection:
+    engine-timeout: 10m
+    retries: 0
   create-issue:
     title-prefix: "[duplication] "
     labels: [enhancement]
@@ -43,6 +46,10 @@ tools:
     - git status
     - git grep
     - node
+
+jobs:
+  detection:
+    timeout-minutes: 20
 
 timeout-minutes: 20
 ---
