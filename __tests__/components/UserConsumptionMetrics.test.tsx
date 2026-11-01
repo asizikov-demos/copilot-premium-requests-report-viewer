@@ -56,12 +56,13 @@ describe('UserConsumptionMetrics', () => {
       { date: '2026-07-01', inputTokens: null, outputTokens: null, cacheReadTokens: null, cacheWriteTokens: null },
       { date: '2026-07-02', inputTokens: null, outputTokens: null, cacheReadTokens: null, cacheWriteTokens: null },
     ]);
-    fireEvent.change(screen.getByLabelText('Trend model'), { target: { value: 'test-model-two' } });
+    fireEvent.click(screen.getByRole('button', { name: /Trend model/ }));
+    fireEvent.click(screen.getByRole('option', { name: 'test-model-two' }));
     expect(chart()[0].inputTokens).toBe(20);
     expect(chart()[2].inputTokens).toBeNull();
     expect(screen.getByRole('table')).toHaveTextContent('test-model-one');
     rerender(<UserConsumptionMetrics rows={rows.filter(row => row.monthKey === '2026-07')} />);
-    expect(screen.getByLabelText('Trend model')).toHaveValue('');
+    expect(screen.getByRole('button', { name: /Trend model/ })).toHaveTextContent('All models');
     expect(chart()).toHaveLength(1);
     expect(screen.getByText('No complete daily token counts are available for this selection.')).toBeInTheDocument();
   });

@@ -2,9 +2,9 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { ArrowLeftIcon, ArrowRightIcon, ChevronLeftIcon, ChevronRightIcon, SearchIcon, XIcon } from '@primer/octicons-react';
-import { Button, FormControl, IconButton, Link, Select, TextInput } from '@primer/react';
+import { Button, FormControl, IconButton, Link, TextInput } from '@primer/react';
 
-import { getQuotaTier, isKnownQuotaValue } from '@/utils/analytics/quota';
+import { getQuotaTier } from '@/utils/analytics/quota';
 import { getBillingCostLabels } from '@/utils/billingLabels';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useSortableTable } from '@/hooks/useSortableTable';
@@ -22,6 +22,7 @@ import {
 import { UsersConsumptionHeatmap } from './charts/UsersConsumptionHeatmap';
 import { UserDetailsView } from './UserDetailsView';
 import { SortableColumnHeader } from './primitives/SortableColumnHeader';
+import { SelectPanelDropdown } from './primitives/SelectPanelDropdown';
 
 type DailyCumulativeData = { date: string; [user: string]: string | number };
 const ALL_FILTERS_VALUE = '__all__';
@@ -65,7 +66,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
 
   const ROWS_PER_PAGE = 50;
 
-  type ColumnKey = 'quota' | 'totalCredits' | 'aicGrossAmount' | 'gross' | 'discount' | 'net';
+  type ColumnKey = 'plan' | 'totalCredits' | 'aicGrossAmount' | 'gross' | 'discount' | 'net';
 
   const effectiveBillingArtifacts = useMemo(() => (
     billingArtifacts ?? buildBillingArtifactsFromProcessedData(processedData)
@@ -88,21 +89,16 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
     () => new Map(usageArtifacts.users.map((user) => [user.user, user.totalCredits])),
     [usageArtifacts.users]
   );
-  const hasMultipleMonths = useMemo(
-    () => new Set(processedData.map((row) => row.monthKey)).size > 1,
-    [processedData]
-  );
-
   const columns = useMemo<ColumnKey[]>(() => [
-    'quota',
+    'plan',
     'totalCredits',
     ...(hasCosts ? ['gross', 'discount', 'net'] as ColumnKey[] : [])
   ], [hasCosts]);
 
   const getSortableValue = useCallback((row: UserSummary, column: ColumnKey) => {
-    if (column === 'quota') {
-      const q = getUserQuota(quotaArtifacts, row.user);
-      return q === 'unknown' ? Number.NEGATIVE_INFINITY : q;
+    if (column === 'plan') {
+      const quota = getUserQuota(quotaArtifacts, row.user);
+      return quota === 'unknown' ? Number.NEGATIVE_INFINITY : quota;
     }
 
     if (column === 'totalCredits') return userCredits.get(row.user) ?? row.totalCredits;
@@ -314,73 +310,55 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
         </FormControl>
 
         {organizationOptions.length > 0 && (
-          <FormControl>
-            <FormControl.Label>Organization</FormControl.Label>
-            <Select
-              value={effectiveSelectedOrganization}
-              onChange={(event) => {
-                setSelectedOrganization(event.target.value);
-                setCurrentPage(0);
-              }}
-              block
-              size="large"
-              className="min-w-56"
-            >
-              <Select.Option value={ALL_FILTERS_VALUE}>All organizations</Select.Option>
-              {organizationOptions.map((organization) => (
-                <Select.Option key={organization} value={organization}>
-                  {organization}
-                </Select.Option>
-              ))}
-            </Select>
-          </FormControl>
+          <SelectPanelDropdown
+            label="Organization"
+            value={effectiveSelectedOrganization}
+            onChange={(value) => {
+              setSelectedOrganization(value);
+              setCurrentPage(0);
+            }}
+            className="min-w-56"
+            filterLabel="Filter organizations"
+            options={[
+              { value: ALL_FILTERS_VALUE, label: 'All organizations' },
+              ...organizationOptions.map((organization) => ({ value: organization, label: organization })),
+            ]}
+          />
         )}
 
         {costCenterOptions.length > 0 && (
-          <FormControl>
-            <FormControl.Label>Cost center</FormControl.Label>
-            <Select
-              value={effectiveSelectedCostCenter}
-              onChange={(event) => {
-                setSelectedCostCenter(event.target.value);
-                setCurrentPage(0);
-              }}
-              block
-              size="large"
-              className="min-w-56"
-            >
-              <Select.Option value={ALL_FILTERS_VALUE}>All cost centers</Select.Option>
-              <Select.Option value={NO_COST_CENTERS_FILTER_VALUE}>No cost centers</Select.Option>
-              {costCenterOptions.map((costCenter) => (
-                <Select.Option key={costCenter} value={costCenter}>
-                  {costCenter}
-                </Select.Option>
-              ))}
-            </Select>
-          </FormControl>
+          <SelectPanelDropdown
+            label="Cost center"
+            value={effectiveSelectedCostCenter}
+            onChange={(value) => {
+              setSelectedCostCenter(value);
+              setCurrentPage(0);
+            }}
+            className="min-w-56"
+            filterLabel="Filter cost centers"
+            options={[
+              { value: ALL_FILTERS_VALUE, label: 'All cost centers' },
+              { value: NO_COST_CENTERS_FILTER_VALUE, label: 'No cost centers' },
+              ...costCenterOptions.map((costCenter) => ({ value: costCenter, label: costCenter })),
+            ]}
+          />
         )}
 
         {planOptions.length > 1 && (
-          <FormControl>
-            <FormControl.Label>Copilot Plan</FormControl.Label>
-            <Select
-              value={effectiveSelectedPlan}
-              onChange={(event) => {
-                setSelectedPlan(event.target.value);
-                setCurrentPage(0);
-              }}
-              block
-              size="large"
-              className="min-w-56"
-            >
-              <Select.Option value={ALL_FILTERS_VALUE}>All plans</Select.Option>
-              {planOptions.map((plan) => (
-                <Select.Option key={plan} value={plan}>
-                  {plan}
-                </Select.Option>
-              ))}
-            </Select>
-          </FormControl>
+          <SelectPanelDropdown
+            label="Copilot Plan"
+            value={effectiveSelectedPlan}
+            onChange={(value) => {
+              setSelectedPlan(value);
+              setCurrentPage(0);
+            }}
+            className="min-w-56"
+            filterLabel="Filter plans"
+            options={[
+              { value: ALL_FILTERS_VALUE, label: 'All plans' },
+              ...planOptions.map((plan) => ({ value: plan, label: plan })),
+            ]}
+          />
         )}
       </div>
 
@@ -409,7 +387,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
             </div>
           </div>
           <div className="p-5">
-            <div className="h-72 sm:h-96 2xl:h-[28rem] relative z-30">
+            <div className="h-72 sm:h-96 2xl:h-[28rem] relative">
               <UsersConsumptionHeatmap
                 dailyCumulativeData={dailyCumulativeData}
                 users={chartUsers}
@@ -437,10 +415,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
           {isMobile && (
             <div className="p-4 space-y-2 sm:hidden">
               {paginatedUserData.map((user) => {
-                const userQuota = getUserQuota(quotaArtifacts, user.user);
                 const credits = userCredits.get(user.user) ?? user.totalCredits;
-                const isOverQuota = !hasMultipleMonths && isKnownQuotaValue(userQuota) && credits > userQuota;
-                const quotaDisplay = userQuota === 'unknown' ? 'Unknown' : `${userQuota}`;
                 const costs = userCosts.get(user.user);
                 const planDisplay = getUserPlanDisplayName(user.user);
 
@@ -454,18 +429,13 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                     <span className="font-medium text-(--fgColor-default) truncate flex-1 mr-2">
                       {user.user}
                     </span>
-                    <span className={`text-sm font-mono ${isOverQuota ? 'text-(--fgColor-danger)' : 'text-(--fgColor-default)'}`}>
+                    <span className="text-sm font-mono text-(--fgColor-default)">
                       {credits.toFixed(1)}
                     </span>
                   </div>
                   <div className="text-xs text-(--fgColor-muted)">
-                      {planDisplay} · Quota: {quotaDisplay} AI Credits
-                      {isOverQuota && (
-                        <span className="text-(--fgColor-danger) ml-2">
-                          +{(credits - (userQuota as number)).toFixed(1)} over
-                        </span>
-                      )}
-                    </div>
+                    {planDisplay}
+                  </div>
                   {hasCosts && ((costs?.gross ?? 0) > 0 || (costs?.discount ?? 0) > 0 || (costs?.net ?? 0) > 0) && (
                     <div className="flex items-center gap-3 mt-1.5 text-xs font-mono tabular-nums">
                       <span className="text-(--fgColor-muted)">{formatCurrency(costs?.gross ?? 0)}</span>
@@ -514,10 +484,10 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                   User
                 </th>
                 <SortableColumnHeader
-                  label="Quota"
-                  active={sortBy === 'quota'}
+                  label="Plan"
+                  active={sortBy === 'plan'}
                   direction={sortDirection}
-                  onSort={() => handleSortWithReset('quota')}
+                  onSort={() => handleSortWithReset('plan')}
                   className="min-w-24"
                 />
                 <SortableColumnHeader
@@ -556,10 +526,8 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
             </thead>
             <tbody className="divide-y divide-(--borderColor-muted)">
               {paginatedUserData.map((user) => {
-                const userQuota = getUserQuota(quotaArtifacts, user.user);
                 const credits = userCredits.get(user.user) ?? user.totalCredits;
-                const isOverQuota = !hasMultipleMonths && isKnownQuotaValue(userQuota) && credits > userQuota;
-                const quotaDisplay = userQuota === 'unknown' ? 'Unknown' : userQuota.toString();
+                const planDisplay = getUserPlanDisplayName(user.user);
 
                 return (
                 <tr key={user.user} className="group hover:bg-(--bgColor-muted) transition-colors duration-150">
@@ -573,19 +541,12 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                       {user.user}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-(--fgColor-muted) text-right font-mono tabular-nums">
-                    {quotaDisplay}
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-(--fgColor-muted)">
+                    {planDisplay}
                   </td>
-                  <td className={`px-4 py-3 whitespace-nowrap text-sm font-mono font-medium tabular-nums text-right ${
-                      isOverQuota ? 'text-(--fgColor-danger)' : 'text-(--fgColor-default)'
-                    }`}>
-                      {credits.toFixed(2)}
-                      {isOverQuota && (
-                        <span className="ml-1.5 text-xs text-(--fgColor-danger) font-normal">
-                          (+{(credits - (userQuota as number)).toFixed(1)})
-                        </span>
-                      )}
-                    </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-mono font-medium tabular-nums text-right text-(--fgColor-default)">
+                    {credits.toFixed(2)}
+                  </td>
                   {(() => {
                     const costs = userCosts.get(user.user);
                     return (

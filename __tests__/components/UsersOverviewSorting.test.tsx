@@ -62,7 +62,7 @@ function makeUsage(users: UserSummary[]): UsageArtifacts {
 }
 
 describe('UsersOverview - sorting', () => {
-  it('hides monthly overage badges for multi-month reports and never shows heatmap thresholds', () => {
+  it('shows plan names and plain AI Credits totals without overage indicators', () => {
     const userData: UserSummary[] = [{
       user: 'test-user-one',
       totalCredits: 3000,
@@ -89,11 +89,15 @@ describe('UsersOverview - sorting', () => {
 
     const { rerender } = render(<UsersOverview {...props} processedData={processedData} />);
     expect(screen.queryByText('1,900 quota')).not.toBeInTheDocument();
-    expect(within(screen.getByRole('table', { name: 'Users' })).queryByText('(+1100.0)')).not.toBeInTheDocument();
+    const table = within(screen.getByRole('table', { name: 'Users' }));
+    expect(table.getByRole('columnheader', { name: 'Plan' })).toBeInTheDocument();
+    expect(table.getByText('Business')).toBeInTheDocument();
+    expect(table.getByText('3000.00')).toHaveClass('text-(--fgColor-default)');
+    expect(table.queryByText('(+1100.0)')).not.toBeInTheDocument();
 
     rerender(<UsersOverview {...props} processedData={[processedData[0]]} />);
     expect(screen.queryByText('1,900 quota')).not.toBeInTheDocument();
-    expect(within(screen.getByRole('table', { name: 'Users' })).getByText('(+1100.0)')).toBeInTheDocument();
+    expect(within(screen.getByRole('table', { name: 'Users' })).queryByText('(+1100.0)')).not.toBeInTheDocument();
   });
 
   it('shows a Copilot plan user summary above filters', () => {
@@ -317,14 +321,14 @@ describe('UsersOverview - sorting', () => {
     expect(screen.queryByText('3,900 Enterprise')).not.toBeInTheDocument();
 
     const table = screen.getByRole('table', { name: 'Users' });
-    expect(within(table).getByRole('columnheader', { name: /Quota/ })).toBeInTheDocument();
+    expect(within(table).getByRole('columnheader', { name: 'Plan' })).toBeInTheDocument();
     expect(within(table).getByRole('columnheader', { name: /Gross Amount/ })).toBeInTheDocument();
     expect(within(table).queryByRole('columnheader', { name: /Total Requests/ })).not.toBeInTheDocument();
     expect(within(table).queryByRole('columnheader', { name: 'AI Credits Gross' })).not.toBeInTheDocument();
     expect(within(table).getByRole('columnheader', { name: /Total AI Credits/ })).toBeInTheDocument();
   });
 
-  it('sorts by quota (including Unknown) when clicking Quota header', () => {
+  it('sorts by plan tier (including Unknown) when clicking Plan header', () => {
     const userData: UserSummary[] = [
       { user: 'test-user-one', totalCredits: 10, modelBreakdown: { 'gpt-4': 10 } },
       { user: 'test-user-two', totalCredits: 20, modelBreakdown: { 'gpt-4': 20 } },
@@ -374,22 +378,22 @@ describe('UsersOverview - sorting', () => {
     // Default sort is totalCredits desc.
     expect(getRowUserOrder()).toEqual(['test-user-three', 'test-user-two', 'test-user-one']);
 
-    const quotaHeader = within(table).getByRole('columnheader', { name: 'Quota' });
+    const planHeader = within(table).getByRole('columnheader', { name: 'Plan' });
     const totalCreditsHeader = within(table).getByRole('columnheader', { name: 'Total AI Credits' });
-    const quotaSortButton = within(quotaHeader).getByRole('button', { name: 'Quota' });
-    expect(quotaHeader).toHaveAttribute('aria-sort', 'none');
+    const planSortButton = within(planHeader).getByRole('button', { name: 'Plan' });
+    expect(planHeader).toHaveAttribute('aria-sort', 'none');
     expect(totalCreditsHeader).toHaveAttribute('aria-sort', 'descending');
 
-    // First click selects quota sorting desc: higher known quotas first, Unknown last.
-    fireEvent.click(quotaSortButton);
+    // Higher plan tier sorts first, with Unknown last.
+    fireEvent.click(planSortButton);
     expect(getRowUserOrder()).toEqual(['test-user-three', 'test-user-two', 'test-user-one']);
-    expect(quotaHeader).toHaveAttribute('aria-sort', 'descending');
+    expect(planHeader).toHaveAttribute('aria-sort', 'descending');
     expect(totalCreditsHeader).toHaveAttribute('aria-sort', 'none');
 
-    // Second click toggles to asc: Unknown first, then lowest known quota.
-    fireEvent.click(quotaSortButton);
+    // Ascending order puts Unknown first, followed by the lower plan tier.
+    fireEvent.click(planSortButton);
     expect(getRowUserOrder()).toEqual(['test-user-one', 'test-user-two', 'test-user-three']);
-    expect(quotaHeader).toHaveAttribute('aria-sort', 'ascending');
+    expect(planHeader).toHaveAttribute('aria-sort', 'ascending');
   });
 
   it('filters users by organization and cost center when metadata is available', () => {
@@ -435,17 +439,24 @@ describe('UsersOverview - sorting', () => {
       return rows.map(row => within(row).getByRole('button').textContent ?? '');
     };
 
-    fireEvent.change(screen.getByLabelText('Organization'), { target: { value: 'test-org-one' } });
+    const organizationFilter = screen.getByRole('button', { name: /Organization/ });
+    expect(organizationFilter.querySelector('svg')).toBeNull();
+    fireEvent.click(organizationFilter);
+    fireEvent.click(screen.getByRole('option', { name: 'test-org-one' }));
     expect(getRowUserOrder()).toEqual(['test-user-three', 'test-user-one']);
 
-    fireEvent.change(screen.getByLabelText('Cost center'), { target: { value: 'test-cost-center-one' } });
+    fireEvent.click(screen.getByRole('button', { name: /Cost center/ }));
+    fireEvent.click(screen.getByRole('option', { name: 'test-cost-center-one' }));
     expect(getRowUserOrder()).toEqual(['test-user-one']);
 
-    fireEvent.change(screen.getByLabelText('Cost center'), { target: { value: 'test-cost-center-two' } });
+    fireEvent.click(screen.getByRole('button', { name: /Cost center/ }));
+    fireEvent.click(screen.getByRole('option', { name: 'test-cost-center-two' }));
     expect(getRowUserOrder()).toEqual(['test-user-three', 'test-user-one']);
 
-    fireEvent.change(screen.getByLabelText('Organization'), { target: { value: '__all__' } });
-    fireEvent.change(screen.getByLabelText('Cost center'), { target: { value: '__no_cost_centers__' } });
+    fireEvent.click(screen.getByRole('button', { name: /Organization/ }));
+    fireEvent.click(screen.getByRole('option', { name: 'All organizations' }));
+    fireEvent.click(screen.getByRole('button', { name: /Cost center/ }));
+    fireEvent.click(screen.getByRole('option', { name: 'No cost centers' }));
     expect(getRowUserOrder()).toEqual(['test-user-four']);
   });
 

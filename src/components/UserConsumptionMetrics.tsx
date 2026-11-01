@@ -1,7 +1,6 @@
 'use client';
 
-import { useId, useMemo, useState } from 'react';
-import { FormControl, Select } from '@primer/react';
+import { useMemo, useState } from 'react';
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 import { borderColor, fgColor } from '@/constants/primerTokens';
@@ -11,6 +10,7 @@ import { buildUserConsumption } from '@/utils/analytics/userConsumption';
 import { enumerateDatesInclusive } from '@/utils/dateKeys';
 
 import { chartTooltipContentStyle, chartTooltipLabelStyle, utcDateTickFormatter } from './charts/chartTooltipStyles';
+import { SelectPanelDropdown } from './primitives/SelectPanelDropdown';
 import { TOKEN_COLUMNS, TokenValue } from './TokenValue';
 
 function formatCredits(value: number | undefined): string {
@@ -22,7 +22,6 @@ export function UserConsumptionMetrics({ rows, tokensAvailable = true }: {
   tokensAvailable?: boolean;
 }) {
   const [selectedModel, setSelectedModel] = useState('');
-  const filterId = useId();
   const metrics = useMemo(() => buildUserConsumption(rows, tokensAvailable), [rows, tokensAvailable]);
   const models = useMemo(() => [...metrics.creditsByModel.keys()].sort(), [metrics]);
   const effectiveModel = models.includes(selectedModel) ? selectedModel : '';
@@ -63,13 +62,17 @@ export function UserConsumptionMetrics({ rows, tokensAvailable = true }: {
               <h3 className="text-sm font-medium text-(--fgColor-default)">Token Usage Over Time</h3>
               <p className="text-xs text-(--fgColor-muted) mt-1">Daily UTC counts by token type, shown separately. Missing or partial counts leave gaps.</p>
             </div>
-            <FormControl id={filterId}>
-              <FormControl.Label>Trend model</FormControl.Label>
-              <Select value={effectiveModel} onChange={event => setSelectedModel(event.target.value)} className="max-w-full sm:max-w-64">
-                <Select.Option value="">All models</Select.Option>
-                {models.map(model => <Select.Option key={model} value={model}>{model}</Select.Option>)}
-              </Select>
-            </FormControl>
+            <SelectPanelDropdown
+              label="Trend model"
+              value={effectiveModel}
+              onChange={setSelectedModel}
+              className="max-w-full sm:max-w-64"
+              filterLabel="Filter models"
+              options={[
+                { value: '', label: 'All models' },
+                ...models.map((model) => ({ value: model, label: model })),
+              ]}
+            />
           </div>
           <div className="p-5">
             <div className="h-72 sm:h-80 w-full" role="img" aria-label={`Daily token usage for ${effectiveModel || 'all models'}; incomplete values are omitted`}>

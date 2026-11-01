@@ -11,7 +11,7 @@ Interactive controls use `@primer/react`; icons use `@primer/octicons-react`. Th
 | Text actions inside tables and copy | `Link as="button" type="button"` | `UsersOverview`, `BillingGroupTable`, `AgentUsersTable` |
 | Labelled fields | `FormControl` + `FormControl.Label` (add `visuallyHidden` when the context already names the field) | filters and searches |
 | Text and search inputs | `TextInput` with `leadingVisual={SearchIcon}` | `UsersOverview`, `BillingGroupDetailsView`, `UserCategoryTable` |
-| Single choice | `Select` + `Select.Option` | `UsersOverview`, `UserConsumptionMetrics` |
+| Single choice | `SelectPanel` (through `SelectPanelDropdown` for app filters) | `UsersOverview`, `UserConsumptionMetrics` |
 | Multiple choice | `Checkbox` inside a `fieldset` + `legend` | `DataAnalysis` billing periods |
 | Error and status messages | `Banner` | `page.tsx` |
 | Indeterminate loading | `Spinner` | `CSVUploader` |
@@ -156,7 +156,7 @@ These stay as buttons because they change in-memory state and are heading-sized.
 </nav>
 ```
 
-## Form Controls (Primer: FormControl, TextInput, Select)
+## Form Controls (Primer: FormControl, TextInput, SelectPanel)
 
 ```tsx
 import { FormControl, Select, TextInput } from '@primer/react';
@@ -167,18 +167,19 @@ import { SearchIcon } from '@primer/octicons-react';
   <TextInput block size="large" leadingVisual={SearchIcon} className="min-w-56" value={query} onChange={e => setQuery(e.target.value)} />
 </FormControl>
 
-<FormControl>
-  <FormControl.Label>Copilot Plan</FormControl.Label>
-  <Select block size="large" className="min-w-56" value={plan} onChange={e => setPlan(e.target.value)}>
-    <Select.Option value="all">All plans</Select.Option>
-  </Select>
-</FormControl>
+<SelectPanelDropdown
+  label="Copilot Plan"
+  value={plan}
+  onChange={setPlan}
+  options={[{ value: 'all', label: 'All plans' }]}
+/>
 ```
 
 - `FormControl` connects the label to the input. Do not add a redundant `aria-label`.
 - When surrounding UI already names the field, keep the label for assistive tech with `<FormControl.Label visuallyHidden>`.
 - `FormControl` lays out as a column aligned to the start. Use `block` to stretch an input across its column, and `className` (wrapper) for min/max widths.
 - Use `size="large"` in filter bars and the default `medium` in compact card headers. Primer sets control heights from `--control-*-size`.
+- For searchable single-choice filters, use Primer `SelectPanel` via `SelectPanelDropdown`. The wrapper controls the open state, maps string values to panel items, uses a plain button anchor, and omits the trigger and search icons.
 
 ### Multiple selection (Primer: Checkbox)
 
