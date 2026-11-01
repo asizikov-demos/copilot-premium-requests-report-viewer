@@ -27,6 +27,7 @@ export function SelectPanelDropdown({
   filterLabel = 'Filter options',
 }: SelectPanelDropdownProps) {
   const [open, setOpen] = useState(false);
+  const [filterValue, setFilterValue] = useState('');
   const id = useId();
   const items = options.map(({ label, value: optionValue }) => ({
     id: optionValue,
@@ -41,20 +42,24 @@ export function SelectPanelDropdown({
         <SelectPanel
           id={id}
           open={open}
-          onOpenChange={setOpen}
-          items={items}
+          onOpenChange={(isOpen) => {
+            setOpen(isOpen);
+            if (!isOpen) setFilterValue('');
+          }}
+          items={items.filter((item) => item.text.toLowerCase().includes(filterValue.toLowerCase()))}
           selected={selected}
           onSelectedChange={(item: SelectPanelItemInput | undefined) => {
             if (item?.id !== undefined) onChange(String(item.id));
           }}
-          onFilterChange={() => {}}
+          filterValue={filterValue}
+          onFilterChange={setFilterValue}
           placeholderText={filterLabel}
           inputLabel={filterLabel}
           textInputProps={{ leadingVisual: null }}
           disableFullscreenOnNarrow
           renderAnchor={(props) => (
             <Button {...props} aria-labelledby={`${id}-label ${id}-selected-value`} block size="large" className={className}>
-              {props.children}
+              <span id={`${id}-selected-value`}>{props.children}</span>
             </Button>
           )}
         />
