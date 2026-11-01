@@ -74,6 +74,19 @@ All processing is client-side. No data leaves your browser.
 
 Issues and pull requests are welcome.
 
+### Dependency security updates
+
+Run `npm audit` when updating dependencies, and keep `next` and
+`eslint-config-next` on the same version. Validate updates with
+`npm run build && npm run lint && npm run test`.
+
+The overrides in `package.json` pin patched transitive dependencies. The
+`minimatch` 9/10 overrides use version 11's compatible named exports; legacy
+version 3 consumers require its callable CommonJS API and cannot use the same
+override. Remaining audit findings in legacy `minimatch` and `deepmerge` need
+compatible upstream fixes. Do not use `npm audit fix --force` to downgrade
+ESLint or Jest, or replace legacy APIs without validating their consumers.
+
 ---
 
 **Note**: This tool is not affiliated with GitHub. It's a community-created utility for analyzing Copilot usage reports.
