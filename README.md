@@ -14,6 +14,7 @@ Try the Sample Data option on the upload screen to see how it works without need
 
 - Per-user AI Credit consumption and monthly quota status
 - Model usage distribution in a flat-color treemap (tile area proportional to AI Credits), plus token breakdowns
+- Model Usage Trends includes four AI Credit ring charts for Auto and Fusion (Standard, High, Max), with prefix-trimmed model names and gross USD costs in compact legends (reported AI Credit gross amounts, or credit value at the configured rate when absent)
 - Billed costs and daily included vs. additional usage in USD
 - Cost center and organization breakdowns
 - Consumption groups, feature adoption insights, and recommendations
@@ -21,6 +22,9 @@ Try the Sample Data option on the upload screen to see how it works without need
 Select a single billing month to compare consumption against known quotas.
 Daily charts use UTC billing dates. Cost charts appear only when monetary data
 is available; token views appear when token counts are reported.
+Model ring cards keep a consistent height. Legends show the top five models;
+expanding reveals the rest in a scrollable list without resizing the card.
+Empty buckets explain the absence of usage for the selected period.
 
 ## Supported CSV Format
 
