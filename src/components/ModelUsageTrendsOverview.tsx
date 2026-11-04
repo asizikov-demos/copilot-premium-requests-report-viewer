@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 
 import { DailyConsumptionTable } from '@/components/DailyConsumptionTable';
 import { useAnalysisContext } from '@/context/AnalysisContext';
+import { ModelBucketDistributionCharts } from '@/components/charts/ModelBucketDistributionCharts';
 import { ModelDailyStackedChart } from '@/components/charts/ModelDailyStackedChart';
 import { filterDailySeriesByMonths } from '@/utils/analytics/filters';
 import { formatCurrency } from '@/utils/formatters';
@@ -147,6 +148,8 @@ export function ModelUsageTrendsOverview() {
           </div>
         )}
       </div>
+
+      <ModelBucketDistributionCharts rows={aggregateProcessedData} />
 
       {data.length > 0 && models.length > 0 && (
         <DailyConsumptionTable
