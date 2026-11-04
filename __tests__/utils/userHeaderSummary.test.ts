@@ -29,7 +29,7 @@ describe('buildUserHeaderSummary', () => {
 
     expect(buildUserHeaderSummary([
       makeProcessedData({ model: 'Claude Sonnet 5', sku: 'coding_agent_ai_credit' }),
-    ], 1900, true).cloudAgentUsed).toBe(true);
+    ], 'unknown', true).cloudAgentUsed).toBe(true);
   });
 
   it('falls back to a per-month quota split without billing data and omits the period length across months', () => {

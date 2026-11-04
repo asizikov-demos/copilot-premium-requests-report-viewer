@@ -81,7 +81,7 @@ describe('analyzeCodingAgentAdoptionFromArtifacts', () => {
       }),
     ]);
 
-    const result = analyzeCodingAgentAdoptionFromArtifacts(usage, makeQuota([['test-user-one', 1900]]));
+    const result = analyzeCodingAgentAdoptionFromArtifacts(usage, makeQuota([]));
 
     expect(result.totalCodingAgentCredits).toBe(12);
     expect(result.totalUsers).toBe(1);
