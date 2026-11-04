@@ -155,7 +155,9 @@ export function UserDetailsView({
     let cumulative = 0;
     let currentMonth = '';
     const result: UserDailyData[] = [];
-    for (const dateStr of buildBillingMonthDates(processedData.map(row => row.monthKey))) {
+    const months = dailyBucketsArtifacts?.months
+      ?? (analysisCtx?.aggregateProcessedData ?? processedData).map(row => row.monthKey);
+    for (const dateStr of buildBillingMonthDates(months)) {
       if (dateStr.slice(0, 7) !== currentMonth) {
         currentMonth = dateStr.slice(0, 7);
         cumulative = 0;
@@ -180,7 +182,7 @@ export function UserDetailsView({
     }
 
     return result;
-  }, [processedData, user, usageArtifacts, dailyBucketsArtifacts]);
+  }, [processedData, user, usageArtifacts, dailyBucketsArtifacts, analysisCtx?.aggregateProcessedData]);
 
   const effectiveUserAggregate = useMemo(
     () => userAggregate === undefined

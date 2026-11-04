@@ -6,7 +6,7 @@ import { AnalysisContext } from '@/context/AnalysisContext';
 import type { ProcessedData, UserDailyData } from '@/types/csv';
 import { buildProcessedDataFromRawRows } from '@/utils/ingestion/adapters';
 
-import { makeUsageArtifacts } from '../helpers/makeArtifacts';
+import { makeDailyBucketsArtifacts, makeUsageArtifacts } from '../helpers/makeArtifacts';
 import { makeProcessedData } from '../helpers/testUtils';
 
 jest.mock('recharts', () => ({
@@ -667,6 +667,48 @@ describe('UserDetailsView', () => {
     expect(chartData).toContain('"totalCumulative":42.5');
     expect(screen.queryByTestId('reference-line')).not.toBeInTheDocument();
   });
+
+  it.each([{ months: ['2024-02', '2024-04'] }, { months: undefined }])(
+    'keeps unattributed-only report months in legacy fallback model charts (%#)', ({ months }) => {
+    const processedData = [
+      makeProcessedData({
+        timestamp: new Date('2024-02-10T00:00:00Z'),
+        model: 'test-model-one',
+        creditsUsed: 2,
+      }),
+    ];
+    const unattributed = makeProcessedData({
+      timestamp: new Date('2024-04-15T00:00:00Z'),
+      isUnattributedUsage: true,
+      usageBucket: 'unattributed_ai_credit',
+    });
+    const contextValue = {
+      aggregateProcessedData: [...processedData, unattributed],
+      dailyBucketsArtifacts: makeDailyBucketsArtifacts([], {
+        months,
+        dailyUserModelTotals: undefined,
+      }),
+    } as React.ContextType<typeof AnalysisContext>;
+
+    render(
+      <AnalysisContext.Provider value={contextValue}>
+        <UserDetailsView user="test-user-one" processedData={processedData}
+          userQuotaValue="unknown" onBack={mockOnBack} />
+      </AnalysisContext.Provider>
+    );
+
+    const data: UserDailyData[] = JSON.parse(
+      screen.getByTestId('composed-chart').getAttribute('data-chart') ?? '[]'
+    );
+    expect(data.map(row => row.date)).toEqual([
+      ...Array.from({ length: 29 }, (_, index) => `2024-02-${String(index + 1).padStart(2, '0')}`),
+      ...Array.from({ length: 30 }, (_, index) => `2024-04-${String(index + 1).padStart(2, '0')}`),
+    ]);
+    expect(data[9]).toMatchObject({ totalCumulative: 2, 'test-model-one': 2 });
+    expect(data[28]).toMatchObject({ totalCumulative: 2, 'test-model-one': 0 });
+    expect(data.slice(29).every(row => row.totalCumulative === 0 && row['test-model-one'] === 0)).toBe(true);
+    }
+  );
 
   it('enumerates full UTC billing months in fallback chart data', () => {
     const createRow = (iso: string, user: string, creditsUsed: number): ProcessedData => {
