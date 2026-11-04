@@ -10,6 +10,7 @@ import {
   DailyBucketsArtifacts,
   SpecialUsageBucketKey
 } from './types';
+import { isCodingAgentModel } from '@/utils/productClassification';
 
 export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts> {
   readonly id = 'dailyBuckets';
@@ -17,6 +18,7 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
   private dailyUserTotals = new Map<string, Map<string, number>>();
   // New: nested map for per-model breakdown (day -> user -> model -> quantity)
   private dailyUserModelTotals = new Map<string, Map<string, Map<string, number>>>();
+  private dailyCodingAgentTotals = new Map<string, number>();
   private dailyBucketTotals = new Map<string, Map<SpecialUsageBucketKey, number>>();
   private dailyBucketModelTotals = new Map<string, Map<SpecialUsageBucketKey, Map<string, number>>>();
   private minDate: string | null = null;
@@ -63,6 +65,7 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
     // Reset state
     this.dailyUserTotals.clear();
     this.dailyUserModelTotals.clear();
+    this.dailyCodingAgentTotals.clear();
     this.dailyBucketTotals.clear();
     this.dailyBucketModelTotals.clear();
     this.minDate = null;
@@ -95,12 +98,19 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
 
     // Accumulate per-model nested totals
     DailyBucketsAggregator.inc3Level(this.dailyUserModelTotals, day, user, model, quantity);
+    if (isCodingAgentModel(model, row.sku)) {
+      this.dailyCodingAgentTotals.set(
+        day,
+        (this.dailyCodingAgentTotals.get(day) ?? 0) + quantity
+      );
+    }
   }
   
   finalize(_ctx: AggregatorContext): DailyBucketsArtifacts {
     void _ctx;
     return {
       dailyUserTotals: this.dailyUserTotals,
+      dailyCodingAgentTotals: this.dailyCodingAgentTotals,
       dailyUserModelTotals: this.dailyUserModelTotals,
       dailyBucketTotals: this.dailyBucketTotals,
       dailyBucketModelTotals: this.dailyBucketModelTotals,

@@ -23,6 +23,9 @@ export interface CSVData {
   output?: string;
   cache_read?: string;
   cache_write?: string;
+  app_client_id?: string;
+  image_input?: string;
+  image_output?: string;
   total_input_tokens?: string;
   total_output_tokens?: string;
   total_cache_read_tokens?: string;

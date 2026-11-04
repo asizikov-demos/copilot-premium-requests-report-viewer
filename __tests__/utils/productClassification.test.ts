@@ -11,6 +11,8 @@ describe('product classification', () => {
   test('detects coding agent models', () => {
     expect(isCodingAgentModel('Copilot Coding Agent')).toBe(true);
     expect(isCodingAgentModel('Code Review')).toBe(false);
+    expect(isCodingAgentModel('Claude Sonnet 5', 'coding_agent_ai_credit')).toBe(true);
+    expect(isCodingAgentModel('Claude Sonnet 5', 'copilot_ai_credit')).toBe(false);
   });
 
   test('detects code review models', () => {
@@ -35,6 +37,7 @@ describe('product classification', () => {
 
   test('classifies models into product buckets', () => {
     expect(classifyProductCategory('Coding Agent')).toBe('Coding Agent');
+    expect(classifyProductCategory('Claude Sonnet 5', 'copilot', 'coding_agent_ai_credit')).toBe('Coding Agent');
     expect(classifyProductCategory('Code Review')).toBe('Code Review');
     expect(classifyProductCategory('gpt-4.1')).toBe('Copilot');
     expect(classifyProductCategory('Spark Helper')).toBe('Copilot');

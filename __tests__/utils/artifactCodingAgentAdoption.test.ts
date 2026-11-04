@@ -1,6 +1,7 @@
-import { analyzeCodingAgentAdoptionFromArtifacts } from '@/utils/ingestion';
+import { analyzeCodingAgentAdoptionFromArtifacts, buildUsageArtifactsFromProcessedData } from '@/utils/ingestion';
 
 import { makeQuotaArtifacts, makeUsageArtifacts } from '../helpers/makeArtifacts';
+import { makeProcessedData } from '../helpers/testUtils';
 
 function makeQuota(entries: Array<[string, number | 'unknown']>) {
   return makeQuotaArtifacts(entries.map(([user, quota]) => ({ user, quota })));
@@ -62,5 +63,34 @@ describe('analyzeCodingAgentAdoptionFromArtifacts', () => {
       quota: 'unknown',
     });
     expect(Number.isFinite(result.users[0].codingAgentPercentage)).toBe(true);
+  });
+
+  test('includes users whose rows are identified by the Coding Agent SKU', () => {
+    const usage = buildUsageArtifactsFromProcessedData([
+      makeProcessedData({
+        user: 'test-user-one',
+        model: 'Claude Sonnet 5',
+        sku: 'coding_agent_ai_credit',
+        creditsUsed: 12,
+      }),
+      makeProcessedData({
+        user: 'test-user-one',
+        model: 'GPT-5',
+        sku: 'copilot_ai_credit',
+        creditsUsed: 8,
+      }),
+    ]);
+
+    const result = analyzeCodingAgentAdoptionFromArtifacts(usage, makeQuota([]));
+
+    expect(result.totalCodingAgentCredits).toBe(12);
+    expect(result.totalUsers).toBe(1);
+    expect(result.users[0]).toMatchObject({
+      user: 'test-user-one',
+      totalCredits: 20,
+      codingAgentCredits: 12,
+      codingAgentPercentage: 60,
+      models: ['Claude Sonnet 5'],
+    });
   });
 });

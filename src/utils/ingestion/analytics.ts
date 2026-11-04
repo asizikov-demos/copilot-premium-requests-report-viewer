@@ -93,6 +93,7 @@ export function buildUsageArtifactsFromProcessedData(filtered: ProcessedData[]):
     accumulator.addRow({
       user: r.user,
       model: r.model,
+      sku: r.sku,
       quantity: r.creditsUsed,
       billingQuantity: r.billingQuantity,
       usageUnit: r.usageUnit,
@@ -290,15 +291,25 @@ export function buildDailyCumulativeDataFromArtifacts(daily: DailyBucketsArtifac
 export function analyzeCodingAgentAdoptionFromArtifacts(usage: UsageArtifacts, quota: QuotaArtifacts): CodingAgentAnalysis {
   if (usage.users.length === 0) return { totalUsers: 0, totalUniqueUsers: 0, totalCodingAgentCredits: 0, adoptionRate: 0, users: [] };
   const totalUniqueUsers = usage.userCount;
-  const { users, totalFeatureCredits: totalCodingAgentCredits } = collectFeatureUsers(usage, quota, isCodingAgentModel);
-  const codingAgentUsers: CodingAgentAnalysis['users'] = users.map(user => ({
-    user: user.user,
-    totalCredits: user.totalCredits,
-    codingAgentCredits: user.featureCredits,
-    codingAgentPercentage: user.featurePercentage,
-    quota: user.quota,
-    models: user.models
-  }));
+  const codingAgentUsers: CodingAgentAnalysis['users'] = [];
+  let totalCodingAgentCredits = 0;
+  for (const user of usage.users) {
+    const modelMatched = Object.keys(user.modelBreakdown).filter((model) => isCodingAgentModel(model));
+    const models = Array.from(new Set([...(user.codingAgentModels ?? []), ...modelMatched]));
+    const codingAgentCredits = user.codingAgentCredits
+      ?? modelMatched.reduce((sum, model) => sum + user.modelBreakdown[model], 0);
+    if (models.length === 0) continue;
+
+    totalCodingAgentCredits += codingAgentCredits;
+    codingAgentUsers.push({
+      user: user.user,
+      totalCredits: user.totalCredits,
+      codingAgentCredits,
+      codingAgentPercentage: user.totalCredits > 0 ? (codingAgentCredits / user.totalCredits) * 100 : 0,
+      quota: quota.quotaByUser.get(user.user) ?? 'unknown',
+      models,
+    });
+  }
   codingAgentUsers.sort((a, b) => b.codingAgentCredits - a.codingAgentCredits);
   const adoptionRate = totalUniqueUsers > 0 ? (codingAgentUsers.length / totalUniqueUsers) * 100 : 0;
   return { totalUsers: codingAgentUsers.length, totalUniqueUsers, totalCodingAgentCredits, adoptionRate, users: codingAgentUsers };
@@ -534,18 +545,30 @@ function buildDailyModelSubsetUsageFromArtifacts(
 }
 
 /**
- * Build daily coding agent usage time series (date, dailyCredits, cumulativeCredits)
- * without scanning raw processedData rows. Leverages DailyBucketsAggregator's
- * dailyUserModelTotals nested map. Builds daily credit usage
- * behavior by:
- *  - Including ONLY days with > 0 coding agent credits
- *  - Sorting by ascending date
- *  - Computing cumulativeCredits as running sum of dailyCredits
- * Falls back to empty array if required per-model breakdown map is absent.
+ * Build daily Coding Agent usage time series without scanning raw rows.
+ * Uses SKU-aware daily totals when available, with model-name matching as a
+ * fallback for artifacts created before SKU-aware totals were added. Includes
+ * only days with positive usage, sorts by date, and resets cumulative totals
+ * each month.
  */
 export function buildDailyCodingAgentUsageFromArtifacts(
   daily: DailyBucketsArtifacts
 ): DailyCodingAgentUsageDatum[] {
+  if (daily.dailyCodingAgentTotals) {
+    const days = Array.from(daily.dailyCodingAgentTotals.entries())
+      .filter(([, quantity]) => quantity > 0)
+      .sort(([left], [right]) => left.localeCompare(right));
+    let cumulative = 0;
+    let currentMonth = '';
+    return days.map(([date, dailyCredits]) => {
+      if (date.slice(0, 7) !== currentMonth) {
+        currentMonth = date.slice(0, 7);
+        cumulative = 0;
+      }
+      cumulative += dailyCredits;
+      return { date, dailyCredits, cumulativeCredits: cumulative };
+    });
+  }
   return buildDailyModelSubsetUsageFromArtifacts(daily.dailyUserModelTotals, isCodingAgentModel);
 }
 

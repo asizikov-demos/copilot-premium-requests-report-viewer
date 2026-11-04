@@ -8,6 +8,7 @@ describe('buildUserHeaderSummary', () => {
       makeProcessedData({ timestamp: new Date('2026-06-01T00:00:00Z'), creditsUsed: 1500, grossAmount: 15, discountAmount: 15, netAmount: 0, organization: 'test-org-two', costCenter: 'test-cost-center-one' }),
       makeProcessedData({ timestamp: new Date('2026-06-02T00:00:00Z'), creditsUsed: 600, grossAmount: 6, discountAmount: 4, netAmount: 2, organization: 'test-org-one' }),
       makeProcessedData({ timestamp: new Date('2026-06-02T00:00:00Z'), creditsUsed: 0, model: 'Coding Agent model' }),
+      makeProcessedData({ timestamp: new Date('2026-06-02T00:00:00Z'), creditsUsed: 0, model: 'Claude Sonnet 5', sku: 'coding_agent_ai_credit' }),
     ];
 
     const summary = buildUserHeaderSummary(rows, 1900, true);
@@ -25,6 +26,10 @@ describe('buildUserHeaderSummary', () => {
       cloudAgentUsed: true,
       codeReviewUsed: false,
     });
+
+    expect(buildUserHeaderSummary([
+      makeProcessedData({ model: 'Claude Sonnet 5', sku: 'coding_agent_ai_credit' }),
+    ], 'unknown', true).cloudAgentUsed).toBe(true);
   });
 
   it('falls back to a per-month quota split without billing data and omits the period length across months', () => {

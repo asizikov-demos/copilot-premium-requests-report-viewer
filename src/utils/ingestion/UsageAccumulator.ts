@@ -5,10 +5,12 @@ import {
   type UsageArtifacts,
   type UserAggregate,
 } from './types';
+import { isCodingAgentModel } from '@/utils/productClassification';
 
 export interface UsageAccumulationRow {
   user: string;
   model: string;
+  sku?: string;
   quantity: number;
   billingQuantity?: number;
   usageUnit?: 'ai_credit' | 'unknown';
@@ -27,6 +29,8 @@ interface UserMetadata {
 export class UsageAccumulator {
   private userTotals = new Map<string, number>();
   private userModelTotals = new Map<string, Map<string, number>>();
+  private userCodingAgentTotals = new Map<string, number>();
+  private userCodingAgentModels = new Map<string, Set<string>>();
   private modelTotals = new Map<string, number>();
   private topModelPerUser = new Map<string, { model: string; value: number }>();
   private userMetadata = new Map<string, UserMetadata>();
@@ -54,7 +58,7 @@ export class UsageAccumulator {
       return;
     }
 
-    const { user, model, quantity, organization, costCenter } = row;
+    const { user, model, sku, quantity, organization, costCenter } = row;
 
     this.userTotals.set(user, (this.userTotals.get(user) || 0) + quantity);
 
@@ -65,6 +69,19 @@ export class UsageAccumulator {
     }
     const newModelTotal = (modelMap.get(model) || 0) + quantity;
     modelMap.set(model, newModelTotal);
+
+    if (isCodingAgentModel(model, sku)) {
+      this.userCodingAgentTotals.set(
+        user,
+        (this.userCodingAgentTotals.get(user) ?? 0) + quantity
+      );
+      let codingAgentModels = this.userCodingAgentModels.get(user);
+      if (!codingAgentModels) {
+        codingAgentModels = new Set<string>();
+        this.userCodingAgentModels.set(user, codingAgentModels);
+      }
+      codingAgentModels.add(model);
+    }
 
     if (organization) {
       this.organizations.add(organization);
@@ -109,11 +126,14 @@ export class UsageAccumulator {
 
       const topEntry = this.topModelPerUser.get(user);
       const metadata = this.userMetadata.get(user);
+      const codingAgentModels = this.userCodingAgentModels.get(user);
 
       users.push({
         user,
         totalCredits,
         modelBreakdown,
+        codingAgentCredits: this.userCodingAgentTotals.get(user),
+        codingAgentModels: codingAgentModels ? Array.from(codingAgentModels) : undefined,
         topModel: topEntry?.model,
         topModelValue: topEntry?.value,
         organization: metadata?.organization,

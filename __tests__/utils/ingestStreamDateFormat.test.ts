@@ -117,8 +117,29 @@ describe('ingestStream date format normalization', () => {
         grossAmount: undefined,
         discountAmount: undefined,
         netAmount: undefined,
+        app_client_id: undefined,
+        image_input: undefined,
+        image_output: undefined,
       }),
     ]);
+  });
+
+  it('captures optional client and image usage columns without requiring them', async () => {
+    const csv = [
+      'date,username,sku,model,quantity,app_client_id,image_input,image_output',
+      '2026-07-01,test-user-one,copilot_ai_credit,test-model-one,2.5,test-client,3,4',
+    ].join('\n');
+
+    const result = await ingestCsv(csv);
+    const rows = result.outputs.capturedRows as NormalizedRow[];
+
+    expect(result.rowsProcessed).toBe(1);
+    expect(result.warnings).toEqual([]);
+    expect(rows[0]).toMatchObject({
+      app_client_id: 'test-client',
+      image_input: '3',
+      image_output: '4',
+    });
   });
 
   it('skips legacy request rows in a mixed export while completing with only AI credits', async () => {

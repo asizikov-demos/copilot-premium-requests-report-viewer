@@ -9,9 +9,11 @@ function normalizeProductValue(value?: string): string {
   return value?.trim().toLowerCase() ?? '';
 }
 
-export function isCodingAgentModel(model: string): boolean {
+export function isCodingAgentModel(model: string, sku?: string): boolean {
   const normalizedModel = model.toLowerCase();
-  return normalizedModel.includes('coding agent');
+  const normalizedSku = normalizeProductValue(sku);
+  return normalizedModel.includes('coding agent')
+    || normalizedSku === 'coding_agent_ai_credit';
 }
 
 export function isCodeReviewModel(model: string): boolean {
@@ -47,7 +49,7 @@ export function classifyProductCategory(
     return 'Code Quality';
   }
 
-  if (isCodingAgentModel(model)) {
+  if (isCodingAgentModel(model, sku)) {
     return 'Coding Agent';
   }
 
