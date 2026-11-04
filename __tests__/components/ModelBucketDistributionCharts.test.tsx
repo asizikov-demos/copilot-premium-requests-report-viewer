@@ -18,6 +18,24 @@ jest.mock('recharts', () => {
 });
 
 describe('ModelBucketDistributionCharts', () => {
+  it('includes case-insensitive bucket prefixes and names every populated chart', () => {
+    render(<ModelBucketDistributionCharts rows={[
+      { user: 'test-user-one', model: 'auto: Claude Sonnet 5', creditsUsed: 2 },
+      { user: 'test-user-two', model: 'AUTO: Claude Sonnet 5', creditsUsed: 3 },
+      { user: 'test-user-one', model: 'fusion (standard): test-model-one', creditsUsed: 1 },
+      { user: 'test-user-one', model: 'FUSION (HIGH): test-model-one', creditsUsed: 1 },
+      { user: 'test-user-one', model: 'Fusion (Max): test-model-one', creditsUsed: 1 },
+    ]} />);
+    const auto = within(screen.getByRole('region', { name: 'Auto model distribution' }));
+    expect(auto.getByText('5.00')).toBeInTheDocument();
+    expect(auto.getByText('2 unique users')).toBeInTheDocument();
+    expect(auto.getAllByRole('listitem')).toHaveLength(1);
+    expect(auto.getByRole('listitem')).toHaveTextContent('Claude Sonnet 5');
+    for (const bucket of ['Auto', 'Fusion (Standard)', 'Fusion (High)', 'Fusion (Max)']) {
+      expect(screen.getByRole('application', { name: `${bucket} model AI Credits distribution` })).toHaveAttribute('tabindex', '0');
+    }
+  });
+
   it('shows model, gross USD cost, and credit share above the ring in its tooltip', async () => {
     const { container } = render(<ModelBucketDistributionCharts rows={[
       { user: 'test-user-one', model: 'Auto: test-model-one', creditsUsed: 300, aicGrossAmount: 2 },

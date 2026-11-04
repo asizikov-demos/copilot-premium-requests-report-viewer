@@ -33,7 +33,7 @@ export function ModelBucketDistributionCharts({ rows }: ModelBucketDistributionC
     const creditsByBucket = BUCKETS.map(() => new Map<string, { credits: number; grossAmount: number }>());
     const usersByBucket = BUCKETS.map(() => new Set<string>());
     for (const row of rows) {
-      const bucketIndex = BUCKETS.findIndex(({ prefix }) => row.model.startsWith(prefix));
+      const bucketIndex = BUCKETS.findIndex(({ prefix }) => row.model.toLowerCase().startsWith(prefix.toLowerCase()));
       if (bucketIndex === -1) continue;
 
       if (row.user.trim() && !row.isUnattributedUsage) {
@@ -93,7 +93,7 @@ export function ModelBucketDistributionCharts({ rows }: ModelBucketDistributionC
             <>
               <div className="relative h-48 shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
+                  <PieChart aria-label={`${label} model AI Credits distribution`}>
                     <Pie
                       data={models}
                       dataKey="credits"
