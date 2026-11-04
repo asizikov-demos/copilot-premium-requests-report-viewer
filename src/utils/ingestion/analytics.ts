@@ -16,7 +16,7 @@ import { CodingAgentAnalysis, UserDailyData } from '@/types/csv';
 import { classifyConsumptionUser } from '@/utils/analytics/insights';
 import type { FeatureUtilizationStats, InsightsOverviewData, UserConsumptionCategory } from '@/utils/analytics/insights';
 import { classifyQuotaMap, isKnownQuotaValue } from '@/utils/analytics/quota';
-import { enumerateDatesInclusive, monthKeyToLabel } from '@/utils/dateKeys';
+import { buildBillingMonthDates, monthKeyToLabel } from '@/utils/dateKeys';
 import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
 import {
   UNATTRIBUTED_AI_CREDIT_BUCKET,
@@ -238,17 +238,24 @@ export interface ArtifactCoreAnalysis {
 // -----------------------------
 export interface DailyCumulativeData { date: string; [user: string]: string | number; }
 
+function getBillingMonths(daily: DailyBucketsArtifacts): string[] {
+  // Older artifacts may lack the report-wide month index.
+  return daily.months ?? [
+    ...daily.dailyUserTotals.keys(),
+    ...(daily.dailyBucketTotals?.keys() ?? []),
+    ...(daily.dailyUserModelTotals?.keys() ?? []),
+  ].map(date => date.slice(0, 7));
+}
+
 /**
  * Construct daily cumulative per-user usage series from daily user totals.
  * Derives cumulative values without raw row scans.
  */
 function buildDailyCumulativeDataFromUserTotals(
   dailyUserTotals: Map<string, Map<string, number>>,
-  dateRange: DailyBucketsArtifacts['dateRange']
+  months: string[]
 ): DailyCumulativeData[] {
-  if (!dateRange) return [];
-  const { min, max } = dateRange;
-  const dates = enumerateDatesInclusive(min, max);
+  const dates = buildBillingMonthDates(months);
 
   // Collect all users encountered in any day map
   const users = new Set<string>();
@@ -282,7 +289,7 @@ function buildDailyCumulativeDataFromUserTotals(
 }
 
 export function buildDailyCumulativeDataFromArtifacts(daily: DailyBucketsArtifacts): DailyCumulativeData[] {
-  return buildDailyCumulativeDataFromUserTotals(daily.dailyUserTotals, daily.dateRange);
+  return buildDailyCumulativeDataFromUserTotals(daily.dailyUserTotals, getBillingMonths(daily));
 }
 
 // -----------------------------
@@ -343,8 +350,7 @@ function buildUserDailyModelDataFromModelTotals(
   const userAgg = usage.users.find(u => u.user === user);
   if (!userAgg) return [];
   const models = Object.keys(userAgg.modelBreakdown).sort();
-  const { min, max } = daily.dateRange;
-  const dates = enumerateDatesInclusive(min, max);
+  const dates = buildBillingMonthDates(getBillingMonths(daily));
   let cumulative = 0;
   let currentMonth = '';
   const result: UserDailyData[] = [];
@@ -388,8 +394,7 @@ function buildDailyModelUsageFromTotals(
 ): DailyModelUsageDatum[] {
   if (!daily.dateRange || !dailyUserModelTotalsMap) return [];
 
-  const { min, max } = daily.dateRange;
-  const dates = enumerateDatesInclusive(min, max);
+  const dates = buildBillingMonthDates(getBillingMonths(daily));
 
   // Discover global model list from usage artifacts for stable ordering
   const allModels = Object.keys(usage.modelTotals).sort();
@@ -425,7 +430,7 @@ function buildDailyModelUsageFromTotals(
 /**
  * Build per-day per-model stacked dataset for all users combined.
  * Shape mirrors UserDailyData but aggregated across users, without cumulative line.
- * Returns a dense series across the full date range; days with no activity are
+ * Returns a dense series across full billing months; days with no activity are
  * present with zero totals to keep the X-axis continuous.
  */
 export function buildDailyModelUsageFromArtifacts(
@@ -510,12 +515,12 @@ export function buildConsumptionCategoriesFromArtifacts(
 /**
  * Shared implementation for building a daily usage time series filtered to a
  * subset of models. Iterates the provided daily user/model map, sums per-model quantities for
- * models matching the predicate, includes only days with > 0 usage, sorts by
- * ascending date, and computes a running cumulative total.
+ * models matching the predicate and fills full billing months.
  */
 function buildDailyModelSubsetUsageFromArtifacts(
   dailyUserModelTotals: Map<string, Map<string, Map<string, number>>> | undefined,
-  modelFilter: (model: string) => boolean
+  modelFilter: (model: string) => boolean,
+  months: string[]
 ): DailyCodingAgentUsageDatum[] {
   if (!dailyUserModelTotals) return [];
   const dayTotals: Array<{ date: string; total: number }> = [];
@@ -531,45 +536,41 @@ function buildDailyModelSubsetUsageFromArtifacts(
     if (daySum > 0) dayTotals.push({ date, total: daySum });
   }
   if (dayTotals.length === 0) return [];
-  dayTotals.sort((a, b) => a.date.localeCompare(b.date));
+  return buildDailyFeatureSeries(new Map(dayTotals.map(day => [day.date, day.total])), months);
+}
+
+function buildDailyFeatureSeries(
+  totals: Map<string, number>,
+  months: string[]
+): DailyCodingAgentUsageDatum[] {
+  if (![...totals.values()].some(quantity => quantity > 0)) return [];
   let cumulative = 0;
   let currentMonth = '';
-  return dayTotals.map(d => {
-    if (d.date.slice(0, 7) !== currentMonth) {
-      currentMonth = d.date.slice(0, 7);
+  return buildBillingMonthDates(months).map(date => {
+    if (date.slice(0, 7) !== currentMonth) {
+      currentMonth = date.slice(0, 7);
       cumulative = 0;
     }
-    cumulative += d.total;
-    return { date: d.date, dailyCredits: d.total, cumulativeCredits: cumulative } as DailyCodingAgentUsageDatum;
+    const quantity = totals.get(date) ?? 0;
+    const dailyCredits = quantity > 0 ? quantity : 0;
+    cumulative += dailyCredits;
+    return { date, dailyCredits, cumulativeCredits: cumulative };
   });
 }
 
 /**
  * Build daily Coding Agent usage time series without scanning raw rows.
  * Uses SKU-aware daily totals when available, with model-name matching as a
- * fallback for artifacts created before SKU-aware totals were added. Includes
- * only days with positive usage, sorts by date, and resets cumulative totals
- * each month.
+ * fallback for artifacts created before SKU-aware totals were added. Fills full
+ * billing months and resets cumulative totals each month.
  */
 export function buildDailyCodingAgentUsageFromArtifacts(
   daily: DailyBucketsArtifacts
 ): DailyCodingAgentUsageDatum[] {
   if (daily.dailyCodingAgentTotals) {
-    const days = Array.from(daily.dailyCodingAgentTotals.entries())
-      .filter(([, quantity]) => quantity > 0)
-      .sort(([left], [right]) => left.localeCompare(right));
-    let cumulative = 0;
-    let currentMonth = '';
-    return days.map(([date, dailyCredits]) => {
-      if (date.slice(0, 7) !== currentMonth) {
-        currentMonth = date.slice(0, 7);
-        cumulative = 0;
-      }
-      cumulative += dailyCredits;
-      return { date, dailyCredits, cumulativeCredits: cumulative };
-    });
+    return buildDailyFeatureSeries(daily.dailyCodingAgentTotals, getBillingMonths(daily));
   }
-  return buildDailyModelSubsetUsageFromArtifacts(daily.dailyUserModelTotals, isCodingAgentModel);
+  return buildDailyModelSubsetUsageFromArtifacts(daily.dailyUserModelTotals, isCodingAgentModel, getBillingMonths(daily));
 }
 
 // -----------------------------
@@ -603,7 +604,7 @@ export function analyzeCodeReviewAdoptionFromArtifacts(usage: UsageArtifacts, qu
 export function buildDailyCodeReviewUsageFromArtifacts(
   daily: DailyBucketsArtifacts
 ): DailyCodingAgentUsageDatum[] {
-  return buildDailyModelSubsetUsageFromArtifacts(daily.dailyUserModelTotals, isCodeReviewModel);
+  return buildDailyModelSubsetUsageFromArtifacts(daily.dailyUserModelTotals, isCodeReviewModel, getBillingMonths(daily));
 }
 
 // -----------------------------

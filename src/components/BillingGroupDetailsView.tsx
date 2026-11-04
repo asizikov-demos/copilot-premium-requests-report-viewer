@@ -9,7 +9,7 @@ import { ModelDailyStackedChart } from '@/components/charts/ModelDailyStackedCha
 import { dataVizColor } from '@/constants/primerTokens';
 import type { ProcessedData } from '@/types/csv';
 import type { BillingCostLabels } from '@/utils/billingLabels';
-import { enumerateDatesInclusive } from '@/utils/dateKeys';
+import { buildBillingMonthDates, enumerateDatesInclusive } from '@/utils/dateKeys';
 import { aggregateDailyConsumption } from '@/utils/dailyConsumption';
 import { formatCurrency, formatDecimalQuantity } from '@/utils/formatters';
 import {
@@ -225,18 +225,22 @@ export function BillingGroupDetailsView({
     productCosts.map((product) => [product.label, PRODUCT_CATEGORY_COLORS[product.category]])
   ), [productCosts]);
 
-  const chartData = useMemo((): BillingGroupDailyChartDatum[] => dailyRows.map((row) => {
-    const datum: BillingGroupDailyChartDatum = { date: row.date, totalCredits: row.quantity };
+  const chartData = useMemo((): BillingGroupDailyChartDatum[] => {
+    const byDate = new Map(dailyRows.map(row => [row.date, row]));
+    return buildBillingMonthDates(periodRows.map(row => row.monthKey)).map(date => {
+      const row = byDate.get(date);
+      const datum: BillingGroupDailyChartDatum = { date, totalCredits: row?.quantity ?? 0 };
 
-    for (const label of productLabels) {
-      datum[label] = 0;
-    }
-    for (const product of row.products) {
-      datum[product.label] = product.credits;
-    }
+      for (const label of productLabels) {
+        datum[label] = 0;
+      }
+      for (const product of row?.products ?? []) {
+        datum[product.label] = product.credits;
+      }
 
-    return datum;
-  }), [dailyRows, productLabels]);
+      return datum;
+    });
+  }, [dailyRows, periodRows, productLabels]);
 
   const showCosts = totals.gross > 0 || totals.net > 0;
   const detailColSpan = 2 + (hasAicGross ? 1 : 0) + (showCosts ? 3 : 0);

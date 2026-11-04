@@ -42,7 +42,10 @@ describe('canonical AI-credit daily aggregates', () => {
     }), ctx);
     const artifacts = aggregator.finalize(ctx);
 
-    expect(buildDailyCumulativeDataFromArtifacts(artifacts)).toEqual([
+    const result = buildDailyCumulativeDataFromArtifacts(artifacts);
+    expect(result).toHaveLength(30);
+    expect(result[29]).toEqual({ date: '2026-06-30', 'test-user-one': 4.75, 'test-user-two': 2 });
+    expect(result.slice(0, 2)).toEqual([
       {
         date: '2026-06-01',
         'test-user-one': 1.5,
@@ -110,11 +113,16 @@ describe('canonical AI-credit daily aggregates', () => {
       modelCount: 2,
     };
 
-    expect(buildUserDailyModelDataFromArtifacts(
+    const result = buildUserDailyModelDataFromArtifacts(
       aggregator.finalize(ctx),
       usageArtifacts,
       'test-user-one'
-    )).toEqual([
+    );
+    expect(result).toHaveLength(30);
+    expect(result[29]).toEqual({
+      date: '2026-06-30', totalCumulative: 6.75, 'test-model-one': 0, 'test-model-two': 0,
+    });
+    expect(result.slice(0, 2)).toEqual([
       {
         date: '2026-06-01',
         totalCumulative: 3.5,

@@ -24,7 +24,7 @@ import {
 } from '@/utils/ingestion';
 import { generateModelColors } from '@/utils/modelColors';
 import { getBillingCostLabels } from '@/utils/billingLabels';
-import { enumerateDatesInclusive } from '@/utils/dateKeys';
+import { buildBillingMonthDates } from '@/utils/dateKeys';
 import { aggregateDailyConsumption } from '@/utils/dailyConsumption';
 import { formatCurrency } from '@/utils/formatters';
 import { aggregateProductCosts } from '@/utils/productCosts';
@@ -140,17 +140,6 @@ export function UserDetailsView({
       return [];
     }
 
-    let start = Number.POSITIVE_INFINITY;
-    let end = Number.NEGATIVE_INFINITY;
-
-    for (const row of processedData) {
-      if (row.epoch < start) {
-        start = row.epoch;
-      }
-      if (row.epoch > end) {
-        end = row.epoch;
-      }
-    }
     const models = Array.from(new Set(userRows.map((row) => row.model))).sort();
     const byDate = new Map<string, ProcessedData[]>();
 
@@ -166,10 +155,9 @@ export function UserDetailsView({
     let cumulative = 0;
     let currentMonth = '';
     const result: UserDailyData[] = [];
-    const startDate = new Date(start).toISOString().slice(0, 10);
-    const endDate = new Date(end).toISOString().slice(0, 10);
-
-    for (const dateStr of enumerateDatesInclusive(startDate, endDate)) {
+    const months = dailyBucketsArtifacts?.months
+      ?? (analysisCtx?.aggregateProcessedData ?? processedData).map(row => row.monthKey);
+    for (const dateStr of buildBillingMonthDates(months)) {
       if (dateStr.slice(0, 7) !== currentMonth) {
         currentMonth = dateStr.slice(0, 7);
         cumulative = 0;
@@ -194,7 +182,7 @@ export function UserDetailsView({
     }
 
     return result;
-  }, [processedData, user, usageArtifacts, dailyBucketsArtifacts]);
+  }, [processedData, user, usageArtifacts, dailyBucketsArtifacts, analysisCtx?.aggregateProcessedData]);
 
   const effectiveUserAggregate = useMemo(
     () => userAggregate === undefined
@@ -549,7 +537,12 @@ export function UserDetailsView({
         )}
       </div>
 
-      <UserConsumptionMetrics key={user} rows={userData} tokensAvailable={analysisCtx?.tokenArtifacts !== null} />
+      <UserConsumptionMetrics
+        key={user}
+        rows={userData}
+        periodRows={analysisCtx?.aggregateProcessedData ?? processedData}
+        tokensAvailable={analysisCtx?.tokenArtifacts !== null}
+      />
 
       {/* Daily Model Usage Breakdown table — standalone card */}
       {dailyBreakdownRows.length > 0 && (

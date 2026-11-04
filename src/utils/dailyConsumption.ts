@@ -1,6 +1,6 @@
 import type { ProcessedData } from '@/types/csv';
 
-import { enumerateDatesInclusive } from './dateKeys';
+import { buildBillingMonthDates } from './dateKeys';
 
 export interface DailyConsumptionDatum {
   date: string;
@@ -33,23 +33,7 @@ export function aggregateDailyConsumption(
     return [];
   }
 
-  let earliestMonth = periodRows[0].monthKey;
-  let latestMonth = earliestMonth;
-  for (const row of periodRows) {
-    if (row.monthKey < earliestMonth) {
-      earliestMonth = row.monthKey;
-    }
-    if (row.monthKey > latestMonth) {
-      latestMonth = row.monthKey;
-    }
-  }
-
-  const start = `${earliestMonth}-01`;
-  const end = new Date(`${latestMonth}-01T00:00:00Z`);
-  end.setUTCMonth(end.getUTCMonth() + 1);
-  end.setUTCDate(0);
-
-  return enumerateDatesInclusive(start, end.toISOString().slice(0, 10)).map(date =>
+  return buildBillingMonthDates(periodRows.map(row => row.monthKey)).map(date =>
     byDay.get(date) ?? { date, included: 0, additional: 0 }
   );
 }
