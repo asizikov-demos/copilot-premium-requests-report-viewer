@@ -54,7 +54,7 @@ export function buildUserHeaderSummary(
     if (row.creditsUsed > 0) {
       activeDays.add(row.dateKey);
     }
-    if (isCodingAgentModel(row.model)) {
+    if (isCodingAgentModel(row.model, row.sku)) {
       cloudAgentUsed = true;
     }
     if (isCodeReviewModel(row.model)) {

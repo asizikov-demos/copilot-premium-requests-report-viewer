@@ -64,6 +64,9 @@ export interface NormalizedRow extends TokenCounts {
   netAmount?: number;
   aicQuantity?: number;
   aicGrossAmount?: number;
+  app_client_id?: string;
+  image_input?: string;
+  image_output?: string;
   isUnattributedUsage?: boolean;
   usageBucket?: SpecialUsageBucketKey;
 }
@@ -166,6 +169,8 @@ export interface UserAggregate {
   user: string;
   totalCredits: number;
   modelBreakdown: Record<string, number>;
+  codingAgentCredits?: number;
+  codingAgentModels?: string[];
   topModel?: string;
   topModelValue?: number;
   quotaValue?: number | 'unknown';
@@ -192,6 +197,8 @@ export interface UsageArtifacts {
  */
 export interface DailyBucketsArtifacts {
   dailyUserTotals: Map<string, Map<string, number>>;
+  /** Daily attributed Coding Agent totals, including rows identified by SKU. */
+  dailyCodingAgentTotals?: Map<string, number>;
   dateRange: { min: string; max: string } | null;
   /**
    * Optional richer breakdown: day -> user -> model -> quantity.

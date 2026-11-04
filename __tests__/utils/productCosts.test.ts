@@ -20,6 +20,7 @@ describe('aggregateProductCosts', () => {
       makeProcessedData({ ...PRODUCT_COST_ROW_DEFAULTS, product: 'copilot', sku: 'copilot_ai_credit', model: 'Claude Sonnet 4', creditsUsed: 2, grossAmount: 0.08, netAmount: 0.08, aicQuantity: 12.5, aicGrossAmount: 0.125 }),
       makeProcessedData({ ...PRODUCT_COST_ROW_DEFAULTS, product: 'spark', sku: 'copilot_ai_credit', model: 'Claude Sonnet 4.5', creditsUsed: 3, grossAmount: 0.12, netAmount: 0.12 }),
       makeProcessedData({ ...PRODUCT_COST_ROW_DEFAULTS, model: 'Coding Agent model', creditsUsed: 4, grossAmount: 0.16, netAmount: 0.16 }),
+      makeProcessedData({ ...PRODUCT_COST_ROW_DEFAULTS, model: 'Claude Sonnet 5', sku: 'coding_agent_ai_credit', creditsUsed: 7, grossAmount: 0.07, netAmount: 0.07 }),
       makeProcessedData({ ...PRODUCT_COST_ROW_DEFAULTS, model: 'Code Review model', creditsUsed: 5, grossAmount: 0.2, netAmount: 0.2 }),
       makeProcessedData({ ...PRODUCT_COST_ROW_DEFAULTS, product: 'code_quality', sku: 'code_quality_ai_credit', model: 'Claude Sonnet 4.6', creditsUsed: 51.28584, grossAmount: 0.5128584, netAmount: 0.5128584 }),
       makeProcessedData({ ...PRODUCT_COST_ROW_DEFAULTS, user: '', model: 'Code Review', creditsUsed: 6, grossAmount: 0.24, netAmount: 0.24, isUnattributedUsage: true, usageBucket: 'unattributed_ai_credit' }),
@@ -28,7 +29,7 @@ describe('aggregateProductCosts', () => {
     expect(aggregateProductCosts(rows)).toEqual([
       expect.objectContaining({ category: 'Copilot', label: 'Copilot', credits: 2, aicQuantity: 12.5, aicGrossAmount: 0.125 }),
       expect.objectContaining({ category: 'Spark', label: 'Spark', credits: 3 }),
-      expect.objectContaining({ category: 'Coding Agent', label: 'Cloud Agent', credits: 4 }),
+      expect.objectContaining({ category: 'Coding Agent', label: 'Cloud Agent', credits: 11 }),
       expect.objectContaining({ category: 'Code Review', label: 'Code Review', credits: 11 }),
       expect.objectContaining({ category: 'Code Quality', label: 'Code Quality', credits: 51.28584 }),
     ]);

@@ -47,6 +47,9 @@ export function normalizeRow(
     gross_amount,
     discount_amount,
     net_amount,
+    app_client_id,
+    image_input,
+    image_output,
   } = rawRecord;
   
   // Type guard and validate required fields
@@ -121,6 +124,9 @@ export function normalizeRow(
     netAmount: parseNum(net_amount),
     aicQuantity: qty,
     aicGrossAmount: grossAmountValue,
+    app_client_id: typeof app_client_id === 'string' ? app_client_id : undefined,
+    image_input: typeof image_input === 'string' ? image_input : undefined,
+    image_output: typeof image_output === 'string' ? image_output : undefined,
     isUnattributedUsage,
     usageBucket,
     ...parseTokenCounts(rawRecord, warnings),

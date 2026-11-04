@@ -3,7 +3,7 @@
  * ---------------------------------
  * Streams rows and accumulates usage for specialized Copilot features:
  *  - Code Review (model name contains 'code review')
- *  - Coding Agent (model name contains 'coding agent')
+ *  - Coding Agent (coding_agent_ai_credit SKU or matching model name)
  *  - Spark (product/sku fields via isSparkProduct)
  *  - Code Quality (product/sku fields via isCodeQualityProduct)
  *
@@ -58,7 +58,7 @@ export class FeatureUsageAggregator implements Aggregator<FeatureUsageArtifacts>
       }
     }
 
-    if (isCodingAgentModel(row.model)) {
+    if (isCodingAgentModel(row.model, row.sku)) {
       this.codingAgentTotal += qty;
       if (!row.isUnattributedUsage) {
         this.codingAgentUsers.add(row.user);

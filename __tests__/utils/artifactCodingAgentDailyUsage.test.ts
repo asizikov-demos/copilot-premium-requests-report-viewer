@@ -1,9 +1,11 @@
 import {
   buildDailyCodingAgentUsageFromArtifacts,
+  buildDailyBucketsArtifactsFromProcessedData,
   type DailyCodingAgentUsageDatum,
 } from '@/utils/ingestion';
 
 import { makeDailyBucketsArtifacts } from '../helpers/makeArtifacts';
+import { makeProcessedData } from '../helpers/testUtils';
 
 describe('buildDailyCodingAgentUsageFromArtifacts', () => {
   test('aggregates per day and computes cumulative matching legacy semantics', () => {
@@ -54,6 +56,27 @@ describe('buildDailyCodingAgentUsageFromArtifacts', () => {
 
     expect(buildDailyCodingAgentUsageFromArtifacts(artifacts)).toEqual([
       { date: '2026-03-01', dailyCredits: 12.5, cumulativeCredits: 12.5 },
+    ]);
+  });
+
+  test('includes daily rows identified by the Coding Agent SKU', () => {
+    const artifacts = buildDailyBucketsArtifactsFromProcessedData([
+      makeProcessedData({
+        timestamp: new Date('2026-03-01T00:00:00Z'),
+        model: 'Claude Sonnet 5',
+        sku: 'coding_agent_ai_credit',
+        creditsUsed: 3.5,
+      }),
+      makeProcessedData({
+        timestamp: new Date('2026-03-01T00:00:00Z'),
+        model: 'GPT-5',
+        sku: 'copilot_ai_credit',
+        creditsUsed: 4,
+      }),
+    ]);
+
+    expect(buildDailyCodingAgentUsageFromArtifacts(artifacts)).toEqual([
+      { date: '2026-03-01', dailyCredits: 3.5, cumulativeCredits: 3.5 },
     ]);
   });
 });
