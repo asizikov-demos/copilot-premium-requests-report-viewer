@@ -8,7 +8,7 @@ import { makeDailyBucketsArtifacts } from '../helpers/makeArtifacts';
 import { makeProcessedData } from '../helpers/testUtils';
 
 describe('buildDailyCodingAgentUsageFromArtifacts', () => {
-  test('aggregates per day and computes cumulative matching legacy semantics', () => {
+  test('aggregates per day and carries cumulative totals through month end', () => {
     const artifacts = makeDailyBucketsArtifacts([
       { date: '2025-06-01', user: 'test-user-one', used: 2, model: 'coding agent v1' },
       { date: '2025-06-01', user: 'test-user-one', used: 3, model: 'o3-mini' },
@@ -20,7 +20,9 @@ describe('buildDailyCodingAgentUsageFromArtifacts', () => {
       { date: '2025-06-01', dailyCredits: 5, cumulativeCredits: 5 },
       { date: '2025-06-02', dailyCredits: 5, cumulativeCredits: 10 },
     ];
-    expect(result).toEqual(expected);
+    expect(result).toHaveLength(30);
+    expect(result.slice(0, 2)).toEqual(expected);
+    expect(result[29]).toEqual({ date: '2025-06-30', dailyCredits: 0, cumulativeCredits: 10 });
   });
 
   test('returns empty array when no coding agent usage present', () => {
@@ -54,7 +56,7 @@ describe('buildDailyCodingAgentUsageFromArtifacts', () => {
       },
     ]);
 
-    expect(buildDailyCodingAgentUsageFromArtifacts(artifacts)).toEqual([
+    expect(buildDailyCodingAgentUsageFromArtifacts(artifacts).filter(day => day.dailyCredits > 0)).toEqual([
       { date: '2026-03-01', dailyCredits: 12.5, cumulativeCredits: 12.5 },
     ]);
   });
@@ -75,7 +77,7 @@ describe('buildDailyCodingAgentUsageFromArtifacts', () => {
       }),
     ]);
 
-    expect(buildDailyCodingAgentUsageFromArtifacts(artifacts)).toEqual([
+    expect(buildDailyCodingAgentUsageFromArtifacts(artifacts).filter(day => day.dailyCredits > 0)).toEqual([
       { date: '2026-03-01', dailyCredits: 3.5, cumulativeCredits: 3.5 },
     ]);
   });

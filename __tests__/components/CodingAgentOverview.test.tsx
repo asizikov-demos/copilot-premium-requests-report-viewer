@@ -253,6 +253,7 @@ describe('CodingAgentOverview', () => {
           dailyBucketsArtifacts: makeDailyBucketsArtifacts([], {
             dailyUserModelTotals,
             dateRange: { min: '2026-03-01', max: '2026-03-01' },
+            months: ['2026-03'],
           }),
         }}
       >

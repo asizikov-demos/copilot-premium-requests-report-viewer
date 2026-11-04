@@ -34,6 +34,17 @@ Apply `contentStyle={chartTooltipContentStyle} labelStyle={chartTooltipLabelStyl
 
 ## Recharts Conventions
 
+Every date-axis chart (including the SVG consumption heatmap) must build its
+timeline with `buildBillingMonthDates` from `src/utils/dateKeys.ts`. Pass the
+report-wide filtered month keys, not a user's/model's active dates or today's
+month. It returns every UTC day of each selected month, sorted and deduplicated,
+without adding unselected months. Keep ingestion `dateRange` as observed data.
+Fill daily usage/costs with zero, carry cumulative totals through inactive days
+and reset them each month; missing token counts remain `null`, never zero.
+
+Run `npm test -- --runInBand billingMonth` for the shared timeline and chart
+contract checks. Register any new date-axis chart in the chart contract suite.
+
 ```tsx
 import { borderColor, fgColor } from '@/constants/primerTokens';
 

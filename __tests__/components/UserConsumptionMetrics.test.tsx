@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { Line } from 'recharts';
 
 import { UserConsumptionMetrics } from '@/components/UserConsumptionMetrics';
 import { buildProcessedDataFromRawRows } from '@/utils/ingestion/adapters';
@@ -9,7 +10,7 @@ jest.mock('recharts', () => ({
   LineChart: ({ children, data }: { children: ReactNode; data: unknown }) => (
     <div data-testid="token-trend" data-chart={JSON.stringify(data)}>{children}</div>
   ),
-  Line: () => <div />,
+  Line: jest.fn(() => <div />),
   Legend: () => <div />,
   XAxis: () => <div />,
   YAxis: () => <div />,
@@ -51,19 +52,22 @@ describe('UserConsumptionMetrics', () => {
       { ...base, date: '2026-07-02' },
     ]);
     const { rerender } = render(<UserConsumptionMetrics rows={rows} />);
-    expect(chart()).toEqual([
+    expect(chart()).toHaveLength(61);
+    expect(chart()[0]).toMatchObject({ date: '2026-06-01', inputTokens: null });
+    expect(chart()[60]).toMatchObject({ date: '2026-07-31', inputTokens: null });
+    expect(chart().slice(29, 32)).toEqual([
       { date: '2026-06-30', inputTokens: 30, outputTokens: 0, cacheReadTokens: null, cacheWriteTokens: null },
       { date: '2026-07-01', inputTokens: null, outputTokens: null, cacheReadTokens: null, cacheWriteTokens: null },
       { date: '2026-07-02', inputTokens: null, outputTokens: null, cacheReadTokens: null, cacheWriteTokens: null },
     ]);
     fireEvent.click(screen.getByRole('button', { name: /Trend model/ }));
     fireEvent.click(screen.getByRole('option', { name: 'test-model-two' }));
-    expect(chart()[0].inputTokens).toBe(20);
-    expect(chart()[2].inputTokens).toBeNull();
+    expect(chart()[29].inputTokens).toBe(20);
+    expect(chart()[31].inputTokens).toBeNull();
     expect(screen.getByRole('table')).toHaveTextContent('test-model-one');
     rerender(<UserConsumptionMetrics rows={rows.filter(row => row.monthKey === '2026-07')} />);
     expect(screen.getByRole('button', { name: /Trend model/ })).toHaveTextContent('All models');
-    expect(chart()).toHaveLength(1);
+    expect(chart()).toHaveLength(31);
     expect(screen.getByText('No complete daily token counts are available for this selection.')).toBeInTheDocument();
   });
 
@@ -86,21 +90,31 @@ describe('UserConsumptionMetrics', () => {
     ])} />);
     expect(screen.getByText('Token Usage Over Time')).toBeInTheDocument();
     expect(screen.queryByText('AI Credits per Active Day')).not.toBeInTheDocument();
-    expect(chart()[0].inputTokens).toBe(0);
+    expect(chart()[29].inputTokens).toBe(0);
     expect(screen.getByRole('table')).not.toHaveTextContent('NaN');
     expect(screen.getByRole('table')).not.toHaveTextContent('Infinity');
   });
 
   it('does not bridge unselected months and hides failed tokens while keeping credit metrics', () => {
+    jest.mocked(Line).mockClear();
     const rows = buildProcessedDataFromRawRows([
       { ...base, date: '2026-06-30', input: '1' },
       { ...base, date: '2026-08-01', input: '2' },
     ]);
     const { rerender } = render(<UserConsumptionMetrics rows={rows} />);
-    expect(chart()).toHaveLength(33);
-    expect(chart()[0]).toMatchObject({ date: '2026-06-30', inputTokens: 1 });
-    expect(chart()[32]).toMatchObject({ date: '2026-08-01', inputTokens: 2 });
-    expect(chart().slice(1, -1).every((point: { inputTokens: number | null }) => point.inputTokens === null)).toBe(true);
+    expect(chart()).toHaveLength(61);
+    expect(chart()[29]).toMatchObject({ date: '2026-06-30', inputTokens: 1 });
+    expect(chart()[30]).toMatchObject({ date: '2026-08-01', inputTokens: 2 });
+    expect(chart().filter((point: { date: string }) => point.date.startsWith('2026-07'))).toEqual([]);
+    expect(chart().filter((point: { inputTokens: number | null }) => point.inputTokens !== null)).toHaveLength(2);
+    const inputLines = jest.mocked(Line).mock.calls
+      .map(([props]) => props)
+      .filter(props => props.name === 'Input Tokens');
+    expect(inputLines).toHaveLength(2);
+    expect(inputLines.map(({ dataKey }) => {
+      if (typeof dataKey !== 'function') throw new Error('Expected segmented token data key');
+      return [dataKey(chart()[29]), dataKey(chart()[30])];
+    })).toEqual([[1, null], [null, 2]]);
     rerender(<UserConsumptionMetrics rows={rows} tokensAvailable={false} />);
     expect(screen.queryByText('Token Usage Over Time')).not.toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: 'Input Tokens' })).not.toBeInTheDocument();

@@ -18,7 +18,9 @@ describe('buildDailyCodeReviewUsageFromArtifacts', () => {
       { date: '2025-06-01', dailyCredits: 6, cumulativeCredits: 6 },
       { date: '2025-06-02', dailyCredits: 7, cumulativeCredits: 13 },
     ];
-    expect(result).toEqual(expected);
+    expect(result).toHaveLength(30);
+    expect(result.slice(0, 2)).toEqual(expected);
+    expect(result[29]).toEqual({ date: '2025-06-30', dailyCredits: 0, cumulativeCredits: 13 });
   });
 
   test('sorts results by date', () => {
@@ -28,17 +30,19 @@ describe('buildDailyCodeReviewUsageFromArtifacts', () => {
     ]);
     const result = buildDailyCodeReviewUsageFromArtifacts(artifacts);
     expect(result[0].date).toBe('2025-06-01');
-    expect(result[1].date).toBe('2025-06-03');
+    expect(result[1]).toEqual({ date: '2025-06-02', dailyCredits: 0, cumulativeCredits: 1 });
+    expect(result[2].date).toBe('2025-06-03');
   });
 
-  test('filters out days with zero code review usage', () => {
+  test('retains days with zero code review usage', () => {
     const artifacts = makeDailyBucketsArtifacts([
       { date: '2025-06-01', user: 'test-user-one', used: 2, model: 'code review v1' },
       { date: '2025-06-02', user: 'test-user-one', used: 5, model: 'o3-mini' },
     ]);
     const result = buildDailyCodeReviewUsageFromArtifacts(artifacts);
-    expect(result).toHaveLength(1);
+    expect(result).toHaveLength(30);
     expect(result[0].date).toBe('2025-06-01');
+    expect(result[1]).toEqual({ date: '2025-06-02', dailyCredits: 0, cumulativeCredits: 2 });
   });
 
   test('returns empty array when no code review usage present', () => {
@@ -72,7 +76,7 @@ describe('buildDailyCodeReviewUsageFromArtifacts', () => {
       },
     ]);
 
-    expect(buildDailyCodeReviewUsageFromArtifacts(artifacts)).toEqual([
+    expect(buildDailyCodeReviewUsageFromArtifacts(artifacts).filter(day => day.dailyCredits > 0)).toEqual([
       { date: '2026-03-01', dailyCredits: 8.25, cumulativeCredits: 8.25 },
     ]);
   });

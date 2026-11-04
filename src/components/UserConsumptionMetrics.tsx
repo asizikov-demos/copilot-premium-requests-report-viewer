@@ -7,7 +7,7 @@ import { borderColor, fgColor } from '@/constants/primerTokens';
 import type { ProcessedData } from '@/types/csv';
 import type { TokenCounts } from '@/types/tokens';
 import { buildUserConsumption } from '@/utils/analytics/userConsumption';
-import { enumerateDatesInclusive } from '@/utils/dateKeys';
+import { buildBillingMonthDates } from '@/utils/dateKeys';
 
 import { chartTooltipContentStyle, chartTooltipLabelStyle, utcDateTickFormatter } from './charts/chartTooltipStyles';
 import { SelectPanelDropdown } from './primitives/SelectPanelDropdown';
@@ -17,8 +17,9 @@ function formatCredits(value: number | undefined): string {
   return value === undefined ? 'N/A' : value.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 
-export function UserConsumptionMetrics({ rows, tokensAvailable = true }: {
+export function UserConsumptionMetrics({ rows, periodRows = rows, tokensAvailable = true }: {
   rows: ProcessedData[];
+  periodRows?: ProcessedData[];
   tokensAvailable?: boolean;
 }) {
   const [selectedModel, setSelectedModel] = useState('');
@@ -32,10 +33,8 @@ export function UserConsumptionMetrics({ rows, tokensAvailable = true }: {
       (right.quantity ?? -1) - (left.quantity ?? -1) || leftName.localeCompare(rightName)), [metrics]);
   const trend = useMemo(() => {
     if (!metrics.tokens?.hasAnyTokenData) return [];
-    const days = [...metrics.tokens.byDay.keys()];
-    if (days.length === 0) return [];
     // Explicit null points prevent lines bridging days without selected report data.
-    return enumerateDatesInclusive(days[0], days[days.length - 1])
+    return buildBillingMonthDates(periodRows.map(row => row.monthKey))
       .map(date => {
         const day = metrics.tokens?.byDay.get(date);
         const totals = effectiveModel ? day?.byModel.get(effectiveModel) : day?.totals;
@@ -49,7 +48,22 @@ export function UserConsumptionMetrics({ rows, tokensAvailable = true }: {
         }
         return point;
       });
-  }, [metrics, effectiveModel]);
+  }, [metrics, effectiveModel, periodRows]);
+  const trendSegments = useMemo(() => {
+    // Separate lines keep non-adjacent selected months from being connected.
+    const segments: { start: string; end: string }[] = [];
+    for (const point of trend) {
+      const previous = segments[segments.length - 1];
+      const nextDay = previous ? new Date(`${previous.end}T00:00:00Z`) : null;
+      nextDay?.setUTCDate(nextDay.getUTCDate() + 1);
+      if (previous && nextDay?.toISOString().slice(0, 10) === point.date) {
+        previous.end = point.date;
+      } else {
+        segments.push({ start: point.date, end: point.date });
+      }
+    }
+    return segments;
+  }, [trend]);
 
   if (!hasTokens && !hasCredits) return null;
 
@@ -85,10 +99,12 @@ export function UserConsumptionMetrics({ rows, tokensAvailable = true }: {
                     labelFormatter={value => `${value} (UTC)`}
                     formatter={(value, name) => [Number(value).toLocaleString(), String(name)]} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  {TOKEN_COLUMNS.map(({ field, label, color }, index) => (
-                    <Line key={field} dataKey={field} name={label} stroke={color} strokeWidth={2}
+                  {trendSegments.flatMap(({ start, end }, segmentIndex) => TOKEN_COLUMNS.map(({ field, label, color }, index) => (
+                    <Line key={`${start}-${field}`}
+                      dataKey={(point: (typeof trend)[number]) => point.date >= start && point.date <= end ? point[field] : null}
+                      name={label} stroke={color} strokeWidth={2} legendType={segmentIndex === 0 ? 'line' : 'none'}
                       strokeDasharray={index > 1 ? '5 3' : undefined} dot={{ r: 2 }} connectNulls={false} isAnimationActive={false} />
-                  ))}
+                  )))}
                 </LineChart>
               </ResponsiveContainer>
             </div>

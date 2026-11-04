@@ -668,7 +668,7 @@ describe('UserDetailsView', () => {
     expect(screen.queryByTestId('reference-line')).not.toBeInTheDocument();
   });
 
-  it('enumerates the full UTC date range inclusively in fallback chart data', () => {
+  it('enumerates full UTC billing months in fallback chart data', () => {
     const createRow = (iso: string, user: string, creditsUsed: number): ProcessedData => {
       return makeProcessedData({
         timestamp: new Date(iso),
@@ -697,7 +697,10 @@ describe('UserDetailsView', () => {
     const chartData = JSON.parse(
       screen.getByTestId('composed-chart').getAttribute('data-chart') ?? '[]'
     ) as UserDailyData[];
-    expect(chartData).toEqual([
+    expect(chartData).toHaveLength(61);
+    expect(chartData[0]).toEqual({ date: '2025-06-01', totalCumulative: 0, 'test-model-one': 0 });
+    expect(chartData[60]).toEqual({ date: '2025-07-31', totalCumulative: 0, 'test-model-one': 0 });
+    expect(chartData.slice(29, 32)).toEqual([
       { date: '2025-06-30', totalCumulative: 2, 'test-model-one': 2 },
       { date: '2025-07-01', totalCumulative: 0, 'test-model-one': 0 },
       { date: '2025-07-02', totalCumulative: 0, 'test-model-one': 0 },

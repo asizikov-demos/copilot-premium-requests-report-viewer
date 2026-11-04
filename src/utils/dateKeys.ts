@@ -61,3 +61,20 @@ export function enumerateDatesInclusive(start: string, end: string): string[] {
   }
   return out;
 }
+
+/**
+ * Full UTC calendar days for the report's selected billing months, not today's
+ * month. Sorts/deduplicates months without inventing unselected months.
+ */
+export function buildBillingMonthDates(months: Iterable<string>): string[] {
+  return [...new Set(months)].sort().flatMap(month => {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+      throw new RangeError(`Invalid billing month: ${month}`);
+    }
+    const start = `${month}-01`;
+    const end = new Date(`${start}T00:00:00Z`);
+    end.setUTCMonth(end.getUTCMonth() + 1);
+    end.setUTCDate(0);
+    return enumerateDatesInclusive(start, end.toISOString().slice(0, 10));
+  });
+}
