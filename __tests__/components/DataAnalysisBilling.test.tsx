@@ -145,6 +145,32 @@ function makeUsageBasedRows(): CSVData[] {
 }
 
 describe('DataAnalysis billing summary', () => {
+  it('uses shared decorative category icons in report navigation', () => {
+    render(<DataAnalysis ingestionResult={createIngestionResultFromRawRows(makeAicRows())} filename="test-report.csv" onReset={jest.fn()} />);
+
+    const sidebar = screen.getAllByRole('navigation', { name: 'Report sections' })
+      .find(nav => nav.querySelector('.octicon-home'));
+    if (!sidebar) {
+      throw new Error('Expected report navigation with category icons');
+    }
+    for (const [label, iconName] of [
+      ['Overview', 'home'],
+      ['Users', 'people'],
+      ['Cost Centers', 'briefcase'],
+      ['Organizations', 'organization'],
+      ['Agent Adoption', 'agent'],
+      ['Insights', 'light-bulb'],
+      ['Models', 'ai-model'],
+      ['AI Usage', 'credit-card'],
+    ]) {
+      const icon = within(sidebar).getByRole('button', { name: label }).querySelector('svg');
+      expect(icon).toHaveClass(`octicon-${iconName}`);
+      expect(icon).toHaveAttribute('aria-hidden', 'true');
+      expect(icon).toHaveAttribute('width', '16');
+      expect(icon).toHaveAttribute('height', '16');
+    }
+  });
+
   it.each([
     { view: 'Cost Centers', groupName: 'test-cost-center-one' },
     { view: 'Organizations', groupName: 'test-org-one' },

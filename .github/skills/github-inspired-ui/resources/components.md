@@ -13,7 +13,7 @@ Interactive controls use `@primer/react`; icons use `@primer/octicons-react`. Th
 | Text and search inputs | `TextInput` with `leadingVisual={SearchIcon}` | `UsersOverview`, `BillingGroupDetailsView`, `UserCategoryTable` |
 | Single choice | `SelectPanel` (through `SelectPanelDropdown` for app filters) | `UsersOverview`, `UserConsumptionMetrics` |
 | Multiple choice | `Checkbox` inside a `fieldset` + `legend` | `DataAnalysis` billing periods |
-| Error and status messages | `Banner` | `page.tsx` |
+| Status messages | `Banner` | Use for standard Primer status visuals; see the error exception below. |
 | Indeterminate loading | `Spinner` | `CSVUploader` |
 | Determinate progress or meters | `ProgressBar` | `CSVUploader`, `UserDetailsHeader` |
 | Section navigation | `NavList` (desktop) and `UnderlineNav` (mobile) | `DataAnalysis` |
@@ -33,6 +33,7 @@ Keep these hand-built. Their behavior is required and the Primer counterpart doe
 | CSV dropzone | Drag-and-drop file target wrapped around a hidden `<input type="file">`. |
 | Insight category cards and mobile summary cards | Large card-shaped buttons. `InsightsOverview` returns focus to the card when the user goes back. |
 | Compact sidebar notes (for example "Auto-selected …" in `DataAnalysis`) | A `Banner` is too large for the 224px sidebar. |
+| File-processing error in `page.tsx` | Primer `Banner` fixes critical icons to `StopIcon` at 16px and does not allow overriding critical visuals. A named section preserves its heading/description with the shared 24px `XCircleFillIcon`, without CSS icon-size overrides. |
 | Recharts charts and the feature-reach SVG | Data visualization. See `chart-styling.md`. |
 
 ## Cards (Primer: Box)
@@ -125,10 +126,10 @@ import { ArrowLeftIcon, ChevronLeftIcon, XIcon } from '@primer/octicons-react';
 ```tsx
 import { Banner } from '@primer/react';
 
-<Banner variant="critical" title="Error processing file" description={error} />
+<Banner variant="warning" title="Warning" description={message} />
 ```
 
-Use `variant` `critical`, `warning`, `success`, `info` or `upsell`. `Banner` adds the matching Octicon and heading.
+Use `variant` `critical`, `warning`, `success`, `info` or `upsell`. `Banner` adds the matching Octicon and heading. The file-processing error uses the documented custom exception above to meet the shared icon contract.
 
 Static explanatory notes inside cards may stay as token-styled boxes:
 

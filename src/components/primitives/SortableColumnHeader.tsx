@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { SortAscIcon, SortDescIcon } from '@primer/octicons-react';
+import { ArrowSwitchIcon, TriangleDownIcon, TriangleUpIcon } from '@primer/octicons-react';
 
 import type { SortDirection } from '@/hooks/useSortableTable';
 
@@ -25,7 +25,9 @@ export function SortableColumnHeader({
   className = '',
 }: SortableColumnHeaderProps) {
   const ariaSort = active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none';
-  const SortIcon = active && direction === 'desc' ? SortDescIcon : SortAscIcon;
+  const SortIcon = active
+    ? direction === 'asc' ? TriangleUpIcon : TriangleDownIcon
+    : ArrowSwitchIcon;
 
   return (
     <th

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { MarkGithubIcon } from '@primer/octicons-react';
-import { Banner, Button } from '@primer/react';
+import { MarkGithubIcon, XCircleFillIcon } from '@primer/octicons-react';
+import { Button } from '@primer/react';
 
 import { CSVUploader } from '@/components/CSVUploader';
 import { DataAnalysis } from '@/components/DataAnalysis';
@@ -40,7 +40,7 @@ export default function Home() {
         <div className="px-6">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <MarkGithubIcon size={32} className="fill-(--header-fgColor-logo)" />
+              <MarkGithubIcon size={24} className="fill-(--header-fgColor-logo)" />
               <h1 className="text-lg font-semibold tracking-tight text-(--header-fgColor-logo)">
                 Copilot Billing Report Viewer
               </h1>
@@ -56,7 +56,13 @@ export default function Home() {
       <div className={`flex-1 ${!isDataLoaded ? 'flex flex-col items-center justify-center' : ''} px-6 py-8 pb-12`}>
         {error && (
           <div className="w-full max-w-xl mb-6 animate-fade-in-up">
-            <Banner variant="critical" title="Error processing file" description={error} />
+            <section aria-labelledby="file-error-title" className="flex items-start gap-2 rounded-md border border-(--borderColor-default) bg-(--bgColor-danger-muted) p-3 text-sm text-(--fgColor-default)">
+              <XCircleFillIcon size={24} className="shrink-0 text-(--fgColor-danger)" />
+              <div>
+                <h2 id="file-error-title" className="font-semibold">Error processing file</h2>
+                <p>{error}</p>
+              </div>
+            </section>
           </div>
         )}
 

@@ -4,13 +4,13 @@ import React, { useEffect, useMemo } from 'react';
 import {
   AgentIcon,
   AiModelIcon,
+  BriefcaseIcon,
   CreditCardIcon,
-  GraphIcon,
+  HomeIcon,
   type Icon,
   LightBulbIcon,
   OrganizationIcon,
   PeopleIcon,
-  SparkleFillIcon,
 } from '@primer/octicons-react';
 import { Checkbox, NavList, UnderlineNav } from '@primer/react';
 
@@ -45,18 +45,18 @@ type NavigationItem = {
   icon: Icon;
 };
 
-const COST_CENTERS_NAV_ITEM: NavigationItem = { key: 'costCenters', label: 'Cost Centers', icon: CreditCardIcon };
+const COST_CENTERS_NAV_ITEM: NavigationItem = { key: 'costCenters', label: 'Cost Centers', icon: BriefcaseIcon };
 const ORGANIZATIONS_NAV_ITEM: NavigationItem = { key: 'organizations', label: 'Organizations', icon: OrganizationIcon };
 
 const NAV_ITEMS: NavigationItem[] = [
-  { key: 'overview', label: 'Overview', icon: GraphIcon },
+  { key: 'overview', label: 'Overview', icon: HomeIcon },
   { key: 'users', label: 'Users', icon: PeopleIcon },
   { key: 'codingAgent', label: 'Agent Adoption', icon: AgentIcon },
   { key: 'insights', label: 'Insights', icon: LightBulbIcon },
   { key: 'modelTrends', label: 'Models', icon: AiModelIcon },
 ];
 
-const AI_USAGE_NAV_ITEM: NavigationItem = { key: 'aiUsage', label: 'AI Usage', icon: SparkleFillIcon };
+const AI_USAGE_NAV_ITEM: NavigationItem = { key: 'aiUsage', label: 'AI Usage', icon: CreditCardIcon };
 
 function DataAnalysisInner() {
   const {
@@ -238,7 +238,7 @@ function DataAnalysisInner() {
                     onClick={() => setView(item.key)}
                   >
                     <NavList.LeadingVisual>
-                      <item.icon />
+                      <item.icon size={16} />
                     </NavList.LeadingVisual>
                     {item.label}
                   </NavList.Item>

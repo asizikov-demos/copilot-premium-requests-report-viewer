@@ -26,12 +26,18 @@ describe('SortableColumnHeader', () => {
   });
 
   it.each([
-    [false, 'desc', 'none'],
-    [true, 'desc', 'descending'],
-    [true, 'asc', 'ascending'],
-  ] as const)('maps active=%s direction=%s to aria-sort=%s', (active, direction, expected) => {
+    [false, 'desc', 'none', 'arrow-switch'],
+    [true, 'desc', 'descending', 'triangle-down'],
+    [true, 'asc', 'ascending', 'triangle-up'],
+  ] as const)('maps active=%s direction=%s to aria-sort=%s and a decorative icon', (active, direction, expected, iconName) => {
     renderHeader({ active, direction });
 
-    expect(screen.getByRole('columnheader', { name: 'Quota' })).toHaveAttribute('aria-sort', expected);
+    const header = screen.getByRole('columnheader', { name: 'Quota' });
+    expect(header).toHaveAttribute('aria-sort', expected);
+    const icon = header.querySelector('svg');
+    expect(icon).toHaveClass(`octicon-${iconName}`);
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+    expect(icon).toHaveAttribute('width', '16');
+    expect(icon).toHaveAttribute('height', '16');
   });
 });

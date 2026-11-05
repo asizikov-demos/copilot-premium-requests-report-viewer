@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { ArrowLeftIcon, ArrowRightIcon, ChevronLeftIcon, ChevronRightIcon, SearchIcon, XIcon } from '@primer/octicons-react';
+import { ChevronLeftIcon, ChevronRightIcon, SearchIcon, XIcon } from '@primer/octicons-react';
 import { Button, FormControl, IconButton, Link, TextInput } from '@primer/react';
 
 import { getQuotaTier } from '@/utils/analytics/quota';
@@ -452,7 +452,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                   <Button
                     variant="invisible"
                     size="small"
-                    leadingVisual={ArrowLeftIcon}
+                    leadingVisual={ChevronLeftIcon}
                     onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
                     disabled={activePage === 0}
                   >
@@ -464,7 +464,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                   <Button
                     variant="invisible"
                     size="small"
-                    trailingVisual={ArrowRightIcon}
+                    trailingVisual={ChevronRightIcon}
                     onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
                     disabled={activePage === totalPages - 1}
                   >
