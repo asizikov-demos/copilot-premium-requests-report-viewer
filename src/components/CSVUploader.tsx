@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { LockIcon, UploadIcon } from '@primer/octicons-react';
+import { ArrowRightIcon, LockIcon, UploadIcon } from '@primer/octicons-react';
 import { Button, ProgressBar, Spinner } from '@primer/react';
 
 import {
@@ -347,7 +347,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
           rel="noopener noreferrer"
           className="text-xs text-(--fgColor-muted) hover:text-(--fgColor-accent) transition-colors duration-150 font-medium"
         >
-          How to get this report →
+          How to get this report <ArrowRightIcon size={16} className="inline-block align-text-bottom" />
         </a>
       </div>
     </div>

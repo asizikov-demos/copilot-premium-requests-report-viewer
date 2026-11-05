@@ -22,16 +22,20 @@
 import { SearchIcon, ChevronRightIcon } from '@primer/octicons-react';
 
 <SearchIcon />                 {/* 16px, aria-hidden by default */}
-<ChevronRightIcon size={20} />
+<ChevronRightIcon size={16} />
 <Button leadingVisual={SearchIcon}>Search</Button>
 ```
 
 - Use `@primer/octicons-react` for every interface icon. Do not add inline `<svg>` icons or icon fonts.
-- Size: the default 16px for nav, button and inline icons. Pass `size={20}`/`size={24}` for larger callout icons and `size={32}` for the header mark.
+- Shared viewer contract: use native 16px icons for navigation, inline/table controls, search, copy, pagination, sorting and disclosure. Use 24px for prominent metric/status/upload visuals and the header GitHub mark. Native 12px is reserved for genuinely condensed cases supported by the icon. Never override native icon dimensions with CSS; keep control hit areas independent of icon size.
+- Category mapping: Overview=`HomeIcon`, Users=`PeopleIcon`, Models/model usage=`AiModelIcon`, agent-specific adoption=`AgentIcon`, Insights=`LightBulbIcon`, AI Credits/financial AI Usage=`CreditCardIcon`, Organizations=`OrganizationIcon`, Cost Centers=`BriefcaseIcon`. Do not give generic Copilot adoption agent-specific meaning.
+- Action mapping: `UploadIcon`, `LockIcon`, `CopyIcon`, `SearchIcon`, `ChevronLeftIcon`/`ChevronRightIcon` for pagination, `ChevronRightIcon`/`ChevronDownIcon` for disclosure, `AlertIcon` for warnings, `XCircleFillIcon` for errors and `XIcon` for close. Sorting uses `ArrowSwitchIcon` when inactive and `TriangleUpIcon`/`TriangleDownIcon` when active, with `aria-sort` on the header. Back/external-link actions may use `ArrowLeftIcon`/`ArrowRightIcon`.
+- Generic unattributed model fallbacks use `AiModelIcon`, not a clock; generic client fallbacks may use `TerminalIcon`.
+- Preserve recognizable third-party IDE/vendor marks as deliberate brand exceptions, with brand colors and aspect ratios intact at 16px compact or 24px prominent. Data-bearing chart SVGs (including feature reach and heatmaps) and visualization geometry are not interface icons and must not be replaced.
 - Color comes from `currentColor`. Set it on the parent with a `text-(--fgColor-*)` token, or on the icon with `className` (`fill-(--header-fgColor-logo)`).
 - Octicons render `aria-hidden="true"` unless you pass `aria-label`. Give icon-only actions an accessible name with `IconButton aria-label` instead of labelling the icon.
 - Pass icon components, not elements, to Primer slots (`leadingVisual={SearchIcon}`, `icon={XIcon}`). Inside `NavList.LeadingVisual`, render the element.
-- Wrap decorative text glyphs (`✕`, `←`, `↕`) in `<span aria-hidden="true">`, or prefer the matching Octicon.
+- Icons supplement labels; keep decorative icons hidden from assistive technology and name icon-only controls. Use the matching Octicon rather than decorative font glyphs.
 - Data-bearing SVG charts are not decorative: give the `<svg>` `role="img"` and an `aria-label` that summarizes it.
 
 ## ARIA Patterns

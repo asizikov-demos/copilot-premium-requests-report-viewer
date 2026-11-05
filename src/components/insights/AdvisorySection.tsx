@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowRightIcon } from '@primer/octicons-react';
+import { ArrowRightIcon, ChevronRightIcon } from '@primer/octicons-react';
 import { Button } from '@primer/react';
 
 import type { Advisory } from '@/utils/analytics/advisory';
@@ -22,9 +22,10 @@ export function AdvisorySection({ advisories, onExplore }: AdvisorySectionProps)
       ) : (
         <div className="divide-y divide-(--borderColor-default)">
           {advisories.map(advisory => (
-            <details key={advisory.type}>
-              <summary className="cursor-pointer px-5 py-4 text-sm text-(--fgColor-default) hover:bg-(--control-transparent-bgColor-hover)">
-                {advisory.title}<span className="ml-2 text-xs text-(--fgColor-muted)">{advisory.affectedUsers} users</span>
+            <details key={advisory.type} className="group">
+              <summary className="flex list-none cursor-pointer items-center gap-2 px-5 py-4 text-sm text-(--fgColor-default) hover:bg-(--control-transparent-bgColor-hover) [&::-webkit-details-marker]:hidden">
+                <ChevronRightIcon size={16} className="shrink-0 group-open:rotate-90" />
+                <span>{advisory.title}<span className="ml-2 text-xs text-(--fgColor-muted)">{advisory.affectedUsers} users</span></span>
               </summary>
               <div className="space-y-3 px-5 pb-5 text-sm leading-6 text-(--fgColor-muted)">
                 <p>{advisory.description}</p>
@@ -33,7 +34,7 @@ export function AdvisorySection({ advisories, onExplore }: AdvisorySectionProps)
                 <ul className="list-disc space-y-1 pl-5">{advisory.actionItems.map(action => <li key={action}>{action}</li>)}</ul>
                 <div className="flex flex-wrap items-center gap-4">
                   <Button size="small" trailingVisual={ArrowRightIcon} onClick={onExplore}>Explore low-adoption users</Button>
-                  {advisory.documentationLink && <a href={advisory.documentationLink} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-(--fgColor-accent) hover:underline">View documentation &rarr;</a>}
+                  {advisory.documentationLink && <a href={advisory.documentationLink} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-(--fgColor-accent) hover:underline">View documentation <ArrowRightIcon size={16} className="inline-block align-text-bottom" /></a>}
                 </div>
               </div>
             </details>
