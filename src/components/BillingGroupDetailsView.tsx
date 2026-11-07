@@ -11,7 +11,7 @@ import type { ProcessedData } from '@/types/csv';
 import type { BillingCostLabels } from '@/utils/billingLabels';
 import { buildBillingMonthDates, enumerateDatesInclusive } from '@/utils/dateKeys';
 import { aggregateDailyConsumption } from '@/utils/dailyConsumption';
-import { formatCurrency, formatDecimalQuantity } from '@/utils/formatters';
+import { formatCurrency, formatDecimalQuantity, formatUtcDateLabel } from '@/utils/formatters';
 import {
   accumulateProductCost,
   aggregateProductCosts,
@@ -77,15 +77,6 @@ export interface BillingGroupDetailsViewProps {
 
 function getRowQuantity(row: ProcessedData): number {
   return row.creditsUsed;
-}
-
-function formatUtcDate(dateKey: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(`${dateKey}T00:00:00Z`));
 }
 
 function buildDailyRows(rows: ProcessedData[]): BillingGroupDailyRow[] {
@@ -542,10 +533,10 @@ export function BillingGroupDetailsView({
                                 size={16}
                                 className={`shrink-0 text-(--fgColor-muted) transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`}
                               />
-                              {formatUtcDate(row.date)}
+                              {formatUtcDateLabel(row.date)}
                             </button>
                           ) : (
-                            <span className="flex items-center gap-3 pl-7">{formatUtcDate(row.date)}</span>
+                            <span className="flex items-center gap-3 pl-7">{formatUtcDateLabel(row.date)}</span>
                           )}
                         </td>
                         <td className="px-5 py-3.5 text-sm font-semibold text-(--fgColor-default) text-right font-mono tabular-nums">
@@ -565,7 +556,7 @@ export function BillingGroupDetailsView({
                       {isExpanded && row.products.length > 0 && (
                         <tr>
                           <td id={detailsId} colSpan={detailColSpan} className="p-0">
-                            <table className="min-w-full bg-(--bgColor-muted)" aria-label={`${formatUtcDate(row.date)} product consumption`}>
+                            <table className="min-w-full bg-(--bgColor-muted)" aria-label={`${formatUtcDateLabel(row.date)} product consumption`}>
                               <thead>
                                 <tr className="border-y border-(--borderColor-default)">
                                   <th className="px-12 py-2.5 text-left text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider">Product</th>

@@ -5,7 +5,7 @@ import { ChevronRightIcon } from '@primer/octicons-react';
 
 import { PRICING } from '@/constants/pricing';
 import type { ProcessedData } from '@/types/csv';
-import { formatCurrency, formatDecimalQuantity } from '@/utils/formatters';
+import { formatCurrency, formatDecimalQuantity, formatUtcDateLabel } from '@/utils/formatters';
 import type { DailyModelUsageDatum } from '@/utils/ingestion/analytics';
 
 interface ConsumptionMetrics {
@@ -29,15 +29,6 @@ interface DailyConsumptionTableProps {
   data: DailyModelUsageDatum[];
   models: string[];
   sourceRows: ProcessedData[];
-}
-
-function formatUtcDate(dateKey: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(`${dateKey}T00:00:00Z`));
 }
 
 function getAdditionalUsage(row: ProcessedData): number {
@@ -200,7 +191,7 @@ export function DailyConsumptionTable({
                         onClick={() => setExpandedDate(isExpanded ? null : row.date)}
                       >
                         <ChevronIcon expanded={isExpanded} />
-                        {formatUtcDate(row.date)}
+                        {formatUtcDateLabel(row.date)}
                       </button>
                     </td>
                     <UsageCells row={row} emphasized />
@@ -208,7 +199,7 @@ export function DailyConsumptionTable({
                   {isExpanded && (
                     <tr>
                       <td id={detailsId} colSpan={columnCount} className="p-0">
-                        <table className="min-w-full bg-(--bgColor-muted)" aria-label={`${formatUtcDate(row.date)} model consumption`}>
+                        <table className="min-w-full bg-(--bgColor-muted)" aria-label={`${formatUtcDateLabel(row.date)} model consumption`}>
                           <thead>
                             <tr className="border-y border-(--borderColor-default)">
                               <th className="px-12 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-(--fgColor-muted)">
