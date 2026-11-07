@@ -10,21 +10,17 @@ import { PRICING } from '@/constants/pricing';
 import { AnalysisContext } from '@/context/AnalysisContext';
 import { UserDailyStackedChart } from '@/components/charts/UserDailyStackedChart';
 import { utcDateLabelFormatter } from '@/components/charts/chartTooltipStyles';
-import type { ProcessedData, UserDailyData } from '@/types/csv';
+import type { ProcessedData } from '@/types/csv';
 import type { UserSummary } from '@/utils/analytics';
 import { getQuotaTier, isKnownQuotaValue } from '@/utils/analytics/quota';
 import {
   buildUserDailyModelDataFromArtifacts,
   buildTokenArtifactsFromProcessedData,
   type TokenTotals,
-  DailyBucketsArtifacts,
   getUserQuota,
-  QuotaArtifacts,
-  UsageArtifacts,
 } from '@/utils/ingestion';
 import { generateModelColors } from '@/utils/modelColors';
 import { getBillingCostLabels } from '@/utils/billingLabels';
-import { buildBillingMonthDates } from '@/utils/dateKeys';
 import { aggregateDailyConsumption } from '@/utils/dailyConsumption';
 import { formatCurrency } from '@/utils/formatters';
 import { aggregateProductCosts } from '@/utils/productCosts';
@@ -108,9 +104,9 @@ export function UserDetailsView({
 }: UserDetailsViewProps) {
   const analysisCtx = useContext(AnalysisContext);
 
-  const usageArtifacts = analysisCtx?.usageArtifacts as UsageArtifacts | undefined;
-  const dailyBucketsArtifacts = analysisCtx?.dailyBucketsArtifacts as DailyBucketsArtifacts | undefined;
-  const quotaArtifacts = analysisCtx?.quotaArtifacts as QuotaArtifacts | undefined;
+  const usageArtifacts = analysisCtx?.usageArtifacts;
+  const dailyBucketsArtifacts = analysisCtx?.dailyBucketsArtifacts;
+  const quotaArtifacts = analysisCtx?.quotaArtifacts;
 
   const artifactUserQuota = quotaArtifacts ? getUserQuota(quotaArtifacts, user) : undefined;
   const effectiveUserQuotaValue = artifactUserQuota !== undefined ? artifactUserQuota : userQuotaValue;
@@ -134,55 +130,8 @@ export function UserDetailsView({
     if (usageArtifacts && dailyBucketsArtifacts?.dailyUserModelTotals) {
       return buildUserDailyModelDataFromArtifacts(dailyBucketsArtifacts, usageArtifacts, user);
     }
-
-    const userRows = processedData.filter((entry) => entry.user === user);
-    if (userRows.length === 0) {
-      return [];
-    }
-
-    const models = Array.from(new Set(userRows.map((row) => row.model))).sort();
-    const byDate = new Map<string, ProcessedData[]>();
-
-    userRows.forEach((row) => {
-      const entries = byDate.get(row.dateKey);
-      if (entries) {
-        entries.push(row);
-      } else {
-        byDate.set(row.dateKey, [row]);
-      }
-    });
-
-    let cumulative = 0;
-    let currentMonth = '';
-    const result: UserDailyData[] = [];
-    const months = dailyBucketsArtifacts?.months
-      ?? (analysisCtx?.aggregateProcessedData ?? processedData).map(row => row.monthKey);
-    for (const dateStr of buildBillingMonthDates(months)) {
-      if (dateStr.slice(0, 7) !== currentMonth) {
-        currentMonth = dateStr.slice(0, 7);
-        cumulative = 0;
-      }
-      const day = byDate.get(dateStr) || [];
-      const row: UserDailyData = { date: dateStr, totalCumulative: 0 } as UserDailyData;
-      let dailyTotal = 0;
-
-      models.forEach((model) => {
-        row[model] = 0;
-      });
-
-      for (const record of day) {
-        const quantity = record.creditsUsed;
-        row[record.model] = (row[record.model] as number) + quantity;
-        dailyTotal += quantity;
-      }
-
-      cumulative += dailyTotal;
-      row.totalCumulative = cumulative;
-      result.push(row);
-    }
-
-    return result;
-  }, [processedData, user, usageArtifacts, dailyBucketsArtifacts, analysisCtx?.aggregateProcessedData]);
+    return [];
+  }, [user, usageArtifacts, dailyBucketsArtifacts]);
 
   const effectiveUserAggregate = useMemo(
     () => userAggregate === undefined
