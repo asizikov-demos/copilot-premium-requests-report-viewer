@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { render, screen } from '@testing-library/react';
-import type { ReactElement } from 'react';
+import type { ContextType, ReactElement } from 'react';
 import ts from 'typescript';
 
 import { BillingGroupDetailsView } from '@/components/BillingGroupDetailsView';
@@ -12,6 +12,7 @@ import { CodingAgentUsageChart } from '@/components/charts/CodingAgentUsageChart
 import { DailyConsumptionChart } from '@/components/charts/DailyConsumptionChart';
 import { ModelDailyStackedChart } from '@/components/charts/ModelDailyStackedChart';
 import { UsersConsumptionHeatmap } from '@/components/charts/UsersConsumptionHeatmap';
+import { AnalysisContext } from '@/context/AnalysisContext';
 import { getBillingCostLabels } from '@/utils/billingLabels';
 import { aggregateDailyConsumption } from '@/utils/dailyConsumption';
 import {
@@ -51,6 +52,10 @@ const periodRows = [
 ];
 const daily = buildDailyBucketsArtifactsFromProcessedData(periodRows);
 const usage = buildUsageArtifactsFromProcessedData(periodRows);
+const userDetailsContext = {
+  dailyBucketsArtifacts: daily,
+  usageArtifacts: usage,
+} as ContextType<typeof AnalysisContext>;
 const dates = [
   ...Array.from({ length: 29 }, (_, index) => `2024-02-${String(index + 1).padStart(2, '0')}`),
   ...Array.from({ length: 30 }, (_, index) => `2024-04-${String(index + 1).padStart(2, '0')}`),
@@ -77,9 +82,13 @@ const contracts: { file: string; name: string; render: () => ReactElement }[] = 
       models={Object.keys(usage.modelTotals)} modelColors={{}} />,
   },
   {
-    file: 'charts/UserDailyStackedChart.tsx', name: 'user detail fallback and token trend',
-    render: () => <UserDetailsView user="test-user-one" processedData={periodRows}
-      userQuotaValue="unknown" onBack={jest.fn()} />,
+    file: 'charts/UserDailyStackedChart.tsx', name: 'user detail artifact chart and token trend',
+    render: () => (
+      <AnalysisContext.Provider value={userDetailsContext}>
+        <UserDetailsView user="test-user-one" processedData={periodRows}
+          userQuotaValue="unknown" onBack={jest.fn()} />
+      </AnalysisContext.Provider>
+    ),
   },
   {
     file: 'UserConsumptionMetrics.tsx', name: 'tokens with report-wide scope',
