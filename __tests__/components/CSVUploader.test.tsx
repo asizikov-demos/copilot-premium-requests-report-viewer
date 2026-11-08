@@ -39,6 +39,7 @@ describe('CSVUploader', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.requireMock('@/utils/ingestion').ingestStream.mockReset();
   });
 
   afterEach(() => {
@@ -51,13 +52,67 @@ describe('CSVUploader', () => {
     
     expect(screen.getByText(/drop your csv file here/i)).toBeInTheDocument();
     expect(screen.getByText(/or click to browse/i)).toBeInTheDocument();
-    expect(screen.getByText(/analyze your usage data/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'GitHub Copilot AI Usage' })).toBeInTheDocument();
   });
 
   it('should show accepted file hint', () => {
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
     expect(screen.getByText(/Accepted:/i)).toBeInTheDocument();
     expect(screen.getByText('Accepted: .csv files from the GitHub Copilot AI Usage report')).toBeInTheDocument();
+  });
+
+  it.each(['{Enter}', ' '])('opens the single CSV picker with the keyboard: %s', async (key) => {
+    render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
+    const input = screen.getByLabelText('Upload CSV file');
+    const openPicker = jest.spyOn(input, 'click');
+    const browse = screen.getByRole('button', { name: 'Drag & drop your CSV file here, or click to browse' });
+
+    await user.tab();
+    expect(browse).toHaveFocus();
+    expect(browse).toHaveAccessibleDescription('Accepted: .csv files from the GitHub Copilot AI Usage report');
+    await user.keyboard(key);
+
+    expect(openPicker).toHaveBeenCalledTimes(1);
+    expect(input).toHaveAttribute('accept', '.csv');
+    expect(input).not.toHaveAttribute('multiple');
+    openPicker.mockRestore();
+  });
+
+  it('announces processing and prevents browsing or additional drops while busy', async () => {
+    const { ingestStream } = jest.requireMock('@/utils/ingestion');
+    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onProgress: (progress: { rowsProcessed: number }) => void }) => {
+      options.onProgress({ rowsProcessed: 1000 });
+    });
+    render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
+    const input = screen.getByLabelText('Upload CSV file');
+    const browse = screen.getByRole('button', { name: 'Drag & drop your CSV file here, or click to browse' });
+    await user.upload(input, createMockFile(validCSVString, 'test.csv'));
+
+    expect(screen.getByRole('status')).toHaveTextContent('Processing file...');
+    expect(screen.getByRole('status')).toHaveTextContent('1,000 rows processed');
+    expect(screen.getByRole('progressbar', { name: 'File processing progress' })).toBeInTheDocument();
+    expect(browse).toBeDisabled();
+    expect(screen.getByRole('button', { name: /try with sample/i })).toBeDisabled();
+
+    const openPicker = jest.spyOn(input, 'click');
+    fireEvent.drop(browse, { dataTransfer: { files: [createMockFile(validCSVString, 'second.csv')] } });
+    await user.click(browse);
+    expect(ingestStream).toHaveBeenCalledTimes(1);
+    expect(openPicker).not.toHaveBeenCalled();
+    openPicker.mockRestore();
+  });
+
+  it('renders updated errors in a persistent alert region inside the upload card', () => {
+    const { rerender } = render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
+    const alert = screen.getByRole('alert');
+    expect(alert).toBeEmptyDOMElement();
+
+    rerender(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} error="CSV file is empty" />);
+
+    expect(screen.getByRole('alert')).toBe(alert);
+    expect(alert).toHaveTextContent('CSV file is empty');
+    expect(screen.getByRole('region', { name: 'Error processing file' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Upload usage file' })).toContainElement(alert);
   });
   it('forwards ingestion completion with the filename and includes the tokens aggregator', async () => {
     const mockFile = createMockFile('new-format.csv content', 'new-format.csv');
@@ -214,10 +269,10 @@ describe('CSVUploader', () => {
 
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
     
-    const dropZone = screen.getByText(/drop your csv file here/i).closest('div');
+    const dropZone = screen.getByRole('button', { name: 'Drag & drop your CSV file here, or click to browse' });
     
     // Test drop - this is the main functionality we care about
-    fireEvent.drop(dropZone!, {
+    fireEvent.drop(dropZone, {
       dataTransfer: {
         files: [mockFile]
       }
@@ -282,6 +337,8 @@ describe('CSVUploader', () => {
     await user.click(sampleButton);
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('status')).toHaveTextContent('Loading sample data...');
+    expect(screen.getByRole('button', { name: 'Drag & drop your CSV file here, or click to browse' })).toBeDisabled();
 
     resolveFetch!({
       ok: true,
@@ -325,7 +382,7 @@ describe('CSVUploader', () => {
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
 
     const sourceCodeLink = screen.getByRole('link', {
-      name: /github\.com\/asizikov-demos\/copilot-premium-requests-report-viewer/i,
+      name: /open source/i,
     });
 
     expect(sourceCodeLink).toHaveAttribute(
@@ -337,9 +394,9 @@ describe('CSVUploader', () => {
   it('should show documentation link', () => {
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
     
-    const docLink = screen.getByText(/how to get this report/i);
+    const docLink = screen.getByRole('link', { name: /view github documentation/i });
     expect(docLink).toBeInTheDocument();
-    expect(docLink.closest('a')).toHaveAttribute('href', expect.stringContaining('docs.github.com'));
+    expect(docLink).toHaveAttribute('href', expect.stringContaining('docs.github.com'));
   });
 
   it('should accept files with extra columns', async () => {

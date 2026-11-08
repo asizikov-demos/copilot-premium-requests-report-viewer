@@ -1,8 +1,8 @@
 'use client';
 
-import { useRef, useState } from 'react';
-import { ArrowRightIcon, LockIcon, UploadIcon } from '@primer/octicons-react';
-import { Button, ProgressBar, Spinner } from '@primer/react';
+import { useId, useRef, useState } from 'react';
+import { FileIcon, LinkExternalIcon, LockIcon, UploadIcon } from '@primer/octicons-react';
+import { Banner, Button, Heading, Link, ProgressBar, Spinner, Stack, Text } from '@primer/react';
 
 import {
   ingestStream,
@@ -75,15 +75,18 @@ function buildPublicAssetUrl(assetPath: string): string {
 interface CSVUploaderProps {
   onDataLoad: (result: IngestionResult, filename: string) => void;
   onError: (error: string) => void;
+  error?: string;
 }
 
-export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
+export function CSVUploader({ onDataLoad, onError, error }: CSVUploaderProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSampleLoading, setIsSampleLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [totalRowsProcessed, setTotalRowsProcessed] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputId = useId();
+  const fileHintId = useId();
 
   const isBusy = isLoading || isSampleLoading;
 
@@ -175,6 +178,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    if (isBusy) return;
     setIsDragOver(true);
   };
 
@@ -186,6 +190,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
+    if (isBusy) return;
     
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
@@ -194,6 +199,7 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isBusy) return;
     const files = Array.from(e.target.files || []);
     if (files.length > 0) {
       startIngestion(files[0]);
@@ -201,155 +207,152 @@ export function CSVUploader({ onDataLoad, onError }: CSVUploaderProps) {
   };
 
   const handleButtonClick = () => {
+    if (isBusy) return;
     fileInputRef.current?.click();
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
-      <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md shadow-(--shadow-resting-small) px-8 py-10 animate-fade-in-up">
-        {/* Hero section */}
-        <div className="text-center mb-10">
-          <h2 className="text-4xl text-(--fgColor-default) mb-4">
-            Analyze your usage data
-          </h2>
-          <p className="text-lg text-(--fgColor-muted) max-w-md mx-auto leading-relaxed">
+    <div className="w-full max-w-2xl mx-auto py-8">
+      <Stack gap="normal">
+        <Stack gap="tight" className="text-center mb-2">
+          <Heading as="h2" variant="medium">GitHub Copilot AI Usage</Heading>
+          <Text as="p" size="medium" className="text-(--fgColor-muted)">
             Upload your GitHub Copilot AI Usage report to review usage patterns, quota consumption, and billing details locally in your browser.
-          </p>
-        </div>
+          </Text>
+        </Stack>
 
-        {/* Upload area */}
-        <div
-          className={`
-            relative rounded-md border-2 border-dashed transition-all duration-150 cursor-pointer
-            opacity-0 animate-scale-in
-            ${isDragOver
-              ? 'border-(--borderColor-accent-emphasis) bg-(--bgColor-accent-muted)'
-              : 'border-(--borderColor-default) bg-(--bgColor-default) hover:border-(--borderColor-emphasis)'
-            }
-            ${isBusy ? 'opacity-60 pointer-events-none' : ''}
-          `}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={handleButtonClick}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv"
-            onChange={handleFileInputChange}
-            className="hidden"
-            disabled={isBusy}
-          />
+        <section aria-labelledby={`${fileInputId}-title`} className="rounded-md border border-(--borderColor-default) bg-(--bgColor-default)">
+          <div className="px-5 py-4 border-b border-(--borderColor-default)">
+            <Text as="h3" id={`${fileInputId}-title`} size="medium" weight="semibold">Upload usage file</Text>
+          </div>
+          <div className="p-5">
+            <Stack gap="normal">
+              <label htmlFor={fileInputId} className="sr-only">Upload CSV file</label>
+              <input
+                id={fileInputId}
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                onChange={handleFileInputChange}
+                hidden
+                disabled={isBusy}
+              />
+              <button
+                type="button"
+                aria-labelledby={`${fileInputId}-action`}
+                aria-describedby={fileHintId}
+                disabled={isBusy}
+                className={`w-full rounded-md border-2 border-dashed p-8 text-center transition-colors ${
+                  isBusy
+                    ? 'border-(--borderColor-default) opacity-50 cursor-not-allowed'
+                    : isDragOver
+                      ? 'cursor-pointer border-(--borderColor-accent-emphasis) bg-(--bgColor-accent-muted)'
+                      : 'cursor-pointer border-(--borderColor-default) hover:border-(--borderColor-accent-emphasis) hover:bg-(--bgColor-muted)'
+                }`}
+                onDragEnter={handleDragOver}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={handleButtonClick}
+              >
+                <Stack as="span" align="center" gap="cozy">
+                  <UploadIcon size={24} className="text-(--fgColor-muted)" />
+                  <Stack as="span" gap="tight">
+                    <Text id={`${fileInputId}-action`} size="medium" weight="medium">Drag &amp; drop your CSV file here, or click to browse</Text>
+                    <Text id={fileHintId} size="small" className="text-(--fgColor-muted)">
+                      Accepted: .csv files from the GitHub Copilot AI Usage report
+                    </Text>
+                  </Stack>
+                </Stack>
+              </button>
 
-          <div className="px-6 py-14 sm:py-16">
-            <div className="flex flex-col items-center gap-5">
-              {/* Icon */}
-              <div className={`
-                w-16 h-16 rounded-md flex items-center justify-center transition-all duration-150
-                ${isDragOver
-                  ? 'bg-(--bgColor-accent-emphasis)'
-                  : 'bg-(--bgColor-muted)'
-                }
-              `}>
-                {isLoading ? (
-                  <Spinner size="medium" srText={null} className="text-(--fgColor-accent)" />
-                ) : (
-                  <UploadIcon
-                    size={24}
-                    className={`transition-colors ${isDragOver ? 'text-(--fgColor-onEmphasis)' : 'text-(--fgColor-muted)'}`}
-                  />
-                )}
-              </div>
+              <Stack direction="horizontal" align="center" gap="cozy" aria-hidden="true">
+                <span className="flex-1 border-t border-(--borderColor-default)" />
+                <Text size="small" className="text-(--fgColor-muted)">or</Text>
+                <span className="flex-1 border-t border-(--borderColor-default)" />
+              </Stack>
 
-              {/* Text */}
-              <div className="text-center">
-                {isLoading ? (
-                  <div className="space-y-4">
-                    <p className="text-base font-semibold text-(--fgColor-default)">Processing file...</p>
-                    <div className="w-56 mx-auto">
-                      <ProgressBar progress={progress} bg="accent.emphasis" aria-label="File processing progress" />
-                    </div>
-                    {totalRowsProcessed > 0 && (
-                      <p className="text-sm text-(--fgColor-muted)">
-                        {totalRowsProcessed.toLocaleString()} rows processed
-                      </p>
+              <Stack direction="horizontal" justify="center">
+                <Button variant="primary" leadingVisual={FileIcon} onClick={loadSampleData} disabled={isBusy}>
+                  Try with sample data
+                </Button>
+              </Stack>
+
+              <div role="status" aria-atomic="true">
+                {isBusy && (
+                  <Stack align="center" gap="condensed" paddingBlock="condensed">
+                    <Stack direction="horizontal" align="center" gap="condensed">
+                      <Spinner size="small" srText={null} />
+                      <Text size="medium" className="text-(--fgColor-muted)">
+                        {isLoading ? 'Processing file...' : 'Loading sample data...'}
+                      </Text>
+                    </Stack>
+                    {isLoading && (
+                      <div className="w-full max-w-sm">
+                        <ProgressBar progress={progress} bg="accent.emphasis" aria-label="File processing progress" />
+                      </div>
                     )}
-                  </div>
-                ) : isSampleLoading ? (
-                  <p className="text-base font-semibold text-(--fgColor-default)">Loading sample data...</p>
-                ) : (
-                  <>
-                    <p className="text-base font-semibold text-(--fgColor-default) mb-1">
-                      Drop your CSV file here
-                    </p>
-                    <p className="text-sm text-(--fgColor-muted)">
-                      or click to browse
-                    </p>
-                  </>
+                    {totalRowsProcessed > 0 && (
+                      <Text as="p" size="small" className="text-(--fgColor-muted)">
+                        {totalRowsProcessed.toLocaleString()} rows processed
+                      </Text>
+                    )}
+                  </Stack>
                 )}
               </div>
+
+            </Stack>
+            <div role="alert" aria-atomic="true">
+              {error && (
+                <div className="mt-4">
+                  <Banner variant="critical" layout="compact" title="Error processing file" hideTitle description={error} />
+                </div>
+              )}
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Accepted file hint */}
-        <p className="mt-4 text-xs text-center text-(--fgColor-muted) font-medium tracking-wide">
-          Accepted: .csv files from the GitHub Copilot AI Usage report
-        </p>
-
-        {/* Sample data button */}
-        <div className="mt-5 flex justify-center opacity-0 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-          <Button
-            variant="primary"
-            size="large"
-            onClick={(e) => { e.stopPropagation(); loadSampleData(); }}
-            disabled={isBusy}
-          >
-            Try with sample data
-          </Button>
-        </div>
-
-        {/* Inline privacy info */}
-        <div className="mt-8 opacity-0 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-          <div className="p-4 bg-(--bgColor-muted) rounded-md border border-(--borderColor-default)">
-            <div className="flex items-center gap-2 mb-3">
-              <LockIcon size={16} className="shrink-0 fill-(--fgColor-success)" />
-              <span className="text-sm font-semibold text-(--fgColor-default)">Your data stays private</span>
-            </div>
-            <ul className="space-y-1 text-sm text-(--fgColor-muted) leading-relaxed pl-5 list-disc">
-              <li>All processing of your uploaded CSV happens in your browser. The file contents are not uploaded to any server.</li>
-              <li>The contents of your uploaded CSV are not stored or cached on any server.</li>
-              <li>When you close or reload this tab, the app does not retain your uploaded CSV file.</li>
-              <li>This page does not send the contents of your uploaded CSV to external endpoints.</li>
-              <li>
-                You can verify this yourself — the source code is available at{' '}
-                <a
-                  href="https://github.com/asizikov-demos/copilot-premium-requests-report-viewer"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-(--fgColor-accent) hover:underline font-medium transition-colors duration-150 break-all"
-                >
-                  github.com/asizikov-demos/copilot-premium-requests-report-viewer
-                </a>
-                .
-              </li>
-            </ul>
+        <section aria-labelledby={`${fileInputId}-help`} className="rounded-md border border-(--borderColor-default) bg-(--bgColor-default)">
+          <div className="px-5 py-4 border-b border-(--borderColor-default)">
+            <Text as="h3" id={`${fileInputId}-help`} size="medium" weight="semibold">How to get this report</Text>
           </div>
-        </div>
-      </div>
+          <div className="px-5 py-4">
+            <Text as="p" size="medium">
+              Download your GitHub Copilot AI Usage report as a CSV file, then upload it here.
+              {' '}For export instructions,{' '}
+              <Link
+                href="https://docs.github.com/en/enterprise-cloud@latest/billing/how-tos/products/view-productlicense-use#downloading-usage-reports"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                view GitHub documentation <LinkExternalIcon size={16} className="inline-block align-text-bottom" />
+              </Link>
+              .
+            </Text>
+          </div>
+        </section>
 
-      {/* How to get this report */}
-      <div className="mt-5 text-center opacity-0 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
-        <a
-          href="https://docs.github.com/en/enterprise-cloud@latest/billing/how-tos/products/view-productlicense-use#downloading-usage-reports"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-(--fgColor-muted) hover:text-(--fgColor-accent) transition-colors duration-150 font-medium"
-        >
-          How to get this report <ArrowRightIcon size={16} className="inline-block align-text-bottom" />
-        </a>
-      </div>
+        <div className="rounded-md border border-(--borderColor-default) bg-(--bgColor-muted)">
+          <Stack direction="horizontal" align="start" gap="cozy" paddingInline="normal" paddingBlock="cozy">
+            <LockIcon size={16} className="shrink-0 mt-0.5 text-(--fgColor-muted)" />
+            <Text as="p" size="small" className="text-(--fgColor-muted)">
+              <Text weight="semibold" className="text-(--fgColor-default)">Your data stays private.</Text>
+              {' '}All processing of your uploaded CSV happens in your browser. The file contents are not uploaded, stored, or cached on any server.
+              {' '}This page does not send the contents of your uploaded CSV to external endpoints.
+              {' '}When you close or reload this tab, the app does not retain your uploaded CSV file.
+              {' '}You can verify this yourself — the source code is{' '}
+              <Link
+                href="https://github.com/asizikov-demos/copilot-premium-requests-report-viewer"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                open source
+              </Link>
+              .
+            </Text>
+          </Stack>
+        </div>
+      </Stack>
     </div>
   );
 }
