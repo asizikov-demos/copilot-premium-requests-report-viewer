@@ -112,6 +112,7 @@ describe('ModelBucketDistributionCharts', () => {
     expect(screen.getByText('No Auto usage was reported for the selected billing period.')).toBeInTheDocument();
     for (const card of screen.getAllByRole('region')) {
       expect(card).toHaveClass('h-[28rem]', 'flex', 'flex-col');
+      expect(card.firstElementChild).toHaveClass('border-b');
       expect(card.querySelector('[data-component="Blankslate"]')?.parentElement?.parentElement).toHaveClass('grid', 'flex-1');
     }
     expect(screen.queryByRole('button')).not.toBeInTheDocument();

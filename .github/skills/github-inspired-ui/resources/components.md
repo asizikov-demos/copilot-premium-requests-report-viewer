@@ -13,6 +13,7 @@ Interactive controls use `@primer/react`; icons use `@primer/octicons-react`. Th
 | Text and search inputs | `TextInput` with `leadingVisual={SearchIcon}` | `UsersOverview`, `BillingGroupDetailsView`, `UserCategoryTable` |
 | Single choice | `SelectPanel` (through `SelectPanelDropdown` for app filters) | `UsersOverview`, `UserConsumptionMetrics` |
 | Multiple choice | `Checkbox` inside a `fieldset` + `legend` | `DataAnalysis` billing periods |
+| Page navigation | `Pagination` through `TablePagination`, with page buttons preserving in-memory state | paginated tables |
 | Status messages | `Banner` | Standard Primer status visuals, including the compact upload error in `CSVUploader`. |
 | Indeterminate loading | `Spinner` | `CSVUploader` |
 | Determinate progress or meters | `ProgressBar` | `CSVUploader`, `UserDetailsHeader` |
@@ -27,7 +28,6 @@ Keep these hand-built. Their behavior is required and the Primer counterpart doe
 | Control | Why it stays custom |
 | --- | --- |
 | `SortableColumnHeader` | Puts `aria-sort` on the `<th>` and a keyboard-focusable `<button>` inside it. The tables are not Primer `DataTable`. |
-| Numbered pagination buttons | Primer `Pagination` renders anchors with hash links and disabled `<span>`s. Our pages are in-memory state and need real `<button>`s with `disabled`. Previous/next use `IconButton`. |
 | Breadcrumb buttons | Primer `Breadcrumbs` renders links. Ours are `text-2xl` heading-sized buttons that change in-memory state. |
 | `AdvisorySection` `<details>` | Native disclosure with no Primer equivalent. |
 | CSV dropzone | Native button with drag-and-drop handlers opens a labelled hidden single-file input. It keeps browser keyboard activation and the global Primer focus outline. |
@@ -198,16 +198,9 @@ Do not use `<select multiple>` for user-facing multi-select: it requires Ctrl/Cm
 </fieldset>
 ```
 
-## Pagination (custom page buttons + IconButton)
+## Pagination (Primer: Pagination)
 
-Wrap the controls in `<nav aria-label="… pagination">`. Previous/next use `IconButton` with `ChevronLeftIcon`/`ChevronRightIcon`, `variant="invisible"` and labels such as "Previous page"/"Next page". Numbered page buttons stay hand-built because Primer `Pagination` renders hash links. Give each one `type="button"` and `aria-label="Page N"`, and give the current page `aria-current="page"`:
-
-```tsx
-<IconButton icon={ChevronLeftIcon} variant="invisible" aria-label="Previous page" disabled={page === 1} onClick={prev} />
-<button type="button" aria-label="Page 1" aria-current="page" className="w-8 h-8 text-sm font-medium rounded-md border bg-(--bgColor-accent-emphasis) text-(--fgColor-onEmphasis) border-(--borderColor-accent-emphasis)">1</button>
-<button type="button" aria-label="Page 2" className="w-8 h-8 text-sm font-medium rounded-md border border-(--borderColor-default) text-(--fgColor-muted) hover:bg-(--control-transparent-bgColor-hover)">2</button>
-<span className="text-sm text-(--fgColor-muted)">1–25 of 142</span>
-```
+Use the shared `TablePagination` wrapper for tabular data. It accepts a zero-based page index, item count, page size, and accessible label; it passes a one-based page to Primer `Pagination` and renders its numbered controls as buttons to avoid hash navigation for in-memory tables. Keep page slicing in the table component and reset its page index when search/filter changes.
 
 ## Chart / Table Toggles
 

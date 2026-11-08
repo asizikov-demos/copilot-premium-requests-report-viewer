@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { ChevronLeftIcon, ChevronRightIcon, CopyIcon, SearchIcon } from '@primer/octicons-react';
-import { FormControl, IconButton, TextInput } from '@primer/react';
+import { ChevronRightIcon, CopyIcon, SearchIcon } from '@primer/octicons-react';
+import { FormControl, TextInput } from '@primer/react';
 
 import { DailyConsumptionChart } from '@/components/charts/DailyConsumptionChart';
 import { ModelDailyStackedChart } from '@/components/charts/ModelDailyStackedChart';
+import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '@/components/primitives/TablePagination';
 import { dataVizColor } from '@/constants/primerTokens';
 import type { ProcessedData } from '@/types/csv';
 import type { BillingCostLabels } from '@/utils/billingLabels';
@@ -28,8 +29,6 @@ const PRODUCT_CATEGORY_COLORS: Record<ProductCategory, string> = {
   'Code Review': dataVizColor('purple'),
   'Code Quality': dataVizColor('green'),
 };
-const USERS_PER_PAGE = 50;
-
 interface BillingGroupDailyRow {
   date: string;
   quantity: number;
@@ -201,12 +200,12 @@ export function BillingGroupDetailsView({
 
     return query === '' ? userRows : userRows.filter((row) => row.user.toLowerCase().includes(query));
   }, [userRows, userSearch]);
-  const totalUserPages = Math.max(1, Math.ceil(filteredUserRows.length / USERS_PER_PAGE));
+  const totalUserPages = Math.max(1, Math.ceil(filteredUserRows.length / DEFAULT_TABLE_PAGE_SIZE));
   const activeUserPage = Math.min(userPage, totalUserPages - 1);
   const paginatedUserRows = useMemo(
     () => filteredUserRows.slice(
-      activeUserPage * USERS_PER_PAGE,
-      (activeUserPage + 1) * USERS_PER_PAGE
+      activeUserPage * DEFAULT_TABLE_PAGE_SIZE,
+      (activeUserPage + 1) * DEFAULT_TABLE_PAGE_SIZE
     ),
     [activeUserPage, filteredUserRows]
   );
@@ -431,35 +430,12 @@ export function BillingGroupDetailsView({
                   ))}
                 </tbody>
               </table>
-              {totalUserPages > 1 && (
-                <div className="bg-(--bgColor-default) px-5 py-3 flex items-center justify-between border-t border-(--borderColor-default)">
-                  <p className="text-sm text-(--fgColor-muted)">
-                    {activeUserPage * USERS_PER_PAGE + 1}–{Math.min(
-                      (activeUserPage + 1) * USERS_PER_PAGE,
-                      filteredUserRows.length
-                    )} of {filteredUserRows.length}
-                  </p>
-                  <nav aria-label="Users pagination" className="flex items-center gap-1">
-                    <IconButton
-                      icon={ChevronLeftIcon}
-                      variant="invisible"
-                      aria-label="Previous users page"
-                      onClick={() => setUserPage((page) => Math.max(0, page - 1))}
-                      disabled={activeUserPage === 0}
-                    />
-                    <span className="px-2 text-sm text-(--fgColor-muted)">
-                      {activeUserPage + 1} / {totalUserPages}
-                    </span>
-                    <IconButton
-                      icon={ChevronRightIcon}
-                      variant="invisible"
-                      aria-label="Next users page"
-                      onClick={() => setUserPage((page) => Math.min(totalUserPages - 1, page + 1))}
-                      disabled={activeUserPage === totalUserPages - 1}
-                    />
-                  </nav>
-                </div>
-              )}
+              <TablePagination
+                ariaLabel="Users pagination"
+                currentPage={activeUserPage}
+                itemCount={filteredUserRows.length}
+                onPageChange={setUserPage}
+              />
             </div>
           ) : (
             <div className="flex items-center justify-center h-64 text-(--fgColor-muted) text-sm">
@@ -469,24 +445,28 @@ export function BillingGroupDetailsView({
         </div>
       )}
 
-      <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md p-5">
-        <h3 className="text-sm font-medium text-(--fgColor-default) mb-1">Daily Consumption</h3>
-        <p className="text-xs text-(--fgColor-muted) mb-4">Daily {quantityColumnLabel.toLowerCase()} stacked by product.</p>
-        {chartData.length > 0 ? (
-          <div className="h-72 sm:h-96 w-full">
-            <ModelDailyStackedChart
-              data={chartData}
-              models={productLabels}
-              modelColors={productColors}
-              valueUnitLabel={quantityColumnLabel.toLowerCase()}
-            />
-          </div>
-        ) : (
-          <div className="flex items-center justify-center h-64 text-(--fgColor-muted) text-sm">
-            No data available
-          </div>
-        )}
-      </div>
+      <section aria-labelledby="daily-product-consumption-title" className="overflow-hidden rounded-md border border-(--borderColor-default) bg-(--bgColor-default)">
+        <div className="border-b border-(--borderColor-default) px-5 py-4">
+          <h3 id="daily-product-consumption-title" className="text-sm font-medium text-(--fgColor-default)">Daily Consumption</h3>
+          <p className="mt-1 text-xs text-(--fgColor-muted)">Daily {quantityColumnLabel.toLowerCase()} stacked by product.</p>
+        </div>
+        <div className="p-5">
+          {chartData.length > 0 ? (
+            <div className="h-72 sm:h-96 w-full">
+              <ModelDailyStackedChart
+                data={chartData}
+                models={productLabels}
+                modelColors={productColors}
+                valueUnitLabel={quantityColumnLabel.toLowerCase()}
+              />
+            </div>
+          ) : (
+            <div className="flex h-64 items-center justify-center text-sm text-(--fgColor-muted)">
+              No data available
+            </div>
+          )}
+        </div>
+      </section>
 
       {dailyRows.length > 0 && (
         <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden">

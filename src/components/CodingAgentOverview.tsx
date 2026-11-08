@@ -66,8 +66,6 @@ export function CodingAgentOverview({
 }: CodingAgentOverviewProps) {
   const isMobile = useIsMobile();
   const [showChart, setShowChart] = useState(true);
-  const [showAllUsers, setShowAllUsers] = useState(false);
-  const [showAllReviewUsers, setShowAllReviewUsers] = useState(false);
   const { aggregateProcessedData, dailyBucketsArtifacts, selectedMonths } = useAnalysisContext();
   const quantityColumnLabel = 'AI Credits';
   const valueUnitLabel = 'AI Credits';
@@ -86,7 +84,6 @@ export function CodingAgentOverview({
       : [];
   }, [dailyBucketsArtifacts, selectedMonths]);
 
-  const TABLE_PREVIEW_COUNT = 5;
   const codingAgentTableRows = useMemo<AgentUsageTableRow[]>(() => {
     return buildUsageBasedAgentRows(aggregateProcessedData, 'Coding Agent');
   }, [aggregateProcessedData]);
@@ -118,15 +115,19 @@ export function CodingAgentOverview({
 
       {/* Chart */}
       {(!isMobile || showChart) && dailyCodingAgentData.length > 0 && (
-        <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md p-5">
-          <h3 className="text-sm font-medium text-(--fgColor-default)">Usage Over Time</h3>
-          <p className="text-xs text-(--fgColor-muted) mt-0.5 mb-4">
-            Daily and cumulative {valueUnitLabel} usage
-          </p>
-          <div className="h-56 sm:h-72">
-            <CodingAgentUsageChart data={dailyCodingAgentData} valueUnitLabel={valueUnitLabel} />
+        <section className="overflow-hidden rounded-md border border-(--borderColor-default) bg-(--bgColor-default)">
+          <div className="border-b border-(--borderColor-default) px-5 py-4">
+            <h3 className="text-sm font-medium text-(--fgColor-default)">Usage Over Time</h3>
+            <p className="mt-1 text-xs text-(--fgColor-muted)">
+              Daily and cumulative {valueUnitLabel} usage
+            </p>
           </div>
-        </div>
+          <div className="p-5">
+            <div className="h-56 sm:h-72">
+              <CodingAgentUsageChart data={dailyCodingAgentData} valueUnitLabel={valueUnitLabel} />
+            </div>
+          </div>
+        </section>
       )}
 
       {/* Users Table */}
@@ -137,9 +138,6 @@ export function CodingAgentOverview({
           showCosts={showCosts}
           quantityColumnLabel={quantityColumnLabel}
           costLabels={costLabels}
-          showAll={showAllUsers}
-          onToggleShowAll={() => setShowAllUsers(!showAllUsers)}
-          previewCount={TABLE_PREVIEW_COUNT}
         />
       )}
 
@@ -155,15 +153,19 @@ export function CodingAgentOverview({
 
           {/* Code Review Chart */}
           {(!isMobile || showChart) && dailyCodeReviewData.length > 0 && (
-            <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md p-5">
-              <h3 className="text-sm font-medium text-(--fgColor-default)">Usage Over Time</h3>
-              <p className="text-xs text-(--fgColor-muted) mt-0.5 mb-4">
-                Daily and cumulative {valueUnitLabel} usage
-              </p>
-              <div className="h-56 sm:h-72">
-                <CodingAgentUsageChart data={dailyCodeReviewData} valueUnitLabel={valueUnitLabel} />
+            <section className="overflow-hidden rounded-md border border-(--borderColor-default) bg-(--bgColor-default)">
+              <div className="border-b border-(--borderColor-default) px-5 py-4">
+                <h3 className="text-sm font-medium text-(--fgColor-default)">Usage Over Time</h3>
+                <p className="mt-1 text-xs text-(--fgColor-muted)">
+                  Daily and cumulative {valueUnitLabel} usage
+                </p>
               </div>
-            </div>
+              <div className="p-5">
+                <div className="h-56 sm:h-72">
+                  <CodingAgentUsageChart data={dailyCodeReviewData} valueUnitLabel={valueUnitLabel} />
+                </div>
+              </div>
+            </section>
           )}
 
           {/* Code Review Users Table */}
@@ -174,9 +176,6 @@ export function CodingAgentOverview({
               showCosts={showCosts}
               quantityColumnLabel={quantityColumnLabel}
               costLabels={costLabels}
-              showAll={showAllReviewUsers}
-              onToggleShowAll={() => setShowAllReviewUsers(!showAllReviewUsers)}
-              previewCount={TABLE_PREVIEW_COUNT}
             />
           )}
         </>

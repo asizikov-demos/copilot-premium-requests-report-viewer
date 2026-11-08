@@ -77,6 +77,8 @@ describe('UserDetailsView', () => {
 
     const region = screen.getByRole('region', { name: 'Daily Consumption' });
     expect(within(region).getByText('Included and additional usage by day in USD')).toBeInTheDocument();
+    const modelUsageTitle = screen.getByRole('heading', { name: 'Daily Model Usage' });
+    expect(modelUsageTitle.parentElement).toHaveClass('border-b');
     expect(JSON.parse(within(region).getByTestId('bar-chart').getAttribute('data-chart')!)).toEqual([
       ...Array.from({ length: 30 }, (_, index) => ({
         date: `2026-06-${String(index + 1).padStart(2, '0')}`,

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   AgentIcon,
   AiModelIcon,
@@ -32,6 +32,7 @@ import { ModelCreditsTreemap } from './charts/ModelCreditsTreemap';
 import { ModelUsageTrendsOverview } from './ModelUsageTrendsOverview';
 import { OrganizationsOverview } from './OrganizationsOverview';
 import { UsersOverview } from './UsersOverview';
+import { TablePagination } from './primitives/TablePagination';
 
 interface DataAnalysisProps {
   ingestionResult: import('@/utils/ingestion').IngestionResult;
@@ -44,6 +45,16 @@ type NavigationItem = {
   label: string;
   icon: Icon;
 };
+
+interface ModelDetailsRow {
+  model: string;
+  credits: number;
+  gross: number;
+  discount: number;
+  net: number;
+}
+
+const MODEL_DETAILS_PAGE_SIZE = 20;
 
 const COST_CENTERS_NAV_ITEM: NavigationItem = { key: 'costCenters', label: 'Cost Centers', icon: BriefcaseIcon };
 const ORGANIZATIONS_NAV_ITEM: NavigationItem = { key: 'organizations', label: 'Organizations', icon: OrganizationIcon };
@@ -59,6 +70,7 @@ const NAV_ITEMS: NavigationItem[] = [
 const AI_USAGE_NAV_ITEM: NavigationItem = { key: 'aiUsage', label: 'AI Usage', icon: CreditCardIcon };
 
 function DataAnalysisInner() {
+  const [modelPageState, setModelPageState] = useState<{ rows: ModelDetailsRow[]; page: number } | null>(null);
   const {
     view,
     setView,
@@ -138,7 +150,7 @@ function DataAnalysisInner() {
   const costMetricsAvailable = billingArtifacts?.hasAnyBillingData === true;
   const aggregatedCosts = costMetricsAvailable && billingArtifacts ? billingArtifacts.totals : null;
 
-  const modelRows = useMemo(() => {
+  const modelRows = useMemo<ModelDetailsRow[]>(() => {
     const byModel = new Map<string, number>();
     for (const row of aggregateProcessedData) {
       byModel.set(row.model, (byModel.get(row.model) ?? 0) + row.creditsUsed);
@@ -154,6 +166,13 @@ function DataAnalysisInner() {
       };
     }).sort((left, right) => right.credits - left.credits);
   }, [aggregateProcessedData, billingArtifacts]);
+  const modelPage = modelPageState?.rows === modelRows ? modelPageState.page : 0;
+  const modelPageCount = Math.ceil(modelRows.length / MODEL_DETAILS_PAGE_SIZE);
+  const activeModelPage = Math.min(modelPage, Math.max(modelPageCount - 1, 0));
+  const visibleModelRows = modelRows.slice(
+    activeModelPage * MODEL_DETAILS_PAGE_SIZE,
+    (activeModelPage + 1) * MODEL_DETAILS_PAGE_SIZE
+  );
 
   const hasModelCosts = modelRows.some(
     (row) => row.gross > 0 || row.discount > 0 || row.net > 0
@@ -389,7 +408,7 @@ function DataAnalysisInner() {
               {/* Cost per Product */}
               {productCosts.length > 0 && (
                 <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-                  <div className="px-6 py-4 border-b border-(--borderColor-default) bg-(--bgColor-muted)">
+                  <div className="px-6 py-4 border-b border-(--borderColor-default)">
                     <h3 className="text-lg font-semibold text-(--fgColor-default)">Cost per Product</h3>
                   </div>
                   <div className="overflow-x-auto">
@@ -431,7 +450,7 @@ function DataAnalysisInner() {
 
               {costMetricsAvailable && dailyConsumption.length > 0 && (
                 <section aria-labelledby="daily-consumption-title" className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden min-h-[20rem]">
-                  <div className="px-6 py-4 border-b border-(--borderColor-default) bg-(--bgColor-muted)">
+                  <div className="px-6 py-4 border-b border-(--borderColor-default)">
                     <h3 id="daily-consumption-title" className="text-lg font-semibold text-(--fgColor-default)">Daily Consumption</h3>
                     <p className="text-sm text-(--fgColor-muted) mt-0.5">Included and additional usage by day in USD</p>
                   </div>
@@ -445,7 +464,7 @@ function DataAnalysisInner() {
 
               {autoModeSavingsRows.length > 0 && costMetricsAvailable && (
                 <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '150ms' }}>
-                  <div className="px-6 py-4 border-b border-(--borderColor-default) bg-(--bgColor-muted)">
+                  <div className="px-6 py-4 border-b border-(--borderColor-default)">
                     <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <h3 className="text-lg font-semibold text-(--fgColor-default)">Auto Mode Savings</h3>
@@ -491,19 +510,23 @@ function DataAnalysisInner() {
                 </div>
               )}
 
-              <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md p-6 opacity-0 animate-scale-in" style={{ animationDelay: '200ms' }}>
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                  <h3 className="text-lg font-semibold text-(--fgColor-default)">{modelChartTitle}</h3>
-                  <span className="text-xs text-(--fgColor-muted) font-medium">Total: {modelChartTotalDisplay} {modelChartUnitLabel}</span>
+              <div className="overflow-hidden rounded-md border border-(--borderColor-default) bg-(--bgColor-default) opacity-0 animate-scale-in" style={{ animationDelay: '200ms' }}>
+                <div className="border-b border-(--borderColor-default) px-6 py-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-lg font-semibold text-(--fgColor-default)">{modelChartTitle}</h3>
+                    <span className="text-xs text-(--fgColor-muted) font-medium">Total: {modelChartTotalDisplay} {modelChartUnitLabel}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-(--fgColor-muted)">
+                    Tile area represents each model&apos;s share of AI Credits. Hover or focus a tile for exact usage.
+                  </p>
                 </div>
-                <p className="text-xs text-(--fgColor-muted) mb-6">
-                  Tile area represents each model&apos;s share of AI Credits. Hover or focus a tile for exact usage.
-                </p>
-                <ModelCreditsTreemap data={modelChartData} />
+                <div className="p-6">
+                  <ModelCreditsTreemap data={modelChartData} />
+                </div>
               </div>
 
               <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-                <div className="px-6 py-4 border-b border-(--borderColor-default) bg-(--bgColor-muted)">
+                <div className="px-6 py-4 border-b border-(--borderColor-default)">
                   <h3 className="text-lg font-semibold text-(--fgColor-default)">Model Details</h3>
                 </div>
                 <div className="overflow-x-auto">
@@ -524,9 +547,9 @@ function DataAnalysisInner() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-(--borderColor-default)">
-                      {modelRows.map((item, index) => {
+                      {visibleModelRows.map((item) => {
                         return (
-                          <tr key={index} className="hover:bg-(--bgColor-muted) transition-colors duration-150">
+                          <tr key={item.model} className="hover:bg-(--bgColor-muted) transition-colors duration-150">
                             <td className="px-6 py-3.5 text-sm font-medium text-(--fgColor-default)">
                               <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getModelColor(item.model) }}></div>
@@ -557,6 +580,13 @@ function DataAnalysisInner() {
                     </tbody>
                   </table>
                 </div>
+                <TablePagination
+                  ariaLabel="Model details pagination"
+                  currentPage={activeModelPage}
+                  itemCount={modelRows.length}
+                  pageSize={MODEL_DETAILS_PAGE_SIZE}
+                  onPageChange={(page) => setModelPageState({ rows: modelRows, page })}
+                />
               </div>
             </div>
           )}

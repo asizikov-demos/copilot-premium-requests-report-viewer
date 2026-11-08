@@ -69,16 +69,16 @@ export function ModelBucketDistributionCharts({ rows }: ModelBucketDistributionC
         <section
           key={label}
           aria-label={`${label} model distribution`}
-          className="flex h-[28rem] min-w-0 flex-col rounded-md border border-(--borderColor-default) bg-(--bgColor-default) p-4"
+          className="flex h-[28rem] min-w-0 flex-col overflow-hidden rounded-md border border-(--borderColor-default) bg-(--bgColor-default)"
         >
-          <div className="min-h-14 shrink-0">
+          <div className="shrink-0 border-b border-(--borderColor-default) px-4 py-3">
             <h3 className="text-sm font-medium text-(--fgColor-default)">{label} model distribution</h3>
             <p className="mt-1 text-xs tabular-nums text-(--fgColor-muted)">
               {uniqueUsers.toLocaleString()} unique {uniqueUsers === 1 ? 'user' : 'users'}
             </p>
           </div>
           {models.length === 0 ? (
-            <div className="grid min-h-0 flex-1 items-center">
+            <div className="grid min-h-0 flex-1 items-center p-4">
               <Blankslate size="small">
                 <Blankslate.Visual>
                   <GraphIcon size={24} />
@@ -90,7 +90,7 @@ export function ModelBucketDistributionCharts({ rows }: ModelBucketDistributionC
               </Blankslate>
             </div>
           ) : (
-            <>
+            <div className="flex min-h-0 flex-1 flex-col p-4">
               <div className="relative h-48 shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart aria-label={`${label} model AI Credits distribution`}>
@@ -171,7 +171,7 @@ export function ModelBucketDistributionCharts({ rows }: ModelBucketDistributionC
                   </Button>
                 )}
               </div>
-            </>
+            </div>
           )}
         </section>
       ))}

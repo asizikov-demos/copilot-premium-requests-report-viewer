@@ -153,7 +153,7 @@ export function BillingGroupTable<T extends BillingGroupRow>({
   return (
     <div className="space-y-6">
       <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '50ms' }}>
-        <div className="px-6 py-4 border-b border-(--borderColor-default) bg-(--bgColor-muted)">
+        <div className="px-6 py-4 border-b border-(--borderColor-default)">
           <h3 className="text-lg font-semibold text-(--fgColor-default)">{title}</h3>
           <p className="text-xs text-(--fgColor-muted) mt-1">{rows.length} {singularLabel}{rows.length !== 1 ? 's' : ''}</p>
         </div>

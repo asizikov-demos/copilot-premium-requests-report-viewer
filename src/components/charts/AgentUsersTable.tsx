@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Link } from '@primer/react';
 
+import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '@/components/primitives/TablePagination';
 import type { BillingCostLabels } from '@/utils/billingLabels';
 import { formatCurrency, formatDecimalQuantity } from '@/utils/formatters';
 
@@ -14,27 +14,12 @@ export interface AgentUsageTableRow {
   additional: number;
 }
 
-function getVisibleRows<T>(
-  rows: T[],
-  showAllRows: boolean,
-  previewCount: number
-): T[] {
-  if (showAllRows) {
-    return rows;
-  }
-
-  return rows.slice(0, previewCount);
-}
-
 interface AgentUsersTableProps {
   tableTitle: string;
   rows: AgentUsageTableRow[];
   showCosts: boolean;
   quantityColumnLabel: string;
   costLabels: BillingCostLabels;
-  showAll: boolean;
-  onToggleShowAll: () => void;
-  previewCount: number;
 }
 
 const headerCellClassName =
@@ -46,12 +31,15 @@ export function AgentUsersTable({
   showCosts,
   quantityColumnLabel,
   costLabels,
-  showAll,
-  onToggleShowAll,
-  previewCount,
 }: AgentUsersTableProps) {
-  const visibleRows = getVisibleRows(rows, showAll, previewCount);
-  const hasMore = rows.length > previewCount;
+  const [paginationState, setPaginationState] = React.useState({ rows, page: 0 });
+  const currentPage = paginationState.rows === rows ? paginationState.page : 0;
+  const pageCount = Math.ceil(rows.length / DEFAULT_TABLE_PAGE_SIZE);
+  const activePage = Math.min(currentPage, Math.max(pageCount - 1, 0));
+  const visibleRows = rows.slice(
+    activePage * DEFAULT_TABLE_PAGE_SIZE,
+    (activePage + 1) * DEFAULT_TABLE_PAGE_SIZE
+  );
 
   return (
     <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden">
@@ -102,13 +90,12 @@ export function AgentUsersTable({
           </tbody>
         </table>
       </div>
-      {hasMore && (
-        <div className="px-5 py-3 border-t border-(--borderColor-default) text-sm">
-          <Link as="button" type="button" className="font-medium" onClick={onToggleShowAll}>
-            {showAll ? `Show top ${previewCount}` : `Show all ${rows.length} users`}
-          </Link>
-        </div>
-      )}
+      <TablePagination
+        ariaLabel={`${tableTitle} pagination`}
+        currentPage={activePage}
+        itemCount={rows.length}
+        onPageChange={(page) => setPaginationState({ rows, page })}
+      />
     </div>
   );
 }
