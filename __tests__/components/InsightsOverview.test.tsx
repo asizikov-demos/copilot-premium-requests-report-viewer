@@ -57,15 +57,17 @@ describe('InsightsOverview', () => {
     }
   });
 
-  it('searches the full group, shows all users, and handles no matches', async () => {
+  it('searches the full group, paginates results, and handles no matches', async () => {
     const user = userEvent.setup();
-    const manyRows = Array.from({ length: 25 }, (_, index) => makeProcessedData({ user: `test-user-${index}`, creditsUsed: index }));
+    const manyRows = Array.from({ length: 55 }, (_, index) => makeProcessedData({ user: `test-user-${index}`, creditsUsed: index }));
     render(<InsightsOverview {...propsFor(manyRows)} />);
     await user.click(screen.getByRole('button', { name: /Low adoption.*Explore/ }));
-    expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(7);
-    await user.click(screen.getByRole('button', { name: 'Show all 25' }));
-    expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(26);
-    await user.click(screen.getByRole('button', { name: 'Show fewer' }));
+    const usersTable = within(screen.getByRole('table'));
+    expect(usersTable.getAllByRole('row')).toHaveLength(51);
+    expect(screen.getByText('1–50 of 55')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Page 2' }));
+    expect(usersTable.getAllByRole('row')).toHaveLength(6);
+    expect(usersTable.getByText('test-user-0')).toBeInTheDocument();
     await user.type(screen.getByRole('searchbox'), 'TEST-USER-24');
     expect(screen.getByRole('status')).toHaveTextContent('1 matching user');
     expect(screen.getByText('test-user-24')).toBeInTheDocument();

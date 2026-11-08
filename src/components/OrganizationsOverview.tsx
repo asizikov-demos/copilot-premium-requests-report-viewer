@@ -52,6 +52,7 @@ export function OrganizationsOverview() {
         quantityColumnLabel={quantityColumnLabel}
         costLabels={costLabels}
         hasAicGross={false}
+        showUsers
         onBack={() => setSelectedOrganization(null)}
       />
     );

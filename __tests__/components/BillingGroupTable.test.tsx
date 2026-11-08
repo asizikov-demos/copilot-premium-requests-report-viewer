@@ -44,7 +44,10 @@ describe('BillingGroupTable', () => {
       />
     );
 
-    expect(screen.getByRole('heading', { name: 'Organizations' })).toBeInTheDocument();
+    const title = screen.getByRole('heading', { name: 'Organizations' });
+    expect(title).toBeInTheDocument();
+    expect(title.parentElement).toHaveClass('border-b');
+    expect(title.parentElement).not.toHaveClass('bg-(--bgColor-muted)');
     expect(screen.getByRole('columnheader', { name: 'Organization' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Users' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Details' })).toBeInTheDocument();

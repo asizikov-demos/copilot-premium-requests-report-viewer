@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { ChevronLeftIcon, ChevronRightIcon, SearchIcon, XIcon } from '@primer/octicons-react';
+import { SearchIcon, XIcon } from '@primer/octicons-react';
 import { Button, FormControl, IconButton, Link, TextInput } from '@primer/react';
 
 import { getQuotaTier } from '@/utils/analytics/quota';
@@ -23,6 +23,7 @@ import { UsersConsumptionHeatmap } from './charts/UsersConsumptionHeatmap';
 import { UserDetailsView } from './UserDetailsView';
 import { SortableColumnHeader } from './primitives/SortableColumnHeader';
 import { SelectPanelDropdown } from './primitives/SelectPanelDropdown';
+import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from './primitives/TablePagination';
 
 type DailyCumulativeData = { date: string; [user: string]: string | number };
 const ALL_FILTERS_VALUE = '__all__';
@@ -63,8 +64,6 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const isMobile = useIsMobile();
-
-  const ROWS_PER_PAGE = 50;
 
   type ColumnKey = 'plan' | 'totalCredits' | 'aicGrossAmount' | 'gross' | 'discount' | 'net';
 
@@ -214,10 +213,10 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
   const heatmapTitle = `User Consumption Density Over Time (${chartUsers.length} users)`;
   
   // Pagination calculations
-  const totalPages = Math.max(1, Math.ceil(sortedUserData.length / ROWS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(sortedUserData.length / DEFAULT_TABLE_PAGE_SIZE));
   const activePage = Math.min(currentPage, totalPages - 1);
   const paginatedUserData = useMemo(() => 
-    sortedUserData.slice(activePage * ROWS_PER_PAGE, (activePage + 1) * ROWS_PER_PAGE),
+    sortedUserData.slice(activePage * DEFAULT_TABLE_PAGE_SIZE, (activePage + 1) * DEFAULT_TABLE_PAGE_SIZE),
     [sortedUserData, activePage]
   );
   const selectedUserAggregate = useMemo(
@@ -446,32 +445,12 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                 </button>
               )})}
 
-              {/* Mobile Pagination */}
-              {totalPages > 1 && (
-                <nav aria-label="Users pagination" className="flex items-center justify-between pt-3 border-t border-(--borderColor-default)">
-                  <Button
-                    variant="invisible"
-                    size="small"
-                    leadingVisual={ChevronLeftIcon}
-                    onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
-                    disabled={activePage === 0}
-                  >
-                    Previous
-                  </Button>
-                  <span className="text-xs text-(--fgColor-muted)">
-                    Page {activePage + 1} of {totalPages}
-                  </span>
-                  <Button
-                    variant="invisible"
-                    size="small"
-                    trailingVisual={ChevronRightIcon}
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
-                    disabled={activePage === totalPages - 1}
-                  >
-                    Next
-                  </Button>
-                </nav>
-              )}
+              <TablePagination
+                ariaLabel="Users pagination"
+                currentPage={activePage}
+                itemCount={sortedUserData.length}
+                onPageChange={setCurrentPage}
+              />
             </div>
           )}
 
@@ -573,60 +552,12 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
           </table>
 
           {/* Desktop Pagination */}
-          {totalPages > 1 && (
-            <div className="bg-(--bgColor-default) px-4 py-3 flex items-center justify-between border-t border-(--borderColor-default)">
-              <p className="text-sm text-(--fgColor-muted)">
-                {activePage * ROWS_PER_PAGE + 1}–{Math.min((activePage + 1) * ROWS_PER_PAGE, sortedUserData.length)} of {sortedUserData.length}
-              </p>
-              <nav aria-label="Users pagination" className="flex items-center gap-1">
-                <IconButton
-                  icon={ChevronLeftIcon}
-                  variant="invisible"
-                  aria-label="Previous page"
-                  onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
-                  disabled={activePage === 0}
-                />
-
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum;
-                  if (totalPages <= 5) {
-                    pageNum = i;
-                  } else if (activePage < 3) {
-                    pageNum = i;
-                  } else if (activePage > totalPages - 4) {
-                    pageNum = totalPages - 5 + i;
-                  } else {
-                    pageNum = activePage - 2 + i;
-                  }
-
-                  return (
-                    <button
-                      type="button"
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      aria-label={`Page ${pageNum + 1}`}
-                      aria-current={activePage === pageNum ? 'page' : undefined}
-                      className={`w-8 h-8 text-sm font-medium rounded-md border transition-colors duration-150 ${
-                        activePage === pageNum
-                          ? 'bg-(--bgColor-accent-emphasis) text-(--fgColor-onEmphasis) border-(--borderColor-accent-emphasis)'
-                          : 'text-(--fgColor-muted) border-(--borderColor-default) hover:bg-(--control-transparent-bgColor-hover)'
-                      }`}
-                    >
-                      {pageNum + 1}
-                    </button>
-                  );
-                })}
-
-                <IconButton
-                  icon={ChevronRightIcon}
-                  variant="invisible"
-                  aria-label="Next page"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
-                  disabled={activePage === totalPages - 1}
-                />
-              </nav>
-            </div>
-          )}
+          <TablePagination
+            ariaLabel="Users pagination"
+            currentPage={activePage}
+            itemCount={sortedUserData.length}
+            onPageChange={setCurrentPage}
+          />
           </div>
         </div>
       )}

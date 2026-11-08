@@ -440,51 +440,55 @@ export function UserDetailsView({
       )}
 
       {/* Daily Model Usage chart — standalone card */}
-      <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md p-5">
-        <h3 className="text-sm font-medium text-(--fgColor-default) mb-1">Daily Model Usage</h3>
-        <p className="text-xs text-(--fgColor-muted) mb-4">
-          Daily {userQuantityColumnLabel} by model
-        </p>
+      <section aria-labelledby="daily-model-usage-title" className="overflow-hidden rounded-md border border-(--borderColor-default) bg-(--bgColor-default)">
+        <div className="border-b border-(--borderColor-default) px-5 py-4">
+          <h3 id="daily-model-usage-title" className="text-sm font-medium text-(--fgColor-default)">Daily Model Usage</h3>
+          <p className="mt-1 text-xs text-(--fgColor-muted)">
+            Daily {userQuantityColumnLabel} by model
+          </p>
+        </div>
 
-        {userDailyData.length > 0 ? (
-          <>
-            <div className="h-72 sm:h-96 2xl:h-[28rem] w-full">
-              <UserDailyStackedChart
-                data={userDailyData}
-                models={userModels}
-                modelColors={modelColors}
-                tooltip={<UserDailyUsageTooltip valueUnitLabel={chartValueUnitLabel} />}
-              />
-            </div>
-
-            {userModels.length > 0 && (
-              <div className="border-t border-(--borderColor-default) pt-4 mt-4">
-                <h4 className="text-xs font-semibold text-(--fgColor-muted) uppercase tracking-[0.05em] mb-2">Models Used</h4>
-                <div className="flex flex-wrap gap-x-4 gap-y-1">
-                  {sortedModels.map((model) => (
-                    <div key={model} className="flex items-center gap-1.5">
-                      <div
-                        className="w-2 h-2 rounded-sm"
-                        style={{ backgroundColor: modelColors[model] }}
-                      />
-                      <span className="text-xs text-(--fgColor-muted) truncate max-w-[140px]" title={model}>
-                        {model.length > 18 ? `${model.substring(0, 18)}...` : model}
-                      </span>
-                      <span className="text-xs text-(--fgColor-muted) font-mono">
-                        {modelUsageTotals[model]?.toFixed(1)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+        <div className="p-5">
+          {userDailyData.length > 0 ? (
+            <>
+              <div className="h-72 sm:h-96 2xl:h-[28rem] w-full">
+                <UserDailyStackedChart
+                  data={userDailyData}
+                  models={userModels}
+                  modelColors={modelColors}
+                  tooltip={<UserDailyUsageTooltip valueUnitLabel={chartValueUnitLabel} />}
+                />
               </div>
-            )}
-          </>
-        ) : (
-          <div className="flex items-center justify-center h-64 text-(--fgColor-muted) text-sm">
-            No data available
-          </div>
-        )}
-      </div>
+
+              {userModels.length > 0 && (
+                <div className="border-t border-(--borderColor-default) pt-4 mt-4">
+                  <h4 className="text-xs font-semibold text-(--fgColor-muted) uppercase tracking-[0.05em] mb-2">Models Used</h4>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1">
+                    {sortedModels.map((model) => (
+                      <div key={model} className="flex items-center gap-1.5">
+                        <div
+                          className="w-2 h-2 rounded-sm"
+                          style={{ backgroundColor: modelColors[model] }}
+                        />
+                        <span className="text-xs text-(--fgColor-muted) truncate max-w-[140px]" title={model}>
+                          {model.length > 18 ? `${model.substring(0, 18)}...` : model}
+                        </span>
+                        <span className="text-xs text-(--fgColor-muted) font-mono">
+                          {modelUsageTotals[model]?.toFixed(1)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex items-center justify-center h-64 text-(--fgColor-muted) text-sm">
+              No data available
+            </div>
+          )}
+        </div>
+      </section>
 
       <UserConsumptionMetrics
         key={user}
