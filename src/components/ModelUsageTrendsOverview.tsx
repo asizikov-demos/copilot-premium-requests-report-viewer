@@ -134,20 +134,26 @@ export function ModelUsageTrendsOverview() {
         </div>
       )}
 
-      <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md p-5 min-h-[20rem]">
-        {data.length === 0 || models.length === 0 ? (
-          <p className="text-sm text-(--fgColor-muted)">No model usage data available for the selected period.</p>
-        ) : (
-          <div className="h-80 2xl:h-96">
-            <ModelDailyStackedChart
-              data={data}
-              models={models}
-              modelColors={modelColors}
-              valueUnitLabel="AI Credits"
-            />
-          </div>
-        )}
-      </div>
+      <section aria-labelledby="model-usage-trends-chart-title" className="min-h-[20rem] overflow-hidden rounded-md border border-(--borderColor-default) bg-(--bgColor-default)">
+        <div className="border-b border-(--borderColor-default) px-5 py-4">
+          <h3 id="model-usage-trends-chart-title" className="text-sm font-medium text-(--fgColor-default)">Daily AI Credits by Model</h3>
+          <p className="mt-1 text-xs text-(--fgColor-muted)">Stacked usage per UTC day</p>
+        </div>
+        <div className="p-5">
+          {data.length === 0 || models.length === 0 ? (
+            <p className="text-sm text-(--fgColor-muted)">No model usage data available for the selected period.</p>
+          ) : (
+            <div className="h-80 2xl:h-96">
+              <ModelDailyStackedChart
+                data={data}
+                models={models}
+                modelColors={modelColors}
+                valueUnitLabel="AI Credits"
+              />
+            </div>
+          )}
+        </div>
+      </section>
 
       <ModelBucketDistributionCharts rows={aggregateProcessedData} />
 

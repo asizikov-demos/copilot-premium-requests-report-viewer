@@ -20,9 +20,6 @@ describe('AgentUsersTable', () => {
         showCosts={false}
         quantityColumnLabel="AI Credits"
         costLabels={getBillingCostLabels()}
-        showAll={false}
-        onToggleShowAll={jest.fn()}
-        previewCount={5}
       />
     );
     expect(screen.getByRole('columnheader', { name: 'AI Credits' })).toBeInTheDocument();
@@ -38,9 +35,6 @@ describe('AgentUsersTable', () => {
         showCosts
         quantityColumnLabel="AI Credits"
         costLabels={getBillingCostLabels()}
-        showAll={false}
-        onToggleShowAll={jest.fn()}
-        previewCount={5}
       />
     );
     expect(screen.getByRole('columnheader', { name: 'AI Credits' })).toBeInTheDocument();
@@ -50,23 +44,27 @@ describe('AgentUsersTable', () => {
     expect(within(userRow).getByText('$0.02')).toBeInTheDocument();
   });
 
-  it('previews first rows and expands via the toggle', () => {
-    const rows = Array.from({ length: 7 }, (_, index) => row(`test-user-${index + 1}`, index + 1));
-    const onToggleShowAll = jest.fn();
-    const props = {
-      tableTitle: 'Agent Users',
-      rows,
-      showCosts: false,
-      quantityColumnLabel: 'AI Credits',
-      costLabels: getBillingCostLabels(),
-      onToggleShowAll,
-      previewCount: 5,
-    };
-    const { rerender } = render(<AgentUsersTable {...props} showAll={false} />);
-    expect(screen.getAllByRole('row')).toHaveLength(6);
-    fireEvent.click(screen.getByRole('button', { name: 'Show all 7 users' }));
-    expect(onToggleShowAll).toHaveBeenCalledTimes(1);
-    rerender(<AgentUsersTable {...props} showAll />);
-    expect(screen.getAllByRole('row')).toHaveLength(8);
+  it('paginates users in 50-row pages using Primer page controls', () => {
+    const rows = Array.from({ length: 51 }, (_, index) => row(`test-user-${index + 1}`, index + 1));
+    render(
+      <AgentUsersTable
+        tableTitle="Agent Users"
+        rows={rows}
+        showCosts={false}
+        quantityColumnLabel="AI Credits"
+        costLabels={getBillingCostLabels()}
+      />
+    );
+
+    expect(screen.getAllByRole('row')).toHaveLength(51);
+    expect(screen.getByText('test-user-1')).toBeInTheDocument();
+    expect(screen.queryByText('test-user-51')).not.toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Agent Users pagination' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }));
+
+    expect(screen.getAllByRole('row')).toHaveLength(2);
+    expect(screen.getByText('test-user-51')).toBeInTheDocument();
+    expect(screen.getByText('51–51 of 51')).toBeInTheDocument();
   });
 });

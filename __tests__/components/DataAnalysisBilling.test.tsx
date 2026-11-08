@@ -235,6 +235,36 @@ describe('DataAnalysis billing summary', () => {
     expect(chartData[29]).toEqual({ date: '2026-06-30', included: 1.25, additional: 0.75 });
   });
 
+  it('shows 50-user pages in organization details', () => {
+    const rows = Array.from({ length: 51 }, (_, index) => (
+      makeBillingRow({
+        username: `test-user-${index.toString().padStart(3, '0')}`,
+        organization: 'test-org-one',
+        cost_center_name: 'test-cost-center-one',
+        model: 'test-model-one',
+        quantity: '1',
+      })
+    ));
+    render(<DataAnalysis ingestionResult={createIngestionResultFromRawRows(rows)} filename="organization.csv" onReset={jest.fn()} />);
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Organizations' })[0]);
+    const organizationRow = screen.getByRole('button', { name: 'test-org-one' }).closest('tr');
+    expect(organizationRow).not.toBeNull();
+    fireEvent.click(within(organizationRow!).getByRole('button', { name: 'View details' }));
+
+    const usersTable = within(screen.getByRole('table', { name: 'Users' }));
+    expect(usersTable.getAllByRole('row')).toHaveLength(51);
+    expect(usersTable.getByText('test-user-000')).toBeInTheDocument();
+    expect(usersTable.queryByText('test-user-050')).not.toBeInTheDocument();
+    expect(screen.getByText('1–50 of 51')).toBeInTheDocument();
+
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Users pagination' })).getByRole('button', { name: 'Page 2' }));
+
+    expect(usersTable.getAllByRole('row')).toHaveLength(2);
+    expect(usersTable.getByText('test-user-050')).toBeInTheDocument();
+    expect(screen.getByText('51–51 of 51')).toBeInTheDocument();
+  });
+
   it('places daily consumption below product costs and filters its reported amounts by billing month', () => {
     const ingestionResult = createIngestionResultFromRawRows([
       {
@@ -263,6 +293,10 @@ describe('DataAnalysis billing summary', () => {
     const productHeading = screen.getByRole('heading', { name: 'Cost per Product' });
     const consumption = screen.getByRole('region', { name: 'Daily Consumption' });
     expect(productHeading.compareDocumentPosition(consumption) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(productHeading.parentElement).toHaveClass('border-b');
+    expect(productHeading.parentElement).not.toHaveClass('bg-(--bgColor-muted)');
+    expect(consumption.firstElementChild).toHaveClass('border-b');
+    expect(consumption.firstElementChild).not.toHaveClass('bg-(--bgColor-muted)');
     expect(within(consumption).getByText('Included and additional usage by day in USD')).toBeInTheDocument();
     expect(JSON.parse(screen.getByTestId('daily-consumption-chart').textContent ?? '')).toEqual([
       ...Array.from({ length: 30 }, (_, index) => ({
@@ -665,6 +699,32 @@ describe('DataAnalysis billing summary', () => {
     expect(within(modelDetailsTable).queryByText('45.50')).not.toBeInTheDocument();
   });
 
+  it('paginates Model Details in 20-row pages on the overview', () => {
+    const modelRows = Array.from({ length: 21 }, (_, index) => (
+      makeBillingRow({
+        model: `test-model-${index.toString().padStart(2, '0')}`,
+        quantity: String(21 - index),
+      })
+    ));
+    render(<DataAnalysis ingestionResult={createIngestionResultFromRawRows(modelRows)} filename="models.csv" onReset={jest.fn()} />);
+
+    const modelDetailsHeading = screen.getByRole('heading', { name: 'Model Details' });
+    const modelDetailsCard = modelDetailsHeading.closest('[class*="bg-(--bgColor-default)"]');
+    expect(modelDetailsCard).not.toBeNull();
+    const modelDetailsTable = within(modelDetailsCard as HTMLElement).getByRole('table');
+
+    expect(within(modelDetailsTable).getAllByRole('row')).toHaveLength(21);
+    expect(within(modelDetailsTable).getByText('test-model-00')).toBeInTheDocument();
+    expect(within(modelDetailsTable).queryByText('test-model-20')).not.toBeInTheDocument();
+
+    fireEvent.click(within(modelDetailsCard as HTMLElement).getByRole('button', { name: 'Page 2' }));
+
+    expect(within(modelDetailsTable).getAllByRole('row')).toHaveLength(2);
+    expect(within(modelDetailsTable).getByText('test-model-20')).toBeInTheDocument();
+    expect(within(modelDetailsTable).queryByText('test-model-00')).not.toBeInTheDocument();
+    expect(within(modelDetailsCard as HTMLElement).getByText('21–21 of 21')).toBeInTheDocument();
+  });
+
   it('renders AI-credit model trends while rejecting request-unit rows', async () => {
     const ingestionResult = createIngestionResultFromRawRows(makeUsageBasedRows());
     render(<DataAnalysis ingestionResult={ingestionResult} filename="usage-based.csv" onReset={() => {}} />);
@@ -672,6 +732,7 @@ describe('DataAnalysis billing summary', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Model Usage Trends' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Daily AI Credits by Model' })).toBeInTheDocument();
       expect(screen.getByText('Daily stacked AI Credits by model (UTC)')).toBeInTheDocument();
       expect(screen.queryByText('No model usage data available for the selected period.')).not.toBeInTheDocument();
     });

@@ -313,7 +313,7 @@ describe('BillingGroupDetailsView', () => {
       expect(usersTable.queryByText('test-user-050')).not.toBeInTheDocument();
       expect(screen.getByText('1–50 of 51')).toBeInTheDocument();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Next users page' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Page 2' }));
 
       expect(usersTable.getAllByRole('row')).toHaveLength(2);
       expect(usersTable.getByText('test-user-050')).toBeInTheDocument();

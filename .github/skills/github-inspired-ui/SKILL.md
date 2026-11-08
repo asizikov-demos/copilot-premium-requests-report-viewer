@@ -77,9 +77,9 @@ These rules apply regardless of the task. Do **not** load a resource file for th
 
 ## Primer React Boundaries
 
-Adopted: `Button`, `IconButton`, `Link`, `FormControl`, `TextInput`, `Select`, `Checkbox`, `Banner`, `Spinner`, `ProgressBar`, `NavList` and `UnderlineNav`.
+Adopted: `Button`, `IconButton`, `Link`, `FormControl`, `TextInput`, `Select`, `Checkbox`, `Banner`, `Spinner`, `ProgressBar`, `NavList`, `UnderlineNav` and `Pagination` (through the shared `TablePagination` wrapper).
 
-Kept custom on purpose: `Tooltip` (cancels a pending open on Escape), `SortableColumnHeader`, numbered pagination, breadcrumb buttons, disclosure rows, the CSV dropzone and Recharts visualizations. `resources/components.md` explains why for each one. Keep their tokens, states and ARIA semantics aligned with the Primer counterpart.
+Kept custom on purpose: `Tooltip` (cancels a pending open on Escape), `SortableColumnHeader`, breadcrumb buttons, disclosure rows, the CSV dropzone and Recharts visualizations. `resources/components.md` explains why for each one. Keep their tokens, states and ARIA semantics aligned with the Primer counterpart.
 
 Primer React CSS is not inside a cascade layer, so it overrides Tailwind utilities for any property it sets. Put sizing utilities (`min-w-*`, `max-w-*`, `flex-1`) on the component's `className`, which lands on its outer wrapper. Set font size on a parent element, not on `Link`. Do not try to restyle a Primer component's colors, padding or typography with Tailwind.
 
