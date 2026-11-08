@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { MarkGithubIcon, XCircleFillIcon } from '@primer/octicons-react';
-import { Button } from '@primer/react';
+import { MarkGithubIcon } from '@primer/octicons-react';
+import { Button, Link } from '@primer/react';
 
 import { CSVUploader } from '@/components/CSVUploader';
 import { DataAnalysis } from '@/components/DataAnalysis';
@@ -53,21 +53,9 @@ export default function Home() {
       </header>
 
       {/* Content */}
-      <div className={`flex-1 ${!isDataLoaded ? 'flex flex-col items-center justify-center' : ''} px-6 py-8 pb-12`}>
-        {error && (
-          <div className="w-full max-w-xl mb-6 animate-fade-in-up">
-            <section aria-labelledby="file-error-title" className="flex items-start gap-2 rounded-md border border-(--borderColor-default) bg-(--bgColor-danger-muted) p-3 text-sm text-(--fgColor-default)">
-              <XCircleFillIcon size={24} className="shrink-0 text-(--fgColor-danger)" />
-              <div>
-                <h2 id="file-error-title" className="font-semibold">Error processing file</h2>
-                <p>{error}</p>
-              </div>
-            </section>
-          </div>
-        )}
-
+      <div className={isDataLoaded ? 'flex-1 px-6 py-8 pb-12' : 'flex-1 px-4 sm:px-6'}>
         {!isDataLoaded ? (
-          <CSVUploader onDataLoad={handleDataLoad} onError={handleError} />
+          <CSVUploader onDataLoad={handleDataLoad} onError={handleError} error={error} />
         ) : ingestionResult ? (
           <DataAnalysis ingestionResult={ingestionResult} filename={filename} onReset={handleReset} />
         ) : null}
@@ -77,26 +65,24 @@ export default function Home() {
         {!isDataLoaded && (
           <p className="text-xs text-(--fgColor-muted)">
             This app processes your CSV locally in your browser and doesn&apos;t upload it. Questions?{' '}
-            <a
+            <Link
               href="https://github.com/asizikov-demos/copilot-premium-requests-report-viewer/issues"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-(--fgColor-accent) hover:text-(--fgColor-accent) font-medium transition-colors duration-150"
             >
               Create an issue
-            </a>
+            </Link>
           </p>
         )}
         <p className="text-xs text-(--fgColor-muted)">
           &copy;{' '}
-          <a
+          <Link
             href="https://github.com/asizikov"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium text-(--fgColor-muted) underline underline-offset-2 transition-colors duration-150 hover:text-(--fgColor-default)"
           >
             Anton Sizikov
-          </a>
+          </Link>
           {' '}&mdash; Solutions Engineer @ GitHub
         </p>
       </footer>
