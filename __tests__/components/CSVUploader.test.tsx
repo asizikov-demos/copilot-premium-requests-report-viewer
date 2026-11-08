@@ -65,7 +65,7 @@ describe('CSVUploader', () => {
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
     const input = screen.getByLabelText('Upload CSV file');
     const openPicker = jest.spyOn(input, 'click');
-    const browse = screen.getByRole('button', { name: /upload csv file by dragging/i });
+    const browse = screen.getByRole('button', { name: 'Drag & drop your CSV file here, or click to browse' });
 
     await user.tab();
     expect(browse).toHaveFocus();
@@ -85,7 +85,7 @@ describe('CSVUploader', () => {
     });
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
     const input = screen.getByLabelText('Upload CSV file');
-    const browse = screen.getByRole('button', { name: /upload csv file by dragging/i });
+    const browse = screen.getByRole('button', { name: 'Drag & drop your CSV file here, or click to browse' });
     await user.upload(input, createMockFile(validCSVString, 'test.csv'));
 
     expect(screen.getByRole('status')).toHaveTextContent('Processing file...');
@@ -269,7 +269,7 @@ describe('CSVUploader', () => {
 
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
     
-    const dropZone = screen.getByRole('button', { name: /upload csv file by dragging/i });
+    const dropZone = screen.getByRole('button', { name: 'Drag & drop your CSV file here, or click to browse' });
     
     // Test drop - this is the main functionality we care about
     fireEvent.drop(dropZone, {
@@ -338,7 +338,7 @@ describe('CSVUploader', () => {
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('status')).toHaveTextContent('Loading sample data...');
-    expect(screen.getByRole('button', { name: /upload csv file by dragging/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Drag & drop your CSV file here, or click to browse' })).toBeDisabled();
 
     resolveFetch!({
       ok: true,

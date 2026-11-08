@@ -239,7 +239,7 @@ export function CSVUploader({ onDataLoad, onError, error }: CSVUploaderProps) {
               />
               <button
                 type="button"
-                aria-label="Upload CSV file by dragging and dropping or browsing your device"
+                aria-labelledby={`${fileInputId}-action`}
                 aria-describedby={fileHintId}
                 disabled={isBusy}
                 className={`w-full rounded-md border-2 border-dashed p-8 text-center transition-colors ${
@@ -258,7 +258,7 @@ export function CSVUploader({ onDataLoad, onError, error }: CSVUploaderProps) {
                 <Stack as="span" align="center" gap="cozy">
                   <UploadIcon size={24} className="text-(--fgColor-muted)" />
                   <Stack as="span" gap="tight">
-                    <Text size="medium" weight="medium">Drag &amp; drop your CSV file here, or click to browse</Text>
+                    <Text id={`${fileInputId}-action`} size="medium" weight="medium">Drag &amp; drop your CSV file here, or click to browse</Text>
                     <Text id={fileHintId} size="small" className="text-(--fgColor-muted)">
                       Accepted: .csv files from the GitHub Copilot AI Usage report
                     </Text>
