@@ -7,8 +7,9 @@
 its labelled icon buttons retain the active view and show tooltips. The collapse
 state is local to the loaded report. At narrower or shorter sizes, a Primer
 `ActionMenu` shows the current section and the same conditional navigation items.
-The billing-period filter stays in the content area so it remains accessible in
-either layout.
+The full-width report information bar sticks below the primary header, with the
+sidebar positioned below it. The billing-period filter stays in the content area
+so it remains accessible in either layout.
 
 ## Grid Layouts
 
@@ -21,12 +22,12 @@ either layout.
 ## Info Bar (attached to header)
 
 ```tsx
-<div className="-mx-6 -mt-8 mb-6 px-6 py-3 bg-(--bgColor-muted) border-b border-(--borderColor-default)">
+<section aria-label="Report information" className={`${styles.infoBar} -mx-6 -mt-8 mb-6 px-6 py-3 bg-(--bgColor-muted) border-b border-(--borderColor-default)`}>
   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-(--fgColor-muted)">
     <span>Label: <span className="font-semibold text-(--fgColor-default)">Value</span></span>
     <span className="hidden sm:inline text-(--fgColor-disabled)">|</span>
   </div>
-</div>
+</section>
 ```
 
 ## App Header (Primer header tokens)
