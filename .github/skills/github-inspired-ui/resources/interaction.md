@@ -42,7 +42,7 @@ import { SearchIcon, ChevronRightIcon } from '@primer/octicons-react';
 
 - Expandable sections: `aria-expanded`, `aria-controls`, `aria-labelledby`
 - Tooltips: use Primer's `Tooltip` from `@primer/react`. `IconButton` brings its own label tooltip.
-- Navigation: wrap in `<nav aria-label>` and indicate the active item with `aria-current="page"` in addition to styling. `NavList` and `UnderlineNav` do this when you pass `aria-current` to the item.
+- Navigation: label the navigation and indicate the active item with `aria-current="page"` in `NavList`; compact `ActionMenu` navigation uses single selection.
 - Sortable table headers: use `SortableColumnHeader` (a `<button>` inside `<th>` with `aria-sort` on the `<th>`)
 - Multi-select: a `fieldset` + `legend` of Primer `Checkbox`es, never `<select multiple>`
 - Form fields: label every `TextInput`/`Select` through `FormControl.Label` (add `visuallyHidden` when needed), not `aria-label`

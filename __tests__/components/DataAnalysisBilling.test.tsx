@@ -340,18 +340,51 @@ describe('DataAnalysis billing summary', () => {
     }]);
     render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
 
-    for (const nav of screen.getAllByRole('navigation', { name: 'Report sections' })) {
-      expect(within(nav).getByRole('button', { name: /Overview/ })).toHaveAttribute('aria-current', 'page');
-      expect(within(nav).getByRole('button', { name: /Users/ })).not.toHaveAttribute('aria-current');
-    }
+    const nav = screen.getByRole('navigation', { name: 'Report sections' });
+    expect(within(nav).getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-current', 'page');
+    fireEvent.click(within(nav).getByRole('button', { name: 'Users' }));
+    expect(within(nav).getByRole('button', { name: 'Users' })).toHaveAttribute('aria-current', 'page');
+    expect(within(nav).getByRole('button', { name: 'Overview' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('button', { name: 'Navigate to section: Users' })).toBeInTheDocument();
+  });
 
-    const [firstNav] = screen.getAllByRole('navigation', { name: 'Report sections' });
-    fireEvent.click(within(firstNav).getByRole('button', { name: /Users/ }));
+  it('collapses accessible navigation without losing the active view or billing period', () => {
+    const rows = [
+      makeBillingRow({ date: '2026-03-01' }),
+      makeBillingRow({ date: '2026-04-01' }),
+    ];
+    const { unmount } = render(<DataAnalysis ingestionResult={createIngestionResultFromRawRows(rows)} filename="test-report.csv" onReset={jest.fn()} />);
+    const nav = screen.getByRole('navigation', { name: 'Report sections' });
+    const month = within(screen.getByRole('group', { name: 'Billing Period' })).getAllByRole('checkbox')[0];
+    fireEvent.click(month);
+    fireEvent.click(within(nav).getByRole('button', { name: 'Users' }));
+    const toggle = screen.getByRole('button', { name: 'Collapse sidebar' });
+    toggle.focus();
+    fireEvent.click(toggle);
 
-    for (const nav of screen.getAllByRole('navigation', { name: 'Report sections' })) {
-      expect(within(nav).getByRole('button', { name: /Users/ })).toHaveAttribute('aria-current', 'page');
-      expect(within(nav).getByRole('button', { name: /Overview/ })).not.toHaveAttribute('aria-current');
-    }
+    expect(toggle).toHaveFocus();
+    expect(toggle).toHaveAccessibleName('Expand sidebar');
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveAttribute('aria-controls', nav.id);
+    expect(within(nav).getByRole('button', { name: 'Users' })).toHaveAttribute('aria-current', 'page');
+    expect(within(nav).getByRole('button', { name: 'Users' }).querySelector('.sr-only')).toHaveTextContent('Users');
+    expect(month).toBeChecked();
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(within(nav).getByRole('button', { name: 'Users' }).querySelector('.sr-only')).toBeNull();
+
+    fireEvent.click(toggle);
+    unmount();
+    render(<DataAnalysis ingestionResult={createIngestionResultFromRawRows(rows)} filename="test-report.csv" onReset={jest.fn()} />);
+    expect(screen.getByRole('button', { name: 'Collapse sidebar' })).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('navigates through the compact section menu', () => {
+    render(<DataAnalysis ingestionResult={createIngestionResultFromRawRows(makeAicRows())} filename="test-report.csv" onReset={jest.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Navigate to section: Overview' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Organizations' }));
+    expect(screen.getByRole('button', { name: 'Navigate to section: Organizations' })).toBeInTheDocument();
+    expect(within(screen.getByRole('navigation', { name: 'Report sections' })).getByRole('button', { name: 'Organizations' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('omits daily consumption when commercial fields are absent', () => {

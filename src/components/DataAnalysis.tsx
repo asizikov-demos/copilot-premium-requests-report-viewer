@@ -11,8 +11,10 @@ import {
   LightBulbIcon,
   OrganizationIcon,
   PeopleIcon,
+  SidebarCollapseIcon,
+  SidebarExpandIcon,
 } from '@primer/octicons-react';
-import { Checkbox, NavList, UnderlineNav } from '@primer/react';
+import { ActionList, ActionMenu, Button, Checkbox, NavList, Tooltip } from '@primer/react';
 
 import { PRICING } from '@/constants/pricing';
 import { AnalysisProvider, useAnalysisContext } from '@/context/AnalysisContext';
@@ -33,6 +35,7 @@ import { ModelUsageTrendsOverview } from './ModelUsageTrendsOverview';
 import { OrganizationsOverview } from './OrganizationsOverview';
 import { UsersOverview } from './UsersOverview';
 import { TablePagination } from './primitives/TablePagination';
+import styles from './DataAnalysis.module.css';
 
 interface DataAnalysisProps {
   ingestionResult: import('@/utils/ingestion').IngestionResult;
@@ -71,6 +74,7 @@ const AI_USAGE_NAV_ITEM: NavigationItem = { key: 'aiUsage', label: 'AI Usage', i
 
 function DataAnalysisInner() {
   const [modelPageState, setModelPageState] = useState<{ rows: ModelDetailsRow[]; page: number } | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const {
     view,
     setView,
@@ -134,6 +138,7 @@ function DataAnalysisInner() {
     }
     return items;
   }, [aicMetricsAvailable, hasCostCenters, hasOrganizations]);
+  const activeNavItem = navItems.find(item => item.key === view) ?? navItems[0];
 
   useEffect(() => {
     if (!hasCostCenters && view === 'costCenters') {
@@ -211,7 +216,45 @@ function DataAnalysisInner() {
   }, [autoModeSavingsRows]);
 
   return (
-    <div className="w-full">
+    <div className={`${styles.shell} ${sidebarCollapsed ? styles.collapsed : ''} w-full`}>
+      <aside className={styles.sidebar} aria-label="Navigation sidebar">
+        <NavList id="main-navigation" aria-label="Report sections" className={styles.navigation} disableItemGap>
+          {navItems.map((item) => (
+            <NavList.Item
+              key={item.key}
+              as="button"
+              type="button"
+              className={styles.item}
+              aria-current={view === item.key ? 'page' : undefined}
+              tooltipText={sidebarCollapsed ? item.label : undefined}
+              onClick={() => setView(item.key)}
+            >
+              <NavList.LeadingVisual>
+                <item.icon size={16} />
+              </NavList.LeadingVisual>
+              <span className={sidebarCollapsed ? 'sr-only' : undefined}>{item.label}</span>
+            </NavList.Item>
+          ))}
+        </NavList>
+        <Tooltip text={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} direction="e">
+          <Button
+            variant="invisible"
+            block
+            alignContent="start"
+            className={styles.toggle}
+            icon={sidebarCollapsed ? SidebarExpandIcon : undefined}
+            leadingVisual={sidebarCollapsed ? undefined : SidebarCollapseIcon}
+            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-expanded={!sidebarCollapsed}
+            aria-controls="main-navigation"
+            onClick={() => setSidebarCollapsed(value => !value)}
+          >
+            {sidebarCollapsed ? null : 'Collapse sidebar'}
+          </Button>
+        </Tooltip>
+      </aside>
+
+      <div className={styles.content}>
       {/* Info Bar — attached to header */}
       <div className="-mx-6 -mt-8 mb-6 px-6 py-3 bg-(--bgColor-muted) border-b border-(--borderColor-default)">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-(--fgColor-muted)">
@@ -223,84 +266,58 @@ function DataAnalysisInner() {
         </div>
       </div>
 
-      {/* Mobile Navigation */}
-      <div className="lg:hidden mb-6">
-        <UnderlineNav aria-label="Report sections">
-          {navItems.map((item) => (
-            <UnderlineNav.Item
-              key={item.key}
-              as="button"
-              type="button"
-              aria-current={view === item.key ? 'page' : undefined}
-              onSelect={() => setView(item.key)}
-            >
-              {item.label}
-            </UnderlineNav.Item>
-          ))}
-        </UnderlineNav>
+      <div className={styles.mobileNavigation}>
+        <ActionMenu>
+          <ActionMenu.Button aria-label={`Navigate to section: ${activeNavItem.label}`}>
+            {activeNavItem.label}
+          </ActionMenu.Button>
+          <ActionMenu.Overlay>
+            <ActionList selectionVariant="single">
+              {navItems.map(({ key, label, icon: Icon }) => (
+                <ActionList.Item key={key} selected={view === key} onSelect={() => setView(key)}>
+                  <ActionList.LeadingVisual><Icon size={16} /></ActionList.LeadingVisual>
+                  {label}
+                </ActionList.Item>
+              ))}
+            </ActionList>
+          </ActionMenu.Overlay>
+        </ActionMenu>
       </div>
 
-      {/* Desktop Layout: Sidebar + Content */}
-      <div className="flex gap-6">
-        {/* Left Sidebar */}
-        <aside className="hidden lg:block w-56 shrink-0">
-          <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md sticky top-24 opacity-0 animate-slide-in-right" style={{ animationDelay: '100ms' }}>
-            {/* Navigation */}
-            <div className="py-2">
-              <NavList aria-label="Report sections">
-                {navItems.map((item) => (
-                  <NavList.Item
-                    key={item.key}
-                    as="button"
-                    type="button"
-                    aria-current={view === item.key ? 'page' : undefined}
-                    onClick={() => setView(item.key)}
-                  >
-                    <NavList.LeadingVisual>
-                      <item.icon size={16} />
-                    </NavList.LeadingVisual>
-                    {item.label}
-                  </NavList.Item>
-                ))}
-              </NavList>
+      {hasMultipleMonthsData && (
+        <div className="mb-6 rounded-md border border-(--borderColor-default) bg-(--bgColor-default) p-4">
+          <fieldset aria-describedby="billing-period-hint">
+            <legend className="block text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider mb-2">
+              Billing Period
+            </legend>
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              {availableMonths.map(month => (
+                <label
+                  key={month.value}
+                  className="flex items-center gap-2 px-1 py-1 text-sm text-(--fgColor-default) rounded-md cursor-pointer hover:bg-(--control-transparent-bgColor-hover)"
+                >
+                  <Checkbox
+                    value={month.value}
+                    checked={selectedMonths.includes(month.value)}
+                    onChange={(e) => {
+                      const { checked, value } = e.target;
+                      setSelectedMonths(availableMonths
+                        .map(option => option.value)
+                        .filter(option => option === value ? checked : selectedMonths.includes(option)));
+                    }}
+                  />
+                  {month.label}
+                </label>
+              ))}
             </div>
+            <p id="billing-period-hint" className="mt-2 text-xs text-(--fgColor-muted)">
+              Leave all unchecked to include every month
+            </p>
+          </fieldset>
+        </div>
+      )}
 
-            {/* Billing Period Filter */}
-            {hasMultipleMonthsData && (
-              <div className="border-t border-(--borderColor-default) p-4">
-                <fieldset aria-describedby="billing-period-hint">
-                  <legend className="block text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider mb-2">
-                    Billing Period
-                  </legend>
-                  <div className="space-y-1">
-                    {availableMonths.map(month => (
-                      <label
-                        key={month.value}
-                        className="flex items-center gap-2 px-1 py-1 text-sm text-(--fgColor-default) rounded-md cursor-pointer hover:bg-(--control-transparent-bgColor-hover)"
-                      >
-                        <Checkbox
-                          value={month.value}
-                          checked={selectedMonths.includes(month.value)}
-                          onChange={(e) => {
-                            const { checked, value } = e.target;
-                            setSelectedMonths(availableMonths
-                              .map(option => option.value)
-                              .filter(option => option === value ? checked : selectedMonths.includes(option)));
-                          }}
-                        />
-                        {month.label}
-                      </label>
-                    ))}
-                  </div>
-                  <p id="billing-period-hint" className="mt-2 text-xs text-(--fgColor-muted)">
-                    Leave all unchecked to include every month
-                  </p>
-                </fieldset>
-              </div>
-            )}
-          </div>
-        </aside>
-
+      <div className="flex gap-6">
         {/* Main Content */}
         <div className="flex-1 min-w-0">
           {view === 'users' ? (
@@ -616,6 +633,7 @@ function DataAnalysisInner() {
             </div>
           </div>
         </aside>
+      </div>
       </div>
     </div>
   );

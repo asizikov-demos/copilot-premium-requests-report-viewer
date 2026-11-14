@@ -1,49 +1,14 @@
 # Layout Patterns
 
-## Page Structure (Sidebar + Content)
+## Report Navigation
 
-The desktop sidebar uses Primer `NavList`. Render each item as a button because sections are in-memory state, not routes:
-
-```tsx
-import { NavList } from '@primer/react';
-
-<div className="flex gap-6">
-  <aside className="hidden lg:block w-56 shrink-0">
-    <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md sticky top-24">
-      <div className="py-2">
-        <NavList aria-label="Report sections">
-          {navItems.map(item => (
-            <NavList.Item key={item.key} as="button" type="button" aria-current={view === item.key ? 'page' : undefined} onClick={() => setView(item.key)}>
-              <NavList.LeadingVisual><item.icon /></NavList.LeadingVisual>
-              {item.label}
-            </NavList.Item>
-          ))}
-        </NavList>
-      </div>
-    </div>
-  </aside>
-
-  <div className="flex-1 min-w-0">{/* View content */}</div>
-</div>
-```
-
-## Mobile Navigation (Primer: UnderlineNav)
-
-```tsx
-import { UnderlineNav } from '@primer/react';
-
-<div className="lg:hidden mb-6">
-  <UnderlineNav aria-label="Report sections">
-    {navItems.map(item => (
-      <UnderlineNav.Item key={item.key} as="button" type="button" aria-current={view === item.key ? 'page' : undefined} onSelect={() => setView(item.key)}>
-        {item.label}
-      </UnderlineNav.Item>
-    ))}
-  </UnderlineNav>
-</div>
-```
-
-`UnderlineNav` moves items that do not fit into a "More" menu. Do not pass `icon` to its items. In the overflow menu, Primer forwards `icon` to a DOM element and React logs an error.
+`DataAnalysis` uses a fixed Primer `NavList` sidebar at viewport widths of at least
+63.25rem and heights of at least 42rem. The sidebar collapses from 16rem to 4rem;
+its labelled icon buttons retain the active view and show tooltips. The collapse
+state is local to the loaded report. At narrower or shorter sizes, a Primer
+`ActionMenu` shows the current section and the same conditional navigation items.
+The billing-period filter stays in the content area so it remains accessible in
+either layout.
 
 ## Grid Layouts
 
