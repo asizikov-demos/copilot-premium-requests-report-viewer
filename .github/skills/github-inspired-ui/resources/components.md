@@ -17,7 +17,7 @@ Interactive controls use `@primer/react`; icons use `@primer/octicons-react`. Th
 | Status messages | `Banner` | Standard Primer status visuals, including the compact upload error in `CSVUploader`. |
 | Indeterminate loading | `Spinner` | `CSVUploader` |
 | Determinate progress or meters | `ProgressBar` | `CSVUploader`, `UserDetailsHeader` |
-| Section navigation | `NavList` (desktop) and `UnderlineNav` (mobile) | `DataAnalysis` |
+| Section navigation | `NavList` (desktop) and `ActionMenu` (compact) | `DataAnalysis` |
 
 Primer React CSS is not inside a cascade layer, so it beats Tailwind utilities for any property it sets. Pass layout utilities only (`min-w-56`, `max-w-full`, `flex-1`) through `className`. On `TextInput` and `Select` they land on the outer wrapper. Do not restyle Primer colors, padding or typography with Tailwind.
 
