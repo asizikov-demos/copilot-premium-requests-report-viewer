@@ -165,14 +165,12 @@ describe('UserDetailsView', () => {
     );
     const table = screen.getByRole('table', { name: 'Daily Model Usage Breakdown' });
     expect(within(table).getAllByRole('columnheader').map(header => header.textContent)).toEqual([
-      'Date', 'Model', 'Cost Center', 'AI Credits', 'Input Tokens', 'Output Tokens',
-      'Cache Write Tokens', 'Cache Read Tokens',
+      'Date', 'Model', 'Cost Center', 'AI Credits', 'Cache Success Rate',
     ]);
     expect(within(table).getAllByRole('row')).toHaveLength(3);
     expect(within(table).getByText('test-cost-center-one')).toBeInTheDocument();
     expect(within(table).getByText('test-cost-center-two')).toBeInTheDocument();
-    expect(within(table).getByRole('cell', { name: '0' })).toBeInTheDocument();
-    expect(within(table).getByRole('cell', { name: '10' })).toBeInTheDocument();
+    expect(within(table).getAllByRole('cell', { name: 'Not reported' })).toHaveLength(2);
     expect(table).not.toHaveTextContent('$');
     expect(screen.queryByRole('table', { name: 'Cost per Cost Center' })).not.toBeInTheDocument();
 
@@ -213,7 +211,7 @@ describe('UserDetailsView', () => {
     expect(card).not.toHaveTextContent('$');
   });
 
-  it('groups token counts by UTC date, model and cost center, preserving zero and partial coverage', () => {
+  it('groups cache success rates by UTC date and model across cost centers', () => {
     const base = {
       date: '2026-06-30T23:59:59Z',
       username: 'test-user-one',
@@ -225,7 +223,7 @@ describe('UserDetailsView', () => {
     };
     const processedData = buildProcessedDataFromRawRows([
       { ...base, input: '1000', output: '0', cache_read: '20', cache_write: '5' },
-      { ...base, input: '250', cache_read: '30' },
+      { ...base, input: '250', cache_read: '30', cache_write: '50' },
       { ...base, cost_center_name: 'test-cost-center-two', input: '9', output: '0' },
       { ...base, date: '2026-07-01', input: '7' },
       { ...base, model: 'test-model-two' },
@@ -243,24 +241,24 @@ describe('UserDetailsView', () => {
       'Daily Model Usage Breakdown',
     ]);
     expect(within(table).getAllByRole('columnheader').map(header => header.textContent)).toEqual([
-      'Date', 'Model', 'Cost Center', 'AI Credits', 'Input Tokens', 'Output Tokens',
-      'Cache Write Tokens', 'Cache Read Tokens', 'Gross Amount', 'Included credits', 'Additional usage',
+      'Date', 'Model', 'Cost Center', 'AI Credits', 'Cache Success Rate',
+      'Gross Amount', 'Included credits', 'Additional usage',
     ]);
     const rows = within(table).getAllByRole('row').slice(1);
     const cells = (row: HTMLElement) => within(row).getAllByRole('cell').map(cell => cell.textContent);
-    expect(cells(rows[0]).slice(0, 8)).toEqual([
-      '2026-06-30', '- test-model-one', 'test-cost-center-one', '2.00',
-      (1250).toLocaleString(), '0(partial)', '5(partial)', '50',
+    expect(cells(rows[0]).slice(0, 5)).toEqual([
+      '2026-06-30', '- test-model-one', 'test-cost-center-one', '2.00', '3.7%(partial)',
     ]);
-    expect(within(rows[0]).getAllByText('(partial)')[0]).toHaveAttribute(
-      'title', '1 of 2 rows reported this token count'
+    expect(within(rows[0]).getByText('(partial)')).toHaveAttribute(
+      'title', '2 of 3 rows reported input, cache read, and cache write tokens'
     );
-    expect(cells(rows[1]).slice(0, 7)).toEqual([
-      '- test-model-one', 'test-cost-center-two', '1.00', '9', '0', '—', '—',
+    expect(cells(rows[1]).slice(0, 4)).toEqual([
+      '- test-model-one', 'test-cost-center-two', '1.00', '3.7%(partial)',
     ]);
-    expect(within(rows[2]).getAllByLabelText('Not reported')).toHaveLength(4);
+    expect(within(rows[2]).getAllByLabelText('Not reported')).toHaveLength(1);
     expect(cells(rows[3])[0]).toBe('2026-07-01');
     expect(table).not.toHaveTextContent('9,999');
+    expect(within(table).queryByRole('columnheader', { name: /Input Tokens|Output Tokens|Cache (Read|Write) Tokens/ })).not.toBeInTheDocument();
 
     rerender(
       <UserDetailsView user="test-user-one" processedData={processedData.filter(row => row.monthKey === '2026-07')} userQuotaValue="unknown" onBack={mockOnBack} />
@@ -268,10 +266,10 @@ describe('UserDetailsView', () => {
     const filteredTable = screen.getByRole('table', { name: 'Daily Model Usage Breakdown' });
     expect(filteredTable).not.toHaveTextContent('2026-06-30');
     expect(within(filteredTable).getAllByRole('row')).toHaveLength(2);
-    expect(within(filteredTable).getByRole('cell', { name: '7' })).toBeInTheDocument();
+    expect(within(filteredTable).getByRole('cell', { name: 'Not reported' })).toBeInTheDocument();
   });
 
-  it('shows all four token columns for reported zeros and hides them for legacy user rows', () => {
+  it('shows cache success rate instead of token columns and hides it for legacy user rows', () => {
     const base = {
       date: '2026-06-30', username: 'test-user-one', model: 'test-model-one', quantity: '1', unit_type: 'ai-credits', gross_amount: '0',
     };
@@ -281,14 +279,15 @@ describe('UserDetailsView', () => {
       ])} userQuotaValue="unknown" onBack={mockOnBack} />
     );
     const table = screen.getByRole('table', { name: 'Daily Model Usage Breakdown' });
-    expect(within(table).getByRole('columnheader', { name: 'Input Tokens' })).toBeInTheDocument();
-    expect(within(table).getAllByRole('cell', { name: '0' })).toHaveLength(4);
+    expect(within(table).getByRole('columnheader', { name: 'Cache Success Rate' })).toBeInTheDocument();
+    expect(within(table).queryByRole('columnheader', { name: /Input Tokens|Output Tokens|Cache (Read|Write) Tokens/ })).not.toBeInTheDocument();
+    expect(within(table).getByRole('cell', { name: 'Not reported' })).toBeInTheDocument();
     rerender(
       <UserDetailsView user="test-user-one" processedData={buildProcessedDataFromRawRows([
         base, { ...base, username: 'test-user-two', input: '10' },
       ])} userQuotaValue="unknown" onBack={mockOnBack} />
     );
-    expect(screen.queryByRole('columnheader', { name: /Tokens/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Cache Success Rate' })).not.toBeInTheDocument();
     expect(screen.queryByText(/Partial totals/)).not.toBeInTheDocument();
   });
 

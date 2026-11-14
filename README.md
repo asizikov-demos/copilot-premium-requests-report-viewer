@@ -60,14 +60,15 @@ The ingestion pipeline accepts `input`, `output`, `cache_read`, and `cache_write
 It also accepts the respective compatibility aliases `total_input_tokens`,
 `total_output_tokens`, `total_cache_read_tokens`, and `total_cache_creation_tokens`.
 
-User details show a **Daily Model Usage Breakdown** table, a **Token Usage Over Time**
-chart with a model selector, and a **Model Consumption Breakdown** for the selected
-billing period.
+User details show a **Daily Model Usage Breakdown** table with cache success rates,
+calculated as cache-read tokens divided by input plus cache-read and cache-write
+tokens. Partial rates use only rows reporting all three counts. The page also includes
+a **Token Usage Over Time** chart with a model selector and a **Model Consumption
+Breakdown** for the selected billing period.
 
-Missing counts display as `—`, explicit zeros as `0`, and incomplete table totals
-as `(partial)`. Missing or incomplete daily counts leave gaps in token charts
-rather than false zeros. Token-only exports are supported without inventing
-monetary values.
+Missing counts display as `—`, and explicit zeros remain distinguishable in token
+views. Missing or incomplete daily counts leave gaps in token charts rather than
+false zeros. Token-only exports are supported without inventing monetary values.
 
 Token counts do not change AI Credits, quotas, or monetary calculations.
 
