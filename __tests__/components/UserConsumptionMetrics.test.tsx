@@ -1,16 +1,16 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { Line } from 'recharts';
+import { Bar } from 'recharts';
 
 import { UserConsumptionMetrics } from '@/components/UserConsumptionMetrics';
 import { buildProcessedDataFromRawRows } from '@/utils/ingestion/adapters';
 
 jest.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  LineChart: ({ children, data }: { children: ReactNode; data: unknown }) => (
+  BarChart: ({ children, data }: { children: ReactNode; data: unknown }) => (
     <div data-testid="token-trend" data-chart={JSON.stringify(data)}>{children}</div>
   ),
-  Line: jest.fn(() => <div />),
+  Bar: jest.fn(() => <div />),
   Legend: () => <div />,
   XAxis: () => <div />,
   YAxis: () => <div />,
@@ -95,8 +95,8 @@ describe('UserConsumptionMetrics', () => {
     expect(screen.getByRole('table')).not.toHaveTextContent('Infinity');
   });
 
-  it('does not bridge unselected months and hides failed tokens while keeping credit metrics', () => {
-    jest.mocked(Line).mockClear();
+  it('stacks token types without adding unselected months and hides failed tokens while keeping credit metrics', () => {
+    jest.mocked(Bar).mockClear();
     const rows = buildProcessedDataFromRawRows([
       { ...base, date: '2026-06-30', input: '1' },
       { ...base, date: '2026-08-01', input: '2' },
@@ -107,14 +107,13 @@ describe('UserConsumptionMetrics', () => {
     expect(chart()[30]).toMatchObject({ date: '2026-08-01', inputTokens: 2 });
     expect(chart().filter((point: { date: string }) => point.date.startsWith('2026-07'))).toEqual([]);
     expect(chart().filter((point: { inputTokens: number | null }) => point.inputTokens !== null)).toHaveLength(2);
-    const inputLines = jest.mocked(Line).mock.calls
-      .map(([props]) => props)
-      .filter(props => props.name === 'Input Tokens');
-    expect(inputLines).toHaveLength(2);
-    expect(inputLines.map(({ dataKey }) => {
-      if (typeof dataKey !== 'function') throw new Error('Expected segmented token data key');
-      return [dataKey(chart()[29]), dataKey(chart()[30])];
-    })).toEqual([[1, null], [null, 2]]);
+    const bars = jest.mocked(Bar).mock.calls.map(([props]) => props);
+    expect(bars.map(({ dataKey, name, stackId }) => ({ dataKey, name, stackId }))).toEqual([
+      { dataKey: 'inputTokens', name: 'Input Tokens', stackId: 'tokens' },
+      { dataKey: 'outputTokens', name: 'Output Tokens', stackId: 'tokens' },
+      { dataKey: 'cacheWriteTokens', name: 'Cache Write Tokens', stackId: 'tokens' },
+      { dataKey: 'cacheReadTokens', name: 'Cache Read Tokens', stackId: 'tokens' },
+    ]);
     rerender(<UserConsumptionMetrics rows={rows} tokensAvailable={false} />);
     expect(screen.queryByText('Token Usage Over Time')).not.toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: 'Input Tokens' })).not.toBeInTheDocument();
