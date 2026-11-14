@@ -100,7 +100,7 @@ describe('UserDetailsView', () => {
     rerender(
       <UserDetailsView user="test-user-one" processedData={processedData.filter(row => row.monthKey === '2026-07')} userQuotaValue="unknown" onBack={mockOnBack} />
     );
-    expect(JSON.parse(screen.getByTestId('bar-chart').getAttribute('data-chart')!)).toEqual([
+    expect(JSON.parse(within(screen.getByRole('region', { name: 'Daily Consumption' })).getByTestId('bar-chart').getAttribute('data-chart')!)).toEqual([
       ...Array.from({ length: 31 }, (_, index) => ({
         date: `2026-07-${String(index + 1).padStart(2, '0')}`,
         included: 0,
@@ -111,7 +111,7 @@ describe('UserDetailsView', () => {
     rerender(
       <UserDetailsView user="test-user-two" processedData={processedData} userQuotaValue="unknown" onBack={mockOnBack} />
     );
-    const secondUserData = JSON.parse(screen.getByTestId('bar-chart').getAttribute('data-chart')!);
+    const secondUserData = JSON.parse(within(screen.getByRole('region', { name: 'Daily Consumption' })).getByTestId('bar-chart').getAttribute('data-chart')!);
     expect(secondUserData).toHaveLength(92);
     expect(secondUserData[0]).toEqual({ date: '2026-06-01', included: 0, additional: 0 });
     expect(secondUserData[91]).toEqual({ date: '2026-08-31', included: 0, additional: 0 });

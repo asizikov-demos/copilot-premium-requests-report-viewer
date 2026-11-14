@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 import { borderColor, fgColor } from '@/constants/primerTokens';
 import type { ProcessedData } from '@/types/csv';
@@ -33,7 +33,6 @@ export function UserConsumptionMetrics({ rows, periodRows = rows, tokensAvailabl
       (right.quantity ?? -1) - (left.quantity ?? -1) || leftName.localeCompare(rightName)), [metrics]);
   const trend = useMemo(() => {
     if (!metrics.tokens?.hasAnyTokenData) return [];
-    // Explicit null points prevent lines bridging days without selected report data.
     return buildBillingMonthDates(periodRows.map(row => row.monthKey))
       .map(date => {
         const day = metrics.tokens?.byDay.get(date);
@@ -49,21 +48,6 @@ export function UserConsumptionMetrics({ rows, periodRows = rows, tokensAvailabl
         return point;
       });
   }, [metrics, effectiveModel, periodRows]);
-  const trendSegments = useMemo(() => {
-    // Separate lines keep non-adjacent selected months from being connected.
-    const segments: { start: string; end: string }[] = [];
-    for (const point of trend) {
-      const previous = segments[segments.length - 1];
-      const nextDay = previous ? new Date(`${previous.end}T00:00:00Z`) : null;
-      nextDay?.setUTCDate(nextDay.getUTCDate() + 1);
-      if (previous && nextDay?.toISOString().slice(0, 10) === point.date) {
-        previous.end = point.date;
-      } else {
-        segments.push({ start: point.date, end: point.date });
-      }
-    }
-    return segments;
-  }, [trend]);
 
   if (!hasTokens && !hasCredits) return null;
 
@@ -74,7 +58,7 @@ export function UserConsumptionMetrics({ rows, periodRows = rows, tokensAvailabl
           <div className="px-5 py-4 border-b border-(--borderColor-default) flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <h3 className="text-sm font-medium text-(--fgColor-default)">Token Usage Over Time</h3>
-              <p className="text-xs text-(--fgColor-muted) mt-1">Daily UTC counts by token type, shown separately. Missing or partial counts leave gaps.</p>
+              <p className="text-xs text-(--fgColor-muted) mt-1">Daily UTC counts stacked by token type. Missing or partial counts are omitted.</p>
             </div>
             <SelectPanelDropdown
               label="Trend model"
@@ -91,7 +75,7 @@ export function UserConsumptionMetrics({ rows, periodRows = rows, tokensAvailabl
           <div className="p-5">
             <div className="h-72 sm:h-80 w-full" role="img" aria-label={`Daily token usage for ${effectiveModel || 'all models'}; incomplete values are omitted`}>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trend} margin={{ top: 10, right: 15, left: 10, bottom: 5 }}>
+                <BarChart data={trend} margin={{ top: 10, right: 15, left: 10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={borderColor.muted} />
                   <XAxis dataKey="date" tickFormatter={utcDateTickFormatter} tick={{ fill: fgColor.muted, fontSize: 12 }} />
                   <YAxis tick={{ fill: fgColor.muted, fontSize: 12 }} tickFormatter={value => Number(value).toLocaleString(undefined, { notation: 'compact' })} />
@@ -99,13 +83,11 @@ export function UserConsumptionMetrics({ rows, periodRows = rows, tokensAvailabl
                     labelFormatter={value => `${value} (UTC)`}
                     formatter={(value, name) => [Number(value).toLocaleString(), String(name)]} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  {trendSegments.flatMap(({ start, end }, segmentIndex) => TOKEN_COLUMNS.map(({ field, label, color }, index) => (
-                    <Line key={`${start}-${field}`}
-                      dataKey={(point: (typeof trend)[number]) => point.date >= start && point.date <= end ? point[field] : null}
-                      name={label} stroke={color} strokeWidth={2} legendType={segmentIndex === 0 ? 'line' : 'none'}
-                      strokeDasharray={index > 1 ? '5 3' : undefined} dot={{ r: 2 }} connectNulls={false} isAnimationActive={false} />
-                  )))}
-                </LineChart>
+                  {TOKEN_COLUMNS.map(({ field, label, color }) => (
+                    <Bar key={field} dataKey={field} stackId="tokens"
+                      name={label} fill={color} isAnimationActive={false} />
+                  ))}
+                </BarChart>
               </ResponsiveContainer>
             </div>
             {!trend.some(day => TOKEN_COLUMNS.some(({ field }) => typeof day[field] === 'number')) && (
