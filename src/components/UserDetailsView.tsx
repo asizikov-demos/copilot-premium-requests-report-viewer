@@ -4,7 +4,7 @@ import React, { useContext, useMemo } from 'react';
 
 import { UserDetailsHeader } from '@/components/UserDetailsHeader';
 import { UserConsumptionMetrics } from '@/components/UserConsumptionMetrics';
-import { TOKEN_COLUMNS, TokenValue } from '@/components/TokenValue';
+import { TOKEN_COLUMNS } from '@/components/TokenValue';
 import { DailyConsumptionChart } from '@/components/charts/DailyConsumptionChart';
 import { PRICING } from '@/constants/pricing';
 import { AnalysisContext } from '@/context/AnalysisContext';
@@ -16,7 +16,6 @@ import { getQuotaTier, isKnownQuotaValue } from '@/utils/analytics/quota';
 import {
   buildUserDailyModelDataFromArtifacts,
   buildTokenArtifactsFromProcessedData,
-  type TokenTotals,
   getUserQuota,
 } from '@/utils/ingestion';
 import { generateModelColors } from '@/utils/modelColors';
@@ -52,10 +51,38 @@ interface UserCostCenterCost {
   aicGrossAmount: number;
 }
 
+interface CacheSuccessRate {
+  percent: number;
+  reportedRows: number;
+  totalRows: number;
+}
+
 const TOKEN_BREAKDOWN_ORDER = ['inputTokens', 'cacheReadTokens', 'cacheWriteTokens', 'outputTokens'];
 const TOKEN_BREAKDOWN_COLUMNS = [...TOKEN_COLUMNS].sort(
   (left, right) => TOKEN_BREAKDOWN_ORDER.indexOf(left.field) - TOKEN_BREAKDOWN_ORDER.indexOf(right.field)
 );
+
+function getCacheSuccessRate(rows: ProcessedData[]): CacheSuccessRate | undefined {
+  const reportedRows = rows.filter(
+    row =>
+      row.inputTokens !== undefined &&
+      row.cacheReadTokens !== undefined &&
+      row.cacheWriteTokens !== undefined
+  );
+  if (reportedRows.length === 0) return undefined;
+
+  const inputTokens = reportedRows.reduce((total, row) => total + (row.inputTokens ?? 0), 0);
+  const cacheReadTokens = reportedRows.reduce((total, row) => total + (row.cacheReadTokens ?? 0), 0);
+  const cacheWriteTokens = reportedRows.reduce((total, row) => total + (row.cacheWriteTokens ?? 0), 0);
+  const totalTokens = inputTokens + cacheReadTokens + cacheWriteTokens;
+  if (totalTokens === 0) return undefined;
+
+  return {
+    percent: (cacheReadTokens / totalTokens) * 100,
+    reportedRows: reportedRows.length,
+    totalRows: rows.length,
+  };
+}
 
 export interface UserDetailsViewProps {
   user: string;
@@ -193,7 +220,7 @@ export function UserDetailsView({
     aicGrossAmount: number;
     isFirstInDate: boolean;
     rowSpan: number;
-    tokens?: TokenTotals;
+    cacheSuccessRate?: CacheSuccessRate;
   };
 
   const showAicGross = false;
@@ -211,9 +238,21 @@ export function UserDetailsView({
   const dailyBreakdownRows = useMemo((): DailyModelRow[] => {
     if (!hasBillingData && !showTokens) return [];
 
+    const dailyModelRows = new Map<string, ProcessedData[]>();
+    for (const row of userData) {
+      const key = `${row.dateKey}||${row.model}`;
+      const rows = dailyModelRows.get(key) ?? [];
+      rows.push(row);
+      dailyModelRows.set(key, rows);
+    }
+
+    const cacheSuccessRates = new Map(
+      Array.from(dailyModelRows, ([key, rows]) => [key, getCacheSuccessRate(rows)] as const)
+    );
+
     // Aggregate by date + model + cost center so cost-center changes remain visible.
     type Key = string;
-    const agg = new Map<Key, { date: string; model: string; costCenter?: string; credits: number; gross: number; discount: number; net: number; aicGrossAmount: number; sourceRows: ProcessedData[] }>();
+    const agg = new Map<Key, { date: string; model: string; costCenter?: string; credits: number; gross: number; discount: number; net: number; aicGrossAmount: number }>();
     for (const row of userData) {
       const key = `${row.dateKey}||${row.model}||${row.costCenter ?? ''}`;
       const quantity = row.creditsUsed;
@@ -224,7 +263,6 @@ export function UserDetailsView({
         existing.discount += row.discountAmount ?? 0;
         existing.net += row.netAmount ?? 0;
         existing.aicGrossAmount += row.aicGrossAmount ?? 0;
-        existing.sourceRows.push(row);
       } else {
         agg.set(key, {
           date: row.dateKey,
@@ -235,7 +273,6 @@ export function UserDetailsView({
           discount: row.discountAmount ?? 0,
           net: row.netAmount ?? 0,
           aicGrossAmount: row.aicGrossAmount ?? 0,
-          sourceRows: [row],
         });
       }
     }
@@ -257,7 +294,7 @@ export function UserDetailsView({
       if (isFirst) seenDates.add(r.date);
       return {
         ...r,
-        tokens: showTokens ? buildTokenArtifactsFromProcessedData(r.sourceRows).totals : undefined,
+        cacheSuccessRate: cacheSuccessRates.get(`${r.date}||${r.model}`),
         isFirstInDate: isFirst,
         rowSpan: dateSpan.get(r.date) ?? 1,
       };
@@ -570,7 +607,7 @@ export function UserDetailsView({
             <h3 className="text-sm font-medium text-(--fgColor-default)">Daily Model Usage Breakdown</h3>
             {showTokens && (
               <p className="text-xs text-(--fgColor-muted) mt-1">
-                Token counts: — means not reported. Partial totals include only rows with reported counts.
+                Cache success rate = cache read ÷ (input + cache read + cache write). Partial rates use rows with all three counts reported; — means no rows reported all counts or their combined total is zero.
               </p>
             )}
           </div>
@@ -584,11 +621,11 @@ export function UserDetailsView({
                     <th className="px-5 py-3 text-left text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted) whitespace-nowrap">Cost Center</th>
                   )}
                   <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted) whitespace-nowrap">{userQuantityColumnLabel}</th>
-                  {showTokens && TOKEN_COLUMNS.map(({ field, label }) => (
-                    <th key={field} scope="col" className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted) whitespace-nowrap">
-                      {label}
+                  {showTokens && (
+                    <th scope="col" className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted) whitespace-nowrap">
+                      Cache Success Rate
                     </th>
-                  ))}
+                  )}
                   {showAicGross && (
                     <th className="px-5 py-3 text-right text-xs font-semibold text-(--fgColor-muted) uppercase tracking-wider bg-(--bgColor-muted) whitespace-nowrap">AI Credits Gross</th>
                   )}
@@ -617,11 +654,25 @@ export function UserDetailsView({
                       <td className="px-5 py-3 text-sm text-(--fgColor-muted) whitespace-nowrap">{row.costCenter ?? '—'}</td>
                     )}
                     <td className="px-5 py-3 text-sm font-mono text-(--fgColor-default) text-right">{row.credits.toFixed(2)}</td>
-                    {showTokens && TOKEN_COLUMNS.map(({ field }) => (
-                        <td key={field} className="px-5 py-3 text-sm font-mono tabular-nums text-(--fgColor-muted) text-right whitespace-nowrap">
-                          <TokenValue totals={row.tokens} field={field} />
-                        </td>
-                    ))}
+                    {showTokens && (
+                      <td className="px-5 py-3 text-sm font-mono tabular-nums text-(--fgColor-muted) text-right whitespace-nowrap">
+                        {row.cacheSuccessRate ? (
+                          <>
+                            {row.cacheSuccessRate.percent.toFixed(1)}%
+                            {row.cacheSuccessRate.reportedRows < row.cacheSuccessRate.totalRows && (
+                              <span
+                                className="ml-1 text-xs"
+                                title={`${row.cacheSuccessRate.reportedRows} of ${row.cacheSuccessRate.totalRows} rows reported input, cache read, and cache write tokens`}
+                              >
+                                (partial)
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span aria-label="Not reported">—</span>
+                        )}
+                      </td>
+                    )}
                     {showAicGross && (
                       <td className="px-5 py-3 text-sm font-mono text-(--fgColor-muted) text-right">{formatCurrency(row.aicGrossAmount)}</td>
                     )}
