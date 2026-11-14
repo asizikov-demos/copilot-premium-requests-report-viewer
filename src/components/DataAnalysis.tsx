@@ -217,6 +217,16 @@ function DataAnalysisInner() {
 
   return (
     <div className={`${styles.shell} ${sidebarCollapsed ? styles.collapsed : ''} w-full`}>
+      <section className={`${styles.infoBar} -mx-6 -mt-8 mb-6 px-6 py-3 bg-(--bgColor-muted) border-b border-(--borderColor-default)`} aria-label="Report information">
+        <div className={`${styles.infoContents} flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-(--fgColor-muted)`}>
+          <span className={styles.filename}>File: <span className="font-semibold text-(--fgColor-default)">{filename}</span></span>
+          <span className="hidden sm:inline text-(--fgColor-disabled)">|</span>
+          <span>Report window: <span className="font-semibold text-(--fgColor-default)">{analysis.timeFrame.start} to {analysis.timeFrame.end}</span></span>
+          <span className="hidden sm:inline text-(--fgColor-disabled)">|</span>
+          <span>Total rows: <span className="font-semibold text-(--fgColor-default)">{aggregateProcessedData.length.toLocaleString()}</span></span>
+        </div>
+      </section>
+
       <aside className={styles.sidebar} aria-label="Navigation sidebar">
         <NavList id="main-navigation" aria-label="Report sections" className={styles.navigation} disableItemGap>
           {navItems.map((item) => (
@@ -255,17 +265,6 @@ function DataAnalysisInner() {
       </aside>
 
       <div className={styles.content}>
-      {/* Info Bar — attached to header */}
-      <div className="-mx-6 -mt-8 mb-6 px-6 py-3 bg-(--bgColor-muted) border-b border-(--borderColor-default)">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-(--fgColor-muted)">
-          <span>File: <span className="font-semibold text-(--fgColor-default)">{filename}</span></span>
-          <span className="hidden sm:inline text-(--fgColor-disabled)">|</span>
-          <span>Report window: <span className="font-semibold text-(--fgColor-default)">{analysis.timeFrame.start} to {analysis.timeFrame.end}</span></span>
-          <span className="hidden sm:inline text-(--fgColor-disabled)">|</span>
-          <span>Total rows: <span className="font-semibold text-(--fgColor-default)">{aggregateProcessedData.length.toLocaleString()}</span></span>
-        </div>
-      </div>
-
       <div className={styles.mobileNavigation}>
         <ActionMenu>
           <ActionMenu.Button aria-label={`Navigate to section: ${activeNavItem.label}`}>

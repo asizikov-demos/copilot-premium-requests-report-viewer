@@ -145,6 +145,18 @@ function makeUsageBasedRows(): CSVData[] {
 }
 
 describe('DataAnalysis billing summary', () => {
+  it('places report information before the sidebar and outside the report content', () => {
+    render(<DataAnalysis ingestionResult={createIngestionResultFromRawRows(makeAicRows())} filename="test-report.csv" onReset={jest.fn()} />);
+
+    const info = screen.getByRole('region', { name: 'Report information' });
+    const sidebar = screen.getByRole('complementary', { name: 'Navigation sidebar' });
+    expect(info).toHaveTextContent('File: test-report.csv');
+    expect(info).toHaveTextContent('Report window:');
+    expect(info).toHaveTextContent('Total rows: 3');
+    expect(info.nextElementSibling).toBe(sidebar);
+    expect(sidebar.nextElementSibling).toContainElement(screen.getByRole('button', { name: 'Navigate to section: Overview' }));
+  });
+
   it('uses shared decorative category icons in report navigation', () => {
     render(<DataAnalysis ingestionResult={createIngestionResultFromRawRows(makeAicRows())} filename="test-report.csv" onReset={jest.fn()} />);
 
