@@ -610,7 +610,7 @@ function DataAnalysisInner() {
 
         {/* Right Summary Panel */}
         <aside className="hidden xl:block w-56 shrink-0">
-          <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md p-5 sticky top-24 opacity-0 animate-slide-in-right" style={{ animationDelay: '250ms' }}>
+          <div className={`${styles.summary} bg-(--bgColor-default) border border-(--borderColor-default) rounded-md p-5 opacity-0 animate-slide-in-right`} style={{ animationDelay: '250ms' }}>
             <div className="space-y-4">
               <h3 className="text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">Summary</h3>
 

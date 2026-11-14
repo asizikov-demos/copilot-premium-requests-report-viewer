@@ -60,6 +60,11 @@
     text-overflow: ellipsis;
   }
 
+  .summary {
+    position: sticky;
+    top: calc(4rem + var(--report-bar-height) + 1rem);
+  }
+
   .mobileNavigation {
     display: none;
   }
@@ -90,6 +95,20 @@
   .infoBar {
     position: static;
     height: auto;
+  }
+
+  .infoContents {
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+
+  .filename {
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .summary {
+    position: static;
   }
 
   .sidebar,
