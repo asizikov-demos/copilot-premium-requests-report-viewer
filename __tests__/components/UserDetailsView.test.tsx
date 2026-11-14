@@ -182,6 +182,37 @@ describe('UserDetailsView', () => {
     expect(screen.queryByRole('table', { name: 'Daily Model Usage Breakdown' })).not.toBeInTheDocument();
   });
 
+  it('shows the selected user token volume by type without estimating token costs', () => {
+    const base = {
+      date: '2026-06-30', username: 'test-user-one', model: 'test-model-one', quantity: '1', unit_type: 'ai-credits',
+    };
+    render(
+      <UserDetailsView
+        user="test-user-one"
+        processedData={buildProcessedDataFromRawRows([
+          { ...base, input: '1000', cache_read: '300', cache_write: '200', output: '500' },
+        ])}
+        userQuotaValue="unknown"
+        onBack={mockOnBack}
+      />
+    );
+
+    const card = screen.getByRole('region', { name: 'Token usage by type' });
+    expect(within(card).getByText('Input')).toBeInTheDocument();
+    expect(within(card).getByText('Cache Read')).toBeInTheDocument();
+    expect(within(card).getByText('Cache Write')).toBeInTheDocument();
+    expect(within(card).getByText('Output')).toBeInTheDocument();
+    expect(within(card).getByText('1,000')).toBeInTheDocument();
+    expect(within(card).getByText('300')).toBeInTheDocument();
+    expect(within(card).getByText('200')).toBeInTheDocument();
+    expect(within(card).getByText('500')).toBeInTheDocument();
+    expect(within(card).getByRole('img')).toHaveAttribute(
+      'aria-label',
+      'Token volume distribution across 2,000 reported tokens'
+    );
+    expect(card).not.toHaveTextContent('$');
+  });
+
   it('groups token counts by UTC date, model and cost center, preserving zero and partial coverage', () => {
     const base = {
       date: '2026-06-30T23:59:59Z',

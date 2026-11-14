@@ -52,6 +52,11 @@ interface UserCostCenterCost {
   aicGrossAmount: number;
 }
 
+const TOKEN_BREAKDOWN_ORDER = ['inputTokens', 'cacheReadTokens', 'cacheWriteTokens', 'outputTokens'];
+const TOKEN_BREAKDOWN_COLUMNS = [...TOKEN_COLUMNS].sort(
+  (left, right) => TOKEN_BREAKDOWN_ORDER.indexOf(left.field) - TOKEN_BREAKDOWN_ORDER.indexOf(right.field)
+);
+
 export interface UserDetailsViewProps {
   user: string;
   processedData: ProcessedData[];
@@ -194,6 +199,13 @@ export function UserDetailsView({
   const showAicGross = false;
   const showTokens = analysisCtx?.tokenArtifacts !== null &&
     userData.some(row => TOKEN_COLUMNS.some(({ field }) => row[field] !== undefined));
+  const userTokenTotals = useMemo(
+    () => showTokens ? buildTokenArtifactsFromProcessedData(userData).totals : null,
+    [showTokens, userData]
+  );
+  const totalReportedTokens = userTokenTotals
+    ? TOKEN_BREAKDOWN_COLUMNS.reduce((total, { field }) => total + (userTokenTotals[field] ?? 0), 0)
+    : 0;
   const hasUserCostCenters = userData.some(row => Boolean(row.costCenter));
 
   const dailyBreakdownRows = useMemo((): DailyModelRow[] => {
@@ -346,6 +358,60 @@ export function UserDetailsView({
         onBack={onBack}
         onCopyUser={handleCopyUser}
       />
+
+      {userTokenTotals && (
+        <section
+          aria-labelledby="token-usage-by-type-title"
+          className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden"
+        >
+          <div className="px-5 py-4 border-b border-(--borderColor-default)">
+            <h3 id="token-usage-by-type-title" className="text-sm font-medium text-(--fgColor-default)">
+              Token usage by type
+            </h3>
+            <p className="text-xs text-(--fgColor-muted) mt-1">
+              Reported token counts only.
+            </p>
+          </div>
+          <div className="p-5">
+            <div
+              role="img"
+              aria-label={`Token volume distribution across ${totalReportedTokens.toLocaleString()} reported tokens`}
+              className="flex h-2 w-full overflow-hidden rounded-sm bg-(--bgColor-muted)"
+            >
+              {TOKEN_BREAKDOWN_COLUMNS.map(({ field, color }) => {
+                const count = userTokenTotals[field] ?? 0;
+                const width = totalReportedTokens > 0 ? (count / totalReportedTokens) * 100 : 0;
+                return (
+                  <span
+                    key={field}
+                    aria-hidden="true"
+                    className="h-full"
+                    style={{ width: `${width}%`, backgroundColor: color }}
+                  />
+                );
+              })}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+              {TOKEN_BREAKDOWN_COLUMNS.map(({ field, label, color }) => {
+                const count = userTokenTotals[field];
+                return (
+                  <div key={field} className="inline-flex items-center gap-2 text-sm">
+                    <span
+                      aria-hidden="true"
+                      className="h-2.5 w-2.5 rounded-sm"
+                      style={{ backgroundColor: color }}
+                    />
+                    <span className="text-(--fgColor-muted)">{label.replace(/ Tokens$/, '')}</span>
+                    <span className="font-mono tabular-nums text-(--fgColor-default)">
+                      {count === undefined ? '—' : count.toLocaleString()}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Cost per Cost Center — standalone card */}
       {costCenterCosts.length > 0 && (
