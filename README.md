@@ -89,6 +89,13 @@ billing tables. `selectBillingPagesArtifacts` merges only the selected months an
 preserves source-order ties without retaining source rows. User costs and
 consumption insights use the selected core billing, usage, and quota artifacts.
 
+The `modelDaily` page aggregator follows the same month-partitioned contract.
+`selectModelDailyArtifacts` supplies product costs, Auto Mode savings, daily
+commercial model totals, Auto/Fusion distributions and distinct-user sets without
+retaining source rows. Model credits reuse core usage/billing artifacts. Daily
+views fill the complete selected UTC billing months; reported zero amounts and
+per-row cost fallbacks remain distinct from absent billing fields.
+
 ## Privacy
 All processing is client-side. No data leaves your browser.
 

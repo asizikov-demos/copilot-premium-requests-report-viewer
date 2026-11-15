@@ -1,31 +1,37 @@
-import { aggregateDailyConsumption } from '@/utils/dailyConsumption';
+import { aggregateDailyConsumption as selectDailyConsumption } from '@/utils/dailyConsumption';
+import type { NormalizedRow } from '@/utils/ingestion/types';
 
-import { makeProcessedData } from '../helpers/testUtils';
+import { makeNormalizedRow } from '../helpers/makeNormalizedRow';
+import { makeModelDailyArtifacts } from '../helpers/modelDailyArtifacts';
+
+function aggregateDailyConsumption(rows: NormalizedRow[], periodRows = rows) {
+  return selectDailyConsumption(makeModelDailyArtifacts(rows).dailyConsumption, periodRows.map(row => row.day.slice(0, 7)));
+}
 
 describe('aggregateDailyConsumption', () => {
   it('sums reported USD amounts across users, products, and unattributed usage in UTC day order', () => {
     const rows = [
-      makeProcessedData({
-        timestamp: new Date('2026-07-01T00:00:00Z'),
+      makeNormalizedRow({
+        day: '2026-07-01',
         discountAmount: 0,
         netAmount: 2.3456,
       }),
-      makeProcessedData({
-        timestamp: new Date('2026-06-30T23:59:59Z'),
+      makeNormalizedRow({
+        day: '2026-06-30',
         discountAmount: 1.2345,
         netAmount: 0.5,
-        creditsUsed: 999,
+        quantity: 999,
         aicGrossAmount: 999,
       }),
-      makeProcessedData({
-        timestamp: new Date('2026-06-30T12:00:00Z'),
+      makeNormalizedRow({
+        day: '2026-06-30',
         user: 'test-user-two',
         product: 'spark',
         discountAmount: 2,
         netAmount: 1,
       }),
-      makeProcessedData({
-        timestamp: new Date('2026-06-30T00:00:00Z'),
+      makeNormalizedRow({
+        day: '2026-06-30',
         user: '',
         model: 'Code Review',
         isUnattributedUsage: true,
@@ -47,13 +53,13 @@ describe('aggregateDailyConsumption', () => {
 
   it('retains reported zeros and optional monetary fields without inferring costs', () => {
     const result = aggregateDailyConsumption([
-      makeProcessedData({ discountAmount: 0, netAmount: 0 }),
-      makeProcessedData({ discountAmount: 1 }),
-      makeProcessedData({ netAmount: 2 }),
-      makeProcessedData({
-        timestamp: new Date('2025-06-02T00:00:00Z'),
+      makeNormalizedRow({ discountAmount: 0, netAmount: 0 }),
+      makeNormalizedRow({ discountAmount: 1 }),
+      makeNormalizedRow({ netAmount: 2 }),
+      makeNormalizedRow({
+        day: '2025-06-02',
         grossAmount: 100,
-        creditsUsed: 100,
+        quantity: 100,
         inputTokens: 100,
       }),
     ]);
@@ -69,7 +75,7 @@ describe('aggregateDailyConsumption', () => {
     { month: '2025-12', days: 31 },
   ])('fills the complete UTC billing month $month', ({ month, days }) => {
     const result = aggregateDailyConsumption([
-      makeProcessedData({ timestamp: new Date(`${month}-15T23:59:59Z`), netAmount: 1 }),
+      makeNormalizedRow({ day: `${month}-15`, netAmount: 1 }),
     ]);
     expect(result).toHaveLength(days);
     expect(result[0]).toEqual({ date: `${month}-01`, included: 0, additional: 0 });
@@ -79,12 +85,12 @@ describe('aggregateDailyConsumption', () => {
 
   it('uses the report period even when the user has no usage in its boundary months', () => {
     const userRows = [
-      makeProcessedData({ timestamp: new Date('2025-12-15T00:00:00Z'), netAmount: 1 }),
+      makeNormalizedRow({ day: '2025-12-15', netAmount: 1 }),
     ];
     const result = aggregateDailyConsumption(userRows, [
       ...userRows,
-      makeProcessedData({ timestamp: new Date('2025-11-20T00:00:00Z'), user: 'test-user-two' }),
-      makeProcessedData({ timestamp: new Date('2026-01-10T00:00:00Z'), user: 'test-user-two' }),
+      makeNormalizedRow({ day: '2025-11-20', user: 'test-user-two' }),
+      makeNormalizedRow({ day: '2026-01-10', user: 'test-user-two' }),
     ]);
     expect(result).toHaveLength(92);
     expect(result[0]).toEqual({ date: '2025-11-01', included: 0, additional: 0 });
@@ -96,18 +102,18 @@ describe('aggregateDailyConsumption', () => {
 
   it('omits rows without daily monetary amounts', () => {
     expect(aggregateDailyConsumption([])).toEqual([]);
-    expect(aggregateDailyConsumption([makeProcessedData({ inputTokens: 100 })])).toEqual([]);
+    expect(aggregateDailyConsumption([makeNormalizedRow({ inputTokens: 100 })])).toEqual([]);
   });
 
   it('preserves the timeline for unordered duplicate months without mutating report rows', () => {
     const userRows = [
-      makeProcessedData({ timestamp: new Date('2025-12-15T00:00:00Z'), netAmount: 1 }),
+      makeNormalizedRow({ day: '2025-12-15', netAmount: 1 }),
     ];
     const periodRows = [
-      makeProcessedData({ timestamp: new Date('2026-01-20T00:00:00Z') }),
+      makeNormalizedRow({ day: '2026-01-20' }),
       ...userRows,
-      makeProcessedData({ timestamp: new Date('2025-11-20T00:00:00Z') }),
-      makeProcessedData({ timestamp: new Date('2026-01-10T00:00:00Z') }),
+      makeNormalizedRow({ day: '2025-11-20' }),
+      makeNormalizedRow({ day: '2026-01-10' }),
     ];
     const originalRows = [...periodRows];
     const result = aggregateDailyConsumption(userRows, periodRows);

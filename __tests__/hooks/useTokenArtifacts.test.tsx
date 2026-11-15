@@ -6,6 +6,7 @@ import { AnalysisProvider, useAnalysisContext } from '@/context/AnalysisContext'
 import {
   BillingAggregator,
   BillingPagesAggregator,
+  ModelDailyAggregator,
   DailyBucketsAggregator,
   FeatureUsageAggregator,
   QuotaAggregator,
@@ -25,7 +26,7 @@ function createResult(includeRaw: boolean, includeTokens: boolean): IngestionRes
   ];
   const aggregators: Aggregator[] = [
     new UsageAggregator(), new QuotaAggregator(), new DailyBucketsAggregator(), new FeatureUsageAggregator(),
-    new BillingAggregator(), new BillingPagesAggregator(),
+    new BillingAggregator(), new BillingPagesAggregator(), new ModelDailyAggregator(),
     ...(includeRaw ? [new RawDataAggregator()] : []),
     ...(includeTokens ? [new TokenAggregator()] : []),
   ];
@@ -53,8 +54,13 @@ describe('month-filtered token artifacts in analysis context', () => {
       ),
     });
     expect(result.current.tokenArtifacts?.totals.inputTokens).toBe(100);
+    const allMonths = result.current.modelDailyArtifacts;
+    expect(allMonths.rowCount).toBe(3);
+    act(() => result.current.setView('modelTrends'));
+    expect(result.current.modelDailyArtifacts).toBe(allMonths);
     act(() => result.current.setSelectedMonths(['2026-07']));
     expect(result.current.tokenArtifacts?.totals).toMatchObject({ inputTokens: 0, rowCount: 1 });
+    expect(result.current.modelDailyArtifacts).toMatchObject({ rowCount: 1, months: ['2026-07'] });
     expect(result.current.tokenArtifacts?.hasAnyTokenData).toBe(true);
     act(() => result.current.setSelectedMonths(['2026-08']));
     expect(result.current.tokenArtifacts?.totals.inputTokens).toBeUndefined();

@@ -24,7 +24,7 @@ export function ModelUsageTrendsOverview() {
     dailyBucketsArtifacts,
     selectedMonths,
     billingArtifacts,
-    aggregateProcessedData,
+    modelDailyArtifacts,
   } = useAnalysisContext();
   const { data, models } = useMemo(() => {
     if (!dailyBucketsArtifacts) {
@@ -46,15 +46,7 @@ export function ModelUsageTrendsOverview() {
   }, [models]);
 
   const topAicModelAnalysis = useMemo((): { rows: TopAicModelRow[]; topShare: number } => {
-    if (aggregateProcessedData.length === 0) {
-      return { rows: [], topShare: 0 };
-    }
-
-    const creditsByModel = new Map<string, number>();
-    for (const row of aggregateProcessedData) {
-      creditsByModel.set(row.model, (creditsByModel.get(row.model) ?? 0) + row.creditsUsed);
-    }
-    const rows = [...creditsByModel.entries()]
+    const rows = Object.entries(usageArtifacts.modelTotals)
       .map(([model, credits]) => ({
         model,
         aicQuantity: credits,
@@ -84,7 +76,7 @@ export function ModelUsageTrendsOverview() {
       rows: topRows,
       topShare: totalConsumption > 0 ? (topConsumption / totalConsumption) * 100 : 0,
     };
-  }, [aggregateProcessedData, billingArtifacts]);
+  }, [usageArtifacts, billingArtifacts]);
   const { rows: topAicModelRows, topShare: topAicModelShare } = topAicModelAnalysis;
 
   return (
@@ -155,13 +147,13 @@ export function ModelUsageTrendsOverview() {
         </div>
       </section>
 
-      <ModelBucketDistributionCharts rows={aggregateProcessedData} />
+      <ModelBucketDistributionCharts buckets={modelDailyArtifacts.buckets} />
 
       {data.length > 0 && models.length > 0 && (
         <DailyConsumptionTable
           data={data}
           models={models}
-          sourceRows={aggregateProcessedData}
+          commercialByDay={modelDailyArtifacts.commercialByDay}
         />
       )}
     </div>

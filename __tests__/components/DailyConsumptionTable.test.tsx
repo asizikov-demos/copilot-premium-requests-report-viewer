@@ -2,45 +2,27 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 
 import { DailyConsumptionTable } from '@/components/DailyConsumptionTable';
 import { PRICING } from '@/constants/pricing';
-import type { ProcessedData } from '@/types/csv';
-
-function makeProcessedRow(overrides: Partial<ProcessedData>): ProcessedData {
-  const dateKey = overrides.dateKey ?? '2026-08-01';
-  const timestamp = new Date(`${dateKey}T00:00:00Z`);
-
-  return {
-    timestamp,
-    user: 'test-user-one',
-    model: 'test-model-one',
-    creditsUsed: 0,
-    totalQuota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
-    quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
-    iso: timestamp.toISOString(),
-    dateKey,
-    monthKey: dateKey.slice(0, 7),
-    epoch: timestamp.getTime(),
-    usageUnit: 'ai_credit',
-    ...overrides,
-  };
-}
+import { makeModelDailyArtifacts } from '../helpers/modelDailyArtifacts';
 
 describe('DailyConsumptionTable', () => {
   it('expands a UTC day to show the per-model AI Credits breakdown', () => {
     const sourceRows = [
-      makeProcessedRow({
+      {
         model: 'test-model-one',
-        creditsUsed: 100,
+        quantity: 100,
+        day: '2026-08-01',
         aicQuantity: 100,
         aicGrossAmount: 100 * PRICING.AI_CREDIT_USD_VALUE,
         netAmount: 0,
-      }),
-      makeProcessedRow({
+      },
+      {
         model: 'test-model-two',
-        creditsUsed: 50,
+        quantity: 50,
+        day: '2026-08-01',
         aicQuantity: 50,
         aicGrossAmount: 50 * PRICING.AI_CREDIT_USD_VALUE,
         netAmount: 0.2,
-      }),
+      },
     ];
 
     render(
@@ -52,7 +34,7 @@ describe('DailyConsumptionTable', () => {
           'test-model-two': 50,
         }]}
         models={['test-model-one', 'test-model-two']}
-        sourceRows={sourceRows}
+        commercialByDay={makeModelDailyArtifacts(sourceRows).commercialByDay}
       />
     );
 
@@ -76,7 +58,7 @@ describe('DailyConsumptionTable', () => {
       <DailyConsumptionTable
         data={[{ date: '2026-08-01', totalCredits: 3, 'test-model-one': 3 }]}
         models={['test-model-one']}
-        sourceRows={[]}
+        commercialByDay={makeModelDailyArtifacts().commercialByDay}
       />
     );
 

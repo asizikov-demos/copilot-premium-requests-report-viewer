@@ -43,7 +43,6 @@ class BillingPagesPartialAggregator implements Aggregator<BillingPagesArtifacts>
   private sequence = 0;
 
   onRow(row: NormalizedRow, _ctx: AggregatorContext, sequence = this.sequence++): void {
-    const productRow = { ...row, creditsUsed: row.quantity };
     for (const [groups, name] of [
       [this.artifacts.organizations, row.organization || UNASSIGNED_BILLING_GROUP],
       [this.artifacts.costCenters, row.costCenter || UNASSIGNED_BILLING_GROUP],
@@ -53,7 +52,7 @@ class BillingPagesPartialAggregator implements Aggregator<BillingPagesArtifacts>
       };
       group.credits += row.quantity;
       if (!row.isUnattributedUsage) group.users.add(row.user);
-      accumulateProductCost(group.products, productRow);
+      accumulateProductCost(group.products, row);
       groups.set(name, group);
     }
 

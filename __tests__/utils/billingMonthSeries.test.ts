@@ -9,6 +9,7 @@ import {
 
 import { makeProcessedData } from '../helpers/testUtils';
 import { buildDailyBucketsArtifactsFromProcessedData, buildUsageArtifactsFromProcessedData } from '../helpers/processedArtifacts';
+import { makeModelDailyArtifacts } from '../helpers/modelDailyArtifacts';
 
 describe('billingMonth series contract', () => {
   const rows = [
@@ -19,12 +20,13 @@ describe('billingMonth series contract', () => {
   ];
   const daily = buildDailyBucketsArtifactsFromProcessedData(rows);
   const usage = buildUsageArtifactsFromProcessedData(rows);
+  const modelDaily = makeModelDailyArtifacts(rows.map(row => ({ ...row, day: row.dateKey, quantity: row.creditsUsed })));
   const expectedDates = [
     ...Array.from({ length: 29 }, (_, index) => `2024-02-${String(index + 1).padStart(2, '0')}`),
     ...Array.from({ length: 30 }, (_, index) => `2024-04-${String(index + 1).padStart(2, '0')}`),
   ];
   const series = {
-    'USD consumption': () => aggregateDailyConsumption(rows.slice(0, 2), rows),
+    'USD consumption': () => aggregateDailyConsumption(modelDaily.dailyConsumption, modelDaily.months),
     'model trends': () => buildDailyModelUsageFromArtifacts(daily, usage),
     'user models': () => buildUserDailyModelDataFromArtifacts(daily, usage, 'test-user-one'),
     'consumption heatmap': () => buildDailyCumulativeDataFromArtifacts(daily),
@@ -55,7 +57,7 @@ describe('billingMonth series contract', () => {
     expect(heatmap[28]['test-user-one']).toBe(5);
     expect(heatmap[29]['test-user-one']).toBe(0);
     expect(buildDailyModelUsageFromArtifacts(daily, usage)[0].totalCredits).toBe(0);
-    expect(aggregateDailyConsumption(rows)[0]).toEqual({ date: '2024-02-01', included: 0, additional: 0 });
+    expect(aggregateDailyConsumption(modelDaily.dailyConsumption, modelDaily.months)[0]).toEqual({ date: '2024-02-01', included: 0, additional: 0 });
   });
 
   it('derives report months for older artifacts without a month index', () => {

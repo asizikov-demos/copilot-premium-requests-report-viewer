@@ -22,6 +22,7 @@ import {
 
 import { makeProcessedData } from '../helpers/testUtils';
 import { buildDailyBucketsArtifactsFromProcessedData, buildUsageArtifactsFromProcessedData } from '../helpers/processedArtifacts';
+import { makeModelDailyArtifacts } from '../helpers/modelDailyArtifacts';
 
 jest.mock('recharts', () => {
   const Chart = ({ data }: { data: unknown }) => <div data-testid="date-chart">{JSON.stringify(data)}</div>;
@@ -49,6 +50,7 @@ const periodRows = [
 ];
 const daily = buildDailyBucketsArtifactsFromProcessedData(periodRows);
 const usage = buildUsageArtifactsFromProcessedData(periodRows);
+const modelDaily = makeModelDailyArtifacts(userRows.map(row => ({ ...row, day: row.dateKey, quantity: row.creditsUsed })));
 const userDetailsContext = {
   dailyBucketsArtifacts: daily,
   usageArtifacts: usage,
@@ -63,7 +65,7 @@ const dates = [
 const contracts: { file: string; name: string; render: () => ReactElement }[] = [
   {
     file: 'charts/DailyConsumptionChart.tsx', name: 'USD',
-    render: () => <DailyConsumptionChart data={aggregateDailyConsumption(userRows, periodRows)} />,
+    render: () => <DailyConsumptionChart data={aggregateDailyConsumption(modelDaily.dailyConsumption, daily.months ?? [])} />,
   },
   {
     file: 'charts/CodingAgentUsageChart.tsx', name: 'cloud agent',

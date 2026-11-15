@@ -19,6 +19,7 @@ import { buildUserHeaderSummary } from '../helpers/detailFixtures';
 import { buildDailyBucketsArtifactsFromProcessedData, buildUsageArtifactsFromProcessedData } from '../helpers/processedArtifacts';
 import { buildUserConsumption } from '../helpers/legacyUserConsumption';
 import { createStreamingFile, MockFileReader } from '../helpers/streamingFile';
+import { makeModelDailyArtifacts } from '../helpers/modelDailyArtifacts';
 
 const csv = readFileSync(path.join(process.cwd(), '__tests__/fixtures/detail-usage.csv'), 'utf8');
 const rows = buildProcessedDataFromRawRows(Papa.parse<CSVData>(csv, { header: true, skipEmptyLines: true }).data);
@@ -51,10 +52,11 @@ describe('filtered detail stream parity', () => {
       const details = result.outputs.details as DetailArtifacts;
       const tokens = result.outputs.tokens as TokenArtifacts;
       const monthKeys = periodRows.map(row => row.monthKey);
-      expect(details.productCosts).toEqual(aggregateProductCosts(selected));
+      const modelDaily = makeModelDailyArtifacts(selected.map(row => ({ ...row, day: row.dateKey, quantity: row.creditsUsed })));
+      expect(details.productCosts).toEqual(aggregateProductCosts(modelDaily.productCosts));
       expect({ ...details.consumption, tokens }).toEqual(buildUserConsumption(selected));
       expect(selectDetailTimeline(details, monthKeys).dailyConsumption)
-        .toEqual(aggregateDailyConsumption(selected, periodRows));
+        .toEqual(aggregateDailyConsumption(modelDaily.dailyConsumption, monthKeys));
       expect(summarizeUserHeader(details.header, PRICING.BUSINESS_AI_CREDIT_QUOTA, true))
         .toEqual(buildUserHeaderSummary(selected, PRICING.BUSINESS_AI_CREDIT_QUOTA, true));
       expect(details.totals).toEqual(selected.reduce((total, row) => ({
@@ -65,7 +67,8 @@ describe('filtered detail stream parity', () => {
       const activeDates = selected.map(row => row.dateKey).sort();
       const dates = activeDates.length ? enumerateDatesInclusive(activeDates[0], activeDates.at(-1)!) : [];
       expect(details.dailyRows).toEqual(dates.map(date => {
-        const products = aggregateProductCosts(selected.filter(row => row.dateKey === date));
+        const products = aggregateProductCosts(makeModelDailyArtifacts(selected.filter(row => row.dateKey === date)
+          .map(row => ({ ...row, day: row.dateKey, quantity: row.creditsUsed }))).productCosts);
         return {
           date, products,
           quantity: products.reduce((sum, product) => sum + product.credits, 0),

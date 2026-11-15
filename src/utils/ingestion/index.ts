@@ -20,6 +20,7 @@ export * from './RawDataAggregator';
 export * from './adapters';
 export * from './analytics';
 export * from './selectors';
+export * from './ModelDailyAggregator';
 
 // Re-export helpers
 import { QuotaArtifacts } from './types';

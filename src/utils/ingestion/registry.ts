@@ -4,6 +4,7 @@ import { DailyBucketsAggregator } from './DailyBucketsAggregator';
 import { DetailAggregator } from './DetailAggregator';
 import { FeatureUsageAggregator } from './FeatureUsageAggregator';
 import { QuotaAggregator } from './QuotaAggregator';
+import { ModelDailyAggregator } from './ModelDailyAggregator';
 import { RawDataAggregator } from './RawDataAggregator';
 import { TokenAggregator } from './TokenAggregator';
 import { UsageAggregator } from './UsageAggregator';
@@ -18,6 +19,7 @@ const aggregatorRegistry = {
   billing: () => new BillingAggregator(),
   billingPages: () => new BillingPagesAggregator(),
   tokens: () => new TokenAggregator(),
+  modelDaily: () => new ModelDailyAggregator(),
   rawData: () => new RawDataAggregator(),
 };
 

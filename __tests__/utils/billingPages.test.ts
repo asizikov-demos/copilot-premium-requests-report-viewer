@@ -39,7 +39,7 @@ function referenceGroups(source: NormalizedRow[], field: 'organization' | 'costC
     const group = groups.get(name) ?? { credits: 0, users: new Set<string>(), products: createEmptyProductCostMap() };
     group.credits += row.quantity;
     if (!row.isUnattributedUsage) group.users.add(row.user);
-    accumulateProductCost(group.products, { ...row, creditsUsed: row.quantity });
+    accumulateProductCost(group.products, row);
     groups.set(name, group);
   }
   return [...groups].map(([name, group]) => ({

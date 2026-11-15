@@ -1,29 +1,34 @@
 import { PRICING } from '@/constants/pricing';
-import type { ProcessedData } from '@/types/csv';
-import { aggregateProductCosts } from '@/utils/productCosts';
+import type { NormalizedRow } from '@/utils/ingestion/types';
+import { aggregateProductCosts as selectProductCosts } from '@/utils/productCosts';
 
-import { makeProcessedData } from '../helpers/testUtils';
+import { makeNormalizedRow } from '../helpers/makeNormalizedRow';
+import { makeModelDailyArtifacts } from '../helpers/modelDailyArtifacts';
+
+function aggregateProductCosts(rows: NormalizedRow[]) {
+  return selectProductCosts(makeModelDailyArtifacts(rows).productCosts);
+}
 
 const PRODUCT_COST_ROW_DEFAULTS = {
-  timestamp: new Date('2025-10-01T00:00:00Z'),
+  day: '2025-10-01',
   model: 'Claude Sonnet 4',
-  creditsUsed: 1,
+  quantity: 1,
   quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
   grossAmount: 0.04,
   discountAmount: 0,
   netAmount: 0.04,
-} satisfies Partial<ProcessedData>;
+} satisfies Partial<NormalizedRow>;
 
 describe('aggregateProductCosts', () => {
   test('aggregates rows in stable product order with display labels', () => {
-    const rows: ProcessedData[] = [
-      makeProcessedData({ ...PRODUCT_COST_ROW_DEFAULTS, product: 'copilot', sku: 'copilot_ai_credit', model: 'Claude Sonnet 4', creditsUsed: 2, grossAmount: 0.08, netAmount: 0.08, aicQuantity: 12.5, aicGrossAmount: 0.125 }),
-      makeProcessedData({ ...PRODUCT_COST_ROW_DEFAULTS, product: 'spark', sku: 'copilot_ai_credit', model: 'Claude Sonnet 4.5', creditsUsed: 3, grossAmount: 0.12, netAmount: 0.12 }),
-      makeProcessedData({ ...PRODUCT_COST_ROW_DEFAULTS, model: 'Coding Agent model', creditsUsed: 4, grossAmount: 0.16, netAmount: 0.16 }),
-      makeProcessedData({ ...PRODUCT_COST_ROW_DEFAULTS, model: 'Claude Sonnet 5', sku: 'coding_agent_ai_credit', creditsUsed: 7, grossAmount: 0.07, netAmount: 0.07 }),
-      makeProcessedData({ ...PRODUCT_COST_ROW_DEFAULTS, model: 'Code Review model', creditsUsed: 5, grossAmount: 0.2, netAmount: 0.2 }),
-      makeProcessedData({ ...PRODUCT_COST_ROW_DEFAULTS, product: 'code_quality', sku: 'code_quality_ai_credit', model: 'Claude Sonnet 4.6', creditsUsed: 51.28584, grossAmount: 0.5128584, netAmount: 0.5128584 }),
-      makeProcessedData({ ...PRODUCT_COST_ROW_DEFAULTS, user: '', model: 'Code Review', creditsUsed: 6, grossAmount: 0.24, netAmount: 0.24, isUnattributedUsage: true, usageBucket: 'unattributed_ai_credit' }),
+    const rows: NormalizedRow[] = [
+      makeNormalizedRow({ ...PRODUCT_COST_ROW_DEFAULTS, product: 'copilot', sku: 'copilot_ai_credit', model: 'Claude Sonnet 4', quantity: 2, grossAmount: 0.08, netAmount: 0.08, aicQuantity: 12.5, aicGrossAmount: 0.125 }),
+      makeNormalizedRow({ ...PRODUCT_COST_ROW_DEFAULTS, product: 'spark', sku: 'copilot_ai_credit', model: 'Claude Sonnet 4.5', quantity: 3, grossAmount: 0.12, netAmount: 0.12 }),
+      makeNormalizedRow({ ...PRODUCT_COST_ROW_DEFAULTS, model: 'Coding Agent model', quantity: 4, grossAmount: 0.16, netAmount: 0.16 }),
+      makeNormalizedRow({ ...PRODUCT_COST_ROW_DEFAULTS, model: 'Claude Sonnet 5', sku: 'coding_agent_ai_credit', quantity: 7, grossAmount: 0.07, netAmount: 0.07 }),
+      makeNormalizedRow({ ...PRODUCT_COST_ROW_DEFAULTS, model: 'Code Review model', quantity: 5, grossAmount: 0.2, netAmount: 0.2 }),
+      makeNormalizedRow({ ...PRODUCT_COST_ROW_DEFAULTS, product: 'code_quality', sku: 'code_quality_ai_credit', model: 'Claude Sonnet 4.6', quantity: 51.28584, grossAmount: 0.5128584, netAmount: 0.5128584 }),
+      makeNormalizedRow({ ...PRODUCT_COST_ROW_DEFAULTS, user: '', model: 'Code Review', quantity: 6, grossAmount: 0.24, netAmount: 0.24, isUnattributedUsage: true, usageBucket: 'unattributed_ai_credit' }),
     ];
 
     expect(aggregateProductCosts(rows)).toEqual([

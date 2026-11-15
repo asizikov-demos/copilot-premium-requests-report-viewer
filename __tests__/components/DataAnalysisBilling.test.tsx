@@ -9,6 +9,7 @@ import type { DailyConsumptionDatum } from '@/utils/dailyConsumption';
 import {
   BillingAggregator,
   BillingPagesAggregator,
+  ModelDailyAggregator,
   DailyBucketsAggregator,
   FeatureUsageAggregator,
   QuotaAggregator,
@@ -50,6 +51,7 @@ function createIngestionResultFromRawRows(rows: CSVData[]): IngestionResult {
     new FeatureUsageAggregator(),
     new BillingAggregator(),
     new BillingPagesAggregator(),
+    new ModelDailyAggregator(),
     new RawDataAggregator(),
   ];
   const ctx: AggregatorContext = { pricing: PRICING };
@@ -90,6 +92,7 @@ function createIngestionResultWithBillingArtifacts(billingArtifacts: BillingArti
       },
       'billing': billingArtifacts,
       'billingPages': new BillingPagesAggregator().finalize(),
+      'modelDaily': new ModelDailyAggregator().finalize(),
     },
     rowsProcessed: 0,
     durationMs: 100,
@@ -151,6 +154,25 @@ function makeUsageBasedRows(): CSVData[] {
 }
 
 describe('DataAnalysis billing summary', () => {
+  it('renders model totals, row counts, and navigation from aggregates without retained rows', () => {
+    const ingestionResult = createIngestionResultFromRawRows(makeAicRows());
+    delete ingestionResult.outputs.rawData;
+    render(<DataAnalysis ingestionResult={ingestionResult} filename="test-report.csv" onReset={jest.fn()} />);
+    expect(screen.getByRole('region', { name: 'Report information' })).toHaveTextContent('Total rows: 3');
+    expect(screen.getAllByRole('button', { name: 'Organizations' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: 'Cost Centers' }).length).toBeGreaterThan(0);
+    const card = screen.getByRole('heading', { name: 'Model Details' }).closest('[class*="bg-(--bgColor-default)"]');
+    expect(card).not.toBeNull();
+    const models = within(within(card as HTMLElement).getByRole('table'));
+    expect(models.getByText('Claude Opus 4.6')).toBeInTheDocument();
+    expect(models.getByText('24.00')).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Models' })[0]);
+    const topModels = within(screen.getByRole('table', { name: 'Top AI Credits models' }));
+    expect(topModels.getByText('Claude Opus 4.6')).toBeInTheDocument();
+    expect(topModels.getByText('24.00')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Daily consumption' })).toBeInTheDocument();
+  });
+
   it('places report information before the sidebar and outside the report content', () => {
     render(<DataAnalysis ingestionResult={createIngestionResultFromRawRows(makeAicRows())} filename="test-report.csv" onReset={jest.fn()} />);
 
