@@ -1,5 +1,5 @@
 import { PRICING } from '@/constants/pricing';
-import { buildUserConsumption } from '@/utils/analytics/userConsumption';
+import { buildUserConsumption } from '../helpers/legacyUserConsumption';
 import { buildProcessedDataFromRawRows } from '@/utils/ingestion/adapters';
 
 const base = {

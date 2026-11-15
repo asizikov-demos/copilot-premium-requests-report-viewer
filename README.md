@@ -76,12 +76,16 @@ Token counts do not change AI Credits, quotas, or monetary calculations.
 All processing is client-side. No data leaves your browser.
 
 CSV parsing and aggregators run in a Web Worker in 1 MiB chunks. The uploaded
-`File` remains in memory-only app state until reset or reload. Drill-down code can
-re-stream it with `streamFile(file, aggregatorIds, rowFilter?, options?)` from
+`File` remains in memory-only app state until reset or reload. User, organization,
+and cost-center drill-downs re-stream it with
+`streamFile(file, aggregatorIds, rowFilter?, options?)` from
 `src/utils/ingestion/streamFile.ts`. Filters combine `user`, `organization`,
 `costCenter`, and UTC `months` (YYYY-MM) with AND semantics; an empty months list
 means all months. Missing organizations/cost centers match `Unassigned`.
 Results preserve aggregator output Maps/Sets through structured clone.
+Drill-downs keep only compact detail/token aggregates, cached by uploaded File,
+filter, and selected months. Loading displays scanned-row progress; closing a
+detail view or changing its filters cancels its worker via `options.signal`.
 Environments without Web Worker support use the same streaming pipeline on the
 main thread; worker startup/runtime failures are surfaced rather than retried there.
 

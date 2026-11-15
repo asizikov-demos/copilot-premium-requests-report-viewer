@@ -234,7 +234,6 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
     return (
       <UserDetailsView
         user={selectedUser}
-        processedData={processedData}
         userQuotaValue={getUserQuota(quotaArtifacts, selectedUser)}
         userAggregate={selectedUserAggregate ?? null}
         onBack={() => setSelectedUser(null)}

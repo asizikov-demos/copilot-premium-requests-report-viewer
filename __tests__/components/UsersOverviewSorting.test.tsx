@@ -3,12 +3,17 @@ import '@testing-library/jest-dom';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 
 import { UsersOverview } from '@/components/UsersOverview';
+import { AnalysisProvider } from '@/context/AnalysisContext';
 import { PRICING } from '@/constants/pricing';
 import type { ProcessedData } from '@/types/csv';
 import type { UserSummary } from '@/utils/analytics';
 import type { QuotaArtifacts, UsageArtifacts } from '@/utils/ingestion';
+import { buildNormalizedRowFromProcessedData } from '@/utils/ingestion/analytics';
+import { createAggregators } from '@/utils/ingestion/registry';
+import { REPORT_AGGREGATOR_IDS } from '@/utils/ingestion/streamFile';
 
 import { makeProcessedData } from '../helpers/testUtils';
+import { createStreamingFile, MockFileReader } from '../helpers/streamingFile';
 
 beforeAll(() => {
   global.ResizeObserver = class {
@@ -460,7 +465,7 @@ describe('UsersOverview - sorting', () => {
     expect(getRowUserOrder()).toEqual(['test-user-four']);
   });
 
-  it('opens inline user details and returns via breadcrumb', () => {
+  it('opens streamed user details and returns via breadcrumb', async () => {
     const userData: UserSummary[] = [
       { user: 'test-user-one', totalCredits: 10, modelBreakdown: { 'gpt-4': 10 }, organization: 'test-org-one', costCenter: 'test-cost-center-one' },
       { user: 'test-user-two', totalCredits: 20, modelBreakdown: { 'gpt-4': 20 }, organization: 'test-org-two', costCenter: 'test-cost-center-two' },
@@ -484,7 +489,18 @@ describe('UsersOverview - sorting', () => {
       }),
     ];
 
+    globalThis.FileReader = MockFileReader as unknown as typeof FileReader;
+    const outputs: Record<string, unknown> = {};
+    for (const aggregator of createAggregators(REPORT_AGGREGATOR_IDS)) {
+      const context = { pricing: PRICING };
+      aggregator.init?.(context);
+      processedData.forEach(row => aggregator.onRow(buildNormalizedRowFromProcessedData(row), context));
+      outputs[aggregator.id] = aggregator.finalize(context);
+    }
     render(
+      <AnalysisProvider ingestionResult={{ outputs, rowsProcessed: 1, durationMs: 1, warnings: [] }}
+        filename="test-report.csv" onReset={jest.fn()}
+        sourceFile={createStreamingFile('date,username,sku,model,quantity\n2025-01-01,test-user-one,copilot_ai_credit,gpt-4,10')}>
       <UsersOverview
         userData={userData}
         processedData={processedData}
@@ -492,10 +508,11 @@ describe('UsersOverview - sorting', () => {
         quotaArtifacts={quotaArtifacts}
         usageArtifacts={makeUsage(userData)}
       />
+      </AnalysisProvider>
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'test-user-one' }));
-    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument();
+    expect(await screen.findByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'users' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'users' }));

@@ -10,6 +10,7 @@ export const REPORT_AGGREGATOR_IDS = [
 ] as const satisfies readonly AggregatorId[];
 
 export interface StreamFileOptions {
+  signal?: AbortSignal;
   chunkSize?: number;
   progressResolution?: number;
   onProgress?: (progress: IngestionProgress) => void;
@@ -22,6 +23,7 @@ export async function streamFile(
   rowFilter?: RowFilter,
   options: StreamFileOptions = {},
 ): Promise<IngestionResult> {
+  options.signal?.throwIfAborted();
   const request: IngestionRequest = {
     file,
     aggregatorIds,
@@ -33,19 +35,36 @@ export async function streamFile(
   if (typeof Worker === 'undefined') {
     const { runFileIngestion } = await import('./runFileIngestion');
     return new Promise((resolve, reject) => {
+      const abort = () => reject(new DOMException('Detail loading cancelled', 'AbortError'));
+      options.signal?.addEventListener('abort', abort, { once: true });
+      if (options.signal?.aborted) {
+        abort();
+        return;
+      }
       runFileIngestion(request, response => {
         if (response.type === 'progress') options.onProgress?.(response.progress);
-        else if (response.type === 'complete') resolve(response.result);
-        else reject(new Error(response.error));
-      });
+        else {
+          options.signal?.removeEventListener('abort', abort);
+          if (response.type === 'complete') resolve(response.result);
+          else reject(new Error(response.error));
+        }
+      }, options.signal);
     });
   }
 
   const { createIngestionWorker } = await import('./createIngestionWorker');
   const worker = createIngestionWorker();
   return new Promise((resolve, reject) => {
-    const fail = (message: string) => {
+    const cleanup = () => {
+      options.signal?.removeEventListener('abort', abort);
       worker.terminate();
+    };
+    const abort = () => {
+      cleanup();
+      reject(new DOMException('Detail loading cancelled', 'AbortError'));
+    };
+    const fail = (message: string) => {
+      cleanup();
       reject(new Error(message));
     };
     worker.onmessage = (event: MessageEvent<IngestionResponse>) => {
@@ -53,7 +72,7 @@ export async function streamFile(
       if (response.type === 'progress') {
         options.onProgress?.(response.progress);
       } else if (response.type === 'complete') {
-        worker.terminate();
+        cleanup();
         resolve(response.result);
       } else {
         fail(response.error);
@@ -64,6 +83,11 @@ export async function streamFile(
       fail(event.message || 'CSV ingestion worker failed');
     };
     worker.onmessageerror = () => fail('Failed to receive CSV ingestion results');
+    options.signal?.addEventListener('abort', abort, { once: true });
+    if (options.signal?.aborted) {
+      abort();
+      return;
+    }
     try {
       worker.postMessage(request);
     } catch (error) {

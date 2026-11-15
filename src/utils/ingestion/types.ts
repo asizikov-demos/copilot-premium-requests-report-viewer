@@ -134,6 +134,7 @@ export interface RowFilter {
  * Configuration options for ingestion pipeline.
  */
 export interface IngestOptions {
+  signal?: AbortSignal;
   chunkSize?: number;
   rowFilter?: RowFilter;
   progressResolution?: number;  // rows between progress callbacks
@@ -146,6 +147,7 @@ export interface IngestOptions {
  * Progress information during ingestion.
  */
 export interface IngestionProgress {
+  rowsScanned?: number;
   rowsProcessed: number;
   usersDiscovered?: number;
   modelsDiscovered?: number;

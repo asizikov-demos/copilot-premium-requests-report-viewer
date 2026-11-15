@@ -2,24 +2,18 @@
 
 import React, { useMemo, useState } from 'react';
 import { ChevronRightIcon, CopyIcon, SearchIcon } from '@primer/octicons-react';
-import { FormControl, TextInput } from '@primer/react';
+import { Banner, FormControl, TextInput } from '@primer/react';
 
 import { DailyConsumptionChart } from '@/components/charts/DailyConsumptionChart';
+import { DetailStreamStatus } from '@/components/DetailStreamStatus';
+import { useDetailStream, type DetailResult } from '@/hooks/useDetailStream';
 import { ModelDailyStackedChart } from '@/components/charts/ModelDailyStackedChart';
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '@/components/primitives/TablePagination';
 import { dataVizColor } from '@/constants/primerTokens';
-import type { ProcessedData } from '@/types/csv';
 import type { BillingCostLabels } from '@/utils/billingLabels';
-import { buildBillingMonthDates, enumerateDatesInclusive } from '@/utils/dateKeys';
-import { aggregateDailyConsumption } from '@/utils/dailyConsumption';
+import { buildBillingMonthDates } from '@/utils/dateKeys';
+import { selectDetailTimeline } from '@/utils/ingestion/DetailAggregator';
 import { formatCurrency, formatDecimalQuantity, formatUtcDateLabel } from '@/utils/formatters';
-import {
-  accumulateProductCost,
-  aggregateProductCosts,
-  createEmptyProductCostMap,
-  getPopulatedProductCosts,
-  type ProductCost,
-} from '@/utils/productCosts';
 import type { ProductCategory } from '@/utils/productClassification';
 
 const PRODUCT_CATEGORY_COLORS: Record<ProductCategory, string> = {
@@ -29,25 +23,6 @@ const PRODUCT_CATEGORY_COLORS: Record<ProductCategory, string> = {
   'Code Review': dataVizColor('purple'),
   'Code Quality': dataVizColor('green'),
 };
-interface BillingGroupDailyRow {
-  date: string;
-  quantity: number;
-  gross: number;
-  discount: number;
-  net: number;
-  aicGrossAmount: number;
-  products: ProductCost[];
-}
-
-interface BillingGroupUserRow {
-  user: string;
-  quantity: number;
-  gross: number;
-  discount: number;
-  net: number;
-  aicGrossAmount: number;
-}
-
 interface BillingGroupDailyChartDatum {
   date: string;
   totalCredits: number;
@@ -63,9 +38,7 @@ export interface BillingGroupDetailsViewProps {
   groupsLabel: string;
   /** Prefix for the generated daily breakdown detail element ids. */
   detailIdPrefix: string;
-  rows: ProcessedData[];
-  /** Report-wide filtered rows that determine the full billing-period timeline. */
-  periodRows?: ProcessedData[];
+  groupKind: 'organization' | 'costCenter';
   quantityColumnLabel: string;
   costLabels: BillingCostLabels;
   hasAicGross: boolean;
@@ -74,126 +47,37 @@ export interface BillingGroupDetailsViewProps {
   onBack: () => void;
 }
 
-function getRowQuantity(row: ProcessedData): number {
-  return row.creditsUsed;
+export function BillingGroupDetailsView(props: BillingGroupDetailsViewProps) {
+  const { data, error, progress, months } = useDetailStream({ [props.groupKind]: props.groupName });
+  if (!data) return <DetailStreamStatus error={error} progress={progress} onBack={props.onBack} />;
+  return <BillingGroupDetailsContent {...props} data={data} months={months} />;
 }
 
-function buildDailyRows(rows: ProcessedData[]): BillingGroupDailyRow[] {
-  if (rows.length === 0) {
-    return [];
-  }
-
-  const buckets = new Map<string, Map<ProductCategory, ProductCost>>();
-  let earliest = rows[0].dateKey;
-  let latest = rows[0].dateKey;
-
-  for (const row of rows) {
-    if (row.dateKey < earliest) {
-      earliest = row.dateKey;
-    }
-    if (row.dateKey > latest) {
-      latest = row.dateKey;
-    }
-
-    let bucket = buckets.get(row.dateKey);
-    if (!bucket) {
-      bucket = createEmptyProductCostMap();
-      buckets.set(row.dateKey, bucket);
-    }
-    accumulateProductCost(bucket, row);
-  }
-
-  return enumerateDatesInclusive(earliest, latest).map((date) => {
-    const bucket = buckets.get(date);
-    const products = bucket ? getPopulatedProductCosts(bucket) : [];
-
-    return {
-      date,
-      quantity: products.reduce((total, product) => total + product.credits, 0),
-      gross: products.reduce((total, product) => total + product.gross, 0),
-      discount: products.reduce((total, product) => total + product.discount, 0),
-      net: products.reduce((total, product) => total + product.net, 0),
-      aicGrossAmount: products.reduce((total, product) => total + product.aicGrossAmount, 0),
-      products,
-    };
-  });
-}
-
-export function BillingGroupDetailsView({
+export function BillingGroupDetailsContent({
   groupName,
   groupLabel,
   groupsLabel,
   detailIdPrefix,
-  rows,
-  periodRows = rows,
+  data,
+  months,
   quantityColumnLabel,
   costLabels,
   hasAicGross,
   showUsers = false,
   onBack,
-}: BillingGroupDetailsViewProps) {
+}: BillingGroupDetailsViewProps & { data: DetailResult; months: string[] }) {
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [userSearch, setUserSearch] = useState('');
   const [userPage, setUserPage] = useState(0);
 
-  const productCosts = useMemo(() => aggregateProductCosts(rows), [rows]);
+  const { details } = data;
+  const { productCosts, dailyRows, totals } = details;
   const dailyConsumption = useMemo(
-    () => aggregateDailyConsumption(rows, periodRows),
-    [rows, periodRows]
+    () => selectDetailTimeline(details, months).dailyConsumption,
+    [details, months]
   );
-  const dailyRows = useMemo(() => buildDailyRows(rows), [rows]);
-
-  const userCount = useMemo(() => {
-    const users = new Set<string>();
-    for (const row of rows) {
-      if (!row.isUnattributedUsage) {
-        users.add(row.user);
-      }
-    }
-    return users.size;
-  }, [rows]);
-
-  const totals = useMemo(() => rows.reduce(
-    (accumulator, row) => ({
-      quantity: accumulator.quantity + getRowQuantity(row),
-      gross: accumulator.gross + (row.grossAmount ?? 0),
-      discount: accumulator.discount + (row.discountAmount ?? 0),
-      net: accumulator.net + (row.netAmount ?? 0),
-      aicGrossAmount: accumulator.aicGrossAmount + (row.aicGrossAmount ?? 0),
-    }),
-    { quantity: 0, gross: 0, discount: 0, net: 0, aicGrossAmount: 0 }
-  ), [rows]);
-
-  const userRows = useMemo((): BillingGroupUserRow[] => {
-    if (!showUsers) {
-      return [];
-    }
-
-    const buckets = new Map<string, BillingGroupUserRow>();
-
-    for (const row of rows) {
-      // Special usage buckets are not attributable to a real user.
-      if (row.isUnattributedUsage) {
-        continue;
-      }
-
-      let bucket = buckets.get(row.user);
-      if (!bucket) {
-        bucket = { user: row.user, quantity: 0, gross: 0, discount: 0, net: 0, aicGrossAmount: 0 };
-        buckets.set(row.user, bucket);
-      }
-
-      bucket.quantity += getRowQuantity(row);
-      bucket.gross += row.grossAmount ?? 0;
-      bucket.discount += row.discountAmount ?? 0;
-      bucket.net += row.netAmount ?? 0;
-      bucket.aicGrossAmount += row.aicGrossAmount ?? 0;
-    }
-
-    return [...buckets.values()].sort(
-      (a, b) => b.net - a.net || b.quantity - a.quantity || a.user.localeCompare(b.user)
-    );
-  }, [rows, showUsers]);
+  const userCount = details.userRows.length;
+  const userRows = useMemo(() => showUsers ? details.userRows : [], [showUsers, details.userRows]);
 
   const filteredUserRows = useMemo(() => {
     const query = userSearch.trim().toLowerCase();
@@ -217,7 +101,7 @@ export function BillingGroupDetailsView({
 
   const chartData = useMemo((): BillingGroupDailyChartDatum[] => {
     const byDate = new Map(dailyRows.map(row => [row.date, row]));
-    return buildBillingMonthDates(periodRows.map(row => row.monthKey)).map(date => {
+    return buildBillingMonthDates(months).map(date => {
       const row = byDate.get(date);
       const datum: BillingGroupDailyChartDatum = { date, totalCredits: row?.quantity ?? 0 };
 
@@ -230,7 +114,7 @@ export function BillingGroupDetailsView({
 
       return datum;
     });
-  }, [dailyRows, periodRows, productLabels]);
+  }, [dailyRows, months, productLabels]);
 
   const showCosts = totals.gross > 0 || totals.net > 0;
   const detailColSpan = 2 + (hasAicGross ? 1 : 0) + (showCosts ? 3 : 0);
@@ -245,6 +129,7 @@ export function BillingGroupDetailsView({
 
   return (
     <div className="space-y-6">
+      {data.warnings?.length ? <Banner variant="warning" title="Report warnings" description={data.warnings.join('; ')} /> : null}
       <div>
         <nav aria-label="Breadcrumb">
           <ol className="flex items-center gap-2">

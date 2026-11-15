@@ -1,19 +1,7 @@
 import type { ProcessedData } from '@/types/csv';
+import type { CreditTotals, UserConsumption } from '@/types/consumption';
 import { getEffectiveAicQuantity } from '@/utils/aicFields';
 import { buildTokenArtifactsFromProcessedData } from '@/utils/ingestion/analytics';
-import type { TokenArtifacts } from '@/utils/ingestion/types';
-
-export interface CreditTotals {
-  quantity?: number;
-  rowCount: number;
-  reportedRows: number;
-}
-
-export interface UserConsumption {
-  tokens?: TokenArtifacts;
-  credits: CreditTotals;
-  creditsByModel: Map<string, CreditTotals>;
-}
 
 function emptyCredits(): CreditTotals {
   return { rowCount: 0, reportedRows: 0 };

@@ -1,5 +1,4 @@
 import { PRICING } from '@/constants/pricing';
-import type { ProcessedData } from '@/types/csv';
 import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassification';
 
 export interface UserHeaderSummary {
@@ -22,8 +21,17 @@ export interface UserHeaderSummary {
   codeReviewUsed: boolean;
 }
 
-function sortedUnique(values: Array<string | undefined>): string[] {
-  return Array.from(new Set(values.filter((value): value is string => Boolean(value)))).sort();
+interface HeaderUsage {
+  monthKey: string;
+  dateKey: string;
+  creditsUsed: number;
+  model: string;
+  sku?: string;
+  organization?: string;
+  costCenter?: string;
+  grossAmount?: number;
+  discountAmount?: number;
+  netAmount?: number;
 }
 
 function daysInUtcMonth(monthKey: string): number {
@@ -31,62 +39,73 @@ function daysInUtcMonth(monthKey: string): number {
   return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
 
-export function buildUserHeaderSummary(
-  userData: ProcessedData[],
-  quota: number | 'unknown',
-  hasBillingData: boolean
-): UserHeaderSummary {
-  const monthlyCredits = new Map<string, number>();
-  const activeDays = new Set<string>();
-  let totalConsumed = 0;
-  let gross = 0;
-  let discount = 0;
-  let net = 0;
-  let cloudAgentUsed = false;
-  let codeReviewUsed = false;
+export class UserHeaderAccumulator {
+  private monthlyCredits = new Map<string, number>();
+  private activeDays = new Set<string>();
+  private organizations = new Set<string>();
+  private costCenters = new Set<string>();
+  private totalConsumed = 0;
+  private gross = 0;
+  private discount = 0;
+  private net = 0;
+  private cloudAgentUsed = false;
+  private codeReviewUsed = false;
 
-  for (const row of userData) {
-    monthlyCredits.set(row.monthKey, (monthlyCredits.get(row.monthKey) ?? 0) + row.creditsUsed);
-    totalConsumed += row.creditsUsed;
-    gross += row.grossAmount ?? 0;
-    discount += row.discountAmount ?? 0;
-    net += row.netAmount ?? 0;
-    if (row.creditsUsed > 0) {
-      activeDays.add(row.dateKey);
-    }
-    if (isCodingAgentModel(row.model, row.sku)) {
-      cloudAgentUsed = true;
-    }
-    if (isCodeReviewModel(row.model)) {
-      codeReviewUsed = true;
-    }
+  add(row: HeaderUsage): void {
+    this.monthlyCredits.set(row.monthKey, (this.monthlyCredits.get(row.monthKey) ?? 0) + row.creditsUsed);
+    this.totalConsumed += row.creditsUsed;
+    this.gross += row.grossAmount ?? 0;
+    this.discount += row.discountAmount ?? 0;
+    this.net += row.netAmount ?? 0;
+    if (row.creditsUsed > 0) this.activeDays.add(row.dateKey);
+    if (row.organization) this.organizations.add(row.organization);
+    if (row.costCenter) this.costCenters.add(row.costCenter);
+    this.cloudAgentUsed ||= isCodingAgentModel(row.model, row.sku);
+    this.codeReviewUsed ||= isCodeReviewModel(row.model);
   }
 
+  finalize() {
+    return {
+      organizations: [...this.organizations].sort(), costCenters: [...this.costCenters].sort(),
+      daysActive: this.activeDays.size,
+      daysInPeriod: this.monthlyCredits.size === 1 ? daysInUtcMonth([...this.monthlyCredits.keys()][0]) : null,
+      monthlyCredits: this.monthlyCredits, totalConsumed: this.totalConsumed,
+      gross: this.gross, discount: this.discount, net: this.net,
+      cloudAgentUsed: this.cloudAgentUsed, codeReviewUsed: this.codeReviewUsed,
+    };
+  }
+}
+
+export function summarizeUserHeader(
+  data: ReturnType<UserHeaderAccumulator['finalize']>,
+  quota: number | 'unknown',
+  hasBillingData: boolean,
+): UserHeaderSummary {
   let includedConsumed: number | null = null;
   let additionalConsumed: number | null = null;
   if (hasBillingData) {
-    includedConsumed = discount / PRICING.AI_CREDIT_USD_VALUE;
-    additionalConsumed = net / PRICING.AI_CREDIT_USD_VALUE;
+    includedConsumed = data.discount / PRICING.AI_CREDIT_USD_VALUE;
+    additionalConsumed = data.net / PRICING.AI_CREDIT_USD_VALUE;
   } else if (quota !== 'unknown') {
     includedConsumed = 0;
     additionalConsumed = 0;
-    for (const credits of monthlyCredits.values()) {
+    for (const credits of data.monthlyCredits.values()) {
       includedConsumed += Math.min(credits, quota);
       additionalConsumed += Math.max(0, credits - quota);
     }
   }
 
   return {
-    organizations: sortedUnique(userData.map((row) => row.organization)),
-    costCenters: sortedUnique(userData.map((row) => row.costCenter)),
-    daysActive: activeDays.size,
-    daysInPeriod: monthlyCredits.size === 1 ? daysInUtcMonth(Array.from(monthlyCredits.keys())[0]) : null,
-    totalConsumed,
+    organizations: data.organizations,
+    costCenters: data.costCenters,
+    daysActive: data.daysActive,
+    daysInPeriod: data.daysInPeriod,
+    totalConsumed: data.totalConsumed,
     includedConsumed,
     additionalConsumed,
-    totalCost: hasBillingData ? gross : null,
-    additionalCost: hasBillingData ? net : null,
-    cloudAgentUsed,
-    codeReviewUsed,
+    totalCost: hasBillingData ? data.gross : null,
+    additionalCost: hasBillingData ? data.net : null,
+    cloudAgentUsed: data.cloudAgentUsed,
+    codeReviewUsed: data.codeReviewUsed,
   };
 }

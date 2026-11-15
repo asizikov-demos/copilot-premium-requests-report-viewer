@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 
-import { BillingGroupDetailsView } from '@/components/BillingGroupDetailsView';
+import { BillingGroupDetailsView } from '../helpers/detailFixtures';
 import type { ProcessedData } from '@/types/csv';
 import { getBillingCostLabels } from '@/utils/billingLabels';
 import type { DailyConsumptionDatum } from '@/utils/dailyConsumption';

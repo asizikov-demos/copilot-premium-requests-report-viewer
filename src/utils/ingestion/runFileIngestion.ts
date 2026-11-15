@@ -5,9 +5,11 @@ import type { IngestionRequest, IngestionResponse } from './workerProtocol';
 export function runFileIngestion(
   request: IngestionRequest,
   respond: (response: IngestionResponse) => void,
+  signal?: AbortSignal,
 ): void {
   try {
     ingestStream(request.file, createAggregators(request.aggregatorIds), {
+      signal,
       chunkSize: request.chunkSize,
       progressResolution: request.progressResolution,
       rowFilter: request.rowFilter,
