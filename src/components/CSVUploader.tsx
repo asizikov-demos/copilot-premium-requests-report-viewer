@@ -106,6 +106,9 @@ export function CSVUploader({ onDataLoad, onError, error }: CSVUploaderProps) {
         onError(result.warnings[0] ?? 'CSV file is empty');
         return;
       }
+      if (!result.outputs.detailPages) {
+        throw new Error(result.warnings.join('; ') || 'Missing detailPages output in ingestion result');
+      }
       setProgress(100);
       await new Promise(resolve => setTimeout(resolve, 200));
       onDataLoad(result, file.name);

@@ -9,6 +9,8 @@ import { createMockFile } from '../helpers/testUtils';
 import type { IngestionResult } from '@/utils/ingestion';
 import { streamFile, type StreamFileOptions } from '@/utils/ingestion/streamFile';
 
+import { ingestRows } from '../helpers/aggregateRows';
+
 jest.mock('@/utils/ingestion/streamFile', () => ({
   ...jest.requireActual('@/utils/ingestion/streamFile'),
   streamFile: jest.fn(),
@@ -19,14 +21,8 @@ const mockStreamFile = jest.mocked(streamFile);
 // Helper to create mock IngestionResult
 function createMockIngestionResult(rows: unknown[]): IngestionResult {
   return {
-    outputs: {
-      'quota': { quotaByUser: new Map(), conflicts: new Map(), distinctQuotas: new Set(), hasMixedQuotas: false, hasMixedLicenses: false },
-      'usage': { userTotals: new Map(), modelBreakdown: new Map(), globalModelTotals: new Map(), topModelPerUser: new Map() },
-      'dailyBuckets': { dailyUserTotals: new Map(), startDate: new Date(), endDate: new Date() },
-    },
+    ...ingestRows([]),
     rowsProcessed: rows.length,
-    durationMs: 100,
-    warnings: []
   };
 }
 
@@ -129,6 +125,37 @@ describe('CSVUploader', () => {
       expect.arrayContaining(['tokens']),
       expect.any(Object)
     );
+  });
+
+  it.each([
+    [null, ['Aggregator detailPages finalize error: Error: Invalid or overflowing detail token total in inputTokens']],
+    [undefined, ['Aggregator detailPages finalize error: Error: Invalid or overflowing detail token total in inputTokens']],
+    [undefined, []],
+  ])('rejects missing detail output %s with warnings %j and permits a new upload', async (details, warnings) => {
+    const result = createMockIngestionResult([{}, {}]);
+    result.outputs.detailPages = details;
+    result.warnings = warnings;
+    mockStreamFile.mockResolvedValueOnce(result);
+    render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
+    const input = screen.getByLabelText('Upload CSV file');
+    const browse = screen.getByRole('button', { name: 'Drag & drop your CSV file here, or click to browse' });
+
+    await user.upload(input, createMockFile(validCSVString, 'test-failed.csv'));
+
+    await waitFor(() => {
+      expect(mockOnError).toHaveBeenCalledWith(warnings.join('; ') || 'Missing detailPages output in ingestion result');
+      expect(browse).toBeEnabled();
+    });
+    expect(mockOnDataLoad).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /try with sample/i })).toBeEnabled();
+
+    mockStreamFile.mockResolvedValueOnce(createMockIngestionResult(validCSVData));
+    await user.upload(input, createMockFile(validCSVString, 'test-retry.csv'));
+    await waitFor(() => {
+      expect(mockOnDataLoad).toHaveBeenCalledWith(
+        expect.objectContaining({ rowsProcessed: validCSVData.length }), 'test-retry.csv',
+      );
+    });
   });
 
   it('should handle file validation errors for non-CSV files', async () => {
