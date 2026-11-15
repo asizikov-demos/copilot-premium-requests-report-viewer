@@ -2,7 +2,7 @@ import { PRICING } from '@/constants/pricing';
 import {
   buildQuotaArtifactsFromProcessedData,
   buildUsageArtifactsFromProcessedData,
-} from '@/utils/ingestion';
+} from '../helpers/processedArtifacts';
 import { buildUsersExceedingQuota } from '@/utils/ingestion/analytics';
 
 import { makeDailyBucketsArtifacts, makeQuotaArtifacts } from '../helpers/makeArtifacts';

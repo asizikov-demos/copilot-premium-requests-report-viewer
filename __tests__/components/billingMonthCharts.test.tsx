@@ -16,15 +16,14 @@ import { AnalysisContext } from '@/context/AnalysisContext';
 import { getBillingCostLabels } from '@/utils/billingLabels';
 import { aggregateDailyConsumption } from '@/utils/dailyConsumption';
 import {
-  buildDailyBucketsArtifactsFromProcessedData,
   buildDailyCodeReviewUsageFromArtifacts,
   buildDailyCodingAgentUsageFromArtifacts,
   buildDailyCumulativeDataFromArtifacts,
   buildDailyModelUsageFromArtifacts,
-  buildUsageArtifactsFromProcessedData,
 } from '@/utils/ingestion';
 
 import { makeProcessedData } from '../helpers/testUtils';
+import { buildDailyBucketsArtifactsFromProcessedData, buildUsageArtifactsFromProcessedData } from '../helpers/processedArtifacts';
 
 jest.mock('recharts', () => {
   const Chart = ({ data }: { data: unknown }) => <div data-testid="date-chart">{JSON.stringify(data)}</div>;

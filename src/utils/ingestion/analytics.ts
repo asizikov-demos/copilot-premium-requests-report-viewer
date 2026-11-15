@@ -28,10 +28,6 @@ import {
   type UsageArtifacts,
 } from './types';
 import { TokenAggregator } from './TokenAggregator';
-import { UsageAggregator } from './UsageAggregator';
-import { QuotaAggregator } from './QuotaAggregator';
-import { DailyBucketsAggregator } from './DailyBucketsAggregator';
-import { FeatureUsageAggregator } from './FeatureUsageAggregator';
 import { buildNormalizedRowFromProcessedData } from './adapters';
 
 export type { DailyBucketsArtifacts } from './types';
@@ -98,22 +94,6 @@ function runAggregatorOverProcessedData<T>(aggregator: Aggregator<T>, processed:
 
 export function buildTokenArtifactsFromProcessedData(processed: ProcessedData[]): TokenArtifacts {
   return runAggregatorOverProcessedData(new TokenAggregator(), processed);
-}
-
-export function buildUsageArtifactsFromProcessedData(processed: ProcessedData[]): UsageArtifacts {
-  return runAggregatorOverProcessedData(new UsageAggregator(), processed);
-}
-
-export function buildQuotaArtifactsFromProcessedData(processed: ProcessedData[]): QuotaArtifacts {
-  return runAggregatorOverProcessedData(new QuotaAggregator(), processed);
-}
-
-export function buildDailyBucketsArtifactsFromProcessedData(processed: ProcessedData[]): DailyBucketsArtifacts {
-  return runAggregatorOverProcessedData(new DailyBucketsAggregator(), processed);
-}
-
-export function buildFeatureUsageArtifactsFromProcessedData(processed: ProcessedData[]): FeatureUsageArtifacts {
-  return runAggregatorOverProcessedData(new FeatureUsageAggregator(), processed);
 }
 
 /**
