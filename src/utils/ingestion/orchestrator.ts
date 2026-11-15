@@ -13,7 +13,8 @@ import {
   AggregatorContext,
   IngestOptions,
   IngestionResult,
-  IngestionProgress
+  IngestionProgress,
+  UNASSIGNED_BILLING_GROUP
 } from './types';
 
 /**
@@ -28,6 +29,7 @@ export function ingestStream(
   const {
     chunkSize = 1024 * 1024,
     progressResolution = 1000,
+    rowFilter,
     onProgress,
     onComplete,
     onError
@@ -45,6 +47,7 @@ export function ingestStream(
   
   let rowsProcessed = 0;
   let sawLegacyRows = false;
+  let sawSupportedRows = false;
   let failed = false;
   const warnings: string[] = [];
   const t0 = performance.now();
@@ -94,6 +97,15 @@ export function ingestStream(
 
         const normalized = normalizeRow(rawRow, warnings, { normalizeDate: dateNormalizer });
         if (!normalized) continue;
+        sawSupportedRows = true;
+        if (rowFilter && (
+          (rowFilter.user !== undefined && normalized.user !== rowFilter.user) ||
+          (rowFilter.organization !== undefined &&
+            (normalized.organization || UNASSIGNED_BILLING_GROUP) !== rowFilter.organization) ||
+          (rowFilter.costCenter !== undefined &&
+            (normalized.costCenter || UNASSIGNED_BILLING_GROUP) !== rowFilter.costCenter) ||
+          (rowFilter.months?.length && !rowFilter.months.includes(normalized.day.slice(0, 7)))
+        )) continue;
         
         // Dispatch to all aggregators
         for (const aggregator of aggregators) {
@@ -122,7 +134,7 @@ export function ingestStream(
     },
     complete: () => {
       if (failed) return;
-      if (rowsProcessed === 0 && sawLegacyRows) {
+      if (rowsProcessed === 0 && sawLegacyRows && !sawSupportedRows) {
         onError?.('This report contains only unsupported premium-request rows. Please upload an AI Credit billing export.');
         return;
       }
