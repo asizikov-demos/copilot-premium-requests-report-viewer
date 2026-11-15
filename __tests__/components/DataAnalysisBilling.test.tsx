@@ -211,7 +211,7 @@ describe('DataAnalysis billing summary', () => {
   it.each([
     { view: 'Cost Centers', groupName: 'test-cost-center-one' },
     { view: 'Organizations', groupName: 'test-org-one' },
-  ])('scopes $view detail USD consumption to the group on the full selected report period', async ({ view, groupName }) => {
+  ])('scopes $view detail USD consumption to the group on the full report month', async ({ view, groupName }) => {
     const sourceRows: CSVData[] = [
       {
         date: '2026-06-30T23:59:59Z',
@@ -226,7 +226,7 @@ describe('DataAnalysis billing summary', () => {
         net_amount: '0.75',
       },
       {
-        date: '2026-07-15',
+        date: '2026-06-15',
         username: 'test-user-two',
         organization: 'test-org-two',
         cost_center_name: 'test-cost-center-two',
@@ -255,24 +255,9 @@ describe('DataAnalysis billing summary', () => {
         included: index === 29 ? 1.25 : 0,
         additional: index === 29 ? 0.75 : 0,
       })),
-      ...Array.from({ length: 31 }, (_, index) => ({
-        date: `2026-07-${String(index + 1).padStart(2, '0')}`,
-        included: 0,
-        additional: 0,
-      })),
     ]);
 
-    const period = screen.getByRole('group', { name: 'Billing Period' });
-    const monthCheckbox = within(period)
-      .getAllByRole<HTMLInputElement>('checkbox')
-      .find((checkbox) => checkbox.value === '2026-06');
-    expect(monthCheckbox).toBeDefined();
-    fireEvent.click(monthCheckbox!);
-    await screen.findByRole('region', { name: 'Daily Consumption (USD)' });
-    const chartData = JSON.parse(screen.getByTestId('daily-consumption-chart').textContent ?? '');
-    expect(chartData).toHaveLength(30);
-    expect(chartData[0]).toEqual({ date: '2026-06-01', included: 0, additional: 0 });
-    expect(chartData[29]).toEqual({ date: '2026-06-30', included: 1.25, additional: 0.75 });
+    expect(screen.queryByRole('group', { name: 'Billing Period' })).not.toBeInTheDocument();
   });
 
   it('shows 50-user pages in organization details', async () => {

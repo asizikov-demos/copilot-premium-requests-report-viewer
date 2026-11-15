@@ -153,6 +153,7 @@ describe('CSVUploader', () => {
   it.each([
     ['Missing required columns: quantity', invalidCSVData.missingColumns],
     ['Missing required columns: date', invalidCSVData.missingRequiredColumns],
+    ['This report spans multiple months (2026-06 and 2026-07). Please upload a report covering a single calendar month (UTC).', validCSVString],
   ])('forwards the ingestion error callback: %s', async (error, content) => {
     const mockFile = createMockFile(content, 'test.csv');
     
@@ -166,6 +167,7 @@ describe('CSVUploader', () => {
     await waitFor(() => {
       expect(mockOnError).toHaveBeenCalledWith(error);
     });
+    expect(mockOnDataLoad).not.toHaveBeenCalled();
   });
 
   it('should handle empty CSV files', async () => {
