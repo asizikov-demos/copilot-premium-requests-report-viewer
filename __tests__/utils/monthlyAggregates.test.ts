@@ -177,6 +177,28 @@ describe('month-keyed core aggregates', () => {
     expect(() => aggregator.finalize()).toThrow('Token total exceeds the safe integer range');
   });
 
+  it.each(['constructor', 'toString', '__proto__'])('preserves numeric usage for the model key %s', model => {
+    const source = [
+      makeNormalizedRow({ day: '2026-06-01', model, quantity: 2 }),
+      makeNormalizedRow({ day: '2026-06-01', model, quantity: 3, user: '', isUnattributedUsage: true, usageBucket: 'unattributed_ai_credit' }),
+      makeNormalizedRow({ day: '2026-07-01', model, quantity: 5 }),
+      makeNormalizedRow({ day: '2026-07-01', model, quantity: 7, user: '', isUnattributedUsage: true, usageBucket: 'unattributed_ai_credit' }),
+    ];
+    const aggregates = structuredClone(ingest(source));
+    for (const [months, userCredits, bucketCredits] of [
+      [[], 7, 10],
+      [['2026-06'], 2, 3],
+      [['2026-07'], 5, 7],
+      [['2026-06', '2026-07'], 7, 10],
+    ] as const) {
+      const { usageArtifacts } = selectCoreArtifacts(aggregates, months);
+      expect(usageArtifacts.modelTotals[model]).toBe(userCredits + bucketCredits);
+      expect(usageArtifacts.users[0].modelBreakdown[model]).toBe(userCredits);
+      expect(usageArtifacts.users[0]).toMatchObject({ topModel: model, topModelValue: userCredits });
+      expect(usageArtifacts.specialBuckets?.[0].modelBreakdown[model]).toBe(bucketCredits);
+    }
+  });
+
   it('does not turn a failed or absent token artifact into a successful empty result', () => {
     const aggregates = ingest(rows);
     expect(selectCoreArtifacts({ ...aggregates, tokens: null }, ['2026-06']).tokenArtifacts).toBeNull();

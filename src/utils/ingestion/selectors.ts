@@ -2,7 +2,7 @@ import { getQuotaTier, shouldReplaceQuotaValue } from '@/utils/analytics/quota';
 
 import { BillingAccumulator } from './billingAccumulator';
 import { TokenAccumulator, mergeTokenBreakdown } from './TokenAccumulator';
-import { UsageAccumulator } from './UsageAccumulator';
+import { addModelCredits, UsageAccumulator } from './UsageAccumulator';
 import type {
   BillingArtifacts, BillingFieldTotals, BillingGroupTotals, BillingUserTotals,
   DailyBucketsArtifacts, FeatureUsageArtifacts, MonthlyArtifacts, QuotaArtifacts,
@@ -29,7 +29,7 @@ export interface MonthlyAggregates {
 }
 
 function sumRecord(target: Record<string, number>, source: Record<string, number>): void {
-  for (const [key, value] of Object.entries(source)) target[key] = (target[key] ?? 0) + value;
+  for (const [key, value] of Object.entries(source)) addModelCredits(target, key, value);
 }
 
 export function mergeUsageArtifacts(partials: readonly UsageArtifacts[]): UsageArtifacts {

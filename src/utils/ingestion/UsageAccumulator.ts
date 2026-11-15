@@ -27,6 +27,16 @@ interface UserMetadata {
   costCenters: Set<string>;
 }
 
+export function addModelCredits(target: Record<string, number>, model: string, credits: number): void {
+  const previous = Object.hasOwn(target, model) ? target[model] : 0;
+  Object.defineProperty(target, model, {
+    value: previous + credits,
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  });
+}
+
 export class UsageAccumulator {
   private userTotals = new Map<string, number>();
   private userModelTotals = new Map<string, Map<string, number>>();
@@ -56,7 +66,7 @@ export class UsageAccumulator {
       }
       const bucketQuantity = row.quantity;
       bucket.totalCredits += bucketQuantity;
-      bucket.modelBreakdown[row.model] = (bucket.modelBreakdown[row.model] || 0) + bucketQuantity;
+      addModelCredits(bucket.modelBreakdown, row.model, bucketQuantity);
       this.modelTotals.set(row.model, (this.modelTotals.get(row.model) || 0) + row.quantity);
       return;
     }
@@ -134,10 +144,7 @@ export class UsageAccumulator {
         continue;
       }
 
-      const modelBreakdown: Record<string, number> = {};
-      for (const [model, value] of modelMap) {
-        modelBreakdown[model] = value;
-      }
+      const modelBreakdown: Record<string, number> = Object.fromEntries(modelMap);
 
       const topEntry = this.topModelPerUser.get(user);
       const metadata = this.userMetadata.get(user);
