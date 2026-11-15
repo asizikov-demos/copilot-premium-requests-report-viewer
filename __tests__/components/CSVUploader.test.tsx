@@ -7,15 +7,14 @@ import { invalidCSVData } from '../fixtures/invalidCSVData';
 import { newFormatRows } from '../fixtures/newFormatCSVData';
 import { createMockFile } from '../helpers/testUtils';
 import type { IngestionResult } from '@/utils/ingestion';
+import { streamFile, type StreamFileOptions } from '@/utils/ingestion/streamFile';
 
-// Mock the ingestion module
-jest.mock('@/utils/ingestion', () => {
-  const actual = jest.requireActual('@/utils/ingestion');
-  return {
-    ...actual,
-    ingestStream: jest.fn(),
-  };
-});
+jest.mock('@/utils/ingestion/streamFile', () => ({
+  ...jest.requireActual('@/utils/ingestion/streamFile'),
+  streamFile: jest.fn(),
+}));
+
+const mockStreamFile = jest.mocked(streamFile);
 
 // Helper to create mock IngestionResult
 function createMockIngestionResult(rows: unknown[]): IngestionResult {
@@ -39,7 +38,8 @@ describe('CSVUploader', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.requireMock('@/utils/ingestion').ingestStream.mockReset();
+    mockStreamFile.mockReset();
+    mockStreamFile.mockImplementation(() => new Promise(() => {}));
   });
 
   afterEach(() => {
@@ -79,9 +79,9 @@ describe('CSVUploader', () => {
   });
 
   it('announces processing and prevents browsing or additional drops while busy', async () => {
-    const { ingestStream } = jest.requireMock('@/utils/ingestion');
-    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onProgress: (progress: { rowsProcessed: number }) => void }) => {
-      options.onProgress({ rowsProcessed: 1000 });
+    mockStreamFile.mockImplementation((_file, _ids, _filter, options?: StreamFileOptions) => {
+      options?.onProgress?.({ rowsProcessed: 1000 });
+      return new Promise(() => {});
     });
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
     const input = screen.getByLabelText('Upload CSV file');
@@ -97,7 +97,7 @@ describe('CSVUploader', () => {
     const openPicker = jest.spyOn(input, 'click');
     fireEvent.drop(browse, { dataTransfer: { files: [createMockFile(validCSVString, 'second.csv')] } });
     await user.click(browse);
-    expect(ingestStream).toHaveBeenCalledTimes(1);
+    expect(mockStreamFile).toHaveBeenCalledTimes(1);
     expect(openPicker).not.toHaveBeenCalled();
     openPicker.mockRestore();
   });
@@ -116,23 +116,19 @@ describe('CSVUploader', () => {
   });
   it('forwards ingestion completion with the filename and includes the tokens aggregator', async () => {
     const mockFile = createMockFile('new-format.csv content', 'new-format.csv');
-    const { ingestStream } = jest.requireMock('@/utils/ingestion');
-    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onComplete: (result: IngestionResult) => void }) => {
-      setTimeout(() => {
-        options.onComplete(createMockIngestionResult(newFormatRows));
-      }, 0);
-    });
+    mockStreamFile.mockResolvedValue(createMockIngestionResult(newFormatRows));
 
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
     const hiddenInput = document.querySelector('input[type="file"]') as HTMLInputElement;
     await user.upload(hiddenInput, mockFile);
 
     await waitFor(() => {
-      expect(mockOnDataLoad).toHaveBeenCalledWith(expect.objectContaining({ rowsProcessed: newFormatRows.length }), 'new-format.csv');
+      expect(mockOnDataLoad).toHaveBeenCalledWith(expect.objectContaining({ rowsProcessed: newFormatRows.length }), 'new-format.csv', mockFile);
     });
-    expect(ingestStream).toHaveBeenCalledWith(
+    expect(mockStreamFile).toHaveBeenCalledWith(
       mockFile,
-      expect.arrayContaining([expect.objectContaining({ id: 'tokens' })]),
+      expect.arrayContaining(['tokens']),
+      undefined,
       expect.any(Object)
     );
   });
@@ -149,8 +145,7 @@ describe('CSVUploader', () => {
       target: { files: [mockFile] }
     });
 
-    // Should not call ingestStream for non-CSV files
-    expect(jest.requireMock('@/utils/ingestion').ingestStream).not.toHaveBeenCalled();
+    expect(mockStreamFile).not.toHaveBeenCalled();
     await waitFor(() => {
       expect(mockOnError).toHaveBeenCalledWith('Please select a CSV file');
     });
@@ -162,12 +157,7 @@ describe('CSVUploader', () => {
   ])('forwards the ingestion error callback: %s', async (error, content) => {
     const mockFile = createMockFile(content, 'test.csv');
     
-    const { ingestStream } = jest.requireMock('@/utils/ingestion');
-    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onError: (error: string) => void }) => {
-      setTimeout(() => {
-        options.onError(error);
-      }, 0);
-    });
+    mockStreamFile.mockRejectedValue(new Error(error));
 
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
     
@@ -182,12 +172,7 @@ describe('CSVUploader', () => {
   it('should handle empty CSV files', async () => {
     const mockFile = createMockFile(invalidCSVData.emptyFile, 'empty.csv');
     
-    const { ingestStream } = jest.requireMock('@/utils/ingestion');
-    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onComplete: (result: IngestionResult) => void }) => {
-      setTimeout(() => {
-        options.onComplete(createMockIngestionResult([]));
-      }, 0);
-    });
+    mockStreamFile.mockResolvedValue(createMockIngestionResult([]));
 
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
     
@@ -202,12 +187,7 @@ describe('CSVUploader', () => {
   it('should handle Papa Parse errors', async () => {
     const mockFile = createMockFile(validCSVString, 'test.csv');
     
-    const { ingestStream } = jest.requireMock('@/utils/ingestion');
-    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onError: (error: string) => void }) => {
-      setTimeout(() => {
-        options.onError('CSV parsing error: Parse error');
-      }, 0);
-    });
+    mockStreamFile.mockRejectedValue(new Error('CSV parsing error: Parse error'));
 
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
     
@@ -222,12 +202,7 @@ describe('CSVUploader', () => {
   it('should handle file reading errors', async () => {
     const mockFile = createMockFile(validCSVString, 'test.csv');
     
-    const { ingestStream } = jest.requireMock('@/utils/ingestion');
-    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onError: (error: string) => void }) => {
-      setTimeout(() => {
-        options.onError('File reading error: File reading failed');
-      }, 0);
-    });
+    mockStreamFile.mockRejectedValue(new Error('File reading error: File reading failed'));
 
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
     
@@ -242,12 +217,6 @@ describe('CSVUploader', () => {
   it('should show loading state during file processing', async () => {
     const mockFile = createMockFile(validCSVString, 'test.csv');
     
-    // Mock ingestStream to not call complete immediately
-    const { ingestStream } = jest.requireMock('@/utils/ingestion');
-    ingestStream.mockImplementation(() => {
-      // Don't call any callback immediately
-    });
-
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
     
     const hiddenInput = document.querySelector('input[type="file"]') as HTMLInputElement;
@@ -260,12 +229,7 @@ describe('CSVUploader', () => {
   it('should handle drag and drop functionality', async () => {
     const mockFile = createMockFile(validCSVString, 'test.csv');
     
-    const { ingestStream } = jest.requireMock('@/utils/ingestion');
-    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onComplete: (result: IngestionResult) => void }) => {
-      setTimeout(() => {
-        options.onComplete(createMockIngestionResult(validCSVData));
-      }, 0);
-    });
+    mockStreamFile.mockResolvedValue(createMockIngestionResult(validCSVData));
 
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
     
@@ -279,7 +243,7 @@ describe('CSVUploader', () => {
     });
 
     await waitFor(() => {
-      expect(mockOnDataLoad).toHaveBeenCalledWith(expect.objectContaining({ rowsProcessed: validCSVData.length }), 'test.csv');
+      expect(mockOnDataLoad).toHaveBeenCalledWith(expect.objectContaining({ rowsProcessed: validCSVData.length }), 'test.csv', mockFile);
     });
   });
 
@@ -292,12 +256,7 @@ describe('CSVUploader', () => {
       blob: async () => new Blob([sampleCsv], { type: 'text/csv' })
     } as unknown as Response);
 
-    const { ingestStream } = jest.requireMock('@/utils/ingestion');
-    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onComplete: (result: IngestionResult) => void }) => {
-      setTimeout(() => {
-        options.onComplete(createMockIngestionResult([{ date: '2025-10-01', username: 'test-user-one', sku: 'copilot_ai_credit', unit_type: 'ai-credits', model: 'GPT-5', quantity: '1' }]));
-      }, 0);
-    });
+    mockStreamFile.mockResolvedValue(createMockIngestionResult([{ date: '2025-10-01', username: 'test-user-one', sku: 'copilot_ai_credit', unit_type: 'ai-credits', model: 'GPT-5', quantity: '1' }]));
 
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
 
@@ -308,7 +267,8 @@ describe('CSVUploader', () => {
       expect(global.fetch).toHaveBeenCalledWith(expect.stringMatching(/\/data\/ai-credits-example\.csv$/));
       expect(mockOnDataLoad).toHaveBeenCalledWith(
         expect.objectContaining({ rowsProcessed: 1 }),
-        'ai-credits-example.csv'
+        'ai-credits-example.csv',
+        expect.any(File)
       );
     });
   });
@@ -323,12 +283,7 @@ describe('CSVUploader', () => {
 
     global.fetch = jest.fn().mockReturnValue(fetchPromise as unknown as Promise<Response>);
 
-    const { ingestStream } = jest.requireMock('@/utils/ingestion');
-    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onComplete: (result: IngestionResult) => void }) => {
-      setTimeout(() => {
-        options.onComplete(createMockIngestionResult([{ date: '2025-10-01', username: 'test-user-one', sku: 'copilot_ai_credit', unit_type: 'ai-credits', model: 'GPT-5', quantity: '1' }]));
-      }, 0);
-    });
+    mockStreamFile.mockResolvedValue(createMockIngestionResult([{ date: '2025-10-01', username: 'test-user-one', sku: 'copilot_ai_credit', unit_type: 'ai-credits', model: 'GPT-5', quantity: '1' }]));
 
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
 
@@ -348,7 +303,8 @@ describe('CSVUploader', () => {
     await waitFor(() => {
       expect(mockOnDataLoad).toHaveBeenCalledWith(
         expect.objectContaining({ rowsProcessed: 1 }),
-        'ai-credits-example.csv'
+        'ai-credits-example.csv',
+        expect.any(File)
       );
     });
   });
@@ -402,7 +358,6 @@ describe('CSVUploader', () => {
   it('should accept files with extra columns', async () => {
     const mockFile = createMockFile(invalidCSVData.extraColumns, 'test.csv');
     
-    const { ingestStream } = jest.requireMock('@/utils/ingestion');
     const testData = [{
       date: '2025-06-03',
       username: 'test-user-a',
@@ -411,11 +366,7 @@ describe('CSVUploader', () => {
       total_monthly_quota: 'Unknown',
       extra_column: 'extra_value'
     }];
-    ingestStream.mockImplementation((_file: File, _aggregators: unknown[], options: { onComplete: (result: IngestionResult) => void }) => {
-      setTimeout(() => {
-        options.onComplete(createMockIngestionResult(testData));
-      }, 0);
-    });
+    mockStreamFile.mockResolvedValue(createMockIngestionResult(testData));
 
     render(<CSVUploader onDataLoad={mockOnDataLoad} onError={mockOnError} />);
     

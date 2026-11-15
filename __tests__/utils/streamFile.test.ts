@@ -1,0 +1,161 @@
+import { createIngestionWorker } from '@/utils/ingestion/createIngestionWorker';
+import { streamFile } from '@/utils/ingestion/streamFile';
+import { UNASSIGNED_BILLING_GROUP, type NormalizedRow } from '@/utils/ingestion/types';
+import type { IngestionResponse } from '@/utils/ingestion/workerProtocol';
+
+jest.mock('@/utils/ingestion/createIngestionWorker', () => ({
+  createIngestionWorker: jest.fn(),
+}));
+
+const csv = [
+  'date,username,sku,model,quantity,organization,cost_center_name',
+  '2026-06-30T23:30:00Z,test-user-one,copilot_ai_credit,test-model-one,2,test-org-one,test-cost-center-one',
+  '2026-07-01T00:30:00Z,test-user-one,copilot_ai_credit,test-model-one,3,test-org-one,test-cost-center-one',
+  '2026-07-02,test-user-two,copilot_ai_credit,test-model-one,5,test-org-one,test-cost-center-two',
+  '2026-07-03,test-user-one,copilot_ai_credit,test-model-one,7,,',
+].join('\n');
+
+interface FileChunk {
+  content: string;
+}
+
+class MockFileReader {
+  onload: ((event: { target: { result: string } }) => void) | null = null;
+
+  readAsText(chunk: FileChunk): void {
+    this.onload?.({ target: { result: chunk.content } });
+  }
+}
+
+function createFile(content: string): File {
+  const file = new File([content], 'test-usage.csv');
+  Object.defineProperties(file, {
+    size: { value: content.length },
+    slice: { value: (start = 0, end = content.length) => ({ content: content.slice(start, end) }) },
+  });
+  return file;
+}
+
+describe('streamFile without Worker support', () => {
+  const originalFileReader = globalThis.FileReader;
+
+  beforeEach(() => {
+    globalThis.FileReader = MockFileReader as unknown as typeof FileReader;
+  });
+
+  afterEach(() => {
+    globalThis.FileReader = originalFileReader;
+  });
+
+  it('re-streams a File and applies user, group, and UTC month filters before aggregation', async () => {
+    const file = createFile(csv);
+    const result = await streamFile(file, ['rawData'], {
+      user: 'test-user-one',
+      organization: 'test-org-one',
+      costCenter: 'test-cost-center-one',
+      months: ['2026-07'],
+    }, { chunkSize: 64 });
+
+    expect(result.rowsProcessed).toBe(1);
+    expect(result.outputs.rawData).toEqual([
+      expect.objectContaining({ user: 'test-user-one', day: '2026-07-01', quantity: 3 }),
+    ]);
+    expect(result.warnings).toEqual([]);
+
+    const unassigned = await streamFile(file, ['rawData'], {
+      costCenter: UNASSIGNED_BILLING_GROUP,
+      months: [],
+    });
+    expect(unassigned.outputs.rawData).toEqual([
+      expect.objectContaining({ quantity: 7 }),
+    ]);
+  });
+
+  it('returns empty outputs when no rows match, without retaining unfiltered rows', async () => {
+    const file = createFile(csv);
+    const result = await streamFile(file, ['rawData'], { user: 'test-user-three' });
+    expect(result.rowsProcessed).toBe(0);
+    expect(result.outputs.rawData).toEqual([]);
+    expect((await streamFile(file, ['rawData'])).outputs.rawData as NormalizedRow[]).toHaveLength(4);
+  });
+
+  it('rejects parser errors instead of resolving a partial result', async () => {
+    const file = createFile(
+      'date,username,sku,model,quantity\n2026-07-01,test-user-one,copilot_ai_credit,test-model-one,1,extra',
+    );
+    await expect(streamFile(file, ['rawData'])).rejects.toThrow('CSV parsing error:');
+  });
+
+  it('does not misclassify a filtered mixed export as legacy-only', async () => {
+    const file = createFile([
+      csv,
+      '2026-07-04,test-user-two,copilot_premium_request,test-model-one,1,,',
+    ].join('\n'));
+    const result = await streamFile(file, ['rawData'], { user: 'test-user-three' });
+    expect(result.rowsProcessed).toBe(0);
+    expect(result.outputs.rawData).toEqual([]);
+  });
+});
+
+describe('streamFile worker transport', () => {
+  const originalWorker = globalThis.Worker;
+  const postMessage = jest.fn();
+  const terminate = jest.fn();
+  let worker: Worker;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    globalThis.Worker = jest.fn();
+    worker = { postMessage, terminate } as unknown as Worker;
+    jest.mocked(createIngestionWorker).mockReturnValue(worker);
+  });
+
+  afterEach(() => {
+    globalThis.Worker = originalWorker;
+  });
+
+  async function start() {
+    const file = new File([csv], 'test-usage.csv');
+    const onProgress = jest.fn();
+    const result = streamFile(file, ['usage'], { user: 'test-user-one' }, { onProgress });
+    await Promise.resolve();
+    return { file, onProgress, result };
+  }
+
+  it('sends the File and aggregator ids, forwards progress, and preserves opaque Maps/Sets', async () => {
+    const { file, onProgress, result } = await start();
+    expect(postMessage).toHaveBeenCalledWith(expect.objectContaining({
+      file,
+      aggregatorIds: ['usage'],
+      rowFilter: { user: 'test-user-one' },
+    }));
+    const send = (data: IngestionResponse) => worker.onmessage?.(new MessageEvent('message', { data }));
+    send({ type: 'progress', progress: { rowsProcessed: 1000 } });
+    expect(onProgress).toHaveBeenCalledWith({ rowsProcessed: 1000 });
+
+    const output = {
+      outputs: { usage: new Map([['2026-07', { users: new Set(['test-user-one']) }]]) },
+      rowsProcessed: 1000,
+      durationMs: 1,
+      warnings: [],
+    };
+    send({ type: 'complete', result: output });
+    await expect(result).resolves.toBe(output);
+    expect(terminate).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['ingestion', 'runtime', 'deserialization', 'postMessage'])('rejects %s failures and terminates the worker', async failure => {
+    if (failure === 'postMessage') postMessage.mockImplementationOnce(() => { throw new Error('transfer failed'); });
+    const { result } = await start();
+    const rejection = expect(result).rejects.toThrow();
+    if (failure === 'ingestion') {
+      worker.onmessage?.(new MessageEvent('message', { data: { type: 'error', error: 'parse failed' } }));
+    } else if (failure === 'runtime') {
+      worker.onerror?.(new ErrorEvent('error', { message: 'worker failed', cancelable: true }));
+    } else if (failure === 'deserialization') {
+      worker.onmessageerror?.(new MessageEvent('messageerror'));
+    }
+    await rejection;
+    expect(terminate).toHaveBeenCalledTimes(1);
+  });
+});
