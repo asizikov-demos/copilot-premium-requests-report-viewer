@@ -7,7 +7,7 @@ import type { TokenCounts } from '@/types/tokens';
 import type { UsageUnitKind } from '@/utils/unitType';
 
 export const UNATTRIBUTED_AI_CREDIT_BUCKET = 'unattributed_ai_credit' as const;
-export const UNATTRIBUTED_AI_CREDIT_LABEL = 'Unattributed AI Credits' as const;
+const UNATTRIBUTED_AI_CREDIT_LABEL = 'Unattributed AI Credits' as const;
 export const UNASSIGNED_BILLING_GROUP = 'Unassigned' as const;
 
 export type SpecialUsageBucketKey = typeof UNATTRIBUTED_AI_CREDIT_BUCKET;

@@ -13,7 +13,7 @@
  * `new Date("5/29/26")` would apply (violating the app's UTC-only rule).
  */
 
-export type DateFormat = 'iso' | 'us-slash' | 'unknown';
+type DateFormat = 'iso' | 'us-slash' | 'unknown';
 
 /** Converts a single date value into ISO `YYYY-MM-DD`, or `null` if unsupported. */
 export type DateNormalizer = (value: string) => string | null;

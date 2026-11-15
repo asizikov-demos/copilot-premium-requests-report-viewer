@@ -68,7 +68,7 @@ function collectFeatureUsers(
 }
 
 /** Build time frame (start/end) from daily bucket date range. */
-export function buildTimeFrame(daily: DailyBucketsArtifacts): { start: string; end: string } {
+function buildTimeFrame(daily: DailyBucketsArtifacts): { start: string; end: string } {
   if (!daily.dateRange) return { start: '', end: '' };
   return { start: daily.dateRange.min, end: daily.dateRange.max };
 }
@@ -78,12 +78,12 @@ export function buildTimeFrame(daily: DailyBucketsArtifacts): { start: string; e
  * Delegates tier classification to the shared classifyQuotaMap to avoid
  * duplicating quota tier logic.
  */
-export function buildQuotaBreakdownFromArtifacts(quota: QuotaArtifacts): AnalysisResults['quotaBreakdown'] {
+function buildQuotaBreakdownFromArtifacts(quota: QuotaArtifacts): AnalysisResults['quotaBreakdown'] {
   return classifyQuotaMap(quota.quotaByUser);
 }
 
 /** Build creditsByModel array from usageArtifacts.modelTotals */
-export function buildCreditsByModel(usage: UsageArtifacts): Array<{ model: string; totalCredits: number }> {
+function buildCreditsByModel(usage: UsageArtifacts): Array<{ model: string; totalCredits: number }> {
   return Object.entries(usage.modelTotals)
     .map(([model, totalCredits]) => ({ model, totalCredits }))
     .sort((a, b) => b.totalCredits - a.totalCredits);
@@ -128,14 +128,10 @@ export function deriveAnalysisFromArtifacts(
   };
 }
 
-export interface ArtifactCoreAnalysis {
-  analysis: AnalysisResults;
-}
-
 // -----------------------------
 // Daily Cumulative (Buckets)
 // -----------------------------
-export interface DailyCumulativeData { date: string; [user: string]: string | number; }
+interface DailyCumulativeData { date: string; [user: string]: string | number; }
 
 /**
  * Construct daily cumulative per-user usage series from daily user totals.

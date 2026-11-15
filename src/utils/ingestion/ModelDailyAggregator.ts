@@ -13,7 +13,7 @@ export const MODEL_BUCKETS = [
   { label: 'Fusion (Max)', prefix: 'Fusion (Max):' },
 ] as const;
 
-export interface ModelCommercialTotals {
+interface ModelCommercialTotals {
   grossAmount: number;
   additionalUsage: number;
 }

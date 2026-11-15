@@ -4,7 +4,7 @@ function normalizeUsageValue(value: string | undefined): string {
   return value?.trim().toLowerCase() ?? '';
 }
 
-export function isAiCreditUnitType(unitType: string | undefined): boolean {
+function isAiCreditUnitType(unitType: string | undefined): boolean {
   const normalizedUnitType = normalizeUsageValue(unitType);
   return normalizedUnitType === 'ai-credit' || normalizedUnitType === 'ai-credits';
 }

@@ -7,7 +7,7 @@ import {
 } from './types';
 import { isCodingAgentModel } from '@/utils/productClassification';
 
-export interface UsageAccumulationRow {
+interface UsageAccumulationRow {
   user: string;
   model: string;
   sku?: string;
@@ -26,7 +26,7 @@ interface UserMetadata {
   costCenters: Set<string>;
 }
 
-export function addModelCredits(target: Record<string, number>, model: string, credits: number): void {
+function addModelCredits(target: Record<string, number>, model: string, credits: number): void {
   const previous = Object.hasOwn(target, model) ? target[model] : 0;
   Object.defineProperty(target, model, {
     value: previous + credits,

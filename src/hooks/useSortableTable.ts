@@ -2,12 +2,12 @@ import { useState, useMemo, useCallback } from 'react';
 
 export type SortDirection = 'asc' | 'desc';
 
-export interface SortState<T extends string = string> {
+interface SortState<T extends string = string> {
   sortBy: T | null;
   sortDirection: SortDirection;
 }
 
-export interface UseSortableTableParams<Row, ColumnKey extends string> {
+interface UseSortableTableParams<Row, ColumnKey extends string> {
   data: Row[];
   defaultSort?: { column: ColumnKey; direction?: SortDirection };
   getSortableValue: (row: Row, column: ColumnKey) => number | string | undefined | null;
@@ -15,7 +15,7 @@ export interface UseSortableTableParams<Row, ColumnKey extends string> {
   stable?: boolean; // default true
 }
 
-export interface UseSortableTableResult<Row, ColumnKey extends string> extends SortState<ColumnKey> {
+interface UseSortableTableResult<Row, ColumnKey extends string> extends SortState<ColumnKey> {
   sortedData: Row[];
   handleSort: (column: ColumnKey) => void;
   isSorted: (column: ColumnKey) => boolean;
