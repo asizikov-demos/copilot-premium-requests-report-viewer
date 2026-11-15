@@ -43,6 +43,25 @@ export interface DetailArtifacts {
   dailyConsumption: DailyConsumptionDatum[];
 }
 
+interface ModelBucket {
+  quantity: number;
+  costs: Map<string, Float64Array>;
+  cache: Float64Array;
+}
+
+export interface CompactDetailArtifacts {
+  hasBillingData: boolean;
+  header: ReturnType<UserHeaderAccumulator['finalize']>;
+  consumption: UserConsumption;
+  totals: CostTotals;
+  products: ReturnType<typeof createEmptyProductCostMap>;
+  dailyProducts: Map<string, ReturnType<typeof createEmptyProductCostMap>>;
+  costCenters: Map<string, CostTotals & { name: string }>;
+  users: Map<string, CostTotals & { user: string }>;
+  dailyModels: Map<string, Map<string, ModelBucket>>;
+  dailyConsumption: Map<string, DailyConsumptionDatum>;
+}
+
 function emptyCosts(): CostTotals {
   return { quantity: 0, gross: 0, discount: 0, net: 0, aicGrossAmount: 0 };
 }
@@ -63,7 +82,7 @@ function addCredits(target: CreditTotals, quantity: number | undefined): void {
 }
 
 /** Compact drill-down buckets; source rows are never retained. */
-export class DetailAggregator implements Aggregator<DetailArtifacts> {
+export class DetailAggregator implements Aggregator<CompactDetailArtifacts> {
   readonly id = 'details';
   private header = new UserHeaderAccumulator();
   private totals = emptyCosts();
@@ -71,10 +90,7 @@ export class DetailAggregator implements Aggregator<DetailArtifacts> {
   private dailyProducts = new Map<string, ReturnType<typeof createEmptyProductCostMap>>();
   private costCenters = new Map<string, CostTotals & { name: string }>();
   private users = new Map<string, CostTotals & { user: string }>();
-  private models = new Set<string>();
-  private dailyModels = new Map<string, DetailDailyModelRow>();
-  private dailyModelTotals = new Map<string, Record<string, number>>();
-  private cache = new Map<string, { input: number; read: number; write: number; reportedRows: number; totalRows: number }>();
+  private dailyModels = new Map<string, Map<string, ModelBucket>>();
   private dailyConsumption = new Map<string, DailyConsumptionDatum>();
   private credits: CreditTotals = { rowCount: 0, reportedRows: 0 };
   private creditsByModel = new Map<string, CreditTotals>();
@@ -82,7 +98,6 @@ export class DetailAggregator implements Aggregator<DetailArtifacts> {
 
   onRow(row: NormalizedRow): void {
     this.header.add(row);
-    this.models.add(row.model);
     this.hasBillingData ||= [row.grossAmount, row.discountAmount, row.netAmount, row.aicGrossAmount]
       .some(value => value !== undefined);
     addCosts(this.totals, row);
@@ -100,30 +115,29 @@ export class DetailAggregator implements Aggregator<DetailArtifacts> {
       addCosts(costs, row);
       this.users.set(row.user, costs);
     }
-    const key = JSON.stringify([row.day, row.model, row.costCenter ?? '']);
-    const model = this.dailyModels.get(key) ?? {
-      date: row.day, model: row.model, costCenter: row.costCenter,
-      credits: 0, gross: 0, discount: 0, net: 0, aicGrossAmount: 0, isFirstInDate: false, rowSpan: 1,
-    };
-    model.credits += row.quantity;
-    model.gross += row.grossAmount ?? 0;
-    model.discount += row.discountAmount ?? 0;
-    model.net += row.netAmount ?? 0;
-    model.aicGrossAmount += row.aicGrossAmount ?? 0;
-    this.dailyModels.set(key, model);
-    const daily = this.dailyModelTotals.get(row.day) ?? {};
-    daily[row.model] = (daily[row.model] ?? 0) + row.quantity;
-    this.dailyModelTotals.set(row.day, daily);
-    const cacheKey = JSON.stringify([row.day, row.model]);
-    const cache = this.cache.get(cacheKey) ?? { input: 0, read: 0, write: 0, reportedRows: 0, totalRows: 0 };
-    cache.totalRows++;
+    let dayModels = this.dailyModels.get(row.day);
+    if (!dayModels) this.dailyModels.set(row.day, dayModels = new Map());
+    let model = dayModels.get(row.model);
+    if (!model) dayModels.set(row.model, model = { quantity: 0, costs: new Map(), cache: new Float64Array(5) });
+    model.quantity += row.quantity;
+    const center = row.costCenter ?? '';
+    let costs = model.costs.get(center);
+    if (!costs) model.costs.set(center, costs = new Float64Array(5));
+    // quantity, gross, discount, net, AI-credit gross; no presentation fields.
+    costs[0] += row.quantity;
+    costs[1] += row.grossAmount ?? 0;
+    costs[2] += row.discountAmount ?? 0;
+    costs[3] += row.netAmount ?? 0;
+    costs[4] += row.aicGrossAmount ?? 0;
+    const cache = model.cache;
+    // input, cache read, cache write, complete rows, all rows.
+    cache[4]++;
     if (row.inputTokens !== undefined && row.cacheReadTokens !== undefined && row.cacheWriteTokens !== undefined) {
-      cache.input += row.inputTokens;
-      cache.read += row.cacheReadTokens;
-      cache.write += row.cacheWriteTokens;
-      cache.reportedRows++;
+      cache[0] += row.inputTokens;
+      cache[1] += row.cacheReadTokens;
+      cache[2] += row.cacheWriteTokens;
+      cache[3]++;
     }
-    this.cache.set(cacheKey, cache);
     if (row.discountAmount !== undefined || row.netAmount !== undefined) {
       const day = this.dailyConsumption.get(row.day) ?? { date: row.day, included: 0, additional: 0 };
       day.included += row.discountAmount ?? 0;
@@ -139,10 +153,22 @@ export class DetailAggregator implements Aggregator<DetailArtifacts> {
     this.creditsByModel.set(row.model, credits);
   }
 
-  finalize(): DetailArtifacts {
-    const sortedDays = [...this.dailyProducts.keys()].sort();
+  finalize(): CompactDetailArtifacts {
+    return {
+      hasBillingData: this.hasBillingData, header: this.header.finalize(),
+      consumption: { credits: this.credits, creditsByModel: this.creditsByModel },
+      totals: this.totals, products: this.products, dailyProducts: this.dailyProducts,
+      costCenters: this.costCenters, users: this.users, dailyModels: this.dailyModels,
+      dailyConsumption: this.dailyConsumption,
+    };
+  }
+}
+
+/** Materialize only the selected scope; never store padded/sorted view models for every user. */
+export function selectDetailArtifacts(compact: CompactDetailArtifacts): DetailArtifacts {
+    const sortedDays = [...compact.dailyProducts.keys()].sort();
     const dailyRows = sortedDays.length === 0 ? [] : enumerateDatesInclusive(sortedDays[0], sortedDays.at(-1)!).map(date => {
-      const bucket = this.dailyProducts.get(date);
+      const bucket = compact.dailyProducts.get(date);
       const products = bucket ? getPopulatedProductCosts(bucket) : [];
       return products.reduce((totals, product) => ({
         ...totals, quantity: totals.quantity + product.credits,
@@ -150,7 +176,28 @@ export class DetailAggregator implements Aggregator<DetailArtifacts> {
         net: totals.net + product.net, aicGrossAmount: totals.aicGrossAmount + product.aicGrossAmount,
       }), { ...emptyCosts(), date, products });
     });
-    const dailyModels = [...this.dailyModels.values()].sort((a, b) =>
+    const dailyModels: DetailDailyModelRow[] = [];
+    const dailyModelTotals = new Map<string, Record<string, number>>();
+    for (const [date, models] of compact.dailyModels) {
+      const totals: Record<string, number> = Object.create(null);
+      dailyModelTotals.set(date, totals);
+      for (const [model, bucket] of models) {
+        totals[model] = bucket.quantity;
+        const [input, read, write, reportedRows, totalRows] = bucket.cache;
+        const total = input + read + write;
+        const cacheSuccessRate = reportedRows > 0 && total > 0
+          ? { percent: read / total * 100, reportedRows, totalRows } : undefined;
+        for (const [costCenter, costs] of bucket.costs) {
+          dailyModels.push({
+            date, model, costCenter: costCenter || undefined,
+            credits: costs[0], gross: costs[1], discount: costs[2], net: costs[3],
+            aicGrossAmount: costs[4], isFirstInDate: false, rowSpan: 1,
+            ...(cacheSuccessRate ? { cacheSuccessRate } : {}),
+          });
+        }
+      }
+    }
+    dailyModels.sort((a, b) =>
       a.date.localeCompare(b.date) || a.model.localeCompare(b.model) ||
       (a.costCenter ?? '').localeCompare(b.costCenter ?? ''));
     const dateSpans = new Map<string, number>();
@@ -160,23 +207,15 @@ export class DetailAggregator implements Aggregator<DetailArtifacts> {
       row.rowSpan = dateSpans.get(row.date)!;
       row.isFirstInDate = !seenDates.has(row.date);
       seenDates.add(row.date);
-      const cache = this.cache.get(JSON.stringify([row.date, row.model]))!;
-      const total = cache.input + cache.read + cache.write;
-      if (cache.reportedRows > 0 && total > 0) {
-        row.cacheSuccessRate = {
-          percent: cache.read / total * 100, reportedRows: cache.reportedRows, totalRows: cache.totalRows,
-        };
-      }
     }
     return {
-      hasBillingData: this.hasBillingData, models: [...this.models].sort(),
-      header: this.header.finalize(), consumption: { credits: this.credits, creditsByModel: this.creditsByModel },
-      totals: this.totals, productCosts: getPopulatedProductCosts(this.products), dailyRows, dailyModels,
-      costCenterCosts: [...this.costCenters.values()].sort((a, b) => b.net - a.net || a.name.localeCompare(b.name)),
-      userRows: [...this.users.values()].sort((a, b) => b.net - a.net || b.quantity - a.quantity || a.user.localeCompare(b.user)),
-      dailyModelTotals: this.dailyModelTotals, dailyConsumption: [...this.dailyConsumption.values()],
+      hasBillingData: compact.hasBillingData, models: [...compact.consumption.creditsByModel.keys()].sort(),
+      header: compact.header, consumption: compact.consumption,
+      totals: compact.totals, productCosts: getPopulatedProductCosts(compact.products), dailyRows, dailyModels,
+      costCenterCosts: [...compact.costCenters.values()].sort((a, b) => b.net - a.net || a.name.localeCompare(b.name)),
+      userRows: [...compact.users.values()].sort((a, b) => b.net - a.net || b.quantity - a.quantity || a.user.localeCompare(b.user)),
+      dailyModelTotals, dailyConsumption: [...compact.dailyConsumption.values()],
     };
-  }
 }
 
 export function selectDetailTimeline(details: DetailArtifacts, reportMonth: string | undefined) {

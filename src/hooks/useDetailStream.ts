@@ -3,7 +3,7 @@
 import { useContext, useEffect, useState } from 'react';
 
 import { AnalysisContext } from '@/context/AnalysisContext';
-import type { DetailArtifacts } from '@/utils/ingestion/DetailAggregator';
+import { selectDetailArtifacts, type CompactDetailArtifacts, type DetailArtifacts } from '@/utils/ingestion/DetailAggregator';
 import { streamFile, type RowFilter } from '@/utils/ingestion/streamFile';
 import type { IngestionProgress, TokenArtifacts } from '@/utils/ingestion/types';
 
@@ -46,12 +46,12 @@ export function useDetailStream(filter: RowFilter) {
       },
     }).then(result => {
       if (controller.signal.aborted) return;
-      const details = result.outputs.details as DetailArtifacts | null | undefined;
+      const compact = result.outputs.details as CompactDetailArtifacts | null | undefined;
       const tokens = result.outputs.tokens as TokenArtifacts | null | undefined;
-      if (!details || !tokens || result.warnings.some(warning => warning.startsWith('Aggregator '))) {
+      if (!compact || !tokens || result.warnings.some(warning => warning.startsWith('Aggregator '))) {
         throw new Error(result.warnings.join('; ') || 'Missing detail aggregation output');
       }
-      const data = { details, tokens, warnings: result.warnings };
+      const data = { details: selectDetailArtifacts(compact), tokens, warnings: result.warnings };
       let entries = cache.get(file);
       if (!entries) {
         entries = new Map();

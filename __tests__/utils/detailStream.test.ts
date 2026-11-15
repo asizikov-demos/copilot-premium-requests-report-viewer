@@ -9,7 +9,8 @@ import { aggregateDailyConsumption } from '@/utils/dailyConsumption';
 import { buildBillingMonthDates, enumerateDatesInclusive } from '@/utils/dateKeys';
 import { normalizeRows } from '../helpers/normalizeRows';
 import { buildUserDailyModelDataFromArtifacts } from '@/utils/ingestion/analytics';
-import { selectDetailTimeline, type DetailArtifacts } from '@/utils/ingestion/DetailAggregator';
+import { selectDetailArtifacts, selectDetailTimeline, type CompactDetailArtifacts } from '@/utils/ingestion/DetailAggregator';
+import { DetailPagesAggregator, selectUserDetails, selectBillingGroupDetails } from '@/utils/ingestion/DetailPagesAggregator';
 import { streamFile } from '@/utils/ingestion/streamFile';
 import type { RowFilter, TokenArtifacts } from '@/utils/ingestion/types';
 import { aggregateProductCosts } from '@/utils/productCosts';
@@ -20,6 +21,7 @@ import { buildDailyBucketsArtifactsFromRows, buildUsageArtifactsFromRows } from 
 import { buildUserConsumption } from '../helpers/consumptionReference';
 import { createStreamingFile, MockFileReader } from '../helpers/streamingFile';
 import { makeModelDailyArtifacts } from '../helpers/modelDailyArtifacts';
+import { aggregateRows } from '../helpers/aggregateRows';
 
 const csv = readFileSync(path.join(process.cwd(), '__tests__/fixtures/detail-usage.csv'), 'utf8');
 const rows = normalizeRows(Papa.parse<CSVData>(csv, { header: true, skipEmptyLines: true }).data);
@@ -48,8 +50,15 @@ describe('filtered detail stream parity', () => {
       const result = await streamFile(createStreamingFile(csv), ['details', 'tokens'], filter, { chunkSize: 128 });
       expect(result.warnings).toEqual([]);
       expect(result.rowsProcessed).toBe(selected.length);
-      const details = result.outputs.details as DetailArtifacts;
+      const details = selectDetailArtifacts(result.outputs.details as CompactDetailArtifacts);
       const tokens = result.outputs.tokens as TokenArtifacts;
+      const precomputed = aggregateRows(new DetailPagesAggregator(), rows);
+      const data = filter.user
+        ? selectUserDetails(precomputed, filter.user)
+        : selectBillingGroupDetails(precomputed, filter.organization ? 'organization' : 'costCenter',
+          (filter.organization ?? filter.costCenter)!);
+      expect(data.details).toEqual(details);
+      if ('tokens' in data) expect(data.tokens).toEqual(tokens);
       const reportMonth = '2026-07';
       const modelDaily = makeModelDailyArtifacts(selected);
       expect(details.productCosts).toEqual(aggregateProductCosts(modelDaily.productCosts));
@@ -87,7 +96,7 @@ describe('filtered detail stream parity', () => {
 
   it('combines complete cache counts across cost centers without treating missing counts as zero', async () => {
     const result = await streamFile(createStreamingFile(csv), ['details'], { user: 'test-user-one' });
-    const details = result.outputs.details as DetailArtifacts;
+    const details = selectDetailArtifacts(result.outputs.details as CompactDetailArtifacts);
     expect(details.dailyModels.filter(row => row.date === '2026-07-10')).toEqual([
       expect.objectContaining({ credits: 2, rowSpan: 2, isFirstInDate: true,
         cacheSuccessRate: { percent: 60, reportedRows: 2, totalRows: 3 } }),
@@ -105,12 +114,12 @@ describe('filtered detail stream parity', () => {
     const tokenCsv = 'date,username,sku,model,quantity,input\n2026-07-01,test-user-one,copilot_ai_credit,test-model-one,1,20';
     const file = createStreamingFile(tokenCsv);
     const result = await streamFile(file, ['details', 'tokens'], { user: 'test-user-one' });
-    const details = result.outputs.details as DetailArtifacts;
+    const details = selectDetailArtifacts(result.outputs.details as CompactDetailArtifacts);
     expect(details.hasBillingData).toBe(false);
     expect(summarizeUserHeader(details.header, 'unknown', false).totalCost).toBeNull();
     expect((result.outputs.tokens as TokenArtifacts).totals.inputTokens).toBe(20);
     const empty = await streamFile(file, ['details'], { user: 'test-user-two' });
-    expect(selectDetailTimeline(empty.outputs.details as DetailArtifacts, '2026-07'))
+    expect(selectDetailTimeline(selectDetailArtifacts(empty.outputs.details as CompactDetailArtifacts), '2026-07'))
       .toEqual({ userDailyData: [], dailyConsumption: [] });
   });
 });

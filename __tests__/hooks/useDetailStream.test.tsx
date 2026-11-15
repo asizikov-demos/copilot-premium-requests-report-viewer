@@ -5,6 +5,7 @@ import { AnalysisProvider } from '@/context/AnalysisContext';
 import { useDetailStream } from '@/hooks/useDetailStream';
 import { streamFile } from '@/utils/ingestion/streamFile';
 import type { IngestionResult } from '@/utils/ingestion/types';
+import { DetailAggregator } from '@/utils/ingestion/DetailAggregator';
 
 import { detailFixture } from '../helpers/detailFixtures';
 import { ingestRows } from '../helpers/aggregateRows';
@@ -18,7 +19,9 @@ const mockedStream = jest.mocked(streamFile);
 
 function output(): IngestionResult {
   const { details, tokens } = detailFixture([makeUsageRow({ inputTokens: 10 })]);
-  return { outputs: { details, tokens }, rowsProcessed: 1, durationMs: 1, warnings: [] };
+  const aggregator = new DetailAggregator();
+  aggregator.onRow(makeUsageRow({ inputTokens: 10 }));
+  return { outputs: { details: aggregator.finalize(), tokens }, rowsProcessed: details.consumption.credits.rowCount, durationMs: 1, warnings: [] };
 }
 
 describe('useDetailStream lifecycle', () => {
