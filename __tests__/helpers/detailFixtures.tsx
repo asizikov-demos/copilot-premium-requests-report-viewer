@@ -5,7 +5,7 @@ import { UserConsumptionMetrics as ConsumptionMetrics } from '@/components/UserC
 import { UserDetailsContent, type UserDetailsViewProps } from '@/components/UserDetailsView';
 import { AnalysisContext } from '@/context/AnalysisContext';
 import type { NormalizedRow } from '@/utils/ingestion';
-import { DetailAggregator } from '@/utils/ingestion/DetailAggregator';
+import { DetailAggregator, selectDetailArtifacts } from '@/utils/ingestion/DetailAggregator';
 import { TokenAccumulator } from '@/utils/ingestion/TokenAccumulator';
 import { UserHeaderAccumulator, summarizeUserHeader } from '@/utils/userHeaderSummary';
 
@@ -17,14 +17,14 @@ export function buildUserHeaderSummary(rows: NormalizedRow[], quota: number | 'u
   return summarizeUserHeader(accumulator.finalize(), quota, hasBillingData);
 }
 
-export function detailFixture(rows: NormalizedRow[]) {
+function detailFixture(rows: NormalizedRow[]) {
   const details = new DetailAggregator();
   const tokens = new TokenAccumulator();
   for (const row of rows) {
     details.onRow(row);
     tokens.addRow(row);
   }
-  return { details: details.finalize(), tokens: tokens.finalize() };
+  return { details: selectDetailArtifacts(details.finalize()), tokens: tokens.finalize() };
 }
 
 export function UserDetailsView({ rows, ...props }: UserDetailsViewProps & { rows: NormalizedRow[] }) {

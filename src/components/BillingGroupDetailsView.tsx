@@ -2,11 +2,12 @@
 
 import React, { useMemo, useState } from 'react';
 import { ChevronRightIcon, CopyIcon, SearchIcon } from '@primer/octicons-react';
-import { Banner, FormControl, TextInput } from '@primer/react';
+import { FormControl, TextInput } from '@primer/react';
 
 import { DailyConsumptionChart } from '@/components/charts/DailyConsumptionChart';
-import { DetailStreamStatus } from '@/components/DetailStreamStatus';
-import { useDetailStream, type DetailResult } from '@/hooks/useDetailStream';
+import { useAnalysisContext } from '@/context/AnalysisContext';
+import { selectBillingGroupDetails } from '@/utils/ingestion/DetailPagesAggregator';
+import type { DetailArtifacts } from '@/utils/ingestion/DetailAggregator';
 import { ModelDailyStackedChart } from '@/components/charts/ModelDailyStackedChart';
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '@/components/primitives/TablePagination';
 import { dataVizColor } from '@/constants/primerTokens';
@@ -48,8 +49,9 @@ export interface BillingGroupDetailsViewProps {
 }
 
 export function BillingGroupDetailsView(props: BillingGroupDetailsViewProps) {
-  const { data, error, progress, reportMonth } = useDetailStream({ [props.groupKind]: props.groupName });
-  if (!data) return <DetailStreamStatus error={error} progress={progress} onBack={props.onBack} />;
+  const { detailPagesArtifacts, reportMonth } = useAnalysisContext();
+  const data = useMemo(() => selectBillingGroupDetails(detailPagesArtifacts, props.groupKind, props.groupName),
+    [detailPagesArtifacts, props.groupKind, props.groupName]);
   return <BillingGroupDetailsContent {...props} data={data} reportMonth={reportMonth} />;
 }
 
@@ -65,7 +67,7 @@ export function BillingGroupDetailsContent({
   hasAicGross,
   showUsers = false,
   onBack,
-}: BillingGroupDetailsViewProps & { data: DetailResult; reportMonth?: string }) {
+}: BillingGroupDetailsViewProps & { data: { details: DetailArtifacts }; reportMonth?: string }) {
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [userSearch, setUserSearch] = useState('');
   const [userPage, setUserPage] = useState(0);
@@ -129,7 +131,6 @@ export function BillingGroupDetailsContent({
 
   return (
     <div className="space-y-6">
-      {data.warnings?.length ? <Banner variant="warning" title="Report warnings" description={data.warnings.join('; ')} /> : null}
       <div>
         <nav aria-label="Breadcrumb">
           <ol className="flex items-center gap-2">

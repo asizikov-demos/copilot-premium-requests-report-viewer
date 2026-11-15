@@ -4,6 +4,7 @@ import React, { createContext, useContext, useMemo, useState, ReactNode } from '
 
 import { PRICING } from '@/constants/pricing';
 import { useArtifactAnalysis } from '@/hooks/useArtifactAnalysis';
+import type { DetailPagesArtifacts } from '@/utils/ingestion/DetailPagesAggregator';
 import { 
   IngestionResult, 
   QuotaArtifacts, 
@@ -23,7 +24,6 @@ type ViewType = 'overview' | 'users' | 'costCenters' | 'organizations' | 'coding
 interface AnalysisProviderProps {
   ingestionResult: IngestionResult;
   filename: string;
-  sourceFile?: File;
   onReset: () => void;
   children: ReactNode;
 }
@@ -34,10 +34,10 @@ interface PlanInfoEntry {
 }
 
 interface AnalysisContextValue {
+  detailPagesArtifacts: DetailPagesArtifacts;
   modelDailyArtifacts: ModelDailyArtifacts;
   reportHasOrganizations: boolean;
   reportHasCostCenters: boolean;
-  sourceFile?: File;
   // Aggregator outputs (new architecture)
   quotaArtifacts: QuotaArtifacts;
   usageArtifacts: UsageArtifacts;
@@ -110,7 +110,7 @@ function requireFeatureUsageArtifacts(value: unknown): FeatureUsageArtifacts {
 // in components that want to gracefully fallback when provider is absent in tests.
 export const AnalysisContext = createContext<AnalysisContextValue | null>(null);
 
-export function AnalysisProvider({ ingestionResult, filename, sourceFile, onReset, children }: AnalysisProviderProps) {
+export function AnalysisProvider({ ingestionResult, filename, onReset, children }: AnalysisProviderProps) {
   // Local UI state that was previously in DataAnalysis
   const [view, setView] = useState<ViewType>('overview');
 
@@ -119,7 +119,9 @@ export function AnalysisProvider({ ingestionResult, filename, sourceFile, onRese
     const outputs = ingestionResult.outputs;
     if (!outputs.billingPages) throw new Error('Missing billingPages output in ingestion result');
     if (!outputs.modelDaily) throw new Error('Missing modelDaily output in ingestion result');
+    if (!outputs.detailPages) throw new Error('Missing detailPages output in ingestion result');
     return {
+      detailPagesArtifacts: outputs.detailPages as DetailPagesArtifacts,
       billingPagesArtifacts: outputs.billingPages as BillingPagesArtifacts,
       quotaArtifacts: outputs.quota as QuotaArtifacts,
       usageArtifacts: outputs.usage as UsageArtifacts,
@@ -166,7 +168,6 @@ export function AnalysisProvider({ ingestionResult, filename, sourceFile, onRese
     ...artifacts,
     reportHasOrganizations: artifacts.modelDailyArtifacts.hasOrganizations,
     reportHasCostCenters: artifacts.modelDailyArtifacts.hasCostCenters,
-    sourceFile,
     analysis,
     userData,
     allModels,

@@ -1,6 +1,6 @@
 import { createIngestionWorker } from '@/utils/ingestion/createIngestionWorker';
 import { streamFile } from '@/utils/ingestion/streamFile';
-import { UNASSIGNED_BILLING_GROUP, type DailyBucketsArtifacts, type UsageArtifacts } from '@/utils/ingestion/types';
+import type { DailyBucketsArtifacts, UsageArtifacts } from '@/utils/ingestion/types';
 import type { IngestionResponse } from '@/utils/ingestion/workerProtocol';
 
 import { createStreamingFile as createFile, MockFileReader } from '../helpers/streamingFile';
@@ -28,36 +28,19 @@ describe('streamFile without Worker support', () => {
     globalThis.FileReader = originalFileReader;
   });
 
-  it('re-streams a File and applies user and group filters before aggregation', async () => {
+  it('streams all report rows through the selected aggregators', async () => {
     const file = createFile(csv);
-    const result = await streamFile(file, ['usage', 'dailyBuckets'], {
-      user: 'test-user-one',
-      organization: 'test-org-one',
-      costCenter: 'test-cost-center-one',
-    }, { chunkSize: 64 });
+    const result = await streamFile(file, ['usage', 'dailyBuckets'], { chunkSize: 64 });
 
-    expect(result.rowsProcessed).toBe(1);
+    expect(result.rowsProcessed).toBe(4);
     expect((result.outputs.usage as UsageArtifacts).users).toEqual([
-      expect.objectContaining({ user: 'test-user-one', totalCredits: 3 }),
+      expect.objectContaining({ user: 'test-user-two', totalCredits: 7 }),
+      expect.objectContaining({ user: 'test-user-one', totalCredits: 10 }),
     ]);
     expect([...(result.outputs.dailyBuckets as DailyBucketsArtifacts).dailyUserTotals.keys()])
-      .toEqual(['2026-07-01']);
+      .toEqual(['2026-07-01', '2026-07-02', '2026-07-03']);
     expect(result.warnings).toEqual([]);
 
-    const unassigned = await streamFile(file, ['usage'], {
-      costCenter: UNASSIGNED_BILLING_GROUP,
-    });
-    expect((unassigned.outputs.usage as UsageArtifacts).users).toEqual([
-      expect.objectContaining({ user: 'test-user-one', totalCredits: 7 }),
-    ]);
-  });
-
-  it('returns empty outputs when no rows match, without retaining unfiltered rows', async () => {
-    const file = createFile(csv);
-    const result = await streamFile(file, ['usage'], { user: 'test-user-three' });
-    expect(result.rowsProcessed).toBe(0);
-    expect((result.outputs.usage as UsageArtifacts).users).toEqual([]);
-    expect((await streamFile(file, ['usage'])).rowsProcessed).toBe(4);
   });
 
   it('rejects parser errors instead of resolving a partial result', async () => {
@@ -67,20 +50,20 @@ describe('streamFile without Worker support', () => {
     await expect(streamFile(file, ['usage'])).rejects.toThrow('CSV parsing error:');
   });
 
-  it('does not misclassify a filtered mixed export as legacy-only', async () => {
+  it('skips transitional legacy rows in a supported export', async () => {
     const file = createFile([
       csv,
       '2026-07-04,test-user-two,copilot_premium_request,test-model-one,1,,',
     ].join('\n'));
-    const result = await streamFile(file, ['usage'], { user: 'test-user-three' });
-    expect(result.rowsProcessed).toBe(0);
-    expect((result.outputs.usage as UsageArtifacts).users).toEqual([]);
+    const result = await streamFile(file, ['usage']);
+    expect(result.rowsProcessed).toBe(4);
+    expect((result.outputs.usage as UsageArtifacts).users).toHaveLength(2);
   });
 
   it('cancels the main-thread fallback before processing another chunk', async () => {
     const controller = new AbortController();
     const onProgress = jest.fn(() => controller.abort());
-    await expect(streamFile(createFile(csv), ['usage'], undefined, {
+    await expect(streamFile(createFile(csv), ['usage'], {
       chunkSize: 64, signal: controller.signal, onProgress,
     })).rejects.toMatchObject({ name: 'AbortError' });
     expect(onProgress).toHaveBeenCalledTimes(1);
@@ -107,7 +90,7 @@ describe('streamFile worker transport', () => {
   async function start() {
     const file = new File([csv], 'test-usage.csv');
     const onProgress = jest.fn();
-    const result = streamFile(file, ['usage'], { user: 'test-user-one' }, { onProgress });
+    const result = streamFile(file, ['usage'], { onProgress });
     await Promise.resolve();
     return { file, onProgress, result };
   }
@@ -117,7 +100,6 @@ describe('streamFile worker transport', () => {
     expect(postMessage).toHaveBeenCalledWith(expect.objectContaining({
       file,
       aggregatorIds: ['usage'],
-      rowFilter: { user: 'test-user-one' },
     }));
     const send = (data: IngestionResponse) => worker.onmessage?.(new MessageEvent('message', { data }));
     send({ type: 'progress', progress: { rowsProcessed: 1000 } });
@@ -151,7 +133,7 @@ describe('streamFile worker transport', () => {
 
   it('terminates an in-flight worker when cancelled', async () => {
     const controller = new AbortController();
-    const result = streamFile(new File([csv], 'test-report.csv'), ['usage'], undefined, { signal: controller.signal });
+    const result = streamFile(new File([csv], 'test-report.csv'), ['usage'], { signal: controller.signal });
     await Promise.resolve();
     controller.abort();
     await expect(result).rejects.toMatchObject({ name: 'AbortError' });
@@ -161,7 +143,7 @@ describe('streamFile worker transport', () => {
   it('does not create a worker for a request cancelled before start', async () => {
     const controller = new AbortController();
     controller.abort();
-    await expect(streamFile(new File([csv], 'test-report.csv'), ['usage'], undefined, { signal: controller.signal }))
+    await expect(streamFile(new File([csv], 'test-report.csv'), ['usage'], { signal: controller.signal }))
       .rejects.toMatchObject({ name: 'AbortError' });
     expect(createIngestionWorker).not.toHaveBeenCalled();
   });

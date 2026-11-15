@@ -41,9 +41,9 @@ describe('single-month report ingestion', () => {
     read.mockRestore();
   });
 
-  it('validates the whole report before applying detail predicates or skipping malformed quantities', async () => {
+  it('validates the whole report before skipping malformed quantities', async () => {
     const file = createStreamingFile([header, row('2026-06-30'), row('2026-07-01', 'invalid')].join('\n'));
-    await expect(streamFile(file, ['usage'], { user: 'test-user-two' }))
+    await expect(streamFile(file, ['usage']))
       .rejects.toThrow('multiple months (2026-06 and 2026-07)');
   });
 

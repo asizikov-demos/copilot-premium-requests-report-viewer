@@ -84,3 +84,9 @@ Kept custom on purpose: `Tooltip` (cancels a pending open on Escape), `SortableC
 Primer React CSS is not inside a cascade layer, so it overrides Tailwind utilities for any property it sets. Put sizing utilities (`min-w-*`, `max-w-*`, `flex-1`) on the component's `className`, which lands on its outer wrapper. Set font size on a parent element, not on `Link`. Do not try to restyle a Primer component's colors, padding or typography with Tailwind.
 
 Tests: Jest transforms the ESM-only Primer packages listed in `ESM_PACKAGES` in `jest.config.js`. If a new Primer import fails with `SyntaxError: Unexpected token 'export'`, add the reported package to that list. `jest.setup.js` polyfills `window.matchMedia` for Primer's responsive hooks.
+
+Detail pages use `AnalysisContext.detailPagesArtifacts` and selected-scope
+selectors to render synchronously. Upload-time aggregation supplies their compact
+totals; do not introduce detail re-streaming, caches, spinners, or progress UI.
+Keep presentation-only sorting, row spans, percentages, and full-month padding in
+selectors/components rather than storing rendered tables for every user.

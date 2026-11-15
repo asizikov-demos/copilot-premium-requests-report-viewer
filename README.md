@@ -108,35 +108,47 @@ inactive days; missing token counts stay `null`. Report `dateRange` remains the
 observed data window. Reported zero amounts and per-row cost fallbacks remain
 distinct from absent billing fields.
 
+The `detailPages` aggregator computes user, organization, and cost-center details
+in that same upload pass. It retains sparse day/model/cost-center keys and packed
+numeric totals, not source rows or pre-rendered tables. User token sums and
+reported-row counts share these buckets; billing groups do not duplicate token
+breakdowns because their detail pages do not display them. Header summaries,
+consumption, product costs, daily billing rows, and group user totals are
+available immediately through `AnalysisContext`. Selectors materialize only the
+selected scope's sorted rows, row spans, percentages, and full-month timelines.
+There is no detail worker, re-parse, upload-file cache, or detail loading state.
+
+Detail storage grows with occupied user/day/model/cost-center combinations, not
+report byte size. The synthetic scaling test feeds 620,000 rows for 1,000 users,
+31 days, and four models, and checks that five repetitions occupy essentially
+the same space as one. More models or cost centers still increase aggregate
+memory; worker structured cloning temporarily overlaps worker and UI artifacts.
+
 ```mermaid
 flowchart LR
   File[Uploaded File] --> Worker[Web Worker / ingestStream]
   Worker --> Validate[Single calendar month validation]
   Validate -->|Second month| Error[Abort upload and display error]
   Validate --> Normalize[normalizeRow]
-  Normalize --> Core[Core + billingPages + modelDaily aggregators]
+  Normalize --> Core[Core + billingPages + modelDaily + detailPages aggregators]
   Core --> Artifacts[Plain artifacts / Maps and Sets]
   Artifacts --> Context[AnalysisContext / one report month]
   Context --> Pages[Report pages]
-  File --> Detail[Re-stream on drill-down / details + tokens]
-  Detail --> Cache[Compact cancellable detail cache]
-  Cache --> Views[User and group detail views]
+  Context --> Selectors[Selected-scope detail selectors]
+  Selectors --> Views[User and group detail views / synchronous]
 ```
 
 ## Privacy
 All processing is client-side. No data leaves your browser.
 
-CSV parsing and aggregators run in a Web Worker in 1 MiB chunks. The uploaded
-`File` remains in memory-only app state until reset or reload. User, organization,
-and cost-center drill-downs re-stream it with
-`streamFile(file, aggregatorIds, rowFilter?, options?)` from
-`src/utils/ingestion/streamFile.ts`. Filters combine `user`, `organization`,
-and `costCenter` with AND semantics. Missing organizations/cost centers match
-`Unassigned`. Single-month validation runs before these predicates.
-Results preserve aggregator output Maps/Sets through structured clone.
-Drill-downs keep only compact detail/token aggregates, cached by uploaded File
-and filter. Loading displays scanned-row progress; closing a
-detail view or changing its filters cancels its worker via `options.signal`.
+CSV parsing and aggregators run once in a Web Worker in 1 MiB chunks through
+`streamFile(file, aggregatorIds, options?)` from
+`src/utils/ingestion/streamFile.ts`. The worker terminates after ingestion and
+the app does not retain the uploaded `File`. Results preserve aggregator output
+Maps/Sets and numeric arrays through structured clone. Missing organizations and
+cost centers aggregate into `Unassigned`, including unattributed usage; named-user
+details exclude unattributed rows. Detail navigation reads only the precomputed
+artifacts, without reading the file again or storing detail results in a cache.
 Environments without Web Worker support use the same streaming pipeline on the
 main thread; worker startup/runtime failures are surfaced rather than retried there.
 

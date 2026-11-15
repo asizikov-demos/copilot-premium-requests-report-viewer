@@ -29,6 +29,7 @@ describe('AnalysisProvider artifacts', () => {
     ['featureUsage', 'Missing or invalid featureUsage output in ingestion result'],
     ['billingPages', 'Missing billingPages output in ingestion result'],
     ['modelDaily', 'Missing modelDaily output in ingestion result'],
+    ['detailPages', 'Missing detailPages output in ingestion result'],
   ])('throws a clear error when %s artifacts are missing', (id, message) => {
     const ingestionResult = ingestRows([]);
     delete ingestionResult.outputs[id];

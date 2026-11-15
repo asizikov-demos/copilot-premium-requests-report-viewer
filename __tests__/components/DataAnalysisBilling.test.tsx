@@ -1,25 +1,17 @@
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import Papa from 'papaparse';
 
 import { DataAnalysis } from '@/components/DataAnalysis';
 import { PRICING } from '@/constants/pricing';
 import type { CSVData } from '@/types/csv';
 import type { DailyConsumptionDatum } from '@/utils/dailyConsumption';
 import {
-  BillingAggregator,
-  BillingPagesAggregator,
-  ModelDailyAggregator,
-  DailyBucketsAggregator,
-  FeatureUsageAggregator,
-  QuotaAggregator,
-  UsageAggregator,
   normalizeRow,
 } from '@/utils/ingestion';
-import type { AggregatorContext, BillingArtifacts, IngestionResult, NormalizedRow, UsageArtifacts } from '@/utils/ingestion/types';
+import type { BillingArtifacts, IngestionResult, NormalizedRow, UsageArtifacts } from '@/utils/ingestion/types';
 
 import { newFormatRows } from '../fixtures/newFormatCSVData';
-import { createStreamingFile, MockFileReader } from '../helpers/streamingFile';
+import { ingestRows } from '../helpers/aggregateRows';
 
 jest.mock('@/components/charts/DailyConsumptionChart', () => ({
   DailyConsumptionChart: ({ data }: { data: DailyConsumptionDatum[] }) => (
@@ -29,7 +21,6 @@ jest.mock('@/components/charts/DailyConsumptionChart', () => ({
 
 // Mock ResizeObserver for Recharts ResponsiveContainer in JSDOM
 beforeAll(() => {
-  globalThis.FileReader = MockFileReader as unknown as typeof FileReader;
   global.ResizeObserver = class {
     observe() {}
     unobserve() {}
@@ -43,59 +34,13 @@ function createIngestionResultFromRawRows(rows: CSVData[]): IngestionResult {
   const normalizedRows = rows
     .map(row => normalizeRow(row, warnings))
     .filter((row): row is NormalizedRow => row !== null);
-  const aggregators = [
-    new QuotaAggregator(),
-    new UsageAggregator(),
-    new DailyBucketsAggregator(),
-    new FeatureUsageAggregator(),
-    new BillingAggregator(),
-    new BillingPagesAggregator(),
-    new ModelDailyAggregator(),
-  ];
-  const ctx: AggregatorContext = { pricing: PRICING };
-
-  for (const aggregator of aggregators) {
-    aggregator.init?.(ctx);
-  }
-
-  for (const row of normalizedRows) {
-    for (const aggregator of aggregators) {
-      aggregator.onRow(row, ctx);
-    }
-  }
-
-  const outputs: Record<string, unknown> = {};
-  for (const aggregator of aggregators) {
-    outputs[aggregator.id] = aggregator.finalize(ctx);
-  }
-
-  return {
-    outputs,
-    rowsProcessed: normalizedRows.length,
-    durationMs: 100,
-    warnings
-  };
+  return { ...ingestRows(normalizedRows), warnings };
 }
 
 function createIngestionResultWithBillingArtifacts(billingArtifacts: BillingArtifacts): IngestionResult {
-  return {
-    outputs: {
-      'quota': { quotaByUser: new Map(), conflicts: new Map(), distinctQuotas: new Set(), hasMixedQuotas: false, hasMixedLicenses: false },
-      'usage': { users: [], userTotals: new Map(), modelBreakdown: new Map(), globalModelTotals: new Map(), topModelPerUser: new Map(), modelTotals: {}, userCount: 0, modelCount: 0 },
-      'dailyBuckets': { dailyUserTotals: new Map(), startDate: new Date(), endDate: new Date() },
-      'featureUsage': {
-        featureTotals: { codeReview: 0, codingAgent: 0, spark: 0, codeQuality: 0 },
-        featureUsers: { codeReview: new Set(), codingAgent: new Set(), spark: new Set(), codeQuality: new Set() },
-        specialTotals: { unattributedCodeReview: 0, unattributedCodeQuality: 0 }
-      },
-      'billing': billingArtifacts,
-      'billingPages': new BillingPagesAggregator().finalize(),
-      'modelDaily': new ModelDailyAggregator().finalize(),
-    },
-    rowsProcessed: 0,
-    durationMs: 100,
-    warnings: []
-  };
+  const result = ingestRows([]);
+  result.outputs.billing = billingArtifacts;
+  return result;
 }
 
 function makeBillingRow(overrides: Partial<CSVData> = {}): CSVData {
@@ -239,7 +184,7 @@ describe('DataAnalysis billing summary', () => {
       },
     ];
     const ingestionResult = createIngestionResultFromRawRows(sourceRows);
-    render(<DataAnalysis ingestionResult={ingestionResult} sourceFile={createStreamingFile(Papa.unparse(sourceRows))}
+    render(<DataAnalysis ingestionResult={ingestionResult}
       filename="billing-export.csv" onReset={() => {}} />);
     fireEvent.click(screen.getAllByRole('button', { name: view })[0]);
     const groupRow = screen.getByRole('button', { name: new RegExp(groupName) }).closest('tr');
@@ -271,7 +216,7 @@ describe('DataAnalysis billing summary', () => {
       })
     ));
     render(<DataAnalysis ingestionResult={createIngestionResultFromRawRows(rows)}
-      sourceFile={createStreamingFile(Papa.unparse(rows))} filename="organization.csv" onReset={jest.fn()} />);
+      filename="organization.csv" onReset={jest.fn()} />);
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Organizations' })[0]);
     const organizationRow = screen.getByRole('button', { name: 'test-org-one' }).closest('tr');

@@ -45,11 +45,8 @@ export function accumulateProductCost(
   row: Pick<NormalizedRow, 'model' | 'product' | 'sku' | 'quantity' | 'grossAmount' | 'discountAmount' | 'netAmount' | 'aicQuantity' | 'aicGrossAmount'>
 ): void {
   const category = classifyProductCategory(row.model, row.product, row.sku);
-  const bucket = buckets.get(category);
-
-  if (!bucket) {
-    return;
-  }
+  let bucket = buckets.get(category);
+  if (!bucket) buckets.set(category, bucket = createEmptyProductCost(category));
 
   bucket.credits += row.quantity;
   bucket.gross += row.grossAmount ?? 0;
