@@ -8,7 +8,7 @@ import Papa from 'papaparse';
 import { PRICING } from '@/constants/pricing';
 import type { CSVData } from '@/types/csv';
 import {
-  BillingAggregator, DailyBucketsAggregator, FeatureUsageAggregator, QuotaAggregator,
+  BillingAggregator, BillingPagesAggregator, DailyBucketsAggregator, FeatureUsageAggregator, QuotaAggregator,
   TokenAggregator, TokenAccumulator, UsageAccumulator, UsageAggregator, buildProcessedDataFromRows,
   buildBillingArtifactsFromProcessedData,
   buildDailyCumulativeDataFromArtifacts, buildDailyModelUsageFromArtifacts,
@@ -35,6 +35,7 @@ function aggregate<T>(aggregator: Aggregator<T>, rows: NormalizedRow[]): T {
 
 function ingest(rows: NormalizedRow[]): MonthlyAggregates {
   return {
+    billingPages: aggregate(new BillingPagesAggregator(), rows),
     usage: aggregate(new UsageAggregator(), rows),
     quota: aggregate(new QuotaAggregator(), rows),
     dailyBuckets: aggregate(new DailyBucketsAggregator(), rows),

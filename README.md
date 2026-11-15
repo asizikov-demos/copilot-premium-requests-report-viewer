@@ -83,6 +83,12 @@ an empty selection uses all report months. Call it inside `useMemo` with the
 aggregate object and selected months as dependencies. Billing uses the streamed
 commercial totals, never recomputed amounts from retained rows.
 
+The `billingPages` aggregator uses the same month-partitioned shape for organization
+and cost-center product totals, distinct named users, and Cloud Agent/Code Review
+billing tables. `selectBillingPagesArtifacts` merges only the selected months and
+preserves source-order ties without retaining source rows. User costs and
+consumption insights use the selected core billing, usage, and quota artifacts.
+
 ## Privacy
 All processing is client-side. No data leaves your browser.
 
