@@ -105,4 +105,12 @@ describe('precomputed detail views', () => {
     expect(() => selectUserDetails(artifacts, 'test-user-two')).toThrow('Missing precomputed details');
     expect(() => selectBillingGroupDetails(artifacts, 'organization', 'test-org-two')).toThrow('Missing precomputed details');
   });
+
+  it('rejects overflowing user token totals across different day/model buckets during ingestion', () => {
+    const accumulator = new DetailPagesAggregator();
+    accumulator.onRow({ ...rows[0], inputTokens: Number.MAX_SAFE_INTEGER });
+    expect(() => accumulator.onRow({ ...rows[0], day: '2026-07-11', model: 'test-model-two', inputTokens: 1 }))
+      .toThrow('overflowing detail token total');
+    expect(() => accumulator.finalize()).toThrow('overflowing detail token total');
+  });
 });

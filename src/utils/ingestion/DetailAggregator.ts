@@ -3,11 +3,13 @@ import type { CreditTotals, UserConsumption } from '@/types/consumption';
 import type { DailyConsumptionDatum } from '@/utils/dailyConsumption';
 import { buildBillingMonthDates, enumerateDatesInclusive } from '@/utils/dateKeys';
 import {
-  accumulateProductCost, createEmptyProductCostMap, getPopulatedProductCosts,
+  accumulateProductCost, getPopulatedProductCosts,
+  type createEmptyProductCostMap,
   type ProductCost,
 } from '@/utils/productCosts';
 import { UserHeaderAccumulator } from '@/utils/userHeaderSummary';
 
+import { TOKEN_FIELDS } from './tokenFields';
 import type { Aggregator, NormalizedRow } from './types';
 
 interface CostTotals {
@@ -45,11 +47,15 @@ export interface DetailArtifacts {
 
 interface ModelBucket {
   quantity: number;
-  costs: Map<string, Float64Array>;
-  cache: Float64Array;
+  costs: Map<string, number>;
+  cacheOffset: number;
+  /** User scopes only: row count, four token sums, four reported-row counts. */
+  tokenOffset?: number;
 }
 
 export interface CompactDetailArtifacts {
+  /** Packed numeric cells addressed by model/cache/token bucket offsets. */
+  values: number[];
   hasBillingData: boolean;
   header: ReturnType<UserHeaderAccumulator['finalize']>;
   consumption: UserConsumption;
@@ -86,7 +92,7 @@ export class DetailAggregator implements Aggregator<CompactDetailArtifacts> {
   readonly id = 'details';
   private header = new UserHeaderAccumulator();
   private totals = emptyCosts();
-  private products = createEmptyProductCostMap();
+  private products: ReturnType<typeof createEmptyProductCostMap> = new Map();
   private dailyProducts = new Map<string, ReturnType<typeof createEmptyProductCostMap>>();
   private costCenters = new Map<string, CostTotals & { name: string }>();
   private users = new Map<string, CostTotals & { user: string }>();
@@ -95,14 +101,24 @@ export class DetailAggregator implements Aggregator<CompactDetailArtifacts> {
   private credits: CreditTotals = { rowCount: 0, reportedRows: 0 };
   private creditsByModel = new Map<string, CreditTotals>();
   private hasBillingData = false;
+  private tokenTotals = new Float64Array(4);
+  private values: number[] = [];
+
+  constructor(private readonly includeTokens = false) {}
+
+  private allocate(size: number): number {
+    const offset = this.values.length;
+    for (let index = 0; index < size; index++) this.values.push(0);
+    return offset;
+  }
 
   onRow(row: NormalizedRow): void {
     this.header.add(row);
-    this.hasBillingData ||= [row.grossAmount, row.discountAmount, row.netAmount, row.aicGrossAmount]
-      .some(value => value !== undefined);
+    this.hasBillingData ||= row.grossAmount !== undefined || row.discountAmount !== undefined ||
+      row.netAmount !== undefined || row.aicGrossAmount !== undefined;
     addCosts(this.totals, row);
     accumulateProductCost(this.products, row);
-    const dailyProducts = this.dailyProducts.get(row.day) ?? createEmptyProductCostMap();
+    const dailyProducts = this.dailyProducts.get(row.day) ?? new Map();
     accumulateProductCost(dailyProducts, row);
     this.dailyProducts.set(row.day, dailyProducts);
     if (row.costCenter) {
@@ -118,25 +134,41 @@ export class DetailAggregator implements Aggregator<CompactDetailArtifacts> {
     let dayModels = this.dailyModels.get(row.day);
     if (!dayModels) this.dailyModels.set(row.day, dayModels = new Map());
     let model = dayModels.get(row.model);
-    if (!model) dayModels.set(row.model, model = { quantity: 0, costs: new Map(), cache: new Float64Array(5) });
+    if (!model) dayModels.set(row.model, model = { quantity: 0, costs: new Map(), cacheOffset: this.allocate(5) });
     model.quantity += row.quantity;
+    if (this.includeTokens) {
+      model.tokenOffset ??= this.allocate(9);
+      const tokens = model.tokenOffset;
+      this.values[tokens]++;
+      for (let index = 0; index < TOKEN_FIELDS.length; index++) {
+        const field = TOKEN_FIELDS[index];
+        const count = row[field];
+        if (count === undefined) continue;
+        if (!Number.isSafeInteger(count) || count < 0 || !Number.isSafeInteger(this.tokenTotals[index] + count)) {
+          throw new Error(`Invalid or overflowing detail token total in ${field}`);
+        }
+        this.tokenTotals[index] += count;
+        this.values[tokens + index + 1] += count;
+        this.values[tokens + index + 5]++;
+      }
+    }
     const center = row.costCenter ?? '';
     let costs = model.costs.get(center);
-    if (!costs) model.costs.set(center, costs = new Float64Array(5));
+    if (costs === undefined) model.costs.set(center, costs = this.allocate(5));
     // quantity, gross, discount, net, AI-credit gross; no presentation fields.
-    costs[0] += row.quantity;
-    costs[1] += row.grossAmount ?? 0;
-    costs[2] += row.discountAmount ?? 0;
-    costs[3] += row.netAmount ?? 0;
-    costs[4] += row.aicGrossAmount ?? 0;
-    const cache = model.cache;
+    this.values[costs] += row.quantity;
+    this.values[costs + 1] += row.grossAmount ?? 0;
+    this.values[costs + 2] += row.discountAmount ?? 0;
+    this.values[costs + 3] += row.netAmount ?? 0;
+    this.values[costs + 4] += row.aicGrossAmount ?? 0;
+    const cache = model.cacheOffset;
     // input, cache read, cache write, complete rows, all rows.
-    cache[4]++;
+    this.values[cache + 4]++;
     if (row.inputTokens !== undefined && row.cacheReadTokens !== undefined && row.cacheWriteTokens !== undefined) {
-      cache[0] += row.inputTokens;
-      cache[1] += row.cacheReadTokens;
-      cache[2] += row.cacheWriteTokens;
-      cache[3]++;
+      this.values[cache] += row.inputTokens;
+      this.values[cache + 1] += row.cacheReadTokens;
+      this.values[cache + 2] += row.cacheWriteTokens;
+      this.values[cache + 3]++;
     }
     if (row.discountAmount !== undefined || row.netAmount !== undefined) {
       const day = this.dailyConsumption.get(row.day) ?? { date: row.day, included: 0, additional: 0 };
@@ -155,6 +187,7 @@ export class DetailAggregator implements Aggregator<CompactDetailArtifacts> {
 
   finalize(): CompactDetailArtifacts {
     return {
+      values: this.values,
       hasBillingData: this.hasBillingData, header: this.header.finalize(),
       consumption: { credits: this.credits, creditsByModel: this.creditsByModel },
       totals: this.totals, products: this.products, dailyProducts: this.dailyProducts,
@@ -166,56 +199,62 @@ export class DetailAggregator implements Aggregator<CompactDetailArtifacts> {
 
 /** Materialize only the selected scope; never store padded/sorted view models for every user. */
 export function selectDetailArtifacts(compact: CompactDetailArtifacts): DetailArtifacts {
-    const sortedDays = [...compact.dailyProducts.keys()].sort();
-    const dailyRows = sortedDays.length === 0 ? [] : enumerateDatesInclusive(sortedDays[0], sortedDays.at(-1)!).map(date => {
-      const bucket = compact.dailyProducts.get(date);
-      const products = bucket ? getPopulatedProductCosts(bucket) : [];
-      return products.reduce((totals, product) => ({
-        ...totals, quantity: totals.quantity + product.credits,
-        gross: totals.gross + product.gross, discount: totals.discount + product.discount,
-        net: totals.net + product.net, aicGrossAmount: totals.aicGrossAmount + product.aicGrossAmount,
-      }), { ...emptyCosts(), date, products });
-    });
-    const dailyModels: DetailDailyModelRow[] = [];
-    const dailyModelTotals = new Map<string, Record<string, number>>();
-    for (const [date, models] of compact.dailyModels) {
-      const totals: Record<string, number> = Object.create(null);
-      dailyModelTotals.set(date, totals);
-      for (const [model, bucket] of models) {
-        totals[model] = bucket.quantity;
-        const [input, read, write, reportedRows, totalRows] = bucket.cache;
-        const total = input + read + write;
-        const cacheSuccessRate = reportedRows > 0 && total > 0
-          ? { percent: read / total * 100, reportedRows, totalRows } : undefined;
-        for (const [costCenter, costs] of bucket.costs) {
-          dailyModels.push({
-            date, model, costCenter: costCenter || undefined,
-            credits: costs[0], gross: costs[1], discount: costs[2], net: costs[3],
-            aicGrossAmount: costs[4], isFirstInDate: false, rowSpan: 1,
-            ...(cacheSuccessRate ? { cacheSuccessRate } : {}),
-          });
-        }
+  const sortedDays = [...compact.dailyProducts.keys()].sort();
+  const dailyRows = sortedDays.length === 0 ? [] : enumerateDatesInclusive(sortedDays[0], sortedDays.at(-1)!).map(date => {
+    const bucket = compact.dailyProducts.get(date);
+    const products = bucket ? getPopulatedProductCosts(bucket) : [];
+    return products.reduce((totals, product) => ({
+      ...totals, quantity: totals.quantity + product.credits,
+      gross: totals.gross + product.gross, discount: totals.discount + product.discount,
+      net: totals.net + product.net, aicGrossAmount: totals.aicGrossAmount + product.aicGrossAmount,
+    }), { ...emptyCosts(), date, products });
+  });
+  const dailyModels: DetailDailyModelRow[] = [];
+  const dailyModelTotals = new Map<string, Record<string, number>>();
+  for (const [date, models] of compact.dailyModels) {
+    const totals: Record<string, number> = Object.create(null);
+    dailyModelTotals.set(date, totals);
+    for (const [model, bucket] of models) {
+      totals[model] = bucket.quantity;
+      const values = compact.values;
+      const offset = bucket.cacheOffset;
+      const input = values[offset];
+      const read = values[offset + 1];
+      const write = values[offset + 2];
+      const reportedRows = values[offset + 3];
+      const totalRows = values[offset + 4];
+      const total = input + read + write;
+      const cacheSuccessRate = reportedRows > 0 && total > 0
+        ? { percent: read / total * 100, reportedRows, totalRows } : undefined;
+      for (const [costCenter, costs] of bucket.costs) {
+        dailyModels.push({
+          date, model, costCenter: costCenter || undefined,
+          credits: values[costs], gross: values[costs + 1], discount: values[costs + 2], net: values[costs + 3],
+          aicGrossAmount: values[costs + 4], isFirstInDate: false, rowSpan: 1,
+          ...(cacheSuccessRate ? { cacheSuccessRate } : {}),
+        });
       }
     }
-    dailyModels.sort((a, b) =>
-      a.date.localeCompare(b.date) || a.model.localeCompare(b.model) ||
-      (a.costCenter ?? '').localeCompare(b.costCenter ?? ''));
-    const dateSpans = new Map<string, number>();
-    for (const row of dailyModels) dateSpans.set(row.date, (dateSpans.get(row.date) ?? 0) + 1);
-    const seenDates = new Set<string>();
-    for (const row of dailyModels) {
-      row.rowSpan = dateSpans.get(row.date)!;
-      row.isFirstInDate = !seenDates.has(row.date);
-      seenDates.add(row.date);
-    }
-    return {
-      hasBillingData: compact.hasBillingData, models: [...compact.consumption.creditsByModel.keys()].sort(),
-      header: compact.header, consumption: compact.consumption,
-      totals: compact.totals, productCosts: getPopulatedProductCosts(compact.products), dailyRows, dailyModels,
-      costCenterCosts: [...compact.costCenters.values()].sort((a, b) => b.net - a.net || a.name.localeCompare(b.name)),
-      userRows: [...compact.users.values()].sort((a, b) => b.net - a.net || b.quantity - a.quantity || a.user.localeCompare(b.user)),
-      dailyModelTotals, dailyConsumption: [...compact.dailyConsumption.values()],
-    };
+  }
+  dailyModels.sort((a, b) =>
+    a.date.localeCompare(b.date) || a.model.localeCompare(b.model) ||
+    (a.costCenter ?? '').localeCompare(b.costCenter ?? ''));
+  const dateSpans = new Map<string, number>();
+  for (const row of dailyModels) dateSpans.set(row.date, (dateSpans.get(row.date) ?? 0) + 1);
+  const seenDates = new Set<string>();
+  for (const row of dailyModels) {
+    row.rowSpan = dateSpans.get(row.date)!;
+    row.isFirstInDate = !seenDates.has(row.date);
+    seenDates.add(row.date);
+  }
+  return {
+    hasBillingData: compact.hasBillingData, models: [...compact.consumption.creditsByModel.keys()].sort(),
+    header: compact.header, consumption: compact.consumption,
+    totals: compact.totals, productCosts: getPopulatedProductCosts(compact.products), dailyRows, dailyModels,
+    costCenterCosts: [...compact.costCenters.values()].sort((a, b) => b.net - a.net || a.name.localeCompare(b.name)),
+    userRows: [...compact.users.values()].sort((a, b) => b.net - a.net || b.quantity - a.quantity || a.user.localeCompare(b.user)),
+    dailyModelTotals, dailyConsumption: [...compact.dailyConsumption.values()],
+  };
 }
 
 export function selectDetailTimeline(details: DetailArtifacts, reportMonth: string | undefined) {
