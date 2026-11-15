@@ -33,16 +33,16 @@ describe('useUsageBasedBillingScope', () => {
     expect(result.current.scopedBillingArtifacts?.totals.net).toBe(0.025);
   });
 
-  it('rebuilds billing artifacts if the streaming artifact is absent', () => {
+  it('does not rebuild billing artifacts from retained rows when absent', () => {
     const { result, rerender } = renderHook(
       ({ data }) => useUsageBasedBillingScope(data, undefined),
       { initialProps: { data: rows } }
     );
-    expect(result.current.scopedBillingArtifacts?.userMap.get('test-user-one')?.quantity).toBe(2.5);
+    expect(result.current.scopedBillingArtifacts).toBeUndefined();
     const nextRows = rows.filter(row => row.user === 'test-user-two');
     rerender({ data: nextRows });
     expect(result.current.billingRows).toBe(nextRows);
-    expect(result.current.scopedBillingArtifacts?.userMap.has('test-user-one')).toBe(false);
+    expect(result.current.scopedBillingArtifacts).toBeUndefined();
   });
 
   it('preserves rows with token counts and optional billing fields', () => {
@@ -55,6 +55,6 @@ describe('useUsageBasedBillingScope', () => {
     });
     const { result } = renderHook(() => useUsageBasedBillingScope([tokenRow], undefined));
     expect(result.current.billingRows[0]).toBe(tokenRow);
-    expect(result.current.scopedBillingArtifacts?.hasAnyBillingData).toBe(false);
+    expect(result.current.scopedBillingArtifacts).toBeUndefined();
   });
 });

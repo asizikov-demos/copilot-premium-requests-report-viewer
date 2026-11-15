@@ -2,7 +2,7 @@ import { renderHook } from '@testing-library/react';
 
 import { useAnalyzedData } from '@/hooks/useAnalyzedData';
 import type { ProcessedData } from '@/types/csv';
-import { buildUsageArtifactsFromProcessedData } from '@/utils/ingestion';
+import { buildUsageArtifactsFromProcessedData } from '../helpers/processedArtifacts';
 
 import { makeDailyBucketsArtifacts, makeQuotaArtifacts } from '../helpers/makeArtifacts';
 
@@ -28,7 +28,7 @@ function makeProcessedData(
   };
 }
 
-describe('useAnalyzedData fallback', () => {
+describe('useAnalyzedData core artifacts', () => {
   test('builds sorted model totals through usage artifacts and includes unattributed AI credits', () => {
     const baseProcessed = [
       makeProcessedData('model-one', 2),
@@ -46,6 +46,9 @@ describe('useAnalyzedData fallback', () => {
     const { result } = renderHook(() => useAnalyzedData({
       baseProcessed,
       selectedMonths: [],
+      usageArtifacts: buildUsageArtifactsFromProcessedData(baseProcessed),
+      quotaArtifacts: makeQuotaArtifacts([]),
+      dailyBucketsArtifacts: makeDailyBucketsArtifacts([]),
     }));
 
     expect(result.current.analysis.creditsByModel).toEqual([
@@ -68,11 +71,10 @@ describe('useAnalyzedData artifacts', () => {
         costCenter: 'test-cost-center-two',
       }),
     ];
-    const usageArtifacts = buildUsageArtifactsFromProcessedData(baseProcessed);
+    const usageArtifacts = buildUsageArtifactsFromProcessedData(baseProcessed.filter(row => row.monthKey === '2026-03'));
     const quotaArtifacts = makeQuotaArtifacts([{ user: 'test-user-one', quota: 'unknown' }]);
     const dailyBucketsArtifacts = makeDailyBucketsArtifacts([
       { date: '2026-03-11', user: 'test-user-one', used: 2 },
-      { date: '2026-04-11', user: 'test-user-one', used: 3 },
     ]);
 
     const { result } = renderHook(() => useAnalyzedData({

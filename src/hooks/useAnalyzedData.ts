@@ -1,14 +1,11 @@
 import { useMemo } from 'react';
 import { ProcessedData, AnalysisResults, CodingAgentAnalysis, CodeReviewAnalysis } from '@/types/csv';
 import type { UserSummary } from '@/utils/analytics';
-import { buildQuotaBreakdown } from '@/utils/analytics/quota';
 import {
   deriveAnalysisFromArtifacts,
   buildDailyCumulativeDataFromArtifacts,
   analyzeCodingAgentAdoptionFromArtifacts,
   analyzeCodeReviewAdoptionFromArtifacts,
-  buildCreditsByModel,
-  buildUsageArtifactsFromProcessedData,
   UsageArtifacts,
   QuotaArtifacts,
   DailyBucketsArtifacts
@@ -18,11 +15,9 @@ interface UseAnalyzedDataArgs {
   baseProcessed: ProcessedData[];
   // Filters
   selectedMonths: string[];
-  // Optional artifact inputs for new ingestion pipeline. When all three are provided,
-  // artifact-based analytics will be preferred.
-  usageArtifacts?: UsageArtifacts;
-  quotaArtifacts?: QuotaArtifacts;
-  dailyBucketsArtifacts?: DailyBucketsArtifacts;
+  usageArtifacts: UsageArtifacts;
+  quotaArtifacts: QuotaArtifacts;
+  dailyBucketsArtifacts: DailyBucketsArtifacts;
 }
 
 interface UseAnalyzedDataReturn {
@@ -47,48 +42,12 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
       ? baseProcessed
       : baseProcessed.filter(r => selectedMonths.includes(r.monthKey));
     const filteredUserRows = filteredAllRows.filter(r => !r.isUnattributedUsage);
-    const artifactsAvailable = !!(
-      usageArtifacts && quotaArtifacts && dailyBucketsArtifacts &&
-      usageArtifacts.users && usageArtifacts.modelTotals &&
-      quotaArtifacts.quotaByUser && dailyBucketsArtifacts.dailyUserTotals
-    );
-
-    if (!artifactsAvailable) {
-      // Fallback when streaming artifacts are unavailable.
-      const filtered = filteredUserRows;
-      const analysis: AnalysisResults = (() => {
-        const userFiltered = filtered;
-        if (filteredAllRows.length === 0) return { timeFrame: { start: '', end: '' }, totalUniqueUsers: 0, usersExceedingQuota: 0, creditsByModel: [], quotaBreakdown: { unknown: [], business: [], enterprise: [], mixed: false, suggestedPlan: null } };
-        const sorted = [...filteredAllRows].sort((a,b)=> a.epoch - b.epoch);
-        const timeFrame = { start: sorted[0].dateKey, end: sorted[sorted.length-1].dateKey };
-        const uniqueUsers = new Set(userFiltered.map(r=> r.user));
-        const creditsByModel = buildCreditsByModel(
-          buildUsageArtifactsFromProcessedData(filteredAllRows)
-        );
-        return { timeFrame, totalUniqueUsers: uniqueUsers.size, usersExceedingQuota: 0, creditsByModel, quotaBreakdown: buildQuotaBreakdown(userFiltered) };
-      })();
-      return {
-        processedData: filtered,
-        aggregateProcessedData: filteredAllRows,
-        analysis,
-        userData: [],
-        allModels: Array.from(new Set(filtered.map(r=> r.model))).sort(),
-        dailyCumulativeData: [],
-        codingAgentAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodingAgentCredits: 0, adoptionRate: 0, users: [] },
-        codeReviewAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodeReviewCredits: 0, adoptionRate: 0, users: [] }
-      };
-    }
-
     const filtered = filteredUserRows;
-    const analysis = deriveAnalysisFromArtifacts(usageArtifacts!, quotaArtifacts!, dailyBucketsArtifacts!);
-    const dailyCumulativeData = buildDailyCumulativeDataFromArtifacts(dailyBucketsArtifacts!);
-    // When billing period filter is active, derive agent/review analyses from month-sliced data
-    const effectiveUsage = selectedMonths.length > 0
-      ? buildUsageArtifactsFromProcessedData(filteredAllRows)
-      : usageArtifacts!;
-    const codingAgentAnalysis = analyzeCodingAgentAdoptionFromArtifacts(effectiveUsage, quotaArtifacts!);
-    const codeReviewAnalysis = analyzeCodeReviewAdoptionFromArtifacts(effectiveUsage, quotaArtifacts!);
-    const userData = effectiveUsage.users.map(u => ({
+    const analysis = deriveAnalysisFromArtifacts(usageArtifacts, quotaArtifacts, dailyBucketsArtifacts);
+    const dailyCumulativeData = buildDailyCumulativeDataFromArtifacts(dailyBucketsArtifacts);
+    const codingAgentAnalysis = analyzeCodingAgentAdoptionFromArtifacts(usageArtifacts, quotaArtifacts);
+    const codeReviewAnalysis = analyzeCodeReviewAdoptionFromArtifacts(usageArtifacts, quotaArtifacts);
+    const userData = usageArtifacts.users.map(u => ({
       user: u.user,
       totalCredits: u.totalCredits,
       modelBreakdown: u.modelBreakdown,
@@ -96,7 +55,7 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
       costCenter: u.costCenter,
       costCenters: u.costCenters,
     })).sort((a, b) => b.totalCredits - a.totalCredits);
-    const allModels = Object.keys(usageArtifacts!.modelTotals).sort();
+    const allModels = Object.keys(usageArtifacts.modelTotals).sort();
     return {
       processedData: filtered,
       aggregateProcessedData: filteredAllRows,

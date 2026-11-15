@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { PRICING } from '@/constants/pricing';
 import { AnalysisProvider, useAnalysisContext } from '@/context/AnalysisContext';
 import {
+  BillingAggregator,
   DailyBucketsAggregator,
   FeatureUsageAggregator,
   QuotaAggregator,
@@ -23,6 +24,7 @@ function createResult(includeRaw: boolean, includeTokens: boolean): IngestionRes
   ];
   const aggregators: Aggregator[] = [
     new UsageAggregator(), new QuotaAggregator(), new DailyBucketsAggregator(), new FeatureUsageAggregator(),
+    new BillingAggregator(),
     ...(includeRaw ? [new RawDataAggregator()] : []),
     ...(includeTokens ? [new TokenAggregator()] : []),
   ];
@@ -40,7 +42,6 @@ describe('month-filtered token artifacts in analysis context', () => {
   it.each([
     { raw: true, tokens: true },
     { raw: false, tokens: true },
-    { raw: true, tokens: false },
   ])('supports raw=$raw, streaming tokens=$tokens', ({ raw, tokens }) => {
     const ingestionResult = createResult(raw, tokens);
     const { result } = renderHook(() => useAnalysisContext(), {
@@ -61,8 +62,8 @@ describe('month-filtered token artifacts in analysis context', () => {
     expect(result.current.tokenArtifacts?.totals).toMatchObject({ inputTokens: 100, rowCount: 3 });
   });
 
-  it('keeps token artifacts optional for legacy results without raw data', () => {
-    const ingestionResult = createResult(false, false);
+  it.each([true, false])('does not rebuild absent token artifacts from rows (raw=%s)', raw => {
+    const ingestionResult = createResult(raw, false);
     const { result } = renderHook(() => useAnalysisContext(), {
       wrapper: ({ children }: { children: ReactNode }) => (
         <AnalysisProvider ingestionResult={ingestionResult} filename="test-report.csv" onReset={() => {}}>
@@ -71,6 +72,28 @@ describe('month-filtered token artifacts in analysis context', () => {
       ),
     });
     expect(result.current.tokenArtifacts).toBeUndefined();
+    act(() => result.current.setSelectedMonths(['2026-07']));
+    expect(result.current.tokenArtifacts).toBeUndefined();
+  });
+
+  it('uses streamed core and billing partials even when retained rows differ', () => {
+    const ingestionResult = createResult(true, true);
+    ingestionResult.outputs.rawData = [];
+    const { result } = renderHook(() => useAnalysisContext(), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <AnalysisProvider ingestionResult={ingestionResult} filename="test-report.csv" onReset={() => {}}>
+          {children}
+        </AnalysisProvider>
+      ),
+    });
+    expect(result.current.billingArtifacts?.users[0].quantity).toBe(3);
+    expect(result.current.usageArtifacts.users[0].totalCredits).toBe(3);
+    expect(result.current.availableMonths).toHaveLength(3);
+    act(() => result.current.setSelectedMonths(['2026-07']));
+    expect(result.current.billingArtifacts?.users[0].quantity).toBe(1);
+    expect(result.current.usageArtifacts.users[0].totalCredits).toBe(1);
+    expect(result.current.userData[0].totalCredits).toBe(1);
+    expect(result.current.baseProcessed).toEqual([]);
   });
 
   it('preserves a failed token artifact instead of rebuilding partial data from raw rows', () => {
