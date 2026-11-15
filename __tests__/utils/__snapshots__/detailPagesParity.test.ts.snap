@@ -1,5 +1,0 @@
-// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
-
-exports[`single-pass detail parity for __tests__/fixtures/detail-usage.csv matches every user and billing-group re-stream, with a stable semantic golden 1`] = `"437b19c9e6169850744f861c79df36265d1cae2f5d5c15483bf3e5dfeb1125bb"`;
-
-exports[`single-pass detail parity for public/data/ai-credits-example.csv matches every user and billing-group re-stream, with a stable semantic golden 1`] = `"ffef19b750248dac39ff330a6b7ab789d318b48624006573543257b6c3f0508e"`;

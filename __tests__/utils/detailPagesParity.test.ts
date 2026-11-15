@@ -24,9 +24,12 @@ function canonical(value: unknown): unknown {
   return value;
 }
 
-describe.each(['__tests__/fixtures/detail-usage.csv', 'public/data/ai-credits-example.csv'])(
-  'single-pass detail parity for %s', filename => {
-    it('matches every user and billing-group re-stream, with a stable semantic golden', async () => {
+describe.each([
+  ['__tests__/fixtures/detail-usage.csv', '437b19c9e6169850744f861c79df36265d1cae2f5d5c15483bf3e5dfeb1125bb'],
+  ['public/data/ai-credits-example.csv', 'ffef19b750248dac39ff330a6b7ab789d318b48624006573543257b6c3f0508e'],
+])(
+  'single-pass detail parity for %s', (filename, expectedHash) => {
+    it('preserves every user and billing-group detail artifact from the re-stream baseline', async () => {
       const csv = readFileSync(path.join(process.cwd(), filename), 'utf8');
       const rows = normalizeRows(Papa.parse<CSVData>(csv, { header: true, skipEmptyLines: true }).data);
       const views: unknown[] = [];
@@ -53,7 +56,7 @@ describe.each(['__tests__/fixtures/detail-usage.csv', 'public/data/ai-credits-ex
         globalThis.FileReader = originalReader;
       }
       // Captured while all scopes were also checked against the filtered re-stream path.
-      expect(createHash('sha256').update(JSON.stringify(canonical(views))).digest('hex')).toMatchSnapshot();
+      expect(createHash('sha256').update(JSON.stringify(canonical(views))).digest('hex')).toBe(expectedHash);
     });
   },
 );

@@ -17,7 +17,7 @@ export function buildUserHeaderSummary(rows: NormalizedRow[], quota: number | 'u
   return summarizeUserHeader(accumulator.finalize(), quota, hasBillingData);
 }
 
-export function detailFixture(rows: NormalizedRow[]) {
+function detailFixture(rows: NormalizedRow[]) {
   const details = new DetailAggregator();
   const tokens = new TokenAccumulator();
   for (const row of rows) {

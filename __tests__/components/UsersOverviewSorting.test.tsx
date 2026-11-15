@@ -6,11 +6,9 @@ import { UsersOverview } from '@/components/UsersOverview';
 import { AnalysisProvider } from '@/context/AnalysisContext';
 import { PRICING } from '@/constants/pricing';
 import { BillingAggregator, type NormalizedRow } from '@/utils/ingestion';
-import { aggregateRows } from '../helpers/aggregateRows';
+import { aggregateRows, ingestRows } from '../helpers/aggregateRows';
 import type { UserSummary } from '@/utils/analytics';
 import type { QuotaArtifacts, UsageArtifacts } from '@/utils/ingestion';
-import { createAggregators } from '@/utils/ingestion/registry';
-import { REPORT_AGGREGATOR_IDS } from '@/utils/ingestion/streamFile';
 
 import { makeNormalizedRow } from '../helpers/makeNormalizedRow';
 
@@ -488,15 +486,8 @@ describe('UsersOverview - sorting', () => {
       }),
     ];
 
-    const outputs: Record<string, unknown> = {};
-    for (const aggregator of createAggregators(REPORT_AGGREGATOR_IDS)) {
-      const context = { pricing: PRICING };
-      aggregator.init?.(context);
-      sourceRows.forEach(row => aggregator.onRow(row, context));
-      outputs[aggregator.id] = aggregator.finalize(context);
-    }
     render(
-      <AnalysisProvider ingestionResult={{ outputs, rowsProcessed: 1, durationMs: 1, warnings: [] }}
+      <AnalysisProvider ingestionResult={ingestRows(sourceRows)}
         filename="test-report.csv" onReset={jest.fn()}>
       <UsersOverview
         userData={userData}

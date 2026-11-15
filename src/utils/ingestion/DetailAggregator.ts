@@ -20,7 +20,7 @@ interface CostTotals {
   aicGrossAmount: number;
 }
 
-export interface DetailDailyModelRow extends Omit<CostTotals, 'quantity'> {
+interface DetailDailyModelRow extends Omit<CostTotals, 'quantity'> {
   date: string;
   model: string;
   costCenter?: string;

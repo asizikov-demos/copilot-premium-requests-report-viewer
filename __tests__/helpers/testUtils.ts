@@ -1,8 +1,4 @@
 import type { CSVData } from '@/types/csv';
-import type { NormalizedRow } from '@/utils/ingestion';
-import { DailyBucketsAggregator } from '@/utils/ingestion';
-
-import { aggregateRows } from './aggregateRows';
 
 export { makeUsageRow } from './makeNormalizedRow';
 
@@ -21,6 +17,3 @@ export const createMockCSVData = (overrides: Partial<CSVData> = {}): CSVData => 
   total_monthly_quota: 'Unknown',
   ...overrides
 });
-
-export const buildMinimalDailyBucketsArtifact = (rows: NormalizedRow[]) =>
-  aggregateRows(new DailyBucketsAggregator(), rows);

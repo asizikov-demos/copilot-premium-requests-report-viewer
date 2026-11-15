@@ -18,7 +18,7 @@ import { makeNormalizedRow } from './makeNormalizedRow';
  * generic, non-PII names in defaults (e.g. `model-a`).
  */
 
-export interface MakeUsageUser {
+interface MakeUsageUser {
   user: string;
   totalCredits: number;
   modelBreakdown?: Record<string, number>;
@@ -79,7 +79,7 @@ export function makeUsageArtifacts(users: MakeUsageUser[]): UsageArtifacts {
   };
 }
 
-export interface MakeQuotaEntry {
+interface MakeQuotaEntry {
   user: string;
   quota: number | 'unknown';
 }
@@ -109,7 +109,7 @@ export function makeQuotaArtifacts(entries: MakeQuotaEntry[]): QuotaArtifacts {
   return aggregator.finalize();
 }
 
-export interface MakeDailyBucketEntry {
+interface MakeDailyBucketEntry {
   date: string;
   user: string;
   used: number;
