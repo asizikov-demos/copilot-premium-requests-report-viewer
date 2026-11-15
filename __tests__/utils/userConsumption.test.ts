@@ -1,6 +1,6 @@
 import { PRICING } from '@/constants/pricing';
-import { buildUserConsumption } from '../helpers/legacyUserConsumption';
-import { buildProcessedDataFromRawRows } from '@/utils/ingestion/adapters';
+import { buildUserConsumption } from '../helpers/consumptionReference';
+import { normalizeRows } from '../helpers/normalizeRows';
 
 const base = {
   date: '2026-06-30T23:59:59Z', username: 'test-user-one', model: 'test-model-one',
@@ -9,7 +9,7 @@ const base = {
 
 describe('user consumption metrics', () => {
   it('sums credits by model and respects filtered rows', () => {
-    const rows = buildProcessedDataFromRawRows([
+    const rows = normalizeRows([
       { ...base, quantity: '10', input: '100' },
       { ...base, quantity: '20', model: 'test-model-two', input: '200' },
       { ...base, date: '2026-07-02', quantity: '30', input: '300' },
@@ -19,23 +19,23 @@ describe('user consumption metrics', () => {
     expect(result.credits).toEqual({ quantity: 60, rowCount: 4, reportedRows: 4 });
     expect(result.creditsByModel.get('test-model-one')?.quantity).toBe(40);
     expect(result.tokens?.totals.inputTokens).toBe(600);
-    expect(buildUserConsumption(rows.filter(row => row.monthKey === '2026-07')).credits.quantity).toBe(30);
+    expect(buildUserConsumption(rows.filter(row => row.day.slice(0, 7) === '2026-07')).credits.quantity).toBe(30);
   });
 
   it('distinguishes missing credits from reported zeros', () => {
-    const missing = buildUserConsumption(buildProcessedDataFromRawRows([
+    const missing = buildUserConsumption(normalizeRows([
       { ...base, quantity: '10' },
       { ...base, date: '2026-07-01', unit_type: 'requests', quantity: '1' },
     ]));
     expect(missing.credits).toEqual({ quantity: 10, rowCount: 1, reportedRows: 1 });
 
-    const zero = buildUserConsumption(buildProcessedDataFromRawRows([{ ...base, input: '0' }]));
+    const zero = buildUserConsumption(normalizeRows([{ ...base, input: '0' }]));
     expect(zero.credits.quantity).toBe(0);
     expect(buildUserConsumption([]).credits.quantity).toBeUndefined();
   });
 
   it('retains token-only activity alongside supported AI-credit usage', () => {
-    const result = buildUserConsumption(buildProcessedDataFromRawRows([
+    const result = buildUserConsumption(normalizeRows([
       { ...base, quantity: '10', aic_quantity: '5', aic_gross_amount: String(10 * PRICING.AI_CREDIT_USD_VALUE) },
       { ...base, date: '2026-07-01', cache_read: '50' },
     ]));
@@ -44,7 +44,7 @@ describe('user consumption metrics', () => {
   });
 
   it('retains token coverage and disables tokens after an ingestion failure', () => {
-    const rows = buildProcessedDataFromRawRows([{ ...base, input: '5' }, base]);
+    const rows = normalizeRows([{ ...base, input: '5' }, base]);
     expect(buildUserConsumption(rows).tokens?.totals).toMatchObject({
       inputTokens: 5, rowCount: 2, reportedRows: { inputTokens: 1 },
     });

@@ -59,9 +59,6 @@ function createContextValue(rows: NormalizedRow[] = []) {
     } as FeatureUsageArtifacts,
     billingArtifacts: aggregateRows(new BillingAggregator(), rows) as BillingArtifacts | undefined,
     billingPagesArtifacts: aggregateRows(new BillingPagesAggregator(), rows),
-    baseProcessed: [],
-    processedData: [],
-    aggregateProcessedData: [],
     analysis: {
       timeFrame: { start: '', end: '' },
       totalUniqueUsers: 0,

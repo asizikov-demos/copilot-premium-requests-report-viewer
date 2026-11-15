@@ -1,8 +1,8 @@
 import { analyzeCodingAgentAdoptionFromArtifacts } from '@/utils/ingestion';
 
 import { makeQuotaArtifacts, makeUsageArtifacts } from '../helpers/makeArtifacts';
-import { makeProcessedData } from '../helpers/testUtils';
-import { buildUsageArtifactsFromProcessedData } from '../helpers/processedArtifacts';
+import { makeUsageRow } from '../helpers/testUtils';
+import { buildUsageArtifactsFromRows } from '../helpers/normalizedArtifacts';
 
 function makeQuota(entries: Array<[string, number | 'unknown']>) {
   return makeQuotaArtifacts(entries.map(([user, quota]) => ({ user, quota })));
@@ -67,18 +67,18 @@ describe('analyzeCodingAgentAdoptionFromArtifacts', () => {
   });
 
   test('includes users whose rows are identified by the Coding Agent SKU', () => {
-    const usage = buildUsageArtifactsFromProcessedData([
-      makeProcessedData({
+    const usage = buildUsageArtifactsFromRows([
+      makeUsageRow({
         user: 'test-user-one',
         model: 'Claude Sonnet 5',
         sku: 'coding_agent_ai_credit',
-        creditsUsed: 12,
+        quantity: 12,
       }),
-      makeProcessedData({
+      makeUsageRow({
         user: 'test-user-one',
         model: 'GPT-5',
         sku: 'copilot_ai_credit',
-        creditsUsed: 8,
+        quantity: 8,
       }),
     ]);
 

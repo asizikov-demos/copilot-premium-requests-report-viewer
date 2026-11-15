@@ -1,8 +1,6 @@
-import type { ProcessedData } from '@/types/csv';
 import { shouldReplaceQuotaValue } from '@/utils/analytics/quota';
 import { isSupportedUsageUnitType } from '@/utils/unitType';
 
-import { buildNormalizedRowFromProcessedData } from './adapters';
 import {
   BillingArtifacts,
   BillingFieldTotals,
@@ -165,14 +163,4 @@ export class BillingAccumulator {
       userOrder: this.userOrder,
     };
   }
-}
-
-export function buildBillingArtifactsFromProcessedData(rows: ProcessedData[]): BillingArtifacts {
-  const accumulator = new BillingAccumulator();
-
-  for (const row of rows) {
-    accumulator.addRow(buildNormalizedRowFromProcessedData(row));
-  }
-
-  return accumulator.finalize();
 }

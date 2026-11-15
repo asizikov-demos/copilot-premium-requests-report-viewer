@@ -1,52 +1,47 @@
 import { renderHook } from '@testing-library/react';
 
-import { useAnalyzedData } from '@/hooks/useAnalyzedData';
-import type { ProcessedData } from '@/types/csv';
-import { buildUsageArtifactsFromProcessedData } from '../helpers/processedArtifacts';
+import { useArtifactAnalysis } from '@/hooks/useArtifactAnalysis';
+import type { NormalizedRow } from '@/utils/ingestion';
+import { buildUsageArtifactsFromRows } from '../helpers/normalizedArtifacts';
 
 import { makeDailyBucketsArtifacts, makeQuotaArtifacts } from '../helpers/makeArtifacts';
 
-function makeProcessedData(
+function makeUsageRow(
   model: string,
-  creditsUsed: number,
-  overrides: Partial<ProcessedData> = {}
-): ProcessedData {
-  const dateKey = overrides.dateKey ?? '2026-03-11';
+  quantity: number,
+  overrides: Partial<NormalizedRow> = {}
+): NormalizedRow {
+  const day = overrides.day ?? '2026-03-11';
 
   return {
-    timestamp: new Date(`${dateKey}T00:00:00.000Z`),
+    date: day,
     user: 'test-user-one',
     model,
-    creditsUsed,
-    totalQuota: 'Unknown',
+    quantity,
+    quotaRaw: 'Unknown',
     quotaValue: 'unknown',
-    iso: `${dateKey}T00:00:00.000Z`,
-    dateKey,
-    monthKey: dateKey.slice(0, 7),
-    epoch: new Date(`${dateKey}T00:00:00.000Z`).getTime(),
+    day,
     ...overrides,
   };
 }
 
-describe('useAnalyzedData core artifacts', () => {
+describe('useArtifactAnalysis core artifacts', () => {
   test('builds sorted model totals through usage artifacts and includes unattributed AI credits', () => {
-    const baseProcessed = [
-      makeProcessedData('model-one', 2),
-      makeProcessedData('Code Review', 7, {
+    const rows = [
+      makeUsageRow('model-one', 2),
+      makeUsageRow('Code Review', 7, {
         user: '',
         isUnattributedUsage: true,
         usageBucket: 'unattributed_ai_credit',
       }),
-      makeProcessedData('model-two', 5, {
+      makeUsageRow('model-two', 5, {
         user: 'test-user-two',
       }),
-      makeProcessedData('model-one', 4),
+      makeUsageRow('model-one', 4),
     ];
 
-    const { result } = renderHook(() => useAnalyzedData({
-      baseProcessed,
-      selectedMonths: [],
-      usageArtifacts: buildUsageArtifactsFromProcessedData(baseProcessed),
+    const { result } = renderHook(() => useArtifactAnalysis({
+      usageArtifacts: buildUsageArtifactsFromRows(rows),
       quotaArtifacts: makeQuotaArtifacts([]),
       dailyBucketsArtifacts: makeDailyBucketsArtifacts([]),
     }));
@@ -60,26 +55,24 @@ describe('useAnalyzedData core artifacts', () => {
   });
 });
 
-describe('useAnalyzedData artifacts', () => {
+describe('useArtifactAnalysis artifacts', () => {
   test('scopes user cost centers to the selected billing period', () => {
-    const baseProcessed = [
-      makeProcessedData('model-one', 2, {
+    const rows = [
+      makeUsageRow('model-one', 2, {
         costCenter: 'test-cost-center-one',
       }),
-      makeProcessedData('model-one', 3, {
-        dateKey: '2026-04-11',
+      makeUsageRow('model-one', 3, {
+        day: '2026-04-11',
         costCenter: 'test-cost-center-two',
       }),
     ];
-    const usageArtifacts = buildUsageArtifactsFromProcessedData(baseProcessed.filter(row => row.monthKey === '2026-03'));
+    const usageArtifacts = buildUsageArtifactsFromRows(rows.filter(row => row.day.slice(0, 7) === '2026-03'));
     const quotaArtifacts = makeQuotaArtifacts([{ user: 'test-user-one', quota: 'unknown' }]);
     const dailyBucketsArtifacts = makeDailyBucketsArtifacts([
       { date: '2026-03-11', user: 'test-user-one', used: 2 },
     ]);
 
-    const { result } = renderHook(() => useAnalyzedData({
-      baseProcessed,
-      selectedMonths: ['2026-03'],
+    const { result } = renderHook(() => useArtifactAnalysis({
       usageArtifacts,
       quotaArtifacts,
       dailyBucketsArtifacts,

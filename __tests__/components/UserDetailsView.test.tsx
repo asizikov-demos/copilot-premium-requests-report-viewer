@@ -3,11 +3,11 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { UserDetailsView } from '../helpers/detailFixtures';
 import { PRICING } from '@/constants/pricing';
 import { AnalysisContext } from '@/context/AnalysisContext';
-import type { ProcessedData } from '@/types/csv';
-import { buildProcessedDataFromRawRows } from '@/utils/ingestion/adapters';
+import type { NormalizedRow } from '@/utils/ingestion';
+import { normalizeRows } from '../helpers/normalizeRows';
 
 import { makeDailyBucketsArtifacts, makeUsageArtifacts } from '../helpers/makeArtifacts';
-import { makeProcessedData } from '../helpers/testUtils';
+import { makeUsageRow } from '../helpers/testUtils';
 
 jest.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div data-testid="chart-container">{children}</div>,
@@ -40,39 +40,39 @@ describe('UserDetailsView', () => {
   const mockOnBack = jest.fn();
 
   it('charts only the selected user reported daily USD consumption and follows filtered months', () => {
-    const processedData = [
-      makeProcessedData({
-        timestamp: new Date('2026-07-01T00:00:00Z'),
+    const rows = [
+      makeUsageRow({
+        day: '2026-07-01T00:00:00Z'.slice(0, 10),
         discountAmount: 0,
         netAmount: 2,
       }),
-      makeProcessedData({
-        timestamp: new Date('2026-06-30T23:59:59Z'),
+      makeUsageRow({
+        day: '2026-06-30T23:59:59Z'.slice(0, 10),
         discountAmount: 1.25,
         netAmount: 0.5,
       }),
-      makeProcessedData({
-        timestamp: new Date('2026-06-30T12:00:00Z'),
+      makeUsageRow({
+        day: '2026-06-30T12:00:00Z'.slice(0, 10),
         model: 'test-model-two',
         product: 'spark',
         costCenter: 'test-cost-center-two',
         discountAmount: 2,
         netAmount: 1,
       }),
-      makeProcessedData({
-        timestamp: new Date('2026-06-30T00:00:00Z'),
+      makeUsageRow({
+        day: '2026-06-30T00:00:00Z'.slice(0, 10),
         user: 'test-user-two',
         discountAmount: 100,
         netAmount: 50,
       }),
-      makeProcessedData({
-        timestamp: new Date('2026-08-15T00:00:00Z'),
+      makeUsageRow({
+        day: '2026-08-15T00:00:00Z'.slice(0, 10),
         user: 'test-user-two',
         inputTokens: 100,
       }),
     ];
     const { rerender } = render(
-      <UserDetailsView user="test-user-one" processedData={processedData} userQuotaValue="unknown" onBack={mockOnBack} />
+      <UserDetailsView user="test-user-one" rows={rows} userQuotaValue="unknown" onBack={mockOnBack} />
     );
 
     const region = screen.getByRole('region', { name: 'Daily Consumption' });
@@ -98,7 +98,7 @@ describe('UserDetailsView', () => {
     ]);
 
     rerender(
-      <UserDetailsView user="test-user-one" processedData={processedData.filter(row => row.monthKey === '2026-07')} userQuotaValue="unknown" onBack={mockOnBack} />
+      <UserDetailsView user="test-user-one" rows={rows.filter(row => row.day.slice(0, 7) === '2026-07')} userQuotaValue="unknown" onBack={mockOnBack} />
     );
     expect(JSON.parse(within(screen.getByRole('region', { name: 'Daily Consumption' })).getByTestId('bar-chart').getAttribute('data-chart')!)).toEqual([
       ...Array.from({ length: 31 }, (_, index) => ({
@@ -109,7 +109,7 @@ describe('UserDetailsView', () => {
     ]);
 
     rerender(
-      <UserDetailsView user="test-user-two" processedData={processedData} userQuotaValue="unknown" onBack={mockOnBack} />
+      <UserDetailsView user="test-user-two" rows={rows} userQuotaValue="unknown" onBack={mockOnBack} />
     );
     const secondUserData = JSON.parse(within(screen.getByRole('region', { name: 'Daily Consumption' })).getByTestId('bar-chart').getAttribute('data-chart')!);
     expect(secondUserData).toHaveLength(92);
@@ -122,11 +122,11 @@ describe('UserDetailsView', () => {
 
   it('retains zero and optional daily USD amounts without estimating costs from credits', () => {
     render(
-      <UserDetailsView user="test-user-one" processedData={[
-        makeProcessedData({ discountAmount: 0, netAmount: 0 }),
-        makeProcessedData({ timestamp: new Date('2025-06-02T00:00:00Z'), discountAmount: 1 }),
-        makeProcessedData({ timestamp: new Date('2025-06-03T00:00:00Z'), netAmount: 2 }),
-        makeProcessedData({ timestamp: new Date('2025-06-04T00:00:00Z'), grossAmount: 100, creditsUsed: 100 }),
+      <UserDetailsView user="test-user-one" rows={[
+        makeUsageRow({ discountAmount: 0, netAmount: 0 }),
+        makeUsageRow({ day: '2025-06-02T00:00:00Z'.slice(0, 10), discountAmount: 1 }),
+        makeUsageRow({ day: '2025-06-03T00:00:00Z'.slice(0, 10), netAmount: 2 }),
+        makeUsageRow({ day: '2025-06-04T00:00:00Z'.slice(0, 10), grossAmount: 100, quantity: 100 }),
       ]} userQuotaValue="unknown" onBack={mockOnBack} />
     );
 
@@ -141,12 +141,12 @@ describe('UserDetailsView', () => {
 
   it.each([
     { rows: [] },
-    { rows: [makeProcessedData({ inputTokens: 100 })] },
-    { rows: [makeProcessedData({ grossAmount: 100 })] },
-    { rows: [makeProcessedData({ user: 'test-user-two', discountAmount: 1, netAmount: 2 })] },
+    { rows: [makeUsageRow({ inputTokens: 100 })] },
+    { rows: [makeUsageRow({ grossAmount: 100 })] },
+    { rows: [makeUsageRow({ user: 'test-user-two', discountAmount: 1, netAmount: 2 })] },
   ])('omits daily USD consumption when the selected user has no reported daily amounts (%#)', ({ rows }) => {
     render(
-      <UserDetailsView user="test-user-one" processedData={rows} userQuotaValue="unknown" onBack={mockOnBack} />
+      <UserDetailsView user="test-user-one" rows={rows} userQuotaValue="unknown" onBack={mockOnBack} />
     );
 
     expect(screen.queryByRole('region', { name: 'Daily Consumption' })).not.toBeInTheDocument();
@@ -156,12 +156,12 @@ describe('UserDetailsView', () => {
     const base = {
       date: '2026-06-30', username: 'test-user-one', model: 'test-model-one', quantity: '1', unit_type: 'ai-credits',
     };
-    const rows = buildProcessedDataFromRawRows([
+    const rows = normalizeRows([
       { ...base, input: '0', cost_center_name: 'test-cost-center-one' },
       { ...base, input: '10', cache_write: '2', cost_center_name: 'test-cost-center-two' },
     ]);
     const { rerender } = render(
-      <UserDetailsView user="test-user-one" processedData={rows} userQuotaValue="unknown" onBack={mockOnBack} />
+      <UserDetailsView user="test-user-one" rows={rows} userQuotaValue="unknown" onBack={mockOnBack} />
     );
     const table = screen.getByRole('table', { name: 'Daily Model Usage Breakdown' });
     expect(within(table).getAllByRole('columnheader').map(header => header.textContent)).toEqual([
@@ -175,7 +175,7 @@ describe('UserDetailsView', () => {
     expect(screen.queryByRole('table', { name: 'Cost per Cost Center' })).not.toBeInTheDocument();
 
     rerender(
-      <UserDetailsView user="test-user-one" processedData={buildProcessedDataFromRawRows([base])} userQuotaValue="unknown" onBack={mockOnBack} />
+      <UserDetailsView user="test-user-one" rows={normalizeRows([base])} userQuotaValue="unknown" onBack={mockOnBack} />
     );
     expect(screen.queryByRole('table', { name: 'Daily Model Usage Breakdown' })).not.toBeInTheDocument();
   });
@@ -187,7 +187,7 @@ describe('UserDetailsView', () => {
     render(
       <UserDetailsView
         user="test-user-one"
-        processedData={buildProcessedDataFromRawRows([
+        rows={normalizeRows([
           { ...base, input: '1000', cache_read: '300', cache_write: '200', output: '500' },
         ])}
         userQuotaValue="unknown"
@@ -221,7 +221,7 @@ describe('UserDetailsView', () => {
       gross_amount: '1',
       cost_center_name: 'test-cost-center-one',
     };
-    const processedData = buildProcessedDataFromRawRows([
+    const rows = normalizeRows([
       { ...base, input: '1000', output: '0', cache_read: '20', cache_write: '5' },
       { ...base, input: '250', cache_read: '30', cache_write: '50' },
       { ...base, cost_center_name: 'test-cost-center-two', input: '9', output: '0' },
@@ -230,7 +230,7 @@ describe('UserDetailsView', () => {
       { ...base, username: 'test-user-two', input: '9999' },
     ]);
     const { rerender } = render(
-      <UserDetailsView user="test-user-one" processedData={processedData} userQuotaValue="unknown" onBack={mockOnBack} />
+      <UserDetailsView user="test-user-one" rows={rows} userQuotaValue="unknown" onBack={mockOnBack} />
     );
     const table = screen.getByRole('table', { name: 'Daily Model Usage Breakdown' });
     const headings = screen.getAllByRole('heading', { level: 3 }).map(heading => heading.textContent);
@@ -244,24 +244,24 @@ describe('UserDetailsView', () => {
       'Date', 'Model', 'Cost Center', 'AI Credits', 'Cache Success Rate',
       'Gross Amount', 'Included credits', 'Additional usage',
     ]);
-    const rows = within(table).getAllByRole('row').slice(1);
+    const tableRows = within(table).getAllByRole('row').slice(1);
     const cells = (row: HTMLElement) => within(row).getAllByRole('cell').map(cell => cell.textContent);
-    expect(cells(rows[0]).slice(0, 5)).toEqual([
+    expect(cells(tableRows[0]).slice(0, 5)).toEqual([
       '2026-06-30', '- test-model-one', 'test-cost-center-one', '2.00', '3.7%(partial)',
     ]);
-    expect(within(rows[0]).getByText('(partial)')).toHaveAttribute(
+    expect(within(tableRows[0]).getByText('(partial)')).toHaveAttribute(
       'title', '2 of 3 rows reported input, cache read, and cache write tokens'
     );
-    expect(cells(rows[1]).slice(0, 4)).toEqual([
+    expect(cells(tableRows[1]).slice(0, 4)).toEqual([
       '- test-model-one', 'test-cost-center-two', '1.00', '3.7%(partial)',
     ]);
-    expect(within(rows[2]).getAllByLabelText('Not reported')).toHaveLength(1);
-    expect(cells(rows[3])[0]).toBe('2026-07-01');
+    expect(within(tableRows[2]).getAllByLabelText('Not reported')).toHaveLength(1);
+    expect(cells(tableRows[3])[0]).toBe('2026-07-01');
     expect(table).not.toHaveTextContent('9,999');
     expect(within(table).queryByRole('columnheader', { name: /Input Tokens|Output Tokens|Cache (Read|Write) Tokens/ })).not.toBeInTheDocument();
 
     rerender(
-      <UserDetailsView user="test-user-one" processedData={processedData.filter(row => row.monthKey === '2026-07')} userQuotaValue="unknown" onBack={mockOnBack} />
+      <UserDetailsView user="test-user-one" rows={rows.filter(row => row.day.slice(0, 7) === '2026-07')} userQuotaValue="unknown" onBack={mockOnBack} />
     );
     const filteredTable = screen.getByRole('table', { name: 'Daily Model Usage Breakdown' });
     expect(filteredTable).not.toHaveTextContent('2026-06-30');
@@ -274,7 +274,7 @@ describe('UserDetailsView', () => {
       date: '2026-06-30', username: 'test-user-one', model: 'test-model-one', quantity: '1', unit_type: 'ai-credits', gross_amount: '0',
     };
     const { rerender } = render(
-      <UserDetailsView user="test-user-one" processedData={buildProcessedDataFromRawRows([
+      <UserDetailsView user="test-user-one" rows={normalizeRows([
         { ...base, input: '0', output: '0', cache_read: '0', cache_write: '0' },
       ])} userQuotaValue="unknown" onBack={mockOnBack} />
     );
@@ -283,7 +283,7 @@ describe('UserDetailsView', () => {
     expect(within(table).queryByRole('columnheader', { name: /Input Tokens|Output Tokens|Cache (Read|Write) Tokens/ })).not.toBeInTheDocument();
     expect(within(table).getByRole('cell', { name: 'Not reported' })).toBeInTheDocument();
     rerender(
-      <UserDetailsView user="test-user-one" processedData={buildProcessedDataFromRawRows([
+      <UserDetailsView user="test-user-one" rows={normalizeRows([
         base, { ...base, username: 'test-user-two', input: '10' },
       ])} userQuotaValue="unknown" onBack={mockOnBack} />
     );
@@ -291,12 +291,12 @@ describe('UserDetailsView', () => {
     expect(screen.queryByText(/Partial totals/)).not.toBeInTheDocument();
   });
 
-  const createMockProcessedData = (quotaValues: Array<number | 'unknown'>): ProcessedData[] => {
+  const createMockNormalizedRow = (quotaValues: Array<number | 'unknown'>): NormalizedRow[] => {
     return quotaValues.map((quotaValue, index) =>
-      makeProcessedData({
-        timestamp: new Date(`2025-06-${10 + index}T10:00:00Z`),
+      makeUsageRow({
+        day: `2025-06-${10 + index}T10:00:00Z`.slice(0, 10),
         model: 'gpt-4',
-        creditsUsed: 1,
+        quantity: 1,
         quotaValue,
         unitType: undefined,
         usageUnit: undefined,
@@ -318,7 +318,7 @@ describe('UserDetailsView', () => {
   it.each([PRICING.BUSINESS_AI_CREDIT_QUOTA, PRICING.ENTERPRISE_AI_CREDIT_QUOTA, 'unknown'] as const)(
     'shows only daily model bars for quota %s',
     (quotaValue) => {
-      const processedData = createMockProcessedData([quotaValue]);
+      const rows = createMockNormalizedRow([quotaValue]);
       const contextValue = {
         usageArtifacts: makeUsageArtifacts([{
           user: 'test-user-one',
@@ -337,7 +337,7 @@ describe('UserDetailsView', () => {
         <AnalysisContext.Provider value={contextValue}>
           <UserDetailsView
             user="test-user-one"
-            processedData={processedData}
+            rows={rows}
             userQuotaValue={quotaValue}
             onBack={mockOnBack}
           />
@@ -357,7 +357,7 @@ describe('UserDetailsView', () => {
     render(
       <UserDetailsView
         user="test-user-one"
-        processedData={createMockProcessedData([PRICING.BUSINESS_AI_CREDIT_QUOTA])}
+        rows={createMockNormalizedRow([PRICING.BUSINESS_AI_CREDIT_QUOTA])}
         userQuotaValue={PRICING.BUSINESS_AI_CREDIT_QUOTA}
         onBack={mockOnBack}
       />
@@ -383,7 +383,7 @@ describe('UserDetailsView', () => {
     render(
       <UserDetailsView
         user="test-user-one"
-        processedData={createMockProcessedData(['unknown'])}
+        rows={createMockNormalizedRow(['unknown'])}
         userQuotaValue="unknown"
         onBack={mockOnBack}
       />
@@ -397,7 +397,7 @@ describe('UserDetailsView', () => {
   });
 
   it('lists every organization and cost center found in the user rows', () => {
-    const processedData = createMockProcessedData([PRICING.BUSINESS_AI_CREDIT_QUOTA, PRICING.BUSINESS_AI_CREDIT_QUOTA]).map((row, index) => ({
+    const rows = createMockNormalizedRow([PRICING.BUSINESS_AI_CREDIT_QUOTA, PRICING.BUSINESS_AI_CREDIT_QUOTA]).map((row, index) => ({
       ...row,
       user: 'test-user-one',
       organization: index % 2 === 0 ? 'test-org-one' : 'test-org-two',
@@ -407,7 +407,7 @@ describe('UserDetailsView', () => {
     render(
       <UserDetailsView
         user="test-user-one"
-        processedData={processedData}
+        rows={rows}
         userQuotaValue={PRICING.BUSINESS_AI_CREDIT_QUOTA}
         onBack={mockOnBack}
       />
@@ -418,7 +418,7 @@ describe('UserDetailsView', () => {
   });
 
   it('falls back to the filtered user aggregate for organization and cost center metadata', () => {
-    const processedData = createMockProcessedData([PRICING.BUSINESS_AI_CREDIT_QUOTA]).map((row) => ({
+    const rows = createMockNormalizedRow([PRICING.BUSINESS_AI_CREDIT_QUOTA]).map((row) => ({
       ...row,
       user: 'test-user-one',
       organization: undefined,
@@ -428,7 +428,7 @@ describe('UserDetailsView', () => {
     render(
       <UserDetailsView
         user="test-user-one"
-        processedData={processedData}
+        rows={rows}
         userQuotaValue={PRICING.BUSINESS_AI_CREDIT_QUOTA}
         userAggregate={{
           user: 'test-user-one',
@@ -461,7 +461,7 @@ describe('UserDetailsView', () => {
       <AnalysisContext.Provider value={contextValue}>
         <UserDetailsView
           user="test-user-one"
-          processedData={[]}
+          rows={[]}
           userQuotaValue={PRICING.BUSINESS_AI_CREDIT_QUOTA}
           userAggregate={null}
           onBack={mockOnBack}
@@ -475,13 +475,13 @@ describe('UserDetailsView', () => {
   });
 
   it.each([
-    { product: 'spark', label: 'Spark', sku: 'copilot_ai_credit', model: 'Claude Sonnet 4.5', creditsUsed: 4, amount: 0.16 },
-    { product: 'code_quality', label: 'Code Quality', sku: 'code_quality_ai_credit', model: 'Claude Sonnet 4.6', creditsUsed: 51.28584, amount: 0.5128584 },
-  ])('renders $label as a separate billing product bucket', async ({ product, label, sku, model, creditsUsed, amount }) => {
-    const processedData = [
-      makeProcessedData({
-        timestamp: new Date('2025-06-10T10:00:00Z'),
-        model, creditsUsed, product, sku,
+    { product: 'spark', label: 'Spark', sku: 'copilot_ai_credit', model: 'Claude Sonnet 4.5', quantity: 4, amount: 0.16 },
+    { product: 'code_quality', label: 'Code Quality', sku: 'code_quality_ai_credit', model: 'Claude Sonnet 4.6', quantity: 51.28584, amount: 0.5128584 },
+  ])('renders $label as a separate billing product bucket', async ({ product, label, sku, model, quantity, amount }) => {
+    const rows = [
+      makeUsageRow({
+        day: '2025-06-10T10:00:00Z'.slice(0, 10),
+        model, quantity, product, sku,
         quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
         unitType: undefined,
         usageUnit: undefined,
@@ -496,7 +496,7 @@ describe('UserDetailsView', () => {
     render(
       <UserDetailsView
         user="test-user-one"
-        processedData={processedData}
+        rows={rows}
         userQuotaValue={PRICING.ENTERPRISE_AI_CREDIT_QUOTA}
         onBack={mockOnBack}
       />
@@ -514,15 +514,15 @@ describe('UserDetailsView', () => {
     const makeRow = (
       date: string,
       costCenter: string | undefined,
-      creditsUsed: number,
+      quantity: number,
       grossAmount: number,
       discountAmount: number,
       netAmount: number
-    ): ProcessedData => {
-      return makeProcessedData({
-        timestamp: new Date(`${date}T00:00:00Z`),
+    ): NormalizedRow => {
+      return makeUsageRow({
+        day: `${date}T00:00:00Z`.slice(0, 10),
         model: 'test-model-one',
-        creditsUsed,
+        quantity,
         unitType: undefined,
         usageUnit: undefined,
         costCenter,
@@ -531,7 +531,7 @@ describe('UserDetailsView', () => {
         netAmount,
       });
     };
-    const processedData = [
+    const rows = [
       makeRow('2026-03-01', 'test-cost-center-one', 10, 0.4, 0.1, 0.3),
       makeRow('2026-03-02', 'test-cost-center-one', 5, 0.2, 0.05, 0.15),
       makeRow('2026-03-03', 'test-cost-center-two', 20, 0.8, 0.2, 0.6),
@@ -541,7 +541,7 @@ describe('UserDetailsView', () => {
     const { rerender } = render(
       <UserDetailsView
         user="test-user-one"
-        processedData={processedData}
+        rows={rows}
         userQuotaValue={PRICING.BUSINESS_AI_CREDIT_QUOTA}
         onBack={mockOnBack}
       />
@@ -570,7 +570,7 @@ describe('UserDetailsView', () => {
     rerender(
       <UserDetailsView
         user="test-user-one"
-        processedData={[makeRow('2026-03-04', undefined, 2, 0.08, 0, 0.08)]}
+        rows={[makeRow('2026-03-04', undefined, 2, 0.08, 0, 0.08)]}
         userQuotaValue={PRICING.BUSINESS_AI_CREDIT_QUOTA}
         onBack={mockOnBack}
       />
@@ -584,7 +584,7 @@ describe('UserDetailsView', () => {
     render(
       <UserDetailsView
         user="test-user-one"
-        processedData={createMockProcessedData([PRICING.BUSINESS_AI_CREDIT_QUOTA]).map((row) => ({
+        rows={createMockNormalizedRow([PRICING.BUSINESS_AI_CREDIT_QUOTA]).map((row) => ({
           ...row,
           user: 'test-user-one',
           costCenter: 'test-cost-center-one',
@@ -601,10 +601,10 @@ describe('UserDetailsView', () => {
     render(
       <UserDetailsView
         user="test-user-one"
-        processedData={[
-          makeProcessedData({ user: 'test-user-one', costCenter: 'test-cost-center-one', creditsUsed: 3,
+        rows={[
+          makeUsageRow({ user: 'test-user-one', costCenter: 'test-cost-center-one', quantity: 3,
             grossAmount: .03, discountAmount: 0, netAmount: .03 }),
-          makeProcessedData({ user: 'test-user-one', costCenter: 'test-cost-center-one', creditsUsed: 42.5,
+          makeUsageRow({ user: 'test-user-one', costCenter: 'test-cost-center-one', quantity: 42.5,
             grossAmount: .425, discountAmount: 0, netAmount: .425 }),
         ]}
         userQuotaValue={PRICING.BUSINESS_AI_CREDIT_QUOTA}
@@ -625,18 +625,18 @@ describe('UserDetailsView', () => {
     { label: 'zero auxiliary gross amounts', aicGrossAmounts: [0, 0] },
   ])('renders billed gross with zero net spend despite $label', async ({ aicGrossAmounts }) => {
     const models = [
-      { timestamp: new Date('2026-03-01T00:00:00Z'), model: 'Coding Agent model', creditsUsed: 2 },
-      { timestamp: new Date('2026-03-02T00:00:00Z'), model: 'Claude Opus 4.6', creditsUsed: 24 },
+      { day: '2026-03-01T00:00:00Z'.slice(0, 10), model: 'Coding Agent model', quantity: 2 },
+      { day: '2026-03-02T00:00:00Z'.slice(0, 10), model: 'Claude Opus 4.6', quantity: 24 },
     ];
-    const processedData = models.map((row, index) => makeProcessedData({
+    const rows = models.map((row, index) => makeUsageRow({
       ...row,
       quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
       unitType: undefined,
       usageUnit: undefined,
       product: 'copilot',
       sku: 'copilot_ai_credit',
-      grossAmount: row.creditsUsed * PRICING.AI_CREDIT_USD_VALUE,
-      discountAmount: row.creditsUsed * PRICING.AI_CREDIT_USD_VALUE,
+      grossAmount: row.quantity * PRICING.AI_CREDIT_USD_VALUE,
+      discountAmount: row.quantity * PRICING.AI_CREDIT_USD_VALUE,
       netAmount: 0,
       aicGrossAmount: aicGrossAmounts[index],
     }));
@@ -644,7 +644,7 @@ describe('UserDetailsView', () => {
     render(
       <UserDetailsView
         user="test-user-one"
-        processedData={processedData}
+        rows={rows}
         userQuotaValue={PRICING.ENTERPRISE_AI_CREDIT_QUOTA}
         onBack={mockOnBack}
       />
@@ -659,19 +659,19 @@ describe('UserDetailsView', () => {
     });
 
     const dailyTable = screen.getByRole('table', { name: 'Daily Model Usage Breakdown' });
-    for (const { model, creditsUsed } of models) {
+    for (const { model, quantity } of models) {
       const dailyRow = within(dailyTable).getByText(`- ${model}`).closest('tr');
       expect(dailyRow).not.toBeNull();
       const cells = within(dailyRow!).getAllByRole('cell');
-      expect(cells[3]).toHaveTextContent(`$${(creditsUsed * PRICING.AI_CREDIT_USD_VALUE).toFixed(2)}`);
+      expect(cells[3]).toHaveTextContent(`$${(quantity * PRICING.AI_CREDIT_USD_VALUE).toFixed(2)}`);
     }
   });
 
   it('uses usage-based billing columns in product and daily model breakdown tables', async () => {
-    const processedData = [makeProcessedData({
-      timestamp: new Date('2026-06-01T00:00:00Z'),
+    const rows = [makeUsageRow({
+      day: '2026-06-01T00:00:00Z'.slice(0, 10),
       model: 'Auto: Claude Haiku 4.5',
-      creditsUsed: 42.5,
+      quantity: 42.5,
       product: 'copilot',
       sku: 'copilot_ai_credit',
       unitType: 'ai-credits',
@@ -701,7 +701,7 @@ describe('UserDetailsView', () => {
       <AnalysisContext.Provider value={contextValue}>
         <UserDetailsView
           user="test-user-one"
-          processedData={processedData}
+          rows={rows}
           userQuotaValue={PRICING.BUSINESS_AI_CREDIT_QUOTA}
           onBack={mockOnBack}
         />
@@ -733,10 +733,10 @@ describe('UserDetailsView', () => {
   });
 
   it('builds daily model chart data from detail aggregates when overview artifacts are unavailable', () => {
-    const processedData = [makeProcessedData({
-      timestamp: new Date('2025-06-30T23:59:59Z'),
+    const rows = [makeUsageRow({
+      day: '2025-06-30T23:59:59Z'.slice(0, 10),
       model: 'test-model-one',
-      creditsUsed: 2,
+      quantity: 2,
     })];
     const contextValue = {
       usageArtifacts: makeUsageArtifacts([{
@@ -755,7 +755,7 @@ describe('UserDetailsView', () => {
       <AnalysisContext.Provider value={contextValue}>
         <UserDetailsView
           user="test-user-one"
-          processedData={processedData}
+          rows={rows}
           userQuotaValue="unknown"
           onBack={mockOnBack}
         />

@@ -5,7 +5,6 @@ import { DetailAggregator } from './DetailAggregator';
 import { FeatureUsageAggregator } from './FeatureUsageAggregator';
 import { QuotaAggregator } from './QuotaAggregator';
 import { ModelDailyAggregator } from './ModelDailyAggregator';
-import { RawDataAggregator } from './RawDataAggregator';
 import { TokenAggregator } from './TokenAggregator';
 import { UsageAggregator } from './UsageAggregator';
 import type { Aggregator } from './types';
@@ -20,7 +19,6 @@ const aggregatorRegistry = {
   billingPages: () => new BillingPagesAggregator(),
   tokens: () => new TokenAggregator(),
   modelDaily: () => new ModelDailyAggregator(),
-  rawData: () => new RawDataAggregator(),
 };
 
 export type AggregatorId = keyof typeof aggregatorRegistry;

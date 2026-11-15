@@ -3,13 +3,11 @@ import {
   AggregatorContext,
   DailyBucketsAggregator,
   NormalizedRow,
-  QuotaAggregator,
   UsageAggregator,
 } from '@/utils/ingestion';
-import type { ProcessedData } from '@/types/csv';
 
 import { makeNormalizedRow } from '../helpers/makeNormalizedRow';
-import { buildDailyBucketsArtifactsFromProcessedData, buildQuotaArtifactsFromProcessedData, buildUsageArtifactsFromProcessedData } from '../helpers/processedArtifacts';
+import { buildDailyBucketsArtifactsFromRows, buildQuotaArtifactsFromRows, buildUsageArtifactsFromRows } from '../helpers/normalizedArtifacts';
 
 describe('UsageAggregator', () => {
   test('retains per-user organization and cost center metadata and collects distinct values', () => {
@@ -73,8 +71,7 @@ describe('UsageAggregator', () => {
     ]);
   });
 
-  test('processed data builder matches UsageAggregator output and includes top model metadata', () => {
-    const ctx: AggregatorContext = { pricing: PRICING };
+  test('includes top model metadata and unattributed usage totals', () => {
     const rows: NormalizedRow[] = [
       makeNormalizedRow({
         user: 'test-user-one',
@@ -103,41 +100,15 @@ describe('UsageAggregator', () => {
         usageBucket: 'unattributed_ai_credit',
       }),
     ];
-    const agg = new UsageAggregator();
-    agg.init?.(ctx);
-    for (const row of rows) {
-      agg.onRow(row, ctx);
-    }
-
-    const processedRows: ProcessedData[] = rows.map((row) => ({
-      timestamp: new Date(`${row.day}T00:00:00Z`),
-      user: row.user,
-      model: row.model,
-      creditsUsed: row.quantity,
-      totalQuota: row.quotaRaw ?? 'Unknown',
-      quotaValue: row.quotaValue ?? 'unknown',
-      iso: `${row.day}T00:00:00.000Z`,
-      dateKey: row.day,
-      monthKey: row.day.slice(0, 7),
-      epoch: new Date(`${row.day}T00:00:00Z`).getTime(),
-      organization: row.organization,
-      costCenter: row.costCenter,
-      isUnattributedUsage: row.isUnattributedUsage,
-      usageBucket: row.usageBucket,
-    }));
-
-    const streamingOutput = agg.finalize(ctx);
-    const processedOutput = buildUsageArtifactsFromProcessedData(processedRows);
-
-    expect(processedOutput).toEqual(streamingOutput);
-    expect(processedOutput.users).toEqual(expect.arrayContaining([
+    const output = buildUsageArtifactsFromRows(rows);
+    expect(output.users).toEqual(expect.arrayContaining([
       expect.objectContaining({
         user: 'test-user-one',
         topModel: 'model-two',
         topModelValue: 5,
       }),
     ]));
-    expect(processedOutput.specialBuckets).toEqual([
+    expect(output.specialBuckets).toEqual([
       expect.objectContaining({
         key: 'unattributed_ai_credit',
         totalCredits: 4,
@@ -147,35 +118,8 @@ describe('UsageAggregator', () => {
   });
 });
 
-describe('processed data artifact builders', () => {
-  function toProcessedData(rows: NormalizedRow[]): ProcessedData[] {
-    return rows.map((row) => ({
-      timestamp: new Date(`${row.day}T00:00:00Z`),
-      user: row.user,
-      model: row.model,
-      creditsUsed: row.quantity,
-      totalQuota: row.quotaRaw ?? (row.quotaValue === 'unknown' ? 'Unknown' : String(row.quotaValue ?? 'Unknown')),
-      quotaValue: row.quotaValue ?? 'unknown',
-      iso: `${row.day}T00:00:00.000Z`,
-      dateKey: row.day,
-      monthKey: row.day.slice(0, 7),
-      epoch: new Date(`${row.day}T00:00:00Z`).getTime(),
-      product: row.product,
-      sku: row.sku,
-      usageUnit: row.usageUnit,
-      billingQuantity: row.billingQuantity,
-      organization: row.organization,
-      costCenter: row.costCenter,
-      appliedCostPerQuantity: row.appliedCostPerQuantity,
-      grossAmount: row.grossAmount,
-      discountAmount: row.discountAmount,
-      netAmount: row.netAmount,
-      isUnattributedUsage: row.isUnattributedUsage,
-      usageBucket: row.usageBucket,
-    }));
-  }
-
-  test('usage processed-data builder preserves unattributed AI Credits', () => {
+describe('normalized row aggregation', () => {
+  test('preserves unattributed AI Credits', () => {
     const rows = [
       makeNormalizedRow({
         user: '',
@@ -188,7 +132,7 @@ describe('processed data artifact builders', () => {
       }),
     ];
 
-    const output = buildUsageArtifactsFromProcessedData(toProcessedData(rows));
+    const output = buildUsageArtifactsFromRows(rows);
 
     expect(output.users).toHaveLength(0);
     expect(output.specialBuckets).toEqual([
@@ -200,36 +144,31 @@ describe('processed data artifact builders', () => {
     ]);
   });
 
-  test('quota processed-data builder matches QuotaAggregator license semantics', () => {
-    const ctx: AggregatorContext = { pricing: PRICING };
+  test('keeps unattributed usage out of quota license classification', () => {
     const rows: NormalizedRow[] = [
-      makeNormalizedRow({ user: 'test-user-one', quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA, quotaRaw: String(PRICING.BUSINESS_AI_CREDIT_QUOTA) }),
-      makeNormalizedRow({ user: 'test-user-two', quotaValue: 'unknown', quotaRaw: 'Unknown' }),
+      makeNormalizedRow({ user: 'test-user-one', unitType: 'ai-credits', quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA, quotaRaw: String(PRICING.BUSINESS_AI_CREDIT_QUOTA) }),
+      makeNormalizedRow({ user: 'test-user-two', unitType: 'ai-credits', quotaValue: 'unknown', quotaRaw: 'Unknown' }),
       makeNormalizedRow({
         user: '',
         model: 'Code Review',
         quantity: 4,
-        quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA,
+        quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
         isUnattributedUsage: true,
         usageBucket: 'unattributed_ai_credit',
       }),
     ];
-    const aggregator = new QuotaAggregator();
-    aggregator.init?.(ctx);
-    for (const row of rows) {
-      aggregator.onRow(row, ctx);
-    }
+    const output = buildQuotaArtifactsFromRows(rows);
 
-    const output = buildQuotaArtifactsFromProcessedData(toProcessedData(rows));
-
-    expect(output).toEqual(aggregator.finalize(ctx));
-    expect(output.hasMixedQuotas).toBe(false);
+    expect(output.quotaByUser).toEqual(new Map<string, number | 'unknown'>([
+      ['test-user-one', PRICING.BUSINESS_AI_CREDIT_QUOTA],
+      ['test-user-two', 'unknown'],
+    ]));
+    expect(output.hasMixedQuotas).toBe(true);
     expect(output.hasMixedLicenses).toBe(false);
     expect(output.specialBucketQuotas?.get('unattributed_ai_credit')).toBe(0);
   });
 
-  test('daily processed-data builder includes per-model and special bucket breakdowns', () => {
-    const ctx: AggregatorContext = { pricing: PRICING };
+  test('includes daily per-model and special bucket breakdowns', () => {
     const rows: NormalizedRow[] = [
       makeNormalizedRow({ user: 'test-user-one', model: 'model-one', quantity: 2 }),
       makeNormalizedRow({ user: 'test-user-one', model: 'model-two', quantity: 3 }),
@@ -244,15 +183,8 @@ describe('processed data artifact builders', () => {
         usageBucket: 'unattributed_ai_credit',
       }),
     ];
-    const aggregator = new DailyBucketsAggregator();
-    aggregator.init?.(ctx);
-    for (const row of rows) {
-      aggregator.onRow(row, ctx);
-    }
+    const output = buildDailyBucketsArtifactsFromRows(rows);
 
-    const output = buildDailyBucketsArtifactsFromProcessedData(toProcessedData(rows));
-
-    expect(output).toEqual(aggregator.finalize(ctx));
     expect(output.dailyUserModelTotals?.get('2025-06-01')?.get('test-user-one')?.get('model-two')).toBe(3);
     expect(output.dailyBucketTotals?.get('2025-06-02')?.get('unattributed_ai_credit')).toBe(7);
     expect(output.dailyBucketModelTotals?.get('2025-06-02')?.get('unattributed_ai_credit')?.get('Code Review')).toBe(7);

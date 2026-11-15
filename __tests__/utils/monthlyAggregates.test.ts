@@ -9,8 +9,7 @@ import { PRICING } from '@/constants/pricing';
 import type { CSVData } from '@/types/csv';
 import {
   BillingAggregator, BillingPagesAggregator, DailyBucketsAggregator, FeatureUsageAggregator, QuotaAggregator,
-  TokenAggregator, TokenAccumulator, UsageAccumulator, UsageAggregator, buildProcessedDataFromRows,
-  buildBillingArtifactsFromProcessedData,
+  TokenAggregator, TokenAccumulator, UsageAccumulator, UsageAggregator,
   buildDailyCumulativeDataFromArtifacts, buildDailyModelUsageFromArtifacts,
   mergeUsageArtifacts, mergeQuotaArtifacts, mergeDailyBucketsArtifacts,
   mergeFeatureUsageArtifacts, mergeBillingArtifacts, mergeTokenArtifacts,
@@ -20,9 +19,9 @@ import {
 import { buildBillingMonthDates } from '@/utils/dateKeys';
 
 import {
-  buildDailyBucketsArtifactsFromProcessedData, buildFeatureUsageArtifactsFromProcessedData,
-  buildQuotaArtifactsFromProcessedData,
-} from '../helpers/processedArtifacts';
+  buildDailyBucketsArtifactsFromRows, buildFeatureUsageArtifactsFromRows,
+  buildQuotaArtifactsFromRows, buildBillingArtifactsFromRows,
+} from '../helpers/normalizedArtifacts';
 import { makeNormalizedRow } from '../helpers/makeNormalizedRow';
 
 const ctx = { pricing: PRICING };
@@ -55,7 +54,6 @@ function parse(csv: string): NormalizedRow[] {
 }
 
 function reference(rows: NormalizedRow[]): CoreArtifacts {
-  const processed = buildProcessedDataFromRows(rows);
   const usage = new UsageAccumulator();
   const tokens = new TokenAccumulator();
   for (const row of rows) {
@@ -64,10 +62,10 @@ function reference(rows: NormalizedRow[]): CoreArtifacts {
   }
   return {
     usageArtifacts: usage.finalize(),
-    quotaArtifacts: buildQuotaArtifactsFromProcessedData(processed),
-    dailyBucketsArtifacts: buildDailyBucketsArtifactsFromProcessedData(processed),
-    featureUsageArtifacts: buildFeatureUsageArtifactsFromProcessedData(processed),
-    billingArtifacts: buildBillingArtifactsFromProcessedData(processed),
+    quotaArtifacts: buildQuotaArtifactsFromRows(rows),
+    dailyBucketsArtifacts: buildDailyBucketsArtifactsFromRows(rows),
+    featureUsageArtifacts: buildFeatureUsageArtifactsFromRows(rows),
+    billingArtifacts: buildBillingArtifactsFromRows(rows),
     tokenArtifacts: tokens.finalize(),
   };
 }

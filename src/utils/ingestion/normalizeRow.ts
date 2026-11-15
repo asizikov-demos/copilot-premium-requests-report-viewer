@@ -18,10 +18,6 @@ import {
  * Normalize a raw CSV row object into a typed, validated structure.
  * Returns null if row is invalid or missing required fields.
  *
- * When `options.allowInvalidQuantity` is true, rows with a non-numeric quantity
- * are not rejected; instead the returned row will have `quantity` as `NaN`.
- * Callers using this option must handle NaN quantity values themselves.
- *
  * `options.normalizeDate` lets the streaming orchestrator inject a date parser
  * selected once from the first row. When omitted, each value is detected
  * individually via `normalizeDateToIso`.
@@ -29,7 +25,7 @@ import {
 export function normalizeRow(
   raw: CSVData | Record<string, unknown>,
   warnings: string[],
-  options: { allowInvalidQuantity?: boolean; normalizeDate?: DateNormalizer } = {}
+  options: { normalizeDate?: DateNormalizer } = {}
 ): NormalizedRow | null {
   const rawRecord = raw as Record<string, unknown>;
   const {
@@ -78,7 +74,7 @@ export function normalizeRow(
 
   // Parse quantity
   const parsedQty = typeof quantity === 'number' ? quantity : parseFloat(String(quantity));
-  if (Number.isNaN(parsedQty) && !options.allowInvalidQuantity) {
+  if (Number.isNaN(parsedQty)) {
     warnings.push(`Invalid quantity for user=${username} date=${date}`);
     return null;
   }

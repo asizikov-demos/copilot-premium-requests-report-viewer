@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Bar } from 'recharts';
 
 import { UserConsumptionMetrics } from '../helpers/detailFixtures';
-import { buildProcessedDataFromRawRows } from '@/utils/ingestion/adapters';
+import { normalizeRows } from '../helpers/normalizeRows';
 
 jest.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -28,7 +28,7 @@ function chart() {
 
 describe('UserConsumptionMetrics', () => {
   it('shows ranked model shares without summary cards or combined token totals', () => {
-    render(<UserConsumptionMetrics rows={buildProcessedDataFromRawRows([
+    render(<UserConsumptionMetrics rows={normalizeRows([
       { ...base, input: '1000', output: '0', cache_write: '40', cache_read: '100' },
       { ...base, date: '2026-07-01', model: 'test-model-two', quantity: '30', input: '3000', output: '0', cache_write: '60', cache_read: '300' },
     ])} />);
@@ -45,7 +45,7 @@ describe('UserConsumptionMetrics', () => {
   });
 
   it('filters only the trend, with gaps for missing, partial and unreported dates', () => {
-    const rows = buildProcessedDataFromRawRows([
+    const rows = normalizeRows([
       { ...base, input: '10', output: '0' },
       { ...base, model: 'test-model-two', input: '20', output: '0' },
       { ...base, date: '2026-07-02', input: '5' },
@@ -65,14 +65,14 @@ describe('UserConsumptionMetrics', () => {
     expect(chart()[29].inputTokens).toBe(20);
     expect(chart()[31].inputTokens).toBeNull();
     expect(screen.getByRole('table')).toHaveTextContent('test-model-one');
-    rerender(<UserConsumptionMetrics rows={rows.filter(row => row.monthKey === '2026-07')} />);
+    rerender(<UserConsumptionMetrics rows={rows.filter(row => row.day.slice(0, 7) === '2026-07')} />);
     expect(screen.getByRole('button', { name: /Trend model/ })).toHaveTextContent('All models');
     expect(chart()).toHaveLength(31);
     expect(screen.getByText('No complete daily token counts are available for this selection.')).toBeInTheDocument();
   });
 
   it('marks partial model totals', () => {
-    render(<UserConsumptionMetrics rows={buildProcessedDataFromRawRows([
+    render(<UserConsumptionMetrics rows={normalizeRows([
       { ...base, input: '10' },
       { ...base, quantity: '1' },
     ])} />);
@@ -81,11 +81,11 @@ describe('UserConsumptionMetrics', () => {
   });
 
   it('displays zero reported tokens alongside AI-credit usage', () => {
-    const { container, rerender } = render(<UserConsumptionMetrics rows={buildProcessedDataFromRawRows([
+    const { container, rerender } = render(<UserConsumptionMetrics rows={normalizeRows([
       { ...base },
     ])} />);
     expect(container).not.toBeEmptyDOMElement();
-    rerender(<UserConsumptionMetrics rows={buildProcessedDataFromRawRows([
+    rerender(<UserConsumptionMetrics rows={normalizeRows([
       { ...base, input: '0' },
     ])} />);
     expect(screen.getByText('Token Usage Over Time')).toBeInTheDocument();
@@ -97,7 +97,7 @@ describe('UserConsumptionMetrics', () => {
 
   it('stacks token types without adding unselected months and hides failed tokens while keeping credit metrics', () => {
     jest.mocked(Bar).mockClear();
-    const rows = buildProcessedDataFromRawRows([
+    const rows = normalizeRows([
       { ...base, date: '2026-06-30', input: '1' },
       { ...base, date: '2026-08-01', input: '2' },
     ]);

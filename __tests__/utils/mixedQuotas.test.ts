@@ -1,7 +1,8 @@
 import { PRICING } from '@/constants/pricing';
 import type { CSVData } from '@/types/csv';
 
-import { analyzeData, processCSVData } from '../helpers/processCSVData';
+import { normalizeRows } from '../helpers/normalizeRows';
+import { analyzeRows } from '../helpers/normalizedArtifacts';
 
 const row = (
   username: string,
@@ -28,18 +29,18 @@ describe('AI-credit quota tiers', () => {
   ];
 
   it('parses the recognized quotas and treats other quotas as unknown', () => {
-    expect(processCSVData(data).map(r => r.quotaValue)).toEqual([
+    expect(normalizeRows(data).map(r => r.quotaValue)).toEqual([
       PRICING.BUSINESS_AI_CREDIT_QUOTA,
       PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
       'unknown',
       PRICING.BUSINESS_AI_CREDIT_QUOTA,
     ]);
-    expect(processCSVData([row('test-user-four', 5, 300)])[0].quotaValue).toBe('unknown');
-    expect(processCSVData([row('test-user-four', 5, 1000)])[0].quotaValue).toBe('unknown');
+    expect(normalizeRows([row('test-user-four', 5, 300)])[0].quotaValue).toBe('unknown');
+    expect(normalizeRows([row('test-user-four', 5, 1000)])[0].quotaValue).toBe('unknown');
   });
 
   it('classifies mixed tiers and counts users with credits above their individual quota', () => {
-    const analysis = analyzeData(processCSVData(data));
+    const analysis = analyzeRows(normalizeRows(data));
     expect(analysis.quotaBreakdown).toMatchObject({
       business: ['test-user-one'],
       enterprise: ['test-user-two'],
@@ -51,7 +52,7 @@ describe('AI-credit quota tiers', () => {
   });
 
   it('suggests a plan for homogeneous business and enterprise data', () => {
-    const business = analyzeData(processCSVData([
+    const business = analyzeRows(normalizeRows([
       row('test-user-one', 5, PRICING.BUSINESS_AI_CREDIT_QUOTA),
       row('test-user-two', 10, PRICING.BUSINESS_AI_CREDIT_QUOTA),
     ]));
@@ -60,7 +61,7 @@ describe('AI-credit quota tiers', () => {
       suggestedPlan: 'business',
       business: ['test-user-one', 'test-user-two'],
     });
-    const enterprise = analyzeData(processCSVData([
+    const enterprise = analyzeRows(normalizeRows([
       row('test-user-one', 5, PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
       row('test-user-two', 10, PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
     ]));
@@ -72,22 +73,22 @@ describe('AI-credit quota tiers', () => {
   });
 
   it('rejects unsupported request rows rather than letting them affect a plan', () => {
-    const processed = processCSVData([
+    const processed = normalizeRows([
       row('test-user-one', 5, PRICING.BUSINESS_AI_CREDIT_QUOTA),
       { ...row('test-user-two', 4000, PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
         sku: 'copilot_premium_request', unit_type: 'requests' },
     ]);
     expect(processed).toHaveLength(1);
-    expect(analyzeData(processed).quotaBreakdown.suggestedPlan).toBe('business');
+    expect(analyzeRows(processed).quotaBreakdown.suggestedPlan).toBe('business');
   });
 
   it('ignores non-billable sentinels and uses the highest known quota for a user', () => {
-    const processed = processCSVData([
+    const processed = normalizeRows([
       row('test-user-one', 5, PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
       row('test-user-one', 2, 2147483647, '2026-06-02'),
     ]);
     expect(processed[1].quotaValue).toBe('unknown');
-    expect(processed[1].totalQuota).toBe('Unknown');
-    expect(analyzeData(processed).quotaBreakdown.enterprise).toEqual(['test-user-one']);
+    expect(processed[1].quotaRaw).toBe('2147483647');
+    expect(analyzeRows(processed).quotaBreakdown.enterprise).toEqual(['test-user-one']);
   });
 });

@@ -1,14 +1,16 @@
 import { buildMonthListFromArtifacts } from '@/utils/ingestion/analytics';
-import { filterBySelectedMonths } from '@/utils/analytics/filters';
+import { selectArtifacts } from '../helpers/normalizedArtifacts';
 import { PRICING } from '@/constants/pricing';
-import { CSVData, ProcessedData } from '@/types/csv';
+import { CSVData } from '@/types/csv';
+import type { NormalizedRow } from '@/utils/ingestion';
 
-import { processCSVData, analyzeData } from '../helpers/processCSVData';
+import { normalizeRows } from '../helpers/normalizeRows';
+import { analyzeRows } from '../helpers/normalizedArtifacts';
 import { validCSVData } from '../fixtures/validCSVData';
 import {
   buildMinimalDailyBucketsArtifact,
   createMockCSVData,
-  makeProcessedData
+  makeUsageRow
 } from '../helpers/testUtils';
 
 // Explicit model credits interface to remove implicit any usage
@@ -16,17 +18,17 @@ interface ModelCredit { model: string; totalCredits: number }
 const modelTotal = (credits: ModelCredit[], name: string) => credits.find(r => r.model === name)?.totalCredits;
 
 describe('CSV Data Processing', () => {
-  describe('processCSVData', () => {
+  describe('normalizeRows', () => {
     it('should correctly process valid CSV data', () => {
-      const result = processCSVData(validCSVData);
+      const result = normalizeRows(validCSVData);
       
       expect(result).toHaveLength(4);
       expect(result[0]).toMatchObject({
-        timestamp: new Date('2025-06-03T00:00:00Z'),
+        day: '2025-06-03T00:00:00Z'.slice(0, 10),
         user: 'test-user-one',
         model: 'gpt-4.1-2025-04-14',
-        creditsUsed: 1.00,
-        totalQuota: 'Unknown',
+        quantity: 1.00,
+        quotaRaw: 'Unknown',
         quotaValue: 'unknown'
       });
     });
@@ -38,7 +40,7 @@ describe('CSV Data Processing', () => {
         quantity: '5',
         aic_quantity: '20',
       });
-      expect(processCSVData([testData])).toEqual([]);
+      expect(normalizeRows([testData])).toEqual([]);
     });
 
     it('should handle numeric conversion correctly', () => {
@@ -48,8 +50,8 @@ describe('CSV Data Processing', () => {
         })
       ];
       
-      const result = processCSVData(testData);
-      expect(result[0].creditsUsed).toBe(3.14159);
+      const result = normalizeRows(testData);
+      expect(result[0].quantity).toBe(3.14159);
     });
 
     it('should handle invalid numbers gracefully', () => {
@@ -59,8 +61,8 @@ describe('CSV Data Processing', () => {
         })
       ];
       
-      const result = processCSVData(testData);
-      expect(result[0].creditsUsed).toBeNaN();
+      const result = normalizeRows(testData);
+      expect(result).toEqual([]);
     });
 
     it('should handle zero values correctly', () => {
@@ -70,8 +72,8 @@ describe('CSV Data Processing', () => {
         })
       ];
       
-      const result = processCSVData(testData);
-      expect(result[0].creditsUsed).toBe(0);
+      const result = normalizeRows(testData);
+      expect(result[0].quantity).toBe(0);
     });
 
     it('should use production quota parsing for blank quotas', () => {
@@ -82,33 +84,33 @@ describe('CSV Data Processing', () => {
         })
       ];
 
-      const result = processCSVData(testData);
+      const result = normalizeRows(testData);
       expect(result[0].quotaValue).toBe('unknown');
     });
 
     it('should handle empty array', () => {
-      const result = processCSVData([]);
+      const result = normalizeRows([]);
       expect(result).toEqual([]);
     });
 
     it('should preserve all user and model information', () => {
-      const result = processCSVData(validCSVData);
+      const result = normalizeRows(validCSVData);
       
       expect(result[1]).toMatchObject({
-        timestamp: new Date('2025-06-03T00:00:00Z'),
+        day: '2025-06-03T00:00:00Z'.slice(0, 10),
         user: 'test-user-two',
         model: 'claude-3.7-sonnet-thought',
-        creditsUsed: 2.50,
-        totalQuota: String(PRICING.BUSINESS_AI_CREDIT_QUOTA),
+        quantity: 2.50,
+        quotaRaw: String(PRICING.BUSINESS_AI_CREDIT_QUOTA),
         quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA
       });
     });
 
   });
 
-  describe('analyzeData', () => {
+  describe('analyzeRows', () => {
     it('should return empty analysis for empty data', () => {
-      const result = analyzeData([]);
+      const result = analyzeRows([]);
       
       expect(result).toEqual({
         timeFrame: { start: '', end: '' },
@@ -126,8 +128,8 @@ describe('CSV Data Processing', () => {
     });
 
     it('should correctly analyze valid data', () => {
-      const processedData = processCSVData(validCSVData);
-      const result = analyzeData(processedData);
+      const rows = normalizeRows(validCSVData);
+      const result = analyzeRows(rows);
       
       expect(result.totalUniqueUsers).toBe(3);
       expect(result.usersExceedingQuota).toBe(0);
@@ -135,23 +137,23 @@ describe('CSV Data Processing', () => {
     });
 
     it('should calculate correct time frame', () => {
-      const processedData = processCSVData(validCSVData);
-      const result = analyzeData(processedData);
+      const rows = normalizeRows(validCSVData);
+      const result = analyzeRows(rows);
       
       expect(result.timeFrame.start).toBe('2025-06-03');
       expect(result.timeFrame.end).toBe('2025-06-04');
     });
 
     it('should aggregate AI credits by model correctly', () => {
-      const processedData = processCSVData(validCSVData);
-      const result = analyzeData(processedData) as { creditsByModel: ModelCredit[] };
+      const rows = normalizeRows(validCSVData);
+      const result = analyzeRows(rows) as { creditsByModel: ModelCredit[] };
       expect(modelTotal(result.creditsByModel, 'gpt-4.1-2025-04-14')).toBe(1);
       expect(modelTotal(result.creditsByModel, 'claude-3.7-sonnet-thought')).toBe(2.5);
     });
 
     it('should handle single data point', () => {
-      const singleData = processCSVData([validCSVData[0]]);
-      const result = analyzeData(singleData);
+      const singleData = normalizeRows([validCSVData[0]]);
+      const result = analyzeRows(singleData);
       
       expect(result.totalUniqueUsers).toBe(1);
       expect(result.usersExceedingQuota).toBe(0);
@@ -163,27 +165,27 @@ describe('CSV Data Processing', () => {
       const mixedData: CSVData[] = [
         createMockCSVData({ 
           date: '2025-06-05',
-          username: 'User1'
+          username: 'test-user-one'
         }),
         createMockCSVData({ 
           date: '2025-06-03',
-          username: 'User2'
+          username: 'test-user-two'
         }),
         createMockCSVData({ 
           date: '2025-06-04',
-          username: 'User3'
+          username: 'test-user-three'
         })
       ];
       
-      const processedData = processCSVData(mixedData);
-      const result = analyzeData(processedData);
+      const rows = normalizeRows(mixedData);
+      const result = analyzeRows(rows);
       
       expect(result.timeFrame.start).toBe('2025-06-03');
       expect(result.timeFrame.end).toBe('2025-06-05');
     });
 
     it('should resolve conflicting user quotas before counting quota overages', () => {
-      const processedData = processCSVData([
+      const rows = normalizeRows([
         createMockCSVData({
           username: 'test-user-one',
           quantity: String(PRICING.BUSINESS_AI_CREDIT_QUOTA + 100),
@@ -206,7 +208,7 @@ describe('CSV Data Processing', () => {
         }),
       ]);
 
-      const result = analyzeData(processedData);
+      const result = analyzeRows(rows);
 
       expect(result.usersExceedingQuota).toBe(1);
       expect(result.quotaBreakdown.enterprise).toEqual(['test-user-one']);
@@ -216,13 +218,13 @@ describe('CSV Data Processing', () => {
   });
 
   describe('Date Filtering Functions', () => {
-    const createTestDataForDate = (dateString: string): ProcessedData => {
+    const createTestDataForDate = (dateString: string): NormalizedRow => {
       const timestamp = new Date(dateString);
-      return makeProcessedData({
-        timestamp,
-        user: 'test-user',
+      return makeUsageRow({
+        day: timestamp.toISOString().slice(0, 10),
+        user: 'test-user-one',
         model: 'test-model',
-        creditsUsed: 1.0,
+        quantity: 1.0,
         quotaValue: 100,
       });
     };
@@ -304,23 +306,21 @@ describe('CSV Data Processing', () => {
       ];
 
       it('should filter by selected months', () => {
-        const filtered = filterBySelectedMonths(testData, ['2025-06', '2025-08']);
-        expect(filtered).toHaveLength(3);
-        expect(filtered.map(d => d.timestamp.toISOString())).toEqual([
-          '2025-06-15T10:00:00.000Z',
-          '2025-08-15T10:00:00.000Z',
-          '2025-06-20T10:00:00.000Z'
+        const filtered = selectArtifacts(testData, ['2025-06', '2025-08']);
+        expect([...filtered.dailyBucketsArtifacts.dailyUserTotals.keys()].sort()).toEqual([
+          '2025-06-15', '2025-06-20', '2025-08-15',
         ]);
+        expect(filtered.usageArtifacts.users[0].totalCredits).toBe(3);
       });
 
       it('should return all data when no months selected', () => {
-        const filtered = filterBySelectedMonths(testData, []);
-        expect(filtered).toEqual(testData);
+        const filtered = selectArtifacts(testData, []);
+        expect(filtered.usageArtifacts.users[0].totalCredits).toBe(4);
       });
 
       it('should return empty array when no data matches selected months', () => {
-        const filtered = filterBySelectedMonths(testData, ['2025-12']);
-        expect(filtered).toEqual([]);
+        const filtered = selectArtifacts(testData, ['2025-12']);
+        expect(filtered.usageArtifacts.users).toEqual([]);
       });
     });
   });

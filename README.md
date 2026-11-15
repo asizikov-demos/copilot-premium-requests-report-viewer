@@ -74,6 +74,13 @@ Token counts do not change AI Credits, quotas, or monetary calculations.
 
 ### Month-keyed analytics
 
+Report ingestion retains no source-row arrays. CSV chunks flow through
+`normalizeRow` and the registered aggregators in `ingestStream`, then the worker
+returns `MonthlyAggregates` via structured clone. `AnalysisContext` derives its
+view models with `useArtifactAnalysis` from selected month artifacts, never by
+reconstructing rows. Memory use grows with aggregate cardinality (users, models,
+days, groups, and months), rather than the number of CSV rows.
+
 The six core ingestion aggregators (`usage`, `quota`, `dailyBuckets`, `featureUsage`,
 `billing`, and `tokens`) return their existing artifact fields plus
 `byMonth: Map<string, partial>` keyed by UTC `YYYY-MM`. Partials contain only
@@ -95,6 +102,19 @@ commercial model totals, Auto/Fusion distributions and distinct-user sets withou
 retaining source rows. Model credits reuse core usage/billing artifacts. Daily
 views fill the complete selected UTC billing months; reported zero amounts and
 per-row cost fallbacks remain distinct from absent billing fields.
+
+```mermaid
+flowchart LR
+  File[Uploaded File] --> Worker[Web Worker / ingestStream]
+  Worker --> Normalize[normalizeRow]
+  Normalize --> Core[Core + billingPages + modelDaily aggregators]
+  Core --> Monthly[MonthlyAggregates / Maps and Sets]
+  Monthly --> Select[Selected-month selectors]
+  Select --> Pages[Report pages]
+  File --> Detail[Re-stream on drill-down / details + tokens]
+  Detail --> Cache[Compact cancellable detail cache]
+  Cache --> Views[User and group detail views]
+```
 
 ## Privacy
 All processing is client-side. No data leaves your browser.

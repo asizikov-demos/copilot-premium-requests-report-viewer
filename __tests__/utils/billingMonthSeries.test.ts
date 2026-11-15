@@ -7,20 +7,20 @@ import {
   buildUserDailyModelDataFromArtifacts,
 } from '@/utils/ingestion';
 
-import { makeProcessedData } from '../helpers/testUtils';
-import { buildDailyBucketsArtifactsFromProcessedData, buildUsageArtifactsFromProcessedData } from '../helpers/processedArtifacts';
+import { makeUsageRow } from '../helpers/makeNormalizedRow';
+import { buildDailyBucketsArtifactsFromRows, buildUsageArtifactsFromRows } from '../helpers/normalizedArtifacts';
 import { makeModelDailyArtifacts } from '../helpers/modelDailyArtifacts';
 
 describe('billingMonth series contract', () => {
   const rows = [
-    makeProcessedData({ timestamp: new Date('2024-02-20T23:59:59Z'), model: 'Code Review model', creditsUsed: 3, netAmount: 0.3 }),
-    makeProcessedData({ timestamp: new Date('2024-02-10T00:00:00Z'), model: 'Coding Agent model', creditsUsed: 2, netAmount: 0.2 }),
+    makeUsageRow({ day: '2024-02-20T23:59:59Z'.slice(0, 10), model: 'Code Review model', quantity: 3, netAmount: 0.3 }),
+    makeUsageRow({ day: '2024-02-10T00:00:00Z'.slice(0, 10), model: 'Coding Agent model', quantity: 2, netAmount: 0.2 }),
     // A report month without this user's or either feature's usage.
-    makeProcessedData({ timestamp: new Date('2024-04-15T00:00:00Z'), user: 'test-user-two', model: 'test-model-one', creditsUsed: 1 }),
+    makeUsageRow({ day: '2024-04-15T00:00:00Z'.slice(0, 10), user: 'test-user-two', model: 'test-model-one', quantity: 1 }),
   ];
-  const daily = buildDailyBucketsArtifactsFromProcessedData(rows);
-  const usage = buildUsageArtifactsFromProcessedData(rows);
-  const modelDaily = makeModelDailyArtifacts(rows.map(row => ({ ...row, day: row.dateKey, quantity: row.creditsUsed })));
+  const daily = buildDailyBucketsArtifactsFromRows(rows);
+  const usage = buildUsageArtifactsFromRows(rows);
+  const modelDaily = makeModelDailyArtifacts(rows);
   const expectedDates = [
     ...Array.from({ length: 29 }, (_, index) => `2024-02-${String(index + 1).padStart(2, '0')}`),
     ...Array.from({ length: 30 }, (_, index) => `2024-04-${String(index + 1).padStart(2, '0')}`),

@@ -1,12 +1,12 @@
 import { PRICING } from '@/constants/pricing';
 import {
-  buildQuotaArtifactsFromProcessedData,
-  buildUsageArtifactsFromProcessedData,
-} from '../helpers/processedArtifacts';
+  buildQuotaArtifactsFromRows,
+  buildUsageArtifactsFromRows,
+} from '../helpers/normalizedArtifacts';
 import { buildUsersExceedingQuota } from '@/utils/ingestion/analytics';
 
 import { makeDailyBucketsArtifacts, makeQuotaArtifacts } from '../helpers/makeArtifacts';
-import { makeProcessedData } from '../helpers/testUtils';
+import { makeUsageRow } from '../helpers/testUtils';
 
 describe('AI-credit quota excess', () => {
   it('does not combine usage from separate UTC billing months to infer excess consumption', () => {
@@ -42,11 +42,11 @@ describe('AI-credit quota excess', () => {
 
   it('resolves conflicting quotas to the highest recognized AI-credit tier', () => {
     const rows = [
-      makeProcessedData({ user: 'test-user-one', creditsUsed: 2000, quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA }),
-      makeProcessedData({ user: 'test-user-one', creditsUsed: 50, quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA }),
+      makeUsageRow({ user: 'test-user-one', quantity: 2000, quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA }),
+      makeUsageRow({ user: 'test-user-one', quantity: 50, quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA }),
     ];
-    const quota = buildQuotaArtifactsFromProcessedData(rows);
-    const usage = buildUsageArtifactsFromProcessedData(rows);
+    const quota = buildQuotaArtifactsFromRows(rows);
+    const usage = buildUsageArtifactsFromRows(rows);
     expect(quota.quotaByUser.get('test-user-one')).toBe(PRICING.ENTERPRISE_AI_CREDIT_QUOTA);
     expect(usage.users[0].totalCredits).toBeLessThanOrEqual(PRICING.ENTERPRISE_AI_CREDIT_QUOTA);
   });

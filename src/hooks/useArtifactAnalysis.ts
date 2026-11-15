@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ProcessedData, AnalysisResults, CodingAgentAnalysis, CodeReviewAnalysis } from '@/types/csv';
+import { AnalysisResults, CodingAgentAnalysis, CodeReviewAnalysis } from '@/types/csv';
 import type { UserSummary } from '@/utils/analytics';
 import {
   deriveAnalysisFromArtifacts,
@@ -11,18 +11,13 @@ import {
   DailyBucketsArtifacts
 } from '@/utils/ingestion';
 
-interface UseAnalyzedDataArgs {
-  baseProcessed: ProcessedData[];
-  // Filters
-  selectedMonths: string[];
+interface UseArtifactAnalysisArgs {
   usageArtifacts: UsageArtifacts;
   quotaArtifacts: QuotaArtifacts;
   dailyBucketsArtifacts: DailyBucketsArtifacts;
 }
 
-interface UseAnalyzedDataReturn {
-  processedData: ProcessedData[]; // filtered (retained for billing row-level fields)
-  aggregateProcessedData: ProcessedData[]; // filtered rows including non-Copilot aggregate usage
+interface UseArtifactAnalysisReturn {
   analysis: AnalysisResults;
   userData: UserSummary[];
   allModels: string[];
@@ -36,13 +31,8 @@ interface UseAnalyzedDataReturn {
  * Maintains strict UTC semantics by delegating to existing utilities that already
  * avoid local timezone conversions.
  */
-export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts, quotaArtifacts, dailyBucketsArtifacts }: UseAnalyzedDataArgs): UseAnalyzedDataReturn {
+export function useArtifactAnalysis({ usageArtifacts, quotaArtifacts, dailyBucketsArtifacts }: UseArtifactAnalysisArgs): UseArtifactAnalysisReturn {
   return useMemo(() => {
-    const filteredAllRows = selectedMonths.length === 0
-      ? baseProcessed
-      : baseProcessed.filter(r => selectedMonths.includes(r.monthKey));
-    const filteredUserRows = filteredAllRows.filter(r => !r.isUnattributedUsage);
-    const filtered = filteredUserRows;
     const analysis = deriveAnalysisFromArtifacts(usageArtifacts, quotaArtifacts, dailyBucketsArtifacts);
     const dailyCumulativeData = buildDailyCumulativeDataFromArtifacts(dailyBucketsArtifacts);
     const codingAgentAnalysis = analyzeCodingAgentAdoptionFromArtifacts(usageArtifacts, quotaArtifacts);
@@ -57,8 +47,6 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
     })).sort((a, b) => b.totalCredits - a.totalCredits);
     const allModels = Object.keys(usageArtifacts.modelTotals).sort();
     return {
-      processedData: filtered,
-      aggregateProcessedData: filteredAllRows,
       analysis,
       userData,
       allModels,
@@ -66,5 +54,5 @@ export function useAnalyzedData({ baseProcessed, selectedMonths, usageArtifacts,
       codingAgentAnalysis,
       codeReviewAnalysis
     };
-  }, [baseProcessed, selectedMonths, usageArtifacts, quotaArtifacts, dailyBucketsArtifacts]);
+  }, [usageArtifacts, quotaArtifacts, dailyBucketsArtifacts]);
 }

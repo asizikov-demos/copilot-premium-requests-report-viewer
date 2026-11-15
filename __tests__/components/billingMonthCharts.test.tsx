@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { render, screen } from '@testing-library/react';
-import type { ContextType, ReactElement } from 'react';
+import type { ReactElement } from 'react';
 import ts from 'typescript';
 
 import { BillingGroupDetailsView, UserConsumptionMetrics, UserDetailsView } from '../helpers/detailFixtures';
@@ -10,7 +10,7 @@ import { CodingAgentUsageChart } from '@/components/charts/CodingAgentUsageChart
 import { DailyConsumptionChart } from '@/components/charts/DailyConsumptionChart';
 import { ModelDailyStackedChart } from '@/components/charts/ModelDailyStackedChart';
 import { UsersConsumptionHeatmap } from '@/components/charts/UsersConsumptionHeatmap';
-import { AnalysisContext } from '@/context/AnalysisContext';
+import { AnalysisProvider } from '@/context/AnalysisContext';
 import { getBillingCostLabels } from '@/utils/billingLabels';
 import { aggregateDailyConsumption } from '@/utils/dailyConsumption';
 import {
@@ -20,9 +20,10 @@ import {
   buildDailyModelUsageFromArtifacts,
 } from '@/utils/ingestion';
 
-import { makeProcessedData } from '../helpers/testUtils';
-import { buildDailyBucketsArtifactsFromProcessedData, buildUsageArtifactsFromProcessedData } from '../helpers/processedArtifacts';
+import { makeUsageRow } from '../helpers/makeNormalizedRow';
+import { buildDailyBucketsArtifactsFromRows, buildUsageArtifactsFromRows } from '../helpers/normalizedArtifacts';
 import { makeModelDailyArtifacts } from '../helpers/modelDailyArtifacts';
+import { ingestRows } from '../helpers/aggregateRows';
 
 jest.mock('recharts', () => {
   const Chart = ({ data }: { data: unknown }) => <div data-testid="date-chart">{JSON.stringify(data)}</div>;
@@ -35,26 +36,23 @@ jest.mock('recharts', () => {
 });
 
 const userRows = [
-  makeProcessedData({
-    timestamp: new Date('2024-02-20T23:59:59Z'), model: 'Code Review model',
-    creditsUsed: 3, inputTokens: 10, netAmount: 0.3,
+  makeUsageRow({
+    day: '2024-02-20T23:59:59Z'.slice(0, 10), model: 'Code Review model',
+    quantity: 3, inputTokens: 10, netAmount: 0.3,
   }),
-  makeProcessedData({
-    timestamp: new Date('2024-02-10T00:00:00Z'), model: 'Coding Agent model',
-    creditsUsed: 2, inputTokens: 0, netAmount: 0.2,
+  makeUsageRow({
+    day: '2024-02-10T00:00:00Z'.slice(0, 10), model: 'Coding Agent model',
+    quantity: 2, inputTokens: 0, netAmount: 0.2,
   }),
 ];
 const periodRows = [
   ...userRows,
-  makeProcessedData({ timestamp: new Date('2024-04-15T00:00:00Z'), user: 'test-user-two' }),
+  makeUsageRow({ day: '2024-04-15T00:00:00Z'.slice(0, 10), user: 'test-user-two' }),
 ];
-const daily = buildDailyBucketsArtifactsFromProcessedData(periodRows);
-const usage = buildUsageArtifactsFromProcessedData(periodRows);
-const modelDaily = makeModelDailyArtifacts(userRows.map(row => ({ ...row, day: row.dateKey, quantity: row.creditsUsed })));
-const userDetailsContext = {
-  dailyBucketsArtifacts: daily,
-  usageArtifacts: usage,
-} as ContextType<typeof AnalysisContext>;
+const daily = buildDailyBucketsArtifactsFromRows(periodRows);
+const usage = buildUsageArtifactsFromRows(periodRows);
+const modelDaily = makeModelDailyArtifacts(userRows);
+const ingestionResult = ingestRows(periodRows);
 const dates = [
   ...Array.from({ length: 29 }, (_, index) => `2024-02-${String(index + 1).padStart(2, '0')}`),
   ...Array.from({ length: 30 }, (_, index) => `2024-04-${String(index + 1).padStart(2, '0')}`),
@@ -83,10 +81,10 @@ const contracts: { file: string; name: string; render: () => ReactElement }[] = 
   {
     file: 'charts/UserDailyStackedChart.tsx', name: 'user detail artifact chart and token trend',
     render: () => (
-      <AnalysisContext.Provider value={userDetailsContext}>
-        <UserDetailsView user="test-user-one" processedData={periodRows}
+      <AnalysisProvider ingestionResult={ingestionResult} filename="test-report.csv" onReset={jest.fn()}>
+        <UserDetailsView user="test-user-one" rows={periodRows}
           userQuotaValue="unknown" onBack={jest.fn()} />
-      </AnalysisContext.Provider>
+      </AnalysisProvider>
     ),
   },
   {
@@ -117,7 +115,7 @@ describe('billingMonth chart contracts', () => {
     expect(points[9].inputTokens).toBe(0);
     expect(points[19].inputTokens).toBe(10);
     expect(points[58].inputTokens).toBeNull();
-    rerender(<UserConsumptionMetrics rows={userRows} periodRows={periodRows.filter(row => row.monthKey === '2024-02')} />);
+    rerender(<UserConsumptionMetrics rows={userRows} periodRows={periodRows.filter(row => row.day.slice(0, 7) === '2024-02')} />);
     expect(JSON.parse(screen.getByTestId('date-chart').textContent ?? '[]')).toHaveLength(29);
   });
 

@@ -1,11 +1,10 @@
 import { PRICING } from '@/constants/pricing';
 import { BillingAggregator } from '@/utils/ingestion/BillingAggregator';
-import { buildNormalizedRowFromProcessedData } from '@/utils/ingestion/analytics';
-import { buildBillingArtifactsFromProcessedData } from '@/utils/ingestion/billingAccumulator';
+import { buildBillingArtifactsFromRows } from '../helpers/normalizedArtifacts';
 import type { NormalizedRow } from '@/utils/ingestion/types';
 
 import { makeNormalizedRow } from '../helpers/makeNormalizedRow';
-import { makeProcessedData } from '../helpers/testUtils';
+import { makeUsageRow } from '../helpers/testUtils';
 
 const ctx = { pricing: PRICING };
 const row = (partial: Partial<NormalizedRow> = {}) => makeNormalizedRow({
@@ -18,29 +17,6 @@ const row = (partial: Partial<NormalizedRow> = {}) => makeNormalizedRow({
 });
 
 describe('BillingAggregator', () => {
-  it('adapts processed rows with UTC day, AI-credit quantity, and net billing', () => {
-    const processed = makeProcessedData({
-      timestamp: new Date('2025-06-30T23:59:59Z'),
-      creditsUsed: 7.5,
-      quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
-      grossAmount: .075,
-      discountAmount: .025,
-      netAmount: .05,
-      organization: 'test-org-one',
-      inputTokens: 100,
-    });
-    expect(buildNormalizedRowFromProcessedData(processed)).toMatchObject({
-      date: processed.iso,
-      day: '2025-06-30',
-      quantity: 7.5,
-      quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
-      grossAmount: .075,
-      netAmount: .05,
-      organization: 'test-org-one',
-      inputTokens: 100,
-    });
-  });
-
   it('sums supplied gross, discount, and net without deriving costs from quantity', () => {
     const agg = new BillingAggregator();
     agg.onRow(row({ quantity: 2.5, grossAmount: .025, discountAmount: .015, netAmount: .01 }), ctx);
@@ -55,8 +31,8 @@ describe('BillingAggregator', () => {
   });
 
   it('keeps billing columns optional for older AI-credit datasets', () => {
-    const result = buildBillingArtifactsFromProcessedData([
-      makeProcessedData({ creditsUsed: 2, grossAmount: undefined, discountAmount: undefined, netAmount: undefined }),
+    const result = buildBillingArtifactsFromRows([
+      makeUsageRow({ quantity: 2, grossAmount: undefined, discountAmount: undefined, netAmount: undefined }),
     ]);
     expect(result.hasAnyBillingData).toBe(false);
     expect(result.totals).toMatchObject({ gross: 0, discount: 0, net: 0 });

@@ -4,8 +4,7 @@ import React, { createContext, useContext, useMemo, useState, ReactNode } from '
 
 import { PRICING } from '@/constants/pricing';
 import { useAnalysisFilters } from '@/hooks/useAnalysisFilters';
-import { useAnalyzedData } from '@/hooks/useAnalyzedData';
-import { ProcessedData } from '@/types/csv';
+import { useArtifactAnalysis } from '@/hooks/useArtifactAnalysis';
 import { 
   IngestionResult, 
   QuotaArtifacts, 
@@ -14,12 +13,10 @@ import {
   FeatureUsageArtifacts,
   BillingArtifacts,
   TokenArtifacts,
-  NormalizedRow,
   MonthlyAggregates,
   ModelDailyArtifacts,
   selectModelDailyArtifacts,
   selectCoreArtifacts,
-  buildProcessedDataFromRows,
   selectBillingPagesArtifacts,
   type BillingPagesArtifacts,
 } from '@/utils/ingestion';
@@ -55,16 +52,12 @@ interface AnalysisContextValue {
   billingPagesArtifacts: BillingPagesArtifacts;
   tokenArtifacts?: TokenArtifacts | null;
   
-  // Raw & processed (adapter bridge - to be phased out)
-  baseProcessed: ProcessedData[];
-  processedData: ReturnType<typeof useAnalyzedData>['processedData'];
-  aggregateProcessedData: ReturnType<typeof useAnalyzedData>['aggregateProcessedData'];
-  analysis: ReturnType<typeof useAnalyzedData>['analysis'];
-  userData: ReturnType<typeof useAnalyzedData>['userData'];
+  analysis: ReturnType<typeof useArtifactAnalysis>['analysis'];
+  userData: ReturnType<typeof useArtifactAnalysis>['userData'];
   allModels: string[];
-  dailyCumulativeData: ReturnType<typeof useAnalyzedData>['dailyCumulativeData'];
-  codingAgentAnalysis: ReturnType<typeof useAnalyzedData>['codingAgentAnalysis'];
-  codeReviewAnalysis: ReturnType<typeof useAnalyzedData>['codeReviewAnalysis'];
+  dailyCumulativeData: ReturnType<typeof useArtifactAnalysis>['dailyCumulativeData'];
+  codingAgentAnalysis: ReturnType<typeof useArtifactAnalysis>['codingAgentAnalysis'];
+  codeReviewAnalysis: ReturnType<typeof useArtifactAnalysis>['codeReviewAnalysis'];
 
   // Filters
   selectedMonths: string[];
@@ -145,12 +138,6 @@ export function AnalysisProvider({ ingestionResult, filename, sourceFile, onRese
     };
   }, [ingestionResult]);
 
-  // Build ProcessedData for hooks that still need it (adapter bridge)
-  const baseProcessed = useMemo(() => {
-    const rawRows = ingestionResult.outputs.rawData as NormalizedRow[] | undefined;
-    return buildProcessedDataFromRows(rawRows);
-  }, [ingestionResult]);
-
   const {
     selectedMonths,
     setSelectedMonths,
@@ -179,11 +166,7 @@ export function AnalysisProvider({ ingestionResult, filename, sourceFile, onRese
     dailyCumulativeData,
     codingAgentAnalysis,
     codeReviewAnalysis,
-    processedData,
-    aggregateProcessedData
-  } = useAnalyzedData({
-    baseProcessed,
-    selectedMonths,
+  } = useArtifactAnalysis({
     usageArtifacts: scopedArtifacts.usageArtifacts,
     quotaArtifacts: scopedArtifacts.quotaArtifacts,
     dailyBucketsArtifacts: scopedArtifacts.dailyBucketsArtifacts
@@ -218,10 +201,6 @@ export function AnalysisProvider({ ingestionResult, filename, sourceFile, onRese
     billingArtifacts: scopedArtifacts.billingArtifacts,
     billingPagesArtifacts,
     tokenArtifacts: scopedArtifacts.tokenArtifacts,
-    // Legacy adapter bridge
-    baseProcessed,
-    processedData,
-    aggregateProcessedData,
     analysis,
     userData,
     allModels,

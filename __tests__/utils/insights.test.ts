@@ -1,11 +1,12 @@
 import { PRICING } from '@/constants/pricing';
-import type { ProcessedData } from '@/types/csv';
+import type { NormalizedRow } from '@/utils/ingestion';
 import type { UserSummary } from '@/utils/analytics';
-import { categorizeUserConsumption, classifyConsumptionUser, CONSUMPTION_THRESHOLDS } from '@/utils/analytics/insights';
-import { buildFeatureUtilizationFromArtifacts } from '@/utils/ingestion/analytics';
+import { classifyConsumptionUser, CONSUMPTION_THRESHOLDS } from '@/utils/analytics/insights';
+import { buildConsumptionCategoriesFromArtifacts, buildFeatureUtilizationFromArtifacts } from '@/utils/ingestion/analytics';
 import type { FeatureUsageArtifacts } from '@/utils/ingestion/types';
 
-import { makeProcessedData } from '../helpers/testUtils';
+import { makeUsageRow } from '../helpers/testUtils';
+import { buildQuotaArtifactsFromRows, buildUsageArtifactsFromRows } from '../helpers/normalizedArtifacts';
 
 function makeFeatureUsageArtifacts({
   codeReview = 0,
@@ -78,8 +79,8 @@ describe('insights analytics', () => {
       { user: 'test-user-average-high', totalCredits: (CONSUMPTION_THRESHOLDS.powerMinPct - 0.1) / 100 * quota, modelBreakdown: {} },
       { user: 'test-user-power-edge', totalCredits: (CONSUMPTION_THRESHOLDS.powerMinPct) / 100 * quota, modelBreakdown: {} }
     ];
-    const processed: ProcessedData[] = users.map(u => makeProcessedData({ user: u.user, quotaValue: quota }));
-    const categorized = categorizeUserConsumption(users, processed);
+    const processed: NormalizedRow[] = users.map(u => makeUsageRow({ user: u.user, quotaValue: quota, quantity: u.totalCredits }));
+    const categorized = buildConsumptionCategoriesFromArtifacts(buildUsageArtifactsFromRows(processed), buildQuotaArtifactsFromRows(processed));
     const byUser = Object.fromEntries([
       ...categorized.lowAdoptionUsers.map(u => [u.user, u.category]),
       ...categorized.averageUsers.map(u => [u.user, u.category]),

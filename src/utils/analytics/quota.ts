@@ -1,6 +1,4 @@
 import { BUSINESS_QUOTA_VALUES, ENTERPRISE_QUOTA_VALUES, KNOWN_QUOTA_VALUES } from '@/constants/pricing';
-import { ProcessedData } from '@/types/csv';
-import { isSupportedUsageUnitType } from '@/utils/unitType';
 
 export interface QuotaBreakdownResult {
   unknown: string[];
@@ -92,42 +90,11 @@ export function shouldReplaceQuotaValue(
   return incoming > existing;
 }
 
-function buildUserQuotaMap(data: ProcessedData[]): Map<string, number | 'unknown'> {
-  const userQuotas = new Map<string, number | 'unknown'>();
-
-  for (const row of data) {
-    if (row.isUnattributedUsage || !isSupportedUsageUnitType(row.unitType, row.sku)) {
-      continue;
-    }
-
-    const existing = userQuotas.get(row.user);
-    const current = row.quotaValue;
-
-    if (shouldReplaceQuotaValue(existing, current)) {
-      userQuotas.set(row.user, current);
-    }
-  }
-
-  return userQuotas;
-}
-
-/**
- * Build per-user AI-credit quotas from processed rows using the canonical
- * policy: numeric quotas win over unknown values, and the highest tier wins.
- */
-export function buildUserQuotaMapFromRows(data: ProcessedData[]): Map<string, number | 'unknown'> {
-  return buildUserQuotaMap(data);
-}
-
-export function buildUsageQuotaMapFromRows(data: ProcessedData[]): Map<string, number | 'unknown'> {
-  return buildUserQuotaMap(data);
-}
-
 /**
  * Canonical quota tier classification: bucketizes each user's quota into
  * `unknown`, `business`, or `enterprise`, computes the `mixed` flag, and derives
  * `suggestedPlan`. This is the single source of truth for quota tier logic, shared
- * by both the ProcessedData and artifact-based breakdown builders.
+ * by the artifact-based analysis builders.
  */
 export function classifyQuotaMap(
   quotaByUser: Map<string, number | 'unknown'>
@@ -163,8 +130,4 @@ export function classifyQuotaMap(
   }
 
   return { unknown, business, enterprise, mixed, suggestedPlan };
-}
-
-export function buildQuotaBreakdown(data: ProcessedData[]): QuotaBreakdownResult {
-  return classifyQuotaMap(buildUsageQuotaMapFromRows(data));
 }
