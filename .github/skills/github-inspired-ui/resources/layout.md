@@ -11,6 +11,9 @@ The full-width report information bar sticks below the primary header, with the
 sidebar positioned below it. The billing-period filter stays in the content area
 so it remains accessible in either layout.
 
+Report sections use all available content width; there is no right-side Summary
+panel.
+
 ## Grid Layouts
 
 ```tsx

@@ -6,7 +6,6 @@
 | --- | --- | --- | --- |
 | `fadeInUp` | Fade in + translate up 12px | 0.5s | `.animate-fade-in-up` |
 | `scaleIn` | Fade in + scale from 0.95 | 0.4s | `.animate-scale-in` |
-| `slideInRight` | Fade in + translate right 16px | 0.5s | `.animate-slide-in-right` |
 
 ## Staggered Delays
 

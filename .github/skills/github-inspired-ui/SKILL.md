@@ -47,7 +47,7 @@ Detailed reference material lives in the `resources/` directory. **Load only the
 
 ### Adding entrance animations or transitions?
 → Load **`resources/animations.md`**
-  - 3 keyframe animations, stagger pattern, reduced-motion handling, transition conventions
+  - 2 keyframe animations, stagger pattern, reduced-motion handling, transition conventions
 
 ### Working on icons, focus states, accessibility, or hover behavior?
 → Load **`resources/interaction.md`**

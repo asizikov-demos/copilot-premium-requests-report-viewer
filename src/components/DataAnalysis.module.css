@@ -60,11 +60,6 @@
     text-overflow: ellipsis;
   }
 
-  .summary {
-    position: sticky;
-    top: calc(4rem + var(--report-bar-height) + 1rem);
-  }
-
   .mobileNavigation {
     display: none;
   }
@@ -105,10 +100,6 @@
   .filename {
     overflow: visible;
     text-overflow: clip;
-  }
-
-  .summary {
-    position: static;
   }
 
   .sidebar,

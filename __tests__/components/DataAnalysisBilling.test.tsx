@@ -127,6 +127,23 @@ describe('DataAnalysis billing summary', () => {
     expect(sidebar.nextElementSibling).toContainElement(screen.getByRole('button', { name: 'Navigate to section: Overview' }));
   });
 
+  it('renders report sections without a right-side summary panel', () => {
+    render(<DataAnalysis ingestionResult={createIngestionResultFromRawRows(makeAicRows())} filename="test-report.csv" onReset={jest.fn()} />);
+
+    expect(screen.queryByRole('heading', { name: 'Summary' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Monthly Quota')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Auto-selected/)).not.toBeInTheDocument();
+    expect(screen.getAllByRole('complementary')).toEqual([
+      screen.getByRole('complementary', { name: 'Navigation sidebar' }),
+    ]);
+    expect(screen.getByRole('heading', { name: 'Model Details' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Users' })[0]);
+
+    expect(screen.queryByRole('heading', { name: 'Summary' })).not.toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Copilot plan summary' })).toBeInTheDocument();
+  });
+
   it('uses shared decorative category icons in report navigation', () => {
     render(<DataAnalysis ingestionResult={createIngestionResultFromRawRows(makeAicRows())} filename="test-report.csv" onReset={jest.fn()} />);
 
