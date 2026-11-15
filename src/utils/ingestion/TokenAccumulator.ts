@@ -21,7 +21,11 @@ function mergeTotals(target: TokenTotals, source: TokenTotals): void {
   target.rowCount += source.rowCount;
   for (const field of TOKEN_FIELDS) {
     const count = source[field];
-    if (count !== undefined) target[field] = (target[field] ?? 0) + count;
+    if (count !== undefined) {
+      const total = (target[field] ?? 0) + count;
+      if (!Number.isSafeInteger(total)) throw new Error(`Token total exceeds the safe integer range in ${field}`);
+      target[field] = total;
+    }
     target.reportedRows[field] += source.reportedRows[field];
   }
 }
@@ -45,7 +49,7 @@ function addRow(breakdown: TokenBreakdown, row: NormalizedRow, totals: TokenTota
   }
 }
 
-function mergeBreakdown(target: TokenBreakdown, source: TokenBreakdown): void {
+export function mergeTokenBreakdown(target: TokenBreakdown, source: TokenBreakdown): void {
   mergeTotals(target.totals, source.totals);
   for (const [model, totals] of source.byModel) addToMap(target.byModel, model, totals);
   for (const [user, totals] of source.byUser) addToMap(target.byUser, user, totals);
@@ -112,7 +116,7 @@ export function filterTokenArtifactsByMonths(
   const byDay = new Map<string, TokenBreakdown>();
   for (const [day, daily] of artifacts.byDay) {
     if (!months.has(day.slice(0, 7))) continue;
-    mergeBreakdown(breakdown, daily);
+    mergeTokenBreakdown(breakdown, daily);
     byDay.set(day, daily);
   }
   return { ...breakdown, hasAnyTokenData: hasTokenData(breakdown.totals), byDay };

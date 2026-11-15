@@ -23,18 +23,15 @@ import {
   type DailyBucketsArtifacts,
   type Aggregator,
   type FeatureUsageArtifacts,
-  type NormalizedRow,
   type TokenArtifacts,
   type QuotaArtifacts,
   type UsageArtifacts,
 } from './types';
-import { DailyBucketsAggregator } from './DailyBucketsAggregator';
-import { FeatureUsageAggregator } from './FeatureUsageAggregator';
-import { QuotaAggregator } from './QuotaAggregator';
-import { UsageAccumulator } from './UsageAccumulator';
 import { TokenAggregator } from './TokenAggregator';
+import { buildNormalizedRowFromProcessedData } from './adapters';
 
 export type { DailyBucketsArtifacts } from './types';
+export { buildNormalizedRowFromProcessedData } from './adapters';
 
 // Legacy DailyCodingAgentUsageDatum type recreated locally (originally from codingAgent.ts)
 export interface DailyCodingAgentUsageDatum { date: string; dailyCredits: number; cumulativeCredits: number; }
@@ -83,67 +80,6 @@ export function buildTimeFrame(daily: DailyBucketsArtifacts): { start: string; e
 }
 
 /**
- * Build a UsageArtifacts from already-filtered ProcessedData rows.
- * Used when billing period (selectedMonths) is active to produce month-sliced
- * artifacts for downstream analysis functions.
- */
-export function buildUsageArtifactsFromProcessedData(filtered: ProcessedData[]): UsageArtifacts {
-  const accumulator = new UsageAccumulator();
-  for (const r of filtered) {
-    accumulator.addRow({
-      user: r.user,
-      model: r.model,
-      sku: r.sku,
-      quantity: r.creditsUsed,
-      billingQuantity: r.billingQuantity,
-      usageUnit: r.usageUnit,
-      organization: r.organization,
-      costCenter: r.costCenter,
-      isUnattributedUsage: r.isUnattributedUsage,
-      usageBucket: r.usageBucket,
-    });
-  }
-  return accumulator.finalize();
-}
-
-/**
- * Builds the normalized aggregator input shape from ProcessedData rows.
- *
- * ProcessedData keeps cached date fields, while NormalizedRow is the
- * streaming aggregator contract. The source date remains UTC-preserved.
- */
-export function buildNormalizedRowFromProcessedData(row: ProcessedData): NormalizedRow {
-  return {
-    date: row.iso,
-    day: row.dateKey,
-    user: row.user,
-    model: row.model,
-    quantity: row.creditsUsed,
-    quotaRaw: row.totalQuota,
-    quotaValue: row.quotaValue,
-    product: row.product,
-    sku: row.sku,
-    unitType: row.unitType,
-    usageUnit: row.usageUnit,
-    billingQuantity: row.billingQuantity,
-    organization: row.organization,
-    costCenter: row.costCenter,
-    appliedCostPerQuantity: row.appliedCostPerQuantity,
-    grossAmount: row.grossAmount,
-    discountAmount: row.discountAmount,
-    netAmount: row.netAmount,
-    aicQuantity: row.aicQuantity,
-    aicGrossAmount: row.aicGrossAmount,
-    inputTokens: row.inputTokens,
-    outputTokens: row.outputTokens,
-    cacheReadTokens: row.cacheReadTokens,
-    cacheWriteTokens: row.cacheWriteTokens,
-    isUnattributedUsage: row.isUnattributedUsage,
-    usageBucket: row.usageBucket,
-  };
-}
-
-/**
  * Runs an aggregator over ProcessedData rows using the shared normalized
  * row adapter and standard pricing context, then returns the finalized artifact.
  */
@@ -156,20 +92,8 @@ function runAggregatorOverProcessedData<T>(aggregator: Aggregator<T>, processed:
   return aggregator.finalize(ctx);
 }
 
-export function buildQuotaArtifactsFromProcessedData(processed: ProcessedData[]): QuotaArtifacts {
-  return runAggregatorOverProcessedData(new QuotaAggregator(), processed);
-}
-
 export function buildTokenArtifactsFromProcessedData(processed: ProcessedData[]): TokenArtifacts {
   return runAggregatorOverProcessedData(new TokenAggregator(), processed);
-}
-
-export function buildDailyBucketsArtifactsFromProcessedData(processed: ProcessedData[]): DailyBucketsArtifacts {
-  return runAggregatorOverProcessedData(new DailyBucketsAggregator(), processed);
-}
-
-export function buildFeatureUsageArtifactsFromProcessedData(processed: ProcessedData[]): FeatureUsageArtifacts {
-  return runAggregatorOverProcessedData(new FeatureUsageAggregator(), processed);
 }
 
 /**

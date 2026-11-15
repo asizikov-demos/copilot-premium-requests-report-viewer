@@ -15,6 +15,38 @@ import {
   DailyBucketsArtifacts,
 } from './types';
 
+/** Legacy detail-view bridge; core selectors consume month partials directly. */
+export function buildNormalizedRowFromProcessedData(row: ProcessedData): NormalizedRow {
+  return {
+    date: row.iso,
+    day: row.dateKey,
+    user: row.user,
+    model: row.model,
+    quantity: row.creditsUsed,
+    quotaRaw: row.totalQuota,
+    quotaValue: row.quotaValue,
+    product: row.product,
+    sku: row.sku,
+    unitType: row.unitType,
+    usageUnit: row.usageUnit,
+    billingQuantity: row.billingQuantity,
+    organization: row.organization,
+    costCenter: row.costCenter,
+    appliedCostPerQuantity: row.appliedCostPerQuantity,
+    grossAmount: row.grossAmount,
+    discountAmount: row.discountAmount,
+    netAmount: row.netAmount,
+    aicQuantity: row.aicQuantity,
+    aicGrossAmount: row.aicGrossAmount,
+    inputTokens: row.inputTokens,
+    outputTokens: row.outputTokens,
+    cacheReadTokens: row.cacheReadTokens,
+    cacheWriteTokens: row.cacheWriteTokens,
+    isUnattributedUsage: row.isUnattributedUsage,
+    usageBucket: row.usageBucket,
+  };
+}
+
 function buildTimestampFromRowDate(row: NormalizedRow, warnings: string[]): Date | null {
   const isoDate = normalizeDateToIso(row.day) ?? normalizeDateToIso(row.date);
   if (isoDate === null) {

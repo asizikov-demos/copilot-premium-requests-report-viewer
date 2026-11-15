@@ -163,6 +163,17 @@ export interface IngestionResult {
   warnings: string[];
 }
 
+export type MonthlyArtifacts<T> = T & { byMonth: Map<string, T> };
+
+export interface UsageMergeOrder {
+  first: number;
+  organization?: number;
+  costCenter?: number;
+  modelFirstSeen: Map<string, number>;
+  modelLastSeen: Map<string, number>;
+  codingAgentFirstSeen: Map<string, number>;
+}
+
 /**
  * Quota-related artifacts (output of QuotaAggregator).
  */
@@ -173,6 +184,8 @@ export interface QuotaArtifacts {
   hasMixedQuotas: boolean;
   hasMixedLicenses: boolean;
   specialBucketQuotas?: Map<SpecialUsageBucketKey, 0>;
+  /** First source position of each distinct quota, bounded by users and quota tiers. */
+  observations?: Map<string, Map<number | 'unknown', number>>;
 }
 
 /**
@@ -203,6 +216,8 @@ export interface UsageArtifacts {
   organizations?: string[];
   costCenters?: string[];
   specialBuckets?: SpecialUsageBucketAggregate[];
+  /** Source-order metadata keeps user metadata and tied top models stable across month merges. */
+  mergeOrder?: Map<string, UsageMergeOrder>;
 }
 
 /**
@@ -300,4 +315,5 @@ export interface BillingArtifacts {
   hasAnyBillingData: boolean; // true if at least one billing numeric column encountered
   hasAnyAicData: boolean; // true if at least one AI Credits numeric column encountered
   specialBuckets?: SpecialBillingBucketTotals[];
+  userOrder?: Map<string, number>;
 }

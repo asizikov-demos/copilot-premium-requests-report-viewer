@@ -10,8 +10,10 @@ import {
   UsageArtifacts,
 } from './types';
 import { UsageAccumulator } from './UsageAccumulator';
+import { MonthlyAggregator } from './MonthlyAggregator';
+import { mergeUsageArtifacts } from './selectors';
 
-export class UsageAggregator implements Aggregator<UsageArtifacts> {
+class UsagePartialAggregator implements Aggregator<UsageArtifacts> {
   readonly id = 'usage';
 
   private accumulator = new UsageAccumulator();
@@ -21,13 +23,19 @@ export class UsageAggregator implements Aggregator<UsageArtifacts> {
     this.accumulator = new UsageAccumulator();
   }
   
-  onRow(row: NormalizedRow, _ctx: AggregatorContext): void {
+  onRow(row: NormalizedRow, _ctx: AggregatorContext, sequence?: number): void {
     void _ctx;
-    this.accumulator.addRow(row);
+    this.accumulator.addRow(row, sequence);
   }
-  
+
   finalize(_ctx: AggregatorContext): UsageArtifacts {
     void _ctx;
     return this.accumulator.finalize();
+  }
+}
+
+export class UsageAggregator extends MonthlyAggregator<UsageArtifacts> {
+  constructor() {
+    super('usage', () => new UsagePartialAggregator(), mergeUsageArtifacts);
   }
 }

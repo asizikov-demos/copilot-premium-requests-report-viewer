@@ -6,11 +6,11 @@ import Papa from 'papaparse';
 import type { CSVData } from '@/types/csv';
 import {
   buildTokenArtifactsFromProcessedData,
-  buildUsageArtifactsFromProcessedData,
 } from '@/utils/ingestion/analytics';
 import { buildProcessedDataFromRows } from '@/utils/ingestion/adapters';
 import { normalizeRow } from '@/utils/ingestion/normalizeRow';
 import type { NormalizedRow } from '@/utils/ingestion/types';
+import { buildUsageArtifactsFromProcessedData } from '../helpers/processedArtifacts';
 
 describe('checked-in AI-credit sample', () => {
   it('parses and ingests every row with valid AI credits and token counts', () => {

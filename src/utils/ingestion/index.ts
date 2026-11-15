@@ -18,6 +18,7 @@ export * from './TokenAccumulator';
 export * from './RawDataAggregator';
 export * from './adapters';
 export * from './analytics';
+export * from './selectors';
 
 // Re-export helpers
 import { QuotaArtifacts } from './types';

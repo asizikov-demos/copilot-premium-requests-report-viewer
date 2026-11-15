@@ -154,7 +154,9 @@ describe('token artifacts', () => {
     expect([...june.byDay.keys()]).toEqual(['2026-06-30']);
     expect(artifacts).toEqual(aggregate());
     expect(filterTokenArtifactsByMonths(artifacts, [])).toBe(artifacts);
-    expect(filterTokenArtifactsByMonths(artifacts, ['2026-06', '2026-07'])).toEqual(artifacts);
+    const { byMonth: _byMonth, ...totals } = artifacts;
+    void _byMonth;
+    expect(filterTokenArtifactsByMonths(artifacts, ['2026-06', '2026-07'])).toEqual(totals);
     expect(filterTokenArtifactsByMonths(artifacts, ['2026-08'])).toMatchObject({
       hasAnyTokenData: false, totals: { rowCount: 0 }, byModel: new Map(), byDay: new Map(),
     });

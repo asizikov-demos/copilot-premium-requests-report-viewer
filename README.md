@@ -72,6 +72,17 @@ false zeros. Token-only exports are supported without inventing monetary values.
 
 Token counts do not change AI Credits, quotas, or monetary calculations.
 
+### Month-keyed analytics
+
+The six core ingestion aggregators (`usage`, `quota`, `dailyBuckets`, `featureUsage`,
+`billing`, and `tokens`) return their existing artifact fields plus
+`byMonth: Map<string, partial>` keyed by UTC `YYYY-MM`. Partials contain only
+structured-clone-safe data, not rows or accumulator instances.
+`selectCoreArtifacts(aggregates, selectedMonths)` merges the selected partitions;
+an empty selection uses all report months. Call it inside `useMemo` with the
+aggregate object and selected months as dependencies. Billing uses the streamed
+commercial totals, never recomputed amounts from retained rows.
+
 ## Privacy
 All processing is client-side. No data leaves your browser.
 

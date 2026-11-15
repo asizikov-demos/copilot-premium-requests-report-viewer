@@ -8,7 +8,7 @@ import {
   buildFeatureUsageArtifactsFromProcessedData,
   buildQuotaArtifactsFromProcessedData,
   buildUsageArtifactsFromProcessedData,
-} from '@/utils/ingestion/analytics';
+} from '../helpers/processedArtifacts';
 
 import { makeProcessedData } from '../helpers/testUtils';
 

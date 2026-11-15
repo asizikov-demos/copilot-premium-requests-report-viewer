@@ -11,8 +11,10 @@ import {
   SpecialUsageBucketKey
 } from './types';
 import { isCodingAgentModel } from '@/utils/productClassification';
+import { MonthlyAggregator } from './MonthlyAggregator';
+import { mergeDailyBucketsArtifacts } from './selectors';
 
-export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts> {
+class DailyBucketsPartialAggregator implements Aggregator<DailyBucketsArtifacts> {
   readonly id = 'dailyBuckets';
   
   private dailyUserTotals = new Map<string, Map<string, number>>();
@@ -89,21 +91,22 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
 
     if (row.isUnattributedUsage && row.usageBucket) {
       const bucketQuantity = quantity;
-      DailyBucketsAggregator.inc2Level(this.dailyBucketTotals, day, row.usageBucket, bucketQuantity);
-      DailyBucketsAggregator.inc3Level(this.dailyBucketModelTotals, day, row.usageBucket, model, bucketQuantity);
+      DailyBucketsPartialAggregator.inc2Level(this.dailyBucketTotals, day, row.usageBucket, bucketQuantity);
+      DailyBucketsPartialAggregator.inc3Level(this.dailyBucketModelTotals, day, row.usageBucket, model, bucketQuantity);
       return;
     }
 
-    DailyBucketsAggregator.inc2Level(this.dailyUserTotals, day, user, quantity);
+    DailyBucketsPartialAggregator.inc2Level(this.dailyUserTotals, day, user, quantity);
 
     // Accumulate per-model nested totals
-    DailyBucketsAggregator.inc3Level(this.dailyUserModelTotals, day, user, model, quantity);
+    DailyBucketsPartialAggregator.inc3Level(this.dailyUserModelTotals, day, user, model, quantity);
     if (isCodingAgentModel(model, row.sku)) {
       this.dailyCodingAgentTotals.set(
         day,
         (this.dailyCodingAgentTotals.get(day) ?? 0) + quantity
       );
     }
+
   }
   
   finalize(_ctx: AggregatorContext): DailyBucketsArtifacts {
@@ -119,5 +122,11 @@ export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts>
         : null,
       months: Array.from(this.months).sort()
     };
+  }
+}
+
+export class DailyBucketsAggregator extends MonthlyAggregator<DailyBucketsArtifacts> {
+  constructor() {
+    super('dailyBuckets', () => new DailyBucketsPartialAggregator(), mergeDailyBucketsArtifacts);
   }
 }

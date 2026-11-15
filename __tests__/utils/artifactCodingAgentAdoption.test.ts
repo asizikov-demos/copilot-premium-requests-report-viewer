@@ -1,7 +1,8 @@
-import { analyzeCodingAgentAdoptionFromArtifacts, buildUsageArtifactsFromProcessedData } from '@/utils/ingestion';
+import { analyzeCodingAgentAdoptionFromArtifacts } from '@/utils/ingestion';
 
 import { makeQuotaArtifacts, makeUsageArtifacts } from '../helpers/makeArtifacts';
 import { makeProcessedData } from '../helpers/testUtils';
+import { buildUsageArtifactsFromProcessedData } from '../helpers/processedArtifacts';
 
 function makeQuota(entries: Array<[string, number | 'unknown']>) {
   return makeQuotaArtifacts(entries.map(([user, quota]) => ({ user, quota })));

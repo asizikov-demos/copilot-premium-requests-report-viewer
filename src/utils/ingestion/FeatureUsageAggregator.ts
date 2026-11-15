@@ -15,8 +15,10 @@
  */
 import { Aggregator, AggregatorContext, NormalizedRow, FeatureUsageArtifacts } from './types';
 import { isCodeQualityProduct, isCodeReviewModel, isCodingAgentModel, isSparkProduct } from '@/utils/productClassification';
+import { MonthlyAggregator } from './MonthlyAggregator';
+import { mergeFeatureUsageArtifacts } from './selectors';
 
-export class FeatureUsageAggregator implements Aggregator<FeatureUsageArtifacts> {
+class FeatureUsagePartialAggregator implements Aggregator<FeatureUsageArtifacts> {
   readonly id = 'featureUsage';
 
   private codeReviewTotal = 0;
@@ -103,5 +105,11 @@ export class FeatureUsageAggregator implements Aggregator<FeatureUsageArtifacts>
         unattributedCodeQuality: this.unattributedCodeQualityTotal
       }
     };
+  }
+}
+
+export class FeatureUsageAggregator extends MonthlyAggregator<FeatureUsageArtifacts> {
+  constructor() {
+    super('featureUsage', () => new FeatureUsagePartialAggregator(), mergeFeatureUsageArtifacts);
   }
 }

@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 
 import type { ProcessedData } from '@/types/csv';
 import { getBillingCostLabels, type BillingCostLabels } from '@/utils/billingLabels';
-import { buildBillingArtifactsFromProcessedData, type BillingArtifacts } from '@/utils/ingestion';
+import type { BillingArtifacts } from '@/utils/ingestion';
 
 interface UseUsageBasedBillingScopeResult {
   billingRows: ProcessedData[];
@@ -18,10 +18,7 @@ export function useUsageBasedBillingScope(
   billingArtifacts: BillingArtifacts | undefined
 ): UseUsageBasedBillingScopeResult {
   const billingRows = aggregateProcessedData;
-  const scopedBillingArtifacts = useMemo(
-    () => billingArtifacts ?? buildBillingArtifactsFromProcessedData(billingRows),
-    [billingArtifacts, billingRows]
-  );
+  const scopedBillingArtifacts = billingArtifacts;
   const quantityColumnLabel = 'AI Credits';
   const costLabels = useMemo(
     () => getBillingCostLabels(),

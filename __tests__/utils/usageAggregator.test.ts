@@ -5,13 +5,11 @@ import {
   NormalizedRow,
   QuotaAggregator,
   UsageAggregator,
-  buildDailyBucketsArtifactsFromProcessedData,
-  buildQuotaArtifactsFromProcessedData,
-  buildUsageArtifactsFromProcessedData,
 } from '@/utils/ingestion';
 import type { ProcessedData } from '@/types/csv';
 
 import { makeNormalizedRow } from '../helpers/makeNormalizedRow';
+import { buildDailyBucketsArtifactsFromProcessedData, buildQuotaArtifactsFromProcessedData, buildUsageArtifactsFromProcessedData } from '../helpers/processedArtifacts';
 
 describe('UsageAggregator', () => {
   test('retains per-user organization and cost center metadata and collects distinct values', () => {

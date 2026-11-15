@@ -1,15 +1,14 @@
 import { aggregateDailyConsumption } from '@/utils/dailyConsumption';
 import {
-  buildDailyBucketsArtifactsFromProcessedData,
   buildDailyCodeReviewUsageFromArtifacts,
   buildDailyCodingAgentUsageFromArtifacts,
   buildDailyCumulativeDataFromArtifacts,
   buildDailyModelUsageFromArtifacts,
-  buildUsageArtifactsFromProcessedData,
   buildUserDailyModelDataFromArtifacts,
 } from '@/utils/ingestion';
 
 import { makeProcessedData } from '../helpers/testUtils';
+import { buildDailyBucketsArtifactsFromProcessedData, buildUsageArtifactsFromProcessedData } from '../helpers/processedArtifacts';
 
 describe('billingMonth series contract', () => {
   const rows = [

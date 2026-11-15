@@ -15,13 +15,8 @@ import {
   BillingArtifacts,
   TokenArtifacts,
   NormalizedRow,
-  buildBillingArtifactsFromProcessedData,
-  buildUsageArtifactsFromProcessedData,
-  buildQuotaArtifactsFromProcessedData,
-  buildDailyBucketsArtifactsFromProcessedData,
-  buildFeatureUsageArtifactsFromProcessedData,
-  buildTokenArtifactsFromProcessedData,
-  filterTokenArtifactsByMonths,
+  MonthlyAggregates,
+  selectCoreArtifacts,
   buildProcessedDataFromRows
 } from '@/utils/ingestion';
 
@@ -119,22 +114,6 @@ function requireFeatureUsageArtifacts(value: unknown): FeatureUsageArtifacts {
   return value;
 }
 
-function withBillingArtifactDefaults(value: BillingArtifacts | undefined): BillingArtifacts | undefined {
-  if (!value) {
-    return undefined;
-  }
-
-  return {
-    ...value,
-    users: value.users ?? [],
-    userMap: value.userMap ?? new Map(),
-    orgTotals: value.orgTotals ?? new Map(),
-    costCenterTotals: value.costCenterTotals ?? new Map(),
-    billingByModel: value.billingByModel ?? new Map(),
-    specialBuckets: value.specialBuckets ?? [],
-  };
-}
-
 // Exporting the raw context as well (in addition to hook) enables optional consumption
 // in components that want to gracefully fallback when provider is absent in tests.
 export const AnalysisContext = createContext<AnalysisContextValue | null>(null);
@@ -144,14 +123,15 @@ export function AnalysisProvider({ ingestionResult, filename, sourceFile, onRese
   const [view, setView] = useState<ViewType>('overview');
 
   // Extract aggregator outputs
-  const { quotaArtifacts, usageArtifacts, dailyBucketsArtifacts, featureUsageArtifacts, billingArtifacts, tokenArtifacts } = useMemo(() => {
+  const monthlyAggregates = useMemo<MonthlyAggregates>(() => {
+    requireFeatureUsageArtifacts(ingestionResult.outputs.featureUsage);
     return {
-      quotaArtifacts: ingestionResult.outputs.quota as QuotaArtifacts,
-      usageArtifacts: ingestionResult.outputs.usage as UsageArtifacts,
-      dailyBucketsArtifacts: ingestionResult.outputs.dailyBuckets as DailyBucketsArtifacts,
-      featureUsageArtifacts: requireFeatureUsageArtifacts(ingestionResult.outputs.featureUsage),
-      tokenArtifacts: ingestionResult.outputs.tokens as TokenArtifacts | null | undefined,
-      billingArtifacts: withBillingArtifactDefaults(ingestionResult.outputs.billing as BillingArtifacts | undefined)
+      quota: ingestionResult.outputs.quota as MonthlyAggregates['quota'],
+      usage: ingestionResult.outputs.usage as MonthlyAggregates['usage'],
+      dailyBuckets: ingestionResult.outputs.dailyBuckets as MonthlyAggregates['dailyBuckets'],
+      featureUsage: ingestionResult.outputs.featureUsage as MonthlyAggregates['featureUsage'],
+      tokens: ingestionResult.outputs.tokens as MonthlyAggregates['tokens'],
+      billing: ingestionResult.outputs.billing as MonthlyAggregates['billing'],
     };
   }, [ingestionResult]);
 
@@ -166,21 +146,12 @@ export function AnalysisProvider({ ingestionResult, filename, sourceFile, onRese
     setSelectedMonths,
     availableMonths,
     hasMultipleMonthsData
-  } = useAnalysisFilters(baseProcessed, dailyBucketsArtifacts);
+  } = useAnalysisFilters(monthlyAggregates.dailyBuckets);
 
-  const periodRows = useMemo(() => selectedMonths.length === 0
-    ? baseProcessed
-    : baseProcessed.filter((row) => selectedMonths.includes(row.monthKey)),
-  [baseProcessed, selectedMonths]);
-  const scopedArtifacts = useMemo(() => selectedMonths.length === 0
-    ? { usageArtifacts, quotaArtifacts, dailyBucketsArtifacts, featureUsageArtifacts }
-    : {
-      usageArtifacts: buildUsageArtifactsFromProcessedData(periodRows),
-      quotaArtifacts: buildQuotaArtifactsFromProcessedData(periodRows),
-      dailyBucketsArtifacts: buildDailyBucketsArtifactsFromProcessedData(periodRows),
-      featureUsageArtifacts: buildFeatureUsageArtifactsFromProcessedData(periodRows),
-    },
-  [dailyBucketsArtifacts, featureUsageArtifacts, periodRows, quotaArtifacts, selectedMonths.length, usageArtifacts]);
+  const scopedArtifacts = useMemo(
+    () => selectCoreArtifacts(monthlyAggregates, selectedMonths),
+    [monthlyAggregates, selectedMonths]
+  );
 
   const {
     analysis,
@@ -198,23 +169,6 @@ export function AnalysisProvider({ ingestionResult, filename, sourceFile, onRese
     quotaArtifacts: scopedArtifacts.quotaArtifacts,
     dailyBucketsArtifacts: scopedArtifacts.dailyBucketsArtifacts
   });
-
-  const effectiveBillingArtifacts = useMemo(() => (
-    baseProcessed.length > 0
-      ? buildBillingArtifactsFromProcessedData(aggregateProcessedData)
-      : billingArtifacts
-  ), [aggregateProcessedData, baseProcessed.length, billingArtifacts]);
-
-  const effectiveTokenArtifacts = useMemo(() => {
-    // Null records an ingestion failure; absence means no token artifact.
-    if (tokenArtifacts === null) return null;
-    if (tokenArtifacts) {
-      return filterTokenArtifactsByMonths(tokenArtifacts, selectedMonths);
-    }
-    return baseProcessed.length > 0
-      ? buildTokenArtifactsFromProcessedData(aggregateProcessedData)
-      : undefined;
-  }, [aggregateProcessedData, baseProcessed.length, selectedMonths, tokenArtifacts]);
 
   // Use the suggested plan from data (auto-derived from report content)
   const selectedPlan = analysis.quotaBreakdown.suggestedPlan ?? 'business';
@@ -239,8 +193,8 @@ export function AnalysisProvider({ ingestionResult, filename, sourceFile, onRese
     usageArtifacts: scopedArtifacts.usageArtifacts,
     dailyBucketsArtifacts: scopedArtifacts.dailyBucketsArtifacts,
     featureUsageArtifacts: scopedArtifacts.featureUsageArtifacts,
-    billingArtifacts: effectiveBillingArtifacts,
-    tokenArtifacts: effectiveTokenArtifacts,
+    billingArtifacts: scopedArtifacts.billingArtifacts,
+    tokenArtifacts: scopedArtifacts.tokenArtifacts,
     // Legacy adapter bridge
     baseProcessed,
     processedData,

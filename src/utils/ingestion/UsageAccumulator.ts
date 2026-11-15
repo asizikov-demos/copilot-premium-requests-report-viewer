@@ -4,6 +4,7 @@ import {
   type SpecialUsageBucketKey,
   type UsageArtifacts,
   type UserAggregate,
+  type UsageMergeOrder,
 } from './types';
 import { isCodingAgentModel } from '@/utils/productClassification';
 
@@ -26,6 +27,16 @@ interface UserMetadata {
   costCenters: Set<string>;
 }
 
+export function addModelCredits(target: Record<string, number>, model: string, credits: number): void {
+  const previous = Object.hasOwn(target, model) ? target[model] : 0;
+  Object.defineProperty(target, model, {
+    value: previous + credits,
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  });
+}
+
 export class UsageAccumulator {
   private userTotals = new Map<string, number>();
   private userModelTotals = new Map<string, Map<string, number>>();
@@ -37,8 +48,10 @@ export class UsageAccumulator {
   private organizations = new Set<string>();
   private costCenters = new Set<string>();
   private specialBuckets = new Map<SpecialUsageBucketKey, SpecialUsageBucketAggregate>();
+  private mergeOrder = new Map<string, UsageMergeOrder>();
+  private sequence = 0;
 
-  addRow(row: UsageAccumulationRow): void {
+  addRow(row: UsageAccumulationRow, sequence = this.sequence++): void {
     if (row.isUnattributedUsage && row.usageBucket) {
       let bucket = this.specialBuckets.get(row.usageBucket);
       if (!bucket) {
@@ -53,12 +66,23 @@ export class UsageAccumulator {
       }
       const bucketQuantity = row.quantity;
       bucket.totalCredits += bucketQuantity;
-      bucket.modelBreakdown[row.model] = (bucket.modelBreakdown[row.model] || 0) + bucketQuantity;
+      addModelCredits(bucket.modelBreakdown, row.model, bucketQuantity);
       this.modelTotals.set(row.model, (this.modelTotals.get(row.model) || 0) + row.quantity);
       return;
     }
 
     const { user, model, sku, quantity, organization, costCenter } = row;
+    const order = this.mergeOrder.get(user) ?? {
+      first: sequence,
+      modelFirstSeen: new Map<string, number>(),
+      modelLastSeen: new Map<string, number>(),
+      codingAgentFirstSeen: new Map<string, number>(),
+    };
+    if (!order.modelFirstSeen.has(model)) order.modelFirstSeen.set(model, sequence);
+    if (quantity !== 0) order.modelLastSeen.set(model, sequence);
+    if (organization && order.organization === undefined) order.organization = sequence;
+    if (costCenter && order.costCenter === undefined) order.costCenter = sequence;
+    this.mergeOrder.set(user, order);
 
     this.userTotals.set(user, (this.userTotals.get(user) || 0) + quantity);
 
@@ -71,6 +95,7 @@ export class UsageAccumulator {
     modelMap.set(model, newModelTotal);
 
     if (isCodingAgentModel(model, sku)) {
+      if (!order.codingAgentFirstSeen.has(model)) order.codingAgentFirstSeen.set(model, sequence);
       this.userCodingAgentTotals.set(
         user,
         (this.userCodingAgentTotals.get(user) ?? 0) + quantity
@@ -119,10 +144,7 @@ export class UsageAccumulator {
         continue;
       }
 
-      const modelBreakdown: Record<string, number> = {};
-      for (const [model, value] of modelMap) {
-        modelBreakdown[model] = value;
-      }
+      const modelBreakdown: Record<string, number> = Object.fromEntries(modelMap);
 
       const topEntry = this.topModelPerUser.get(user);
       const metadata = this.userMetadata.get(user);
@@ -152,6 +174,7 @@ export class UsageAccumulator {
       organizations: Array.from(this.organizations).sort((left, right) => left.localeCompare(right)),
       costCenters: Array.from(this.costCenters).sort((left, right) => left.localeCompare(right)),
       specialBuckets: Array.from(this.specialBuckets.values()),
+      mergeOrder: this.mergeOrder,
     };
   }
 }

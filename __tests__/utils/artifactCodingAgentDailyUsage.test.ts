@@ -1,11 +1,11 @@
 import {
   buildDailyCodingAgentUsageFromArtifacts,
-  buildDailyBucketsArtifactsFromProcessedData,
   type DailyCodingAgentUsageDatum,
 } from '@/utils/ingestion';
 
 import { makeDailyBucketsArtifacts } from '../helpers/makeArtifacts';
 import { makeProcessedData } from '../helpers/testUtils';
+import { buildDailyBucketsArtifactsFromProcessedData } from '../helpers/processedArtifacts';
 
 describe('buildDailyCodingAgentUsageFromArtifacts', () => {
   test('aggregates per day and carries cumulative totals through month end', () => {
