@@ -8,3 +8,6 @@ applyTo: '**/__tests__/**/*.{ts,tsx}'
 - Treat usernames, org names, and cost center names as PII, even when shown in prompts/examples.
 - Use generic values like `test-user-one`, `test-org-one`, and `test-cost-center-one`.
 - Keep synthetic identifiers consistent within each test.
+- Keep report fixtures within one calendar month, except fixtures explicitly testing
+  multi-month upload rejection. Cover inactive boundary days with the report's full
+  UTC billing-month timeline.
