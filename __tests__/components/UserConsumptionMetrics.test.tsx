@@ -48,26 +48,25 @@ describe('UserConsumptionMetrics', () => {
     const rows = normalizeRows([
       { ...base, input: '10', output: '0' },
       { ...base, model: 'test-model-two', input: '20', output: '0' },
-      { ...base, date: '2026-07-02', input: '5' },
-      { ...base, date: '2026-07-02' },
+      { ...base, date: '2026-06-28', input: '5' },
+      { ...base, date: '2026-06-28' },
     ]);
     const { rerender } = render(<UserConsumptionMetrics rows={rows} />);
-    expect(chart()).toHaveLength(61);
+    expect(chart()).toHaveLength(30);
     expect(chart()[0]).toMatchObject({ date: '2026-06-01', inputTokens: null });
-    expect(chart()[60]).toMatchObject({ date: '2026-07-31', inputTokens: null });
-    expect(chart().slice(29, 32)).toEqual([
+    expect(chart().slice(27, 30)).toEqual([
+      { date: '2026-06-28', inputTokens: null, outputTokens: null, cacheReadTokens: null, cacheWriteTokens: null },
+      { date: '2026-06-29', inputTokens: null, outputTokens: null, cacheReadTokens: null, cacheWriteTokens: null },
       { date: '2026-06-30', inputTokens: 30, outputTokens: 0, cacheReadTokens: null, cacheWriteTokens: null },
-      { date: '2026-07-01', inputTokens: null, outputTokens: null, cacheReadTokens: null, cacheWriteTokens: null },
-      { date: '2026-07-02', inputTokens: null, outputTokens: null, cacheReadTokens: null, cacheWriteTokens: null },
     ]);
     fireEvent.click(screen.getByRole('button', { name: /Trend model/ }));
     fireEvent.click(screen.getByRole('option', { name: 'test-model-two' }));
     expect(chart()[29].inputTokens).toBe(20);
-    expect(chart()[31].inputTokens).toBeNull();
+    expect(chart()[27].inputTokens).toBeNull();
     expect(screen.getByRole('table')).toHaveTextContent('test-model-one');
-    rerender(<UserConsumptionMetrics rows={rows.filter(row => row.day.slice(0, 7) === '2026-07')} />);
+    rerender(<UserConsumptionMetrics rows={rows.filter(row => row.day === '2026-06-28')} />);
     expect(screen.getByRole('button', { name: /Trend model/ })).toHaveTextContent('All models');
-    expect(chart()).toHaveLength(31);
+    expect(chart()).toHaveLength(30);
     expect(screen.getByText('No complete daily token counts are available for this selection.')).toBeInTheDocument();
   });
 
@@ -95,16 +94,16 @@ describe('UserConsumptionMetrics', () => {
     expect(screen.getByRole('table')).not.toHaveTextContent('Infinity');
   });
 
-  it('stacks token types without adding unselected months and hides failed tokens while keeping credit metrics', () => {
+  it('stacks token types throughout the report month and hides failed tokens while keeping credit metrics', () => {
     jest.mocked(Bar).mockClear();
     const rows = normalizeRows([
       { ...base, date: '2026-06-30', input: '1' },
-      { ...base, date: '2026-08-01', input: '2' },
+      { ...base, date: '2026-06-01', input: '2' },
     ]);
     const { rerender } = render(<UserConsumptionMetrics rows={rows} />);
-    expect(chart()).toHaveLength(61);
+    expect(chart()).toHaveLength(30);
     expect(chart()[29]).toMatchObject({ date: '2026-06-30', inputTokens: 1 });
-    expect(chart()[30]).toMatchObject({ date: '2026-08-01', inputTokens: 2 });
+    expect(chart()[0]).toMatchObject({ date: '2026-06-01', inputTokens: 2 });
     expect(chart().filter((point: { date: string }) => point.date.startsWith('2026-07'))).toEqual([]);
     expect(chart().filter((point: { inputTokens: number | null }) => point.inputTokens !== null)).toHaveLength(2);
     const bars = jest.mocked(Bar).mock.calls.map(([props]) => props);

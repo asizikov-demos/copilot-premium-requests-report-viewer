@@ -6,7 +6,6 @@ import { DailyConsumptionTable } from '@/components/DailyConsumptionTable';
 import { useAnalysisContext } from '@/context/AnalysisContext';
 import { ModelBucketDistributionCharts } from '@/components/charts/ModelBucketDistributionCharts';
 import { ModelDailyStackedChart } from '@/components/charts/ModelDailyStackedChart';
-import { filterDailySeriesByMonths } from '@/utils/analytics/filters';
 import { formatCurrency } from '@/utils/formatters';
 import { buildDailyModelUsageFromArtifacts } from '@/utils/ingestion/analytics';
 import { generateModelColors } from '@/utils/modelColors';
@@ -22,7 +21,6 @@ export function ModelUsageTrendsOverview() {
   const {
     usageArtifacts,
     dailyBucketsArtifacts,
-    selectedMonths,
     billingArtifacts,
     modelDailyArtifacts,
   } = useAnalysisContext();
@@ -36,10 +34,10 @@ export function ModelUsageTrendsOverview() {
     }
     const raw = buildDailyModelUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
     return {
-      data: filterDailySeriesByMonths(raw, selectedMonths),
+      data: raw,
       models: Object.keys(usageArtifacts.modelTotals).sort(),
     };
-  }, [dailyBucketsArtifacts, selectedMonths, usageArtifacts]);
+  }, [dailyBucketsArtifacts, usageArtifacts]);
 
   const modelColors: Record<string, string> = useMemo(() => {
     return generateModelColors(models);

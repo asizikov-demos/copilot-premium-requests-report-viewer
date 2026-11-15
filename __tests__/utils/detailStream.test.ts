@@ -39,24 +39,23 @@ describe('filtered detail stream parity', () => {
   afterEach(() => {
     globalThis.FileReader = originalReader;
   });
-  it.each(filters.flatMap(filter => [[], ['2026-07']].map(months => ({ filter, months }))))(
-    'matches row-based view models for $filter, months=$months', async ({ filter, months }) => {
-      const periodRows = rows.filter(row => months.length === 0 || months.includes(row.day.slice(0, 7)));
+  it.each(filters)('matches row-based view models for %j', async filter => {
+      const periodRows = rows;
       const selected = periodRows.filter(row =>
         (filter.user === undefined || row.user === filter.user) &&
         (filter.organization === undefined || (row.organization || 'Unassigned') === filter.organization) &&
         (filter.costCenter === undefined || (row.costCenter || 'Unassigned') === filter.costCenter));
-      const result = await streamFile(createStreamingFile(csv), ['details', 'tokens'], { ...filter, months }, { chunkSize: 128 });
+      const result = await streamFile(createStreamingFile(csv), ['details', 'tokens'], filter, { chunkSize: 128 });
       expect(result.warnings).toEqual([]);
       expect(result.rowsProcessed).toBe(selected.length);
       const details = result.outputs.details as DetailArtifacts;
       const tokens = result.outputs.tokens as TokenArtifacts;
-      const monthKeys = periodRows.map(row => row.day.slice(0, 7));
+      const reportMonth = '2026-07';
       const modelDaily = makeModelDailyArtifacts(selected);
       expect(details.productCosts).toEqual(aggregateProductCosts(modelDaily.productCosts));
       expect({ ...details.consumption, tokens }).toEqual(buildUserConsumption(selected));
-      expect(selectDetailTimeline(details, monthKeys).dailyConsumption)
-        .toEqual(aggregateDailyConsumption(modelDaily.dailyConsumption, monthKeys));
+      expect(selectDetailTimeline(details, reportMonth).dailyConsumption)
+        .toEqual(aggregateDailyConsumption(modelDaily.dailyConsumption, reportMonth));
       expect(summarizeUserHeader(details.header, PRICING.BUSINESS_AI_CREDIT_QUOTA, true))
         .toEqual(buildUserHeaderSummary(selected, PRICING.BUSINESS_AI_CREDIT_QUOTA, true));
       expect(details.totals).toEqual(selected.reduce((total, row) => ({
@@ -80,7 +79,7 @@ describe('filtered detail stream parity', () => {
       expect(details.userRows.map(row => row.user).sort())
         .toEqual([...new Set(selected.filter(row => !row.isUnattributedUsage).map(row => row.user))].sort());
       if (filter.user) {
-        expect(selectDetailTimeline(details, monthKeys).userDailyData).toEqual(buildUserDailyModelDataFromArtifacts(
+        expect(selectDetailTimeline(details, reportMonth).userDailyData).toEqual(buildUserDailyModelDataFromArtifacts(
           buildDailyBucketsArtifactsFromRows(periodRows), buildUsageArtifactsFromRows(periodRows), filter.user));
       }
     },
@@ -89,17 +88,17 @@ describe('filtered detail stream parity', () => {
   it('combines complete cache counts across cost centers without treating missing counts as zero', async () => {
     const result = await streamFile(createStreamingFile(csv), ['details'], { user: 'test-user-one' });
     const details = result.outputs.details as DetailArtifacts;
-    expect(details.dailyModels.filter(row => row.date === '2026-06-30')).toEqual([
+    expect(details.dailyModels.filter(row => row.date === '2026-07-10')).toEqual([
       expect.objectContaining({ credits: 2, rowSpan: 2, isFirstInDate: true,
         cacheSuccessRate: { percent: 60, reportedRows: 2, totalRows: 3 } }),
       expect.objectContaining({ credits: 4, rowSpan: 2, isFirstInDate: false,
         cacheSuccessRate: { percent: 60, reportedRows: 2, totalRows: 3 } }),
     ]);
     expect(details.dailyModels.find(row => row.date === '2026-07-01')?.cacheSuccessRate).toBeUndefined();
-    const timeline = selectDetailTimeline(details, ['2026-06', '2026-07', '2026-08']).userDailyData;
-    expect(timeline.map(row => row.date)).toEqual(buildBillingMonthDates(['2026-06', '2026-07', '2026-08']));
+    const timeline = selectDetailTimeline(details, '2026-07').userDailyData;
+    expect(timeline.map(row => row.date)).toEqual(buildBillingMonthDates('2026-07'));
     expect(timeline.find(row => row.date === '2026-07-01')?.totalCumulative).toBe(4);
-    expect(timeline.find(row => row.date === '2026-08-01')?.totalCumulative).toBe(0);
+    expect(timeline.find(row => row.date === '2026-07-31')?.totalCumulative).toBe(16);
   });
 
   it('keeps token-only exports usable and returns no invented activity for no-match filters', async () => {
@@ -111,7 +110,7 @@ describe('filtered detail stream parity', () => {
     expect(summarizeUserHeader(details.header, 'unknown', false).totalCost).toBeNull();
     expect((result.outputs.tokens as TokenArtifacts).totals.inputTokens).toBe(20);
     const empty = await streamFile(file, ['details'], { user: 'test-user-two' });
-    expect(selectDetailTimeline(empty.outputs.details as DetailArtifacts, ['2026-07']))
+    expect(selectDetailTimeline(empty.outputs.details as DetailArtifacts, '2026-07'))
       .toEqual({ userDailyData: [], dailyConsumption: [] });
   });
 });

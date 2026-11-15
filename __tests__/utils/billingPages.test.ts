@@ -2,7 +2,7 @@
 import { PRICING } from '@/constants/pricing';
 import {
   BillingPagesAggregator, buildAgentBillingRows, buildBillingGroupRows,
-  getSpecialUsageBucketLabel, selectBillingPagesArtifacts, UNASSIGNED_BILLING_GROUP,
+  getSpecialUsageBucketLabel, UNASSIGNED_BILLING_GROUP,
   type NormalizedRow,
 } from '@/utils/ingestion';
 import { classifyProductCategory } from '@/utils/productClassification';
@@ -14,19 +14,19 @@ import { makeNormalizedRow } from '../helpers/makeNormalizedRow';
 const rows = [
   makeNormalizedRow({ day: '2026-06-30', user: 'test-user-one', model: 'test-model-one',
     quantity: 2, organization: 'test-org-one', costCenter: 'test-cost-center-one', grossAmount: 1 }),
-  makeNormalizedRow({ day: '2026-08-01', user: 'test-user-two', model: 'test-model-two',
+  makeNormalizedRow({ day: '2026-06-03', user: 'test-user-two', model: 'test-model-two',
     quantity: 3, sku: 'coding_agent_ai_credit', organization: 'test-org-two', grossAmount: 0, aicGrossAmount: 10 }),
   makeNormalizedRow({ day: '2026-06-01', user: 'test-user-one', model: 'Coding Agent model',
     quantity: 3, organization: 'test-org-one', costCenter: 'test-cost-center-two', aicGrossAmount: 2 }),
-  makeNormalizedRow({ day: '2026-07-01', user: 'test-user-three', model: 'Code Review model',
+  makeNormalizedRow({ day: '2026-06-04', user: 'test-user-three', model: 'Code Review model',
     quantity: 5, discountAmount: 1, netAmount: 2, organization: 'test-org-three' }),
   makeNormalizedRow({ day: '2026-06-02', user: '', model: 'Code Review model',
     quantity: 1, isUnattributedUsage: true, usageBucket: 'unattributed_ai_credit', grossAmount: 0.1 }),
-  makeNormalizedRow({ day: '2026-08-02', user: 'test-user-one', model: 'Coding Agent model',
+  makeNormalizedRow({ day: '2026-06-05', user: 'test-user-one', model: 'Coding Agent model',
     quantity: 2, netAmount: 0, organization: 'test-org-one', costCenter: 'test-cost-center-two' }),
-  makeNormalizedRow({ day: '2026-08-03', user: 'test-user-four', model: 'Code Review model',
+  makeNormalizedRow({ day: '2026-06-06', user: 'test-user-four', model: 'Code Review model',
     quantity: 0, grossAmount: -1, discountAmount: -1, netAmount: -1 }),
-  makeNormalizedRow({ day: '2026-07-02', user: 'test-user-one', model: 'test-model-three',
+  makeNormalizedRow({ day: '2026-06-07', user: 'test-user-one', model: 'test-model-three',
     quantity: 0, product: 'spark', organization: 'test-org-one', costCenter: 'test-cost-center-one' }),
 ];
 
@@ -64,32 +64,27 @@ function referenceAgents(source: NormalizedRow[], category: string) {
     .sort((a, b) => b.quantity - a.quantity);
 }
 
-describe('month-keyed billing page view models', () => {
-  it.each([[], ['2026-06'], ['2026-08', '2026-06'], ['2026-09'], ['2026-06', '2026-06']])(
-    'matches the original row reductions for months %j', (...months) => {
+describe('single-month billing page view models', () => {
+  it('matches the original row reductions after worker transport', () => {
       const artifacts = structuredClone(aggregateRows(new BillingPagesAggregator(), rows));
       const before = structuredClone(artifacts);
-      const selected = selectBillingPagesArtifacts(artifacts, months);
-      const source = months.length ? rows.filter(row => months.includes(row.day.slice(0, 7))) : rows;
       for (const [groups, field] of [
-        [selected.organizations, 'organization'], [selected.costCenters, 'costCenter'],
+        [artifacts.organizations, 'organization'], [artifacts.costCenters, 'costCenter'],
       ] as const) {
-        expect(buildBillingGroupRows(groups).map(({ first: _first, ...row }) => row)).toEqual(referenceGroups(source, field));
+        expect(buildBillingGroupRows(groups)).toEqual(referenceGroups(rows, field));
       }
-      for (const [users, category] of [[selected.codingAgent, 'Coding Agent'], [selected.codeReview, 'Code Review']] as const) {
-        expect(buildAgentBillingRows(users).map(({ first: _first, ...row }) => row)).toEqual(referenceAgents(source, category));
+      for (const [users, category] of [[artifacts.codingAgent, 'Coding Agent'], [artifacts.codeReview, 'Code Review']] as const) {
+        expect(buildAgentBillingRows(users)).toEqual(referenceAgents(rows, category));
       }
       expect(artifacts).toEqual(before);
-    },
-  );
+  });
 
-  it('keeps state bounded by month/group/user/product keys, not input row count', () => {
+  it('keeps state bounded by group/user/product keys, not input row count', () => {
     const aggregator = new BillingPagesAggregator();
     const context = { pricing: PRICING };
     const row = rows[0];
     for (let index = 0; index < 10000; index++) aggregator.onRow(row, context);
     const result = aggregator.finalize();
-    expect(result.byMonth.size).toBe(1);
     expect(result.organizations.size).toBe(1);
     expect(result.organizations.get('test-org-one')?.users.size).toBe(1);
     expect(result.organizations.get('test-org-one')?.credits).toBe(20000);

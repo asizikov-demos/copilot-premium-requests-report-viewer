@@ -1,9 +1,9 @@
 date,username,product,sku,model,quantity,unit_type,gross_amount,discount_amount,net_amount,organization,cost_center_name,input,output,cache_read,cache_write
-2026-06-30T23:59:59Z,test-user-one,copilot,copilot_ai_credit,test-model-one,2,ai-credits,0.02,0.01,0.01,test-org-one,test-cost-center-one,10,5,30,10
-2026-06-30T20:00:00Z,test-user-one,copilot,copilot_ai_credit,test-model-one,3,ai-credits,0.03,0.02,0.01,test-org-one,test-cost-center-two,20,0,60,20
-2026-06-30T18:00:00Z,test-user-one,copilot,copilot_ai_credit,test-model-one,1,ai-credits,0.01,0,0.01,test-org-one,test-cost-center-two,5,,,
+2026-07-10T23:59:59Z,test-user-one,copilot,copilot_ai_credit,test-model-one,2,ai-credits,0.02,0.01,0.01,test-org-one,test-cost-center-one,10,5,30,10
+2026-07-10T20:00:00Z,test-user-one,copilot,copilot_ai_credit,test-model-one,3,ai-credits,0.03,0.02,0.01,test-org-one,test-cost-center-two,20,0,60,20
+2026-07-10T18:00:00Z,test-user-one,copilot,copilot_ai_credit,test-model-one,1,ai-credits,0.01,0,0.01,test-org-one,test-cost-center-two,5,,,
 2026-07-01T00:00:00Z,test-user-one,copilot,copilot_ai_credit,Code Review model,4,ai-credits,0.04,0.01,0.03,test-org-one,test-cost-center-one,0,0,0,0
 2026-07-03,test-user-two,spark,spark_ai_credit,test-model-two,5,ai-credits,0.05,0,0.05,test-org-two,test-cost-center-one,100,10,,
 2026-07-05,test-user-one,copilot,copilot_ai_credit,Coding Agent model,6,ai-credits,0.06,0.02,0.04,,,50,10,100,25
 2026-07-06,,copilot,copilot_ai_credit,Code Review model,7,ai-credits,0.07,0.03,0.04,,,,,,
-2026-08-15,test-user-three,copilot,copilot_ai_credit,test-model-three,1,ai-credits,0.01,0,0.01,test-org-three,test-cost-center-three,,,,
+2026-07-15,test-user-three,copilot,copilot_ai_credit,test-model-three,1,ai-credits,0.01,0,0.01,test-org-three,test-cost-center-three,,,,

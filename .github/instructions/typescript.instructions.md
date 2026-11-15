@@ -12,3 +12,7 @@ applyTo: '**/*.{ts,tsx}'
 - Escape JSX apostrophes/entities, e.g. `organization&apos;s`.
 - Group imports: external, `@/`, relative; separate groups with blank lines.
 - Prefer named exports for utilities; default exports are acceptable for React components.
+- Reports cover one calendar month. Validate the source date month during ingestion
+  before applying row predicates; do not add month partitions or month-selection state.
+- Build date-axis timelines with `buildBillingMonthDates(reportMonth)` using the
+  report-wide `YYYY-MM` key. Preserve UTC source dates and observed `dateRange`.

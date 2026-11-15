@@ -72,10 +72,6 @@ function createContextValue(rows: NormalizedRow[] = []) {
     dailyAicCumulativeData: [],
     codingAgentAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodingAgentCredits: 0, adoptionRate: 0, users: [] },
     codeReviewAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodeReviewCredits: 0, adoptionRate: 0, users: [] },
-    selectedMonths: [],
-    setSelectedMonths: jest.fn(),
-    availableMonths: [],
-    hasMultipleMonthsData: false,
     selectedPlan: 'business' as const,
     view: 'codingAgent' as const,
     setView: jest.fn(),
@@ -237,7 +233,6 @@ describe('CodingAgentOverview', () => {
           dailyBucketsArtifacts: makeDailyBucketsArtifacts([], {
             dailyUserModelTotals,
             dateRange: { min: '2026-03-01', max: '2026-03-01' },
-            months: ['2026-03'],
           }),
         }}
       >

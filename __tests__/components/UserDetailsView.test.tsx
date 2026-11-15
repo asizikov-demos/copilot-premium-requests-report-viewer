@@ -39,10 +39,10 @@ jest.mock('recharts', () => ({
 describe('UserDetailsView', () => {
   const mockOnBack = jest.fn();
 
-  it('charts only the selected user reported daily USD consumption and follows filtered months', () => {
+  it('charts only the selected user reported daily USD consumption throughout the report month', () => {
     const rows = [
       makeUsageRow({
-        day: '2026-07-01T00:00:00Z'.slice(0, 10),
+        day: '2026-06-01T00:00:00Z'.slice(0, 10),
         discountAmount: 0,
         netAmount: 2,
       }),
@@ -66,7 +66,7 @@ describe('UserDetailsView', () => {
         netAmount: 50,
       }),
       makeUsageRow({
-        day: '2026-08-15T00:00:00Z'.slice(0, 10),
+        day: '2026-06-15T00:00:00Z'.slice(0, 10),
         user: 'test-user-two',
         inputTokens: 100,
       }),
@@ -83,28 +83,7 @@ describe('UserDetailsView', () => {
       ...Array.from({ length: 30 }, (_, index) => ({
         date: `2026-06-${String(index + 1).padStart(2, '0')}`,
         included: index === 29 ? 3.25 : 0,
-        additional: index === 29 ? 1.5 : 0,
-      })),
-      ...Array.from({ length: 31 }, (_, index) => ({
-        date: `2026-07-${String(index + 1).padStart(2, '0')}`,
-        included: 0,
-        additional: index === 0 ? 2 : 0,
-      })),
-      ...Array.from({ length: 31 }, (_, index) => ({
-        date: `2026-08-${String(index + 1).padStart(2, '0')}`,
-        included: 0,
-        additional: 0,
-      })),
-    ]);
-
-    rerender(
-      <UserDetailsView user="test-user-one" rows={rows.filter(row => row.day.slice(0, 7) === '2026-07')} userQuotaValue="unknown" onBack={mockOnBack} />
-    );
-    expect(JSON.parse(within(screen.getByRole('region', { name: 'Daily Consumption' })).getByTestId('bar-chart').getAttribute('data-chart')!)).toEqual([
-      ...Array.from({ length: 31 }, (_, index) => ({
-        date: `2026-07-${String(index + 1).padStart(2, '0')}`,
-        included: 0,
-        additional: index === 0 ? 2 : 0,
+        additional: index === 29 ? 1.5 : index === 0 ? 2 : 0,
       })),
     ]);
 
@@ -112,9 +91,9 @@ describe('UserDetailsView', () => {
       <UserDetailsView user="test-user-two" rows={rows} userQuotaValue="unknown" onBack={mockOnBack} />
     );
     const secondUserData = JSON.parse(within(screen.getByRole('region', { name: 'Daily Consumption' })).getByTestId('bar-chart').getAttribute('data-chart')!);
-    expect(secondUserData).toHaveLength(92);
+    expect(secondUserData).toHaveLength(30);
     expect(secondUserData[0]).toEqual({ date: '2026-06-01', included: 0, additional: 0 });
-    expect(secondUserData[91]).toEqual({ date: '2026-08-31', included: 0, additional: 0 });
+    expect(secondUserData[29]).toEqual({ date: '2026-06-30', included: 100, additional: 50 });
     expect(secondUserData.filter((day: { included: number; additional: number }) => day.included !== 0 || day.additional !== 0)).toEqual([
       { date: '2026-06-30', included: 100, additional: 50 },
     ]);
@@ -745,7 +724,6 @@ describe('UserDetailsView', () => {
         modelBreakdown: { 'test-model-one': 2 },
       }]),
       dailyBucketsArtifacts: makeDailyBucketsArtifacts([], {
-        months: ['2025-06'],
         dateRange: { min: '2025-06-01', max: '2025-06-30' },
         dailyUserModelTotals: undefined,
       }),

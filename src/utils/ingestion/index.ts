@@ -17,7 +17,6 @@ export * from './FeatureUsageAggregator';
 export * from './TokenAggregator';
 export * from './TokenAccumulator';
 export * from './analytics';
-export * from './selectors';
 export * from './ModelDailyAggregator';
 
 // Re-export helpers

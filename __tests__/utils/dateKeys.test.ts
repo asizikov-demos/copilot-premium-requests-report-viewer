@@ -1,18 +1,4 @@
-import { MONTH_NAMES, enumerateDatesInclusive, monthKeyToLabel } from '@/utils/dateKeys';
-
-describe('monthKeyToLabel', () => {
-  it('formats month keys without timezone conversion', () => {
-    expect(monthKeyToLabel('2025-06')).toBe('June 2025');
-    expect(monthKeyToLabel('2026-01')).toBe('January 2026');
-    expect(monthKeyToLabel('2024-12')).toBe('December 2024');
-  });
-
-  it('exports the shared month name source', () => {
-    expect(MONTH_NAMES).toHaveLength(12);
-    expect(MONTH_NAMES[0]).toBe('January');
-    expect(MONTH_NAMES[11]).toBe('December');
-  });
-});
+import { enumerateDatesInclusive } from '@/utils/dateKeys';
 
 describe('enumerateDatesInclusive', () => {
   it('enumerates single day range', () => {

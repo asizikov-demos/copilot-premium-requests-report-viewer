@@ -87,9 +87,9 @@ function UserDailyUsageTooltip({ active, payload, label, valueUnitLabel = 'AI Cr
 export function UserDetailsView({
   ...props
 }: UserDetailsViewProps) {
-  const { data, error, progress, months } = useDetailStream({ user: props.user });
+  const { data, error, progress, reportMonth } = useDetailStream({ user: props.user });
   if (!data) return <DetailStreamStatus error={error} progress={progress} onBack={props.onBack} />;
-  return <UserDetailsContent {...props} data={data} months={months} />;
+  return <UserDetailsContent {...props} data={data} reportMonth={reportMonth} />;
 }
 
 export function UserDetailsContent({
@@ -98,8 +98,8 @@ export function UserDetailsContent({
   userAggregate,
   onBack,
   data,
-  months,
-}: UserDetailsViewProps & { data: DetailResult; months: string[] }) {
+  reportMonth,
+}: UserDetailsViewProps & { data: DetailResult; reportMonth?: string }) {
   const analysisCtx = useContext(AnalysisContext);
   const { details, tokens } = data;
   const usageArtifacts = analysisCtx?.usageArtifacts;
@@ -114,7 +114,7 @@ export function UserDetailsContent({
   const userCostLabels = useMemo(() => getBillingCostLabels(), []);
 
   const { userDailyData, dailyConsumption } = useMemo(
-    () => selectDetailTimeline(details, months), [details, months]);
+    () => selectDetailTimeline(details, reportMonth), [details, reportMonth]);
 
   const effectiveUserAggregate = useMemo(
     () => userAggregate === undefined
@@ -426,7 +426,7 @@ export function UserDetailsContent({
       <UserConsumptionMetrics
         key={user}
         metrics={{ ...details.consumption, tokens: analysisCtx?.tokenArtifacts !== null ? tokens : undefined }}
-        months={months}
+        reportMonth={reportMonth}
       />
 
       {/* Daily Model Usage Breakdown table — standalone card */}

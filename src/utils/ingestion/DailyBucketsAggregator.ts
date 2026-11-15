@@ -11,10 +11,7 @@ import {
   SpecialUsageBucketKey
 } from './types';
 import { isCodingAgentModel } from '@/utils/productClassification';
-import { MonthlyAggregator } from './MonthlyAggregator';
-import { mergeDailyBucketsArtifacts } from './selectors';
-
-class DailyBucketsPartialAggregator implements Aggregator<DailyBucketsArtifacts> {
+export class DailyBucketsAggregator implements Aggregator<DailyBucketsArtifacts> {
   readonly id = 'dailyBuckets';
   
   private dailyUserTotals = new Map<string, Map<string, number>>();
@@ -25,7 +22,6 @@ class DailyBucketsPartialAggregator implements Aggregator<DailyBucketsArtifacts>
   private dailyBucketModelTotals = new Map<string, Map<SpecialUsageBucketKey, Map<string, number>>>();
   private minDate: string | null = null;
   private maxDate: string | null = null;
-  private months = new Set<string>();
 
   private static inc2Level<K1, K2>(
     map: Map<K1, Map<K2, number>>,
@@ -72,7 +68,6 @@ class DailyBucketsPartialAggregator implements Aggregator<DailyBucketsArtifacts>
     this.dailyBucketModelTotals.clear();
     this.minDate = null;
     this.maxDate = null;
-    this.months.clear();
   }
   
   onRow(row: NormalizedRow, _ctx: AggregatorContext): void {
@@ -86,20 +81,17 @@ class DailyBucketsPartialAggregator implements Aggregator<DailyBucketsArtifacts>
     if (!this.maxDate || day > this.maxDate) {
       this.maxDate = day;
     }
-    // Track month key (YYYY-MM)
-    this.months.add(day.slice(0, 7));
-
     if (row.isUnattributedUsage && row.usageBucket) {
       const bucketQuantity = quantity;
-      DailyBucketsPartialAggregator.inc2Level(this.dailyBucketTotals, day, row.usageBucket, bucketQuantity);
-      DailyBucketsPartialAggregator.inc3Level(this.dailyBucketModelTotals, day, row.usageBucket, model, bucketQuantity);
+      DailyBucketsAggregator.inc2Level(this.dailyBucketTotals, day, row.usageBucket, bucketQuantity);
+      DailyBucketsAggregator.inc3Level(this.dailyBucketModelTotals, day, row.usageBucket, model, bucketQuantity);
       return;
     }
 
-    DailyBucketsPartialAggregator.inc2Level(this.dailyUserTotals, day, user, quantity);
+    DailyBucketsAggregator.inc2Level(this.dailyUserTotals, day, user, quantity);
 
     // Accumulate per-model nested totals
-    DailyBucketsPartialAggregator.inc3Level(this.dailyUserModelTotals, day, user, model, quantity);
+    DailyBucketsAggregator.inc3Level(this.dailyUserModelTotals, day, user, model, quantity);
     if (isCodingAgentModel(model, row.sku)) {
       this.dailyCodingAgentTotals.set(
         day,
@@ -120,13 +112,6 @@ class DailyBucketsPartialAggregator implements Aggregator<DailyBucketsArtifacts>
       dateRange: this.minDate && this.maxDate 
         ? { min: this.minDate, max: this.maxDate }
         : null,
-      months: Array.from(this.months).sort()
     };
-  }
-}
-
-export class DailyBucketsAggregator extends MonthlyAggregator<DailyBucketsArtifacts> {
-  constructor() {
-    super('dailyBuckets', () => new DailyBucketsPartialAggregator(), mergeDailyBucketsArtifacts);
   }
 }

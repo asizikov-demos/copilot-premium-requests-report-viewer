@@ -1,15 +1,19 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import type { ContextType, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
-import { AnalysisContext } from '@/context/AnalysisContext';
+import { AnalysisProvider } from '@/context/AnalysisContext';
 import { useDetailStream } from '@/hooks/useDetailStream';
 import { streamFile } from '@/utils/ingestion/streamFile';
 import type { IngestionResult } from '@/utils/ingestion/types';
 
 import { detailFixture } from '../helpers/detailFixtures';
+import { ingestRows } from '../helpers/aggregateRows';
 import { makeUsageRow } from '../helpers/testUtils';
 
-jest.mock('@/utils/ingestion/streamFile', () => ({ streamFile: jest.fn() }));
+jest.mock('@/utils/ingestion/streamFile', () => ({
+  ...jest.requireActual('@/utils/ingestion/streamFile'),
+  streamFile: jest.fn(),
+}));
 const mockedStream = jest.mocked(streamFile);
 
 function output(): IngestionResult {
@@ -19,18 +23,13 @@ function output(): IngestionResult {
 
 describe('useDetailStream lifecycle', () => {
   let file: File;
-  let months: string[];
   function Wrapper({ children }: { children: ReactNode }) {
-    const value = {
-      sourceFile: file, selectedMonths: months,
-      availableMonths: [{ value: '2026-06', label: 'June 2026' }, { value: '2026-07', label: 'July 2026' }],
-    } as ContextType<typeof AnalysisContext>;
-    return <AnalysisContext.Provider value={value}>{children}</AnalysisContext.Provider>;
+    return <AnalysisProvider sourceFile={file} ingestionResult={ingestRows([makeUsageRow()])}
+      filename="test-report.csv" onReset={() => {}}>{children}</AnalysisProvider>;
   }
   beforeEach(() => {
     mockedStream.mockReset();
     file = new File(['test'], 'test-report.csv');
-    months = [];
   });
 
   it('reports progress, caches completed results across remounts, and scopes the cache to File identity', async () => {
@@ -39,7 +38,7 @@ describe('useDetailStream lifecycle', () => {
     const first = renderHook(() => useDetailStream({ user: 'test-user-one' }), { wrapper: Wrapper });
     expect(first.result.current.data).toBeUndefined();
     expect(mockedStream).toHaveBeenCalledWith(file, ['details', 'tokens'], {
-      user: 'test-user-one', months: [], organization: undefined, costCenter: undefined,
+      user: 'test-user-one', organization: undefined, costCenter: undefined,
     }, expect.objectContaining({ signal: expect.any(AbortSignal), onProgress: expect.any(Function) }));
     act(() => mockedStream.mock.calls[0][3]?.onProgress?.({ rowsProcessed: 1, rowsScanned: 10000 }));
     expect(first.result.current.progress?.rowsScanned).toBe(10000);
@@ -56,15 +55,13 @@ describe('useDetailStream lifecycle', () => {
     cached.unmount();
   });
 
-  it('cancels on filter/month changes and unmount, ignores late results, and canonicalizes month order', async () => {
+  it('cancels on filter changes and unmount, ignores late results, and reuses unchanged filters', async () => {
     const finishes: ((value: IngestionResult) => void)[] = [];
     mockedStream.mockImplementation(() => new Promise(resolve => finishes.push(resolve)));
-    months = ['2026-07', '2026-06'];
     const hook = renderHook(({ user }) => useDetailStream({ user }), {
       wrapper: Wrapper, initialProps: { user: 'test-user-one' },
     });
     const firstSignal = mockedStream.mock.calls[0][3]?.signal;
-    months = ['2026-06', '2026-07'];
     hook.rerender({ user: 'test-user-one' });
     expect(mockedStream).toHaveBeenCalledTimes(1);
     hook.rerender({ user: 'test-user-two' });
@@ -73,10 +70,9 @@ describe('useDetailStream lifecycle', () => {
     expect(hook.result.current.data).toBeUndefined();
     await act(async () => finishes[1](output()));
     expect(hook.result.current.data).toBeDefined();
-    months = ['2026-07'];
-    hook.rerender({ user: 'test-user-two' });
+    hook.rerender({ user: 'test-user-three' });
     expect(hook.result.current.data).toBeUndefined();
-    expect(mockedStream.mock.calls[2][2]?.months).toEqual(['2026-07']);
+    expect(mockedStream.mock.calls[2][2]?.user).toBe('test-user-three');
     const lastSignal = mockedStream.mock.calls[2][3]?.signal;
     hook.unmount();
     expect(lastSignal?.aborted).toBe(true);

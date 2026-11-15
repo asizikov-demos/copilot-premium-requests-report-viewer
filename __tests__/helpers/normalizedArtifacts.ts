@@ -1,6 +1,6 @@
 import {
-  BillingAggregator, BillingPagesAggregator, DailyBucketsAggregator, FeatureUsageAggregator, QuotaAggregator,
-  TokenAggregator, UsageAggregator, deriveAnalysisFromArtifacts, selectCoreArtifacts, type NormalizedRow,
+  BillingAggregator, DailyBucketsAggregator, FeatureUsageAggregator, QuotaAggregator,
+  TokenAggregator, UsageAggregator, deriveAnalysisFromArtifacts, type NormalizedRow,
 } from '@/utils/ingestion';
 
 import { aggregateRows } from './aggregateRows';
@@ -11,18 +11,6 @@ export const buildDailyBucketsArtifactsFromRows = (rows: NormalizedRow[]) => agg
 export const buildFeatureUsageArtifactsFromRows = (rows: NormalizedRow[]) => aggregateRows(new FeatureUsageAggregator(), rows);
 export const buildBillingArtifactsFromRows = (rows: NormalizedRow[]) => aggregateRows(new BillingAggregator(), rows);
 export const buildTokenArtifactsFromRows = (rows: NormalizedRow[]) => aggregateRows(new TokenAggregator(), rows);
-
-export function selectArtifacts(rows: NormalizedRow[], months: string[]) {
-  return selectCoreArtifacts({
-    usage: buildUsageArtifactsFromRows(rows),
-    quota: buildQuotaArtifactsFromRows(rows),
-    dailyBuckets: buildDailyBucketsArtifactsFromRows(rows),
-    featureUsage: buildFeatureUsageArtifactsFromRows(rows),
-    billing: buildBillingArtifactsFromRows(rows),
-    tokens: buildTokenArtifactsFromRows(rows),
-    billingPages: aggregateRows(new BillingPagesAggregator(), rows),
-  }, months);
-}
 
 export function analyzeRows(rows: NormalizedRow[]) {
   return deriveAnalysisFromArtifacts(

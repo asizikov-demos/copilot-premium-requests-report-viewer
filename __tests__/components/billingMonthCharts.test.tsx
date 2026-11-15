@@ -47,7 +47,7 @@ const userRows = [
 ];
 const periodRows = [
   ...userRows,
-  makeUsageRow({ day: '2024-04-15T00:00:00Z'.slice(0, 10), user: 'test-user-two' }),
+  makeUsageRow({ day: '2024-02-15T00:00:00Z'.slice(0, 10), user: 'test-user-two' }),
 ];
 const daily = buildDailyBucketsArtifactsFromRows(periodRows);
 const usage = buildUsageArtifactsFromRows(periodRows);
@@ -55,7 +55,6 @@ const modelDaily = makeModelDailyArtifacts(userRows);
 const ingestionResult = ingestRows(periodRows);
 const dates = [
   ...Array.from({ length: 29 }, (_, index) => `2024-02-${String(index + 1).padStart(2, '0')}`),
-  ...Array.from({ length: 30 }, (_, index) => `2024-04-${String(index + 1).padStart(2, '0')}`),
 ];
 
 // Keep this registry exhaustive: discovery below fails when a new date chart is
@@ -63,7 +62,7 @@ const dates = [
 const contracts: { file: string; name: string; render: () => ReactElement }[] = [
   {
     file: 'charts/DailyConsumptionChart.tsx', name: 'USD',
-    render: () => <DailyConsumptionChart data={aggregateDailyConsumption(modelDaily.dailyConsumption, daily.months ?? [])} />,
+    render: () => <DailyConsumptionChart data={aggregateDailyConsumption(modelDaily.dailyConsumption, '2024-02')} />,
   },
   {
     file: 'charts/CodingAgentUsageChart.tsx', name: 'cloud agent',
@@ -100,7 +99,7 @@ const contracts: { file: string; name: string; render: () => ReactElement }[] = 
 ];
 
 describe('billingMonth chart contracts', () => {
-  it.each(contracts)('$name renders all days of the report months, not just active dates', ({ render: element }) => {
+  it.each(contracts)('$name renders all days of the report month, not just active dates', ({ render: element }) => {
     render(element());
     for (const chart of screen.getAllByTestId('date-chart')) {
       const points: { date: string }[] = JSON.parse(chart.textContent ?? '[]');
@@ -108,23 +107,22 @@ describe('billingMonth chart contracts', () => {
     }
   });
 
-  it('keeps token absence null, reported zero intact, and report-only months visible', () => {
-    const { rerender } = render(<UserConsumptionMetrics rows={userRows} periodRows={periodRows} />);
+  it('keeps token absence null and reported zero intact through the report month', () => {
+    render(<UserConsumptionMetrics rows={userRows} periodRows={periodRows} />);
     const points = JSON.parse(screen.getByTestId('date-chart').textContent ?? '[]');
     expect(points[0].inputTokens).toBeNull();
     expect(points[9].inputTokens).toBe(0);
     expect(points[19].inputTokens).toBe(10);
-    expect(points[58].inputTokens).toBeNull();
-    rerender(<UserConsumptionMetrics rows={userRows} periodRows={periodRows.filter(row => row.day.slice(0, 7) === '2024-02')} />);
-    expect(JSON.parse(screen.getByTestId('date-chart').textContent ?? '[]')).toHaveLength(29);
+    expect(points[28].inputTokens).toBeNull();
+    expect(points).toHaveLength(29);
   });
 
-  it('renders the SVG heatmap through the final day of every selected month', () => {
+  it('renders the SVG heatmap through the final day of the report month', () => {
     render(<UsersConsumptionHeatmap dailyCumulativeData={buildDailyCumulativeDataFromArtifacts(daily)}
       users={['test-user-one']} />);
     const heatmap = screen.getByRole('img');
     expect(heatmap).toHaveTextContent('2/1');
-    expect(heatmap).toHaveTextContent('4/30');
+    expect(heatmap).toHaveTextContent('2/29');
     const columnDates = [...new Set(
       [...heatmap.querySelectorAll('g > title')].map(title => title.textContent?.split(':')[0])
     )];

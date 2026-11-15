@@ -11,7 +11,7 @@ jest.mock('@/utils/ingestion/createIngestionWorker', () => ({
 
 const csv = [
   'date,username,sku,model,quantity,organization,cost_center_name',
-  '2026-06-30T23:30:00Z,test-user-one,copilot_ai_credit,test-model-one,2,test-org-one,test-cost-center-one',
+  '2026-07-01T00:00:00Z,test-user-two,copilot_ai_credit,test-model-one,2,test-org-one,test-cost-center-one',
   '2026-07-01T00:30:00Z,test-user-one,copilot_ai_credit,test-model-one,3,test-org-one,test-cost-center-one',
   '2026-07-02,test-user-two,copilot_ai_credit,test-model-one,5,test-org-one,test-cost-center-two',
   '2026-07-03,test-user-one,copilot_ai_credit,test-model-one,7,,',
@@ -28,13 +28,12 @@ describe('streamFile without Worker support', () => {
     globalThis.FileReader = originalFileReader;
   });
 
-  it('re-streams a File and applies user, group, and UTC month filters before aggregation', async () => {
+  it('re-streams a File and applies user and group filters before aggregation', async () => {
     const file = createFile(csv);
     const result = await streamFile(file, ['usage', 'dailyBuckets'], {
       user: 'test-user-one',
       organization: 'test-org-one',
       costCenter: 'test-cost-center-one',
-      months: ['2026-07'],
     }, { chunkSize: 64 });
 
     expect(result.rowsProcessed).toBe(1);
@@ -47,7 +46,6 @@ describe('streamFile without Worker support', () => {
 
     const unassigned = await streamFile(file, ['usage'], {
       costCenter: UNASSIGNED_BILLING_GROUP,
-      months: [],
     });
     expect((unassigned.outputs.usage as UsageArtifacts).users).toEqual([
       expect.objectContaining({ user: 'test-user-one', totalCredits: 7 }),

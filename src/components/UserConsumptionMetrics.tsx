@@ -16,9 +16,9 @@ function formatCredits(value: number | undefined): string {
   return value === undefined ? 'N/A' : value.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 
-export function UserConsumptionMetrics({ metrics, months }: {
+export function UserConsumptionMetrics({ metrics, reportMonth }: {
   metrics: UserConsumption;
-  months: string[];
+  reportMonth?: string;
 }) {
   const [selectedModel, setSelectedModel] = useState('');
   const models = useMemo(() => [...metrics.creditsByModel.keys()].sort(), [metrics]);
@@ -30,7 +30,7 @@ export function UserConsumptionMetrics({ metrics, months }: {
       (right.quantity ?? -1) - (left.quantity ?? -1) || leftName.localeCompare(rightName)), [metrics]);
   const trend = useMemo(() => {
     if (!metrics.tokens?.hasAnyTokenData) return [];
-    return buildBillingMonthDates(months)
+    return buildBillingMonthDates(reportMonth)
       .map(date => {
         const day = metrics.tokens?.byDay.get(date);
         const totals = effectiveModel ? day?.byModel.get(effectiveModel) : day?.totals;
@@ -44,7 +44,7 @@ export function UserConsumptionMetrics({ metrics, months }: {
         }
         return point;
       });
-  }, [metrics, effectiveModel, months]);
+  }, [metrics, effectiveModel, reportMonth]);
 
   if (!hasTokens && !hasCredits) return null;
 

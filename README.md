@@ -19,7 +19,7 @@ Try the Sample Data option on the upload screen to see how it works without need
 - Cost center and organization breakdowns
 - Consumption groups, feature adoption insights, and recommendations
 
-Select a single billing month to compare consumption against known quotas.
+Upload a report covering one calendar month to compare consumption against known quotas.
 Daily charts use UTC billing dates. Cost charts appear only when monetary data
 is available; token views appear when token counts are reported.
 Model ring cards keep a consistent height. Legends show the top five models;
@@ -29,6 +29,11 @@ Empty buckets explain the absence of usage for the selected period.
 ## Supported CSV Format
 
 This application supports AI Credit rows in the GitHub Copilot expanded billing export format. A request-only export is rejected; in a mixed export, transitional premium-request rows are ignored so they cannot contaminate AI Credit totals.
+
+Reports must cover a **single calendar month**, identified as `YYYY-MM` from the
+source date column without timezone conversion. The upload stops as soon as a
+second month appears and displays an error; export each billing month separately.
+Dates may be ISO dates/timestamps or US `M/D/YY` / `M/D/YYYY` dates.
 
 Get your report from the expanded billing export in Copilot spending or enterprise
 usage dashboards. See the official [GitHub Copilot usage and entitlements documentation](https://docs.github.com/en/enterprise-cloud@latest/copilot/managing-copilot/monitoring-usage-and-entitlements/monitoring-your-copilot-usage-and-entitlements).
@@ -72,45 +77,47 @@ false zeros. Token-only exports are supported without inventing monetary values.
 
 Token counts do not change AI Credits, quotas, or monetary calculations.
 
-### Month-keyed analytics
+### Single-month analytics
 
-Report ingestion retains no source-row arrays. CSV chunks flow through
-`normalizeRow` and the registered aggregators in `ingestStream`, then the worker
-returns `MonthlyAggregates` via structured clone. `AnalysisContext` derives its
-view models with `useArtifactAnalysis` from selected month artifacts, never by
-reconstructing rows. Memory use grows with aggregate cardinality (users, models,
-days, groups, and months), rather than the number of CSV rows.
+Report ingestion retains no source-row arrays. `ingestStream` validates source
+dates before CSV chunks flow through `normalizeRow` and the registered
+aggregators. The worker returns plain artifacts via structured clone.
+`AnalysisContext` exposes these finalized artifacts directly and derives its
+view models with `useArtifactAnalysis`, never by reconstructing rows.
+Memory use grows with aggregate cardinality (users, models,
+days, and groups), rather than the number of CSV rows.
 
 The six core ingestion aggregators (`usage`, `quota`, `dailyBuckets`, `featureUsage`,
-`billing`, and `tokens`) return their existing artifact fields plus
-`byMonth: Map<string, partial>` keyed by UTC `YYYY-MM`. Partials contain only
-structured-clone-safe data, not rows or accumulator instances.
-`selectCoreArtifacts(aggregates, selectedMonths)` merges the selected partitions;
-an empty selection uses all report months. Call it inside `useMemo` with the
-aggregate object and selected months as dependencies. Billing uses the streamed
-commercial totals, never recomputed amounts from retained rows.
+`billing`, and `tokens`) finalize directly to structured-clone-safe totals, Maps,
+and Sets, not rows or accumulator instances. There are no month partitions,
+merge selectors, or month-selection state. Billing uses the streamed commercial
+totals, never recomputed amounts from retained rows.
 
-The `billingPages` aggregator uses the same month-partitioned shape for organization
-and cost-center product totals, distinct named users, and Cloud Agent/Code Review
-billing tables. `selectBillingPagesArtifacts` merges only the selected months and
-preserves source-order ties without retaining source rows. User costs and
-consumption insights use the selected core billing, usage, and quota artifacts.
+The `billingPages` aggregator supplies organization and cost-center product
+totals, distinct named users, and Cloud Agent/Code Review
+billing tables. Map insertion order preserves source-order ties without
+provenance metadata. User costs and consumption insights use the core billing,
+usage, and quota artifacts.
 
-The `modelDaily` page aggregator follows the same month-partitioned contract.
-`selectModelDailyArtifacts` supplies product costs, Auto Mode savings, daily
+The `modelDaily` page aggregator supplies product costs, Auto Mode savings, daily
 commercial model totals, Auto/Fusion distributions and distinct-user sets without
 retaining source rows. Model credits reuse core usage/billing artifacts. Daily
-views fill the complete selected UTC billing months; reported zero amounts and
-per-row cost fallbacks remain distinct from absent billing fields.
+views use `buildBillingMonthDates(reportMonth)` to fill the report's complete UTC
+calendar month, including inactive boundary days. Cumulative totals carry through
+inactive days; missing token counts stay `null`. Report `dateRange` remains the
+observed data window. Reported zero amounts and per-row cost fallbacks remain
+distinct from absent billing fields.
 
 ```mermaid
 flowchart LR
   File[Uploaded File] --> Worker[Web Worker / ingestStream]
-  Worker --> Normalize[normalizeRow]
+  Worker --> Validate[Single calendar month validation]
+  Validate -->|Second month| Error[Abort upload and display error]
+  Validate --> Normalize[normalizeRow]
   Normalize --> Core[Core + billingPages + modelDaily aggregators]
-  Core --> Monthly[MonthlyAggregates / Maps and Sets]
-  Monthly --> Select[Selected-month selectors]
-  Select --> Pages[Report pages]
+  Core --> Artifacts[Plain artifacts / Maps and Sets]
+  Artifacts --> Context[AnalysisContext / one report month]
+  Context --> Pages[Report pages]
   File --> Detail[Re-stream on drill-down / details + tokens]
   Detail --> Cache[Compact cancellable detail cache]
   Cache --> Views[User and group detail views]
@@ -124,11 +131,11 @@ CSV parsing and aggregators run in a Web Worker in 1 MiB chunks. The uploaded
 and cost-center drill-downs re-stream it with
 `streamFile(file, aggregatorIds, rowFilter?, options?)` from
 `src/utils/ingestion/streamFile.ts`. Filters combine `user`, `organization`,
-`costCenter`, and UTC `months` (YYYY-MM) with AND semantics; an empty months list
-means all months. Missing organizations/cost centers match `Unassigned`.
+and `costCenter` with AND semantics. Missing organizations/cost centers match
+`Unassigned`. Single-month validation runs before these predicates.
 Results preserve aggregator output Maps/Sets through structured clone.
-Drill-downs keep only compact detail/token aggregates, cached by uploaded File,
-filter, and selected months. Loading displays scanned-row progress; closing a
+Drill-downs keep only compact detail/token aggregates, cached by uploaded File
+and filter. Loading displays scanned-row progress; closing a
 detail view or changing its filters cancels its worker via `options.signal`.
 Environments without Web Worker support use the same streaming pipeline on the
 main thread; worker startup/runtime failures are surfaced rather than retried there.

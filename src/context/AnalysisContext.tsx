@@ -3,7 +3,6 @@
 import React, { createContext, useContext, useMemo, useState, ReactNode } from 'react';
 
 import { PRICING } from '@/constants/pricing';
-import { useAnalysisFilters } from '@/hooks/useAnalysisFilters';
 import { useArtifactAnalysis } from '@/hooks/useArtifactAnalysis';
 import { 
   IngestionResult, 
@@ -13,11 +12,7 @@ import {
   FeatureUsageArtifacts,
   BillingArtifacts,
   TokenArtifacts,
-  MonthlyAggregates,
   ModelDailyArtifacts,
-  selectModelDailyArtifacts,
-  selectCoreArtifacts,
-  selectBillingPagesArtifacts,
   type BillingPagesArtifacts,
 } from '@/utils/ingestion';
 
@@ -59,11 +54,7 @@ interface AnalysisContextValue {
   codingAgentAnalysis: ReturnType<typeof useArtifactAnalysis>['codingAgentAnalysis'];
   codeReviewAnalysis: ReturnType<typeof useArtifactAnalysis>['codeReviewAnalysis'];
 
-  // Filters
-  selectedMonths: string[];
-  setSelectedMonths: (v: string[]) => void;
-  availableMonths: { value: string; label: string }[];
-  hasMultipleMonthsData: boolean;
+  reportMonth?: string;
 
   // Thresholds & state
   selectedPlan: CopilotPlan;
@@ -124,40 +115,23 @@ export function AnalysisProvider({ ingestionResult, filename, sourceFile, onRese
   const [view, setView] = useState<ViewType>('overview');
 
   // Extract aggregator outputs
-  const monthlyAggregates = useMemo<MonthlyAggregates>(() => {
-    requireFeatureUsageArtifacts(ingestionResult.outputs.featureUsage);
+  const artifacts = useMemo(() => {
+    const outputs = ingestionResult.outputs;
+    if (!outputs.billingPages) throw new Error('Missing billingPages output in ingestion result');
+    if (!outputs.modelDaily) throw new Error('Missing modelDaily output in ingestion result');
     return {
-      billingPages: ingestionResult.outputs.billingPages as MonthlyAggregates['billingPages'],
-      quota: ingestionResult.outputs.quota as MonthlyAggregates['quota'],
-      usage: ingestionResult.outputs.usage as MonthlyAggregates['usage'],
-      dailyBuckets: ingestionResult.outputs.dailyBuckets as MonthlyAggregates['dailyBuckets'],
-      featureUsage: ingestionResult.outputs.featureUsage as MonthlyAggregates['featureUsage'],
-      tokens: ingestionResult.outputs.tokens as MonthlyAggregates['tokens'],
-      billing: ingestionResult.outputs.billing as MonthlyAggregates['billing'],
-      modelDaily: ingestionResult.outputs.modelDaily as MonthlyAggregates['modelDaily'],
+      billingPagesArtifacts: outputs.billingPages as BillingPagesArtifacts,
+      quotaArtifacts: outputs.quota as QuotaArtifacts,
+      usageArtifacts: outputs.usage as UsageArtifacts,
+      dailyBucketsArtifacts: outputs.dailyBuckets as DailyBucketsArtifacts,
+      featureUsageArtifacts: requireFeatureUsageArtifacts(outputs.featureUsage),
+      tokenArtifacts: outputs.tokens as TokenArtifacts | null | undefined,
+      billingArtifacts: outputs.billing as BillingArtifacts | undefined,
+      modelDailyArtifacts: outputs.modelDaily as ModelDailyArtifacts,
     };
   }, [ingestionResult]);
 
-  const {
-    selectedMonths,
-    setSelectedMonths,
-    availableMonths,
-    hasMultipleMonthsData
-  } = useAnalysisFilters(monthlyAggregates.dailyBuckets);
-
-  const scopedArtifacts = useMemo(
-    () => selectCoreArtifacts(monthlyAggregates, selectedMonths),
-    [monthlyAggregates, selectedMonths]
-  );
-  const billingPagesArtifacts = useMemo(() => {
-    const artifacts = monthlyAggregates.billingPages;
-    if (!artifacts) throw new Error('Missing billingPages output in ingestion result');
-    return selectBillingPagesArtifacts(artifacts, selectedMonths);
-  }, [monthlyAggregates, selectedMonths]);
-  const modelDailyArtifacts = useMemo(() => {
-    if (!monthlyAggregates.modelDaily) throw new Error('Missing modelDaily output in ingestion result');
-    return selectModelDailyArtifacts(monthlyAggregates.modelDaily, selectedMonths);
-  }, [monthlyAggregates, selectedMonths]);
+  const reportMonth = artifacts.dailyBucketsArtifacts.dateRange?.min.slice(0, 7);
 
   const {
     analysis,
@@ -167,9 +141,9 @@ export function AnalysisProvider({ ingestionResult, filename, sourceFile, onRese
     codingAgentAnalysis,
     codeReviewAnalysis,
   } = useArtifactAnalysis({
-    usageArtifacts: scopedArtifacts.usageArtifacts,
-    quotaArtifacts: scopedArtifacts.quotaArtifacts,
-    dailyBucketsArtifacts: scopedArtifacts.dailyBucketsArtifacts
+    usageArtifacts: artifacts.usageArtifacts,
+    quotaArtifacts: artifacts.quotaArtifacts,
+    dailyBucketsArtifacts: artifacts.dailyBucketsArtifacts
   });
 
   // Use the suggested plan from data (auto-derived from report content)
@@ -189,28 +163,17 @@ export function AnalysisProvider({ ingestionResult, filename, sourceFile, onRese
   const isDetailViewActive = view !== 'overview';
 
   const value: AnalysisContextValue = {
-    modelDailyArtifacts,
-    reportHasOrganizations: monthlyAggregates.modelDaily!.hasOrganizations,
-    reportHasCostCenters: monthlyAggregates.modelDaily!.hasCostCenters,
+    ...artifacts,
+    reportHasOrganizations: artifacts.modelDailyArtifacts.hasOrganizations,
+    reportHasCostCenters: artifacts.modelDailyArtifacts.hasCostCenters,
     sourceFile,
-    // New aggregator artifacts
-    quotaArtifacts: scopedArtifacts.quotaArtifacts,
-    usageArtifacts: scopedArtifacts.usageArtifacts,
-    dailyBucketsArtifacts: scopedArtifacts.dailyBucketsArtifacts,
-    featureUsageArtifacts: scopedArtifacts.featureUsageArtifacts,
-    billingArtifacts: scopedArtifacts.billingArtifacts,
-    billingPagesArtifacts,
-    tokenArtifacts: scopedArtifacts.tokenArtifacts,
     analysis,
     userData,
     allModels,
     dailyCumulativeData,
     codingAgentAnalysis,
     codeReviewAnalysis,
-    selectedMonths,
-    setSelectedMonths,
-    availableMonths,
-    hasMultipleMonthsData,
+    reportMonth,
     selectedPlan,
     view,
     setView,

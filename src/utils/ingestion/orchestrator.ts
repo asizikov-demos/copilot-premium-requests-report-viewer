@@ -5,7 +5,7 @@
 
 import Papa from 'papaparse';
 import { PRICING } from '@/constants/pricing';
-import { createDateNormalizer, detectDateFormat, type DateNormalizer } from './dateNormalization';
+import { createDateNormalizer, detectDateFormat, normalizeDateToIso, type DateNormalizer } from './dateNormalization';
 import { normalizeRow } from './normalizeRow';
 import { getUsageUnitKind, isLegacyRequestRow } from '@/utils/unitType';
 import {
@@ -56,6 +56,7 @@ export function ingestStream(
   // Date parser is selected once from the first row that carries a date value,
   // then reused for every subsequent row to avoid per-row format detection.
   let dateNormalizer: DateNormalizer | undefined;
+  let reportMonth: string | undefined;
   
   Papa.parse(file, {
     header: true,
@@ -79,6 +80,20 @@ export function ingestStream(
       // Process each row in chunk
       for (const rawRow of data as Record<string, unknown>[]) {
         rowsScanned++;
+        const rawDate = rawRow.date;
+        const day = typeof rawDate === 'string'
+          ? dateNormalizer?.(rawDate) ?? normalizeDateToIso(rawDate)
+          : undefined;
+        if (day) {
+          const month = day.slice(0, 7);
+          if (reportMonth !== undefined && month !== reportMonth) {
+            failed = true;
+            parser.abort();
+            onError?.(`This report spans multiple months (${reportMonth} and ${month}). Please upload a report covering a single calendar month (UTC).`);
+            return;
+          }
+          reportMonth = month;
+        }
         const unitType = typeof rawRow.unit_type === 'string' ? rawRow.unit_type : undefined;
         const sku = typeof rawRow.sku === 'string' ? rawRow.sku : undefined;
         if (isLegacyRequestRow(unitType, sku)) {
@@ -91,17 +106,13 @@ export function ingestStream(
           onError?.(`Unsupported usage unit in CSV: expected AI Credits, received ${unitType || sku || 'no unit or SKU'}`);
           return;
         }
-        if (!dateNormalizer) {
-          const rawDate = rawRow['date'];
-          if (typeof rawDate === 'string' && rawDate.trim() !== '') {
-            const format = detectDateFormat(rawDate);
-            if (format === 'unknown') {
-              warnings.push(`Unrecognized date format in CSV: ${rawDate}`);
-            }
-            dateNormalizer = createDateNormalizer(format);
+        if (!dateNormalizer && typeof rawDate === 'string' && rawDate.trim() !== '') {
+          const format = detectDateFormat(rawDate);
+          if (format === 'unknown') {
+            warnings.push(`Unrecognized date format in CSV: ${rawDate}`);
           }
+          dateNormalizer = createDateNormalizer(format);
         }
-
         const normalized = normalizeRow(rawRow, warnings, { normalizeDate: dateNormalizer });
         if (!normalized) continue;
         sawSupportedRows = true;
@@ -110,8 +121,7 @@ export function ingestStream(
           (rowFilter.organization !== undefined &&
             (normalized.organization || UNASSIGNED_BILLING_GROUP) !== rowFilter.organization) ||
           (rowFilter.costCenter !== undefined &&
-            (normalized.costCenter || UNASSIGNED_BILLING_GROUP) !== rowFilter.costCenter) ||
-          (rowFilter.months?.length && !rowFilter.months.includes(normalized.day.slice(0, 7)))
+            (normalized.costCenter || UNASSIGNED_BILLING_GROUP) !== rowFilter.costCenter)
         )) continue;
         
         // Dispatch to all aggregators

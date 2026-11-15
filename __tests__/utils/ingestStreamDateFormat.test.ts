@@ -147,8 +147,8 @@ describe('ingestStream date format normalization', () => {
       'date,username,sku,unit_type,model,quantity,net_amount',
       '2026-06-30,test-user-one,copilot_ai_credit,ai-credits,test-model-one,2.5,0.025',
       '2026-06-30,test-user-one,copilot_ai_credit,requests,test-model-one,100,1',
-      '2026-07-01,test-user-two,copilot_ai_credit,ai-credits,test-model-two,3.5,',
-      '2026-07-01,test-user-two,copilot_premium_request,ai-credits,test-model-two,200,2',
+      '2026-06-01,test-user-two,copilot_ai_credit,ai-credits,test-model-two,3.5,',
+      '2026-06-01,test-user-two,copilot_premium_request,ai-credits,test-model-two,200,2',
     ].join('\n');
 
     const result = await ingestCsv(csv, [createCapturingAggregator()], 96);
@@ -182,10 +182,10 @@ describe('ingestStream date format normalization', () => {
     ]);
   });
 
-  it('streams optional tokens across chunks and UTC month boundaries without dropping invalid-token rows', async () => {
+  it('streams optional tokens across chunks and UTC days without dropping invalid-token rows', async () => {
     const csv = [
       'date,username,model,quantity,unit_type,input,output,cache_read,cache_write,total_input_tokens',
-      '2026-06-30T23:59:59Z,test-user-one,test-model-one,1,ai-credits,0,2,3,4,10',
+      '2026-07-01T23:59:59Z,test-user-one,test-model-one,1,ai-credits,0,2,3,4,10',
       '2026-07-01T00:00:00Z,test-user-one,test-model-one,1,ai-credits,invalid,0,,,',
       '2026-07-02T00:00:00Z,test-user-two,test-model-two,1,ai-credits,,,,,5',
     ].join('\n');
@@ -196,7 +196,7 @@ describe('ingestStream date format normalization', () => {
       inputTokens: 5, outputTokens: 2, cacheReadTokens: 3, cacheWriteTokens: 4,
       rowCount: 3, reportedRows: { inputTokens: 2, outputTokens: 2 },
     });
-    expect([...tokens.byDay.keys()]).toEqual(['2026-06-30', '2026-07-01', '2026-07-02']);
+    expect([...tokens.byDay.keys()]).toEqual(['2026-07-01', '2026-07-02']);
     expect(result.outputs.capturedRows).toEqual(expect.arrayContaining([
       expect.objectContaining({ day: '2026-07-01', outputTokens: 0, aicQuantity: 1 }),
     ]));
@@ -209,7 +209,7 @@ describe('ingestStream date format normalization', () => {
     const csv = [
       'date,username,product,sku,model,quantity,total_monthly_quota,organization,cost_center_name',
       `5/29/26,test-user-one,copilot,copilot_ai_credit,Claude Sonnet 4,2,${PRICING.ENTERPRISE_AI_CREDIT_QUOTA},test-org-one,test-cost-center-one`,
-      `6/1/26,test-user-two,copilot,copilot_ai_credit,Code Review model,3,${PRICING.BUSINESS_AI_CREDIT_QUOTA},test-org-two,test-cost-center-two`,
+      `5/1/26,test-user-two,copilot,copilot_ai_credit,Code Review model,3,${PRICING.BUSINESS_AI_CREDIT_QUOTA},test-org-two,test-cost-center-two`,
     ].join('\n');
 
     const result = await ingestCsv(csv);
@@ -217,8 +217,8 @@ describe('ingestStream date format normalization', () => {
 
     expect(result.rowsProcessed).toBe(2);
     expect(result.warnings).toEqual([]);
-    expect(rows.map(row => row.date)).toEqual(['2026-05-29', '2026-06-01']);
-    expect(rows.map(row => row.day)).toEqual(['2026-05-29', '2026-06-01']);
+    expect(rows.map(row => row.date)).toEqual(['2026-05-29', '2026-05-01']);
+    expect(rows.map(row => row.day)).toEqual(['2026-05-29', '2026-05-01']);
   });
 
   it('warns and skips rows when the first streamed date format is unrecognized', async () => {
