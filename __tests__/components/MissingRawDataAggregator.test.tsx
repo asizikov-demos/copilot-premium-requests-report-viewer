@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
 import { DataAnalysis } from '@/components/DataAnalysis';
-import { BillingPagesAggregator, type IngestionResult } from '@/utils/ingestion';
+import { BillingPagesAggregator, ModelDailyAggregator, type IngestionResult } from '@/utils/ingestion';
 
 import { makeDailyBucketsArtifacts } from '../helpers/makeArtifacts';
 
@@ -21,6 +21,7 @@ function createIngestionResultWithoutRawData(): IngestionResult {
   return {
     outputs: {
       billingPages: new BillingPagesAggregator().finalize(),
+      modelDaily: new ModelDailyAggregator().finalize(),
       quota: { quotaByUser: new Map(), conflicts: new Map(), distinctQuotas: new Set(), hasMixedQuotas: false, hasMixedLicenses: false },
       usage: { users: [], modelTotals: {}, userCount: 0, modelCount: 0 },
       dailyBuckets: makeDailyBucketsArtifacts(),
@@ -67,5 +68,12 @@ describe('AnalysisProvider without rawData aggregator', () => {
       .toThrow('Missing or invalid featureUsage output in ingestion result');
 
     consoleError.mockRestore();
+  });
+
+  it('requires streamed modelDaily artifacts instead of rebuilding them from rows', () => {
+    const ingestionResult = createIngestionResultWithoutRawData();
+    delete ingestionResult.outputs.modelDaily;
+    expect(() => render(<DataAnalysis ingestionResult={ingestionResult} filename="no-model-daily.csv" onReset={() => {}} />))
+      .toThrow('Missing modelDaily output in ingestion result');
   });
 });

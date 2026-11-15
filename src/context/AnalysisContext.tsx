@@ -16,6 +16,8 @@ import {
   TokenArtifacts,
   NormalizedRow,
   MonthlyAggregates,
+  ModelDailyArtifacts,
+  selectModelDailyArtifacts,
   selectCoreArtifacts,
   buildProcessedDataFromRows,
   selectBillingPagesArtifacts,
@@ -40,6 +42,9 @@ interface PlanInfoEntry {
 }
 
 interface AnalysisContextValue {
+  modelDailyArtifacts: ModelDailyArtifacts;
+  reportHasOrganizations: boolean;
+  reportHasCostCenters: boolean;
   sourceFile?: File;
   // Aggregator outputs (new architecture)
   quotaArtifacts: QuotaArtifacts;
@@ -136,6 +141,7 @@ export function AnalysisProvider({ ingestionResult, filename, sourceFile, onRese
       featureUsage: ingestionResult.outputs.featureUsage as MonthlyAggregates['featureUsage'],
       tokens: ingestionResult.outputs.tokens as MonthlyAggregates['tokens'],
       billing: ingestionResult.outputs.billing as MonthlyAggregates['billing'],
+      modelDaily: ingestionResult.outputs.modelDaily as MonthlyAggregates['modelDaily'],
     };
   }, [ingestionResult]);
 
@@ -160,6 +166,10 @@ export function AnalysisProvider({ ingestionResult, filename, sourceFile, onRese
     const artifacts = monthlyAggregates.billingPages;
     if (!artifacts) throw new Error('Missing billingPages output in ingestion result');
     return selectBillingPagesArtifacts(artifacts, selectedMonths);
+  }, [monthlyAggregates, selectedMonths]);
+  const modelDailyArtifacts = useMemo(() => {
+    if (!monthlyAggregates.modelDaily) throw new Error('Missing modelDaily output in ingestion result');
+    return selectModelDailyArtifacts(monthlyAggregates.modelDaily, selectedMonths);
   }, [monthlyAggregates, selectedMonths]);
 
   const {
@@ -196,6 +206,9 @@ export function AnalysisProvider({ ingestionResult, filename, sourceFile, onRese
   const isDetailViewActive = view !== 'overview';
 
   const value: AnalysisContextValue = {
+    modelDailyArtifacts,
+    reportHasOrganizations: monthlyAggregates.modelDaily!.hasOrganizations,
+    reportHasCostCenters: monthlyAggregates.modelDaily!.hasCostCenters,
     sourceFile,
     // New aggregator artifacts
     quotaArtifacts: scopedArtifacts.quotaArtifacts,

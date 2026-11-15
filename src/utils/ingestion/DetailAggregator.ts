@@ -90,10 +90,9 @@ export class DetailAggregator implements Aggregator<DetailArtifacts> {
     this.hasBillingData ||= [row.grossAmount, row.discountAmount, row.netAmount, row.aicGrossAmount]
       .some(value => value !== undefined);
     addCosts(this.totals, row);
-    const productRow = { ...row, creditsUsed: row.quantity };
-    accumulateProductCost(this.products, productRow);
+    accumulateProductCost(this.products, row);
     const dailyProducts = this.dailyProducts.get(row.day) ?? createEmptyProductCostMap();
-    accumulateProductCost(dailyProducts, productRow);
+    accumulateProductCost(dailyProducts, row);
     this.dailyProducts.set(row.day, dailyProducts);
     if (row.costCenter) {
       const costs = this.costCenters.get(row.costCenter) ?? { ...emptyCosts(), name: row.costCenter };

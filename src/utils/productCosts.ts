@@ -1,4 +1,4 @@
-import type { ProcessedData } from '@/types/csv';
+import type { NormalizedRow } from '@/utils/ingestion/types';
 
 import { classifyProductCategory, getProductDisplayLabel, ProductCategory } from '@/utils/productClassification';
 
@@ -42,7 +42,7 @@ export function createEmptyProductCostMap(): Map<ProductCategory, ProductCost> {
 
 export function accumulateProductCost(
   buckets: Map<ProductCategory, ProductCost>,
-  row: Pick<ProcessedData, 'model' | 'product' | 'sku' | 'creditsUsed' | 'grossAmount' | 'discountAmount' | 'netAmount' | 'aicQuantity' | 'aicGrossAmount'>
+  row: Pick<NormalizedRow, 'model' | 'product' | 'sku' | 'quantity' | 'grossAmount' | 'discountAmount' | 'netAmount' | 'aicQuantity' | 'aicGrossAmount'>
 ): void {
   const category = classifyProductCategory(row.model, row.product, row.sku);
   const bucket = buckets.get(category);
@@ -51,7 +51,7 @@ export function accumulateProductCost(
     return;
   }
 
-  bucket.credits += row.creditsUsed;
+  bucket.credits += row.quantity;
   bucket.gross += row.grossAmount ?? 0;
   bucket.discount += row.discountAmount ?? 0;
   bucket.net += row.netAmount ?? 0;
@@ -65,12 +65,6 @@ export function getPopulatedProductCosts(buckets: Map<ProductCategory, ProductCo
     .filter((bucket): bucket is ProductCost => Boolean(bucket && (bucket.credits > 0 || bucket.gross !== 0 || bucket.discount !== 0 || bucket.net !== 0)));
 }
 
-export function aggregateProductCosts(rows: ProcessedData[]): ProductCost[] {
-  const buckets = createEmptyProductCostMap();
-
-  for (const row of rows) {
-    accumulateProductCost(buckets, row);
-  }
-
+export function aggregateProductCosts(buckets: Map<ProductCategory, ProductCost>): ProductCost[] {
   return getPopulatedProductCosts(buckets);
 }

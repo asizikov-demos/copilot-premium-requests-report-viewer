@@ -3,104 +3,15 @@
 import React, { useMemo, useState } from 'react';
 import { ChevronRightIcon } from '@primer/octicons-react';
 
-import { PRICING } from '@/constants/pricing';
-import type { ProcessedData } from '@/types/csv';
+import { buildDailyConsumptionRows, type DailyConsumptionRow } from '@/utils/dailyConsumption';
+import type { ModelDailyArtifacts } from '@/utils/ingestion/ModelDailyAggregator';
 import { formatCurrency, formatDecimalQuantity, formatUtcDateLabel } from '@/utils/formatters';
 import type { DailyModelUsageDatum } from '@/utils/ingestion/analytics';
-
-interface ConsumptionMetrics {
-  consumption: number;
-  includedCredits: number;
-  additionalCredits: number;
-  grossAmount: number;
-  additionalUsage: number;
-}
-
-interface DailyModelConsumptionRow extends ConsumptionMetrics {
-  model: string;
-}
-
-interface DailyConsumptionRow extends ConsumptionMetrics {
-  date: string;
-  models: DailyModelConsumptionRow[];
-}
 
 interface DailyConsumptionTableProps {
   data: DailyModelUsageDatum[];
   models: string[];
-  sourceRows: ProcessedData[];
-}
-
-function getAdditionalUsage(row: ProcessedData): number {
-  if (typeof row.netAmount === 'number') {
-    return row.netAmount;
-  }
-
-  if (typeof row.grossAmount === 'number') {
-    return Math.max(row.grossAmount - (row.discountAmount ?? 0), 0);
-  }
-
-  return 0;
-}
-
-function createMetrics(consumption: number, grossAmount: number, additionalUsage: number): ConsumptionMetrics {
-  const additionalCredits = Math.min(
-    consumption,
-    additionalUsage / PRICING.AI_CREDIT_USD_VALUE
-  );
-
-  return {
-    consumption,
-    includedCredits: Math.max(consumption - additionalCredits, 0),
-    additionalCredits,
-    grossAmount,
-    additionalUsage,
-  };
-}
-
-function buildDailyConsumptionRows(
-  data: DailyModelUsageDatum[],
-  models: string[],
-  sourceRows: ProcessedData[]
-): DailyConsumptionRow[] {
-  const commercialByDateAndModel = new Map<string, Map<string, { grossAmount: number; additionalUsage: number }>>();
-
-  for (const row of sourceRows) {
-
-      const dateModels = commercialByDateAndModel.get(row.dateKey) ?? new Map();
-      const modelTotals = dateModels.get(row.model) ?? { grossAmount: 0, additionalUsage: 0 };
-      modelTotals.grossAmount += row.aicGrossAmount ?? row.creditsUsed * PRICING.AI_CREDIT_USD_VALUE;
-      modelTotals.additionalUsage += getAdditionalUsage(row);
-      dateModels.set(row.model, modelTotals);
-      commercialByDateAndModel.set(row.dateKey, dateModels);
-  }
-
-  return data.map((datum) => {
-    const dateModels = commercialByDateAndModel.get(datum.date);
-    const modelRows = models
-      .map((model) => {
-        const consumption = Number(datum[model] ?? 0);
-        const commercial = dateModels?.get(model);
-        const grossAmount = commercial?.grossAmount ?? consumption * PRICING.AI_CREDIT_USD_VALUE;
-        const additionalUsage = commercial?.additionalUsage ?? 0;
-
-        return {
-          model,
-          ...createMetrics(consumption, grossAmount, additionalUsage),
-        };
-      })
-      .filter((row) => row.consumption > 0)
-      .sort((left, right) => right.consumption - left.consumption || left.model.localeCompare(right.model));
-
-    const grossAmount = modelRows.reduce((total, row) => total + row.grossAmount, 0);
-    const additionalUsage = modelRows.reduce((total, row) => total + row.additionalUsage, 0);
-
-    return {
-      date: datum.date,
-      models: modelRows,
-      ...createMetrics(datum.totalCredits, grossAmount, additionalUsage),
-    };
-  });
+  commercialByDay: ModelDailyArtifacts['commercialByDay'];
 }
 
 function ChevronIcon({ expanded }: { expanded: boolean }) {
@@ -112,7 +23,7 @@ function ChevronIcon({ expanded }: { expanded: boolean }) {
   );
 }
 
-function UsageCells({ row, emphasized = false }: { row: ConsumptionMetrics; emphasized?: boolean }) {
+function UsageCells({ row, emphasized = false }: { row: Omit<DailyConsumptionRow, 'date' | 'models'>; emphasized?: boolean }) {
   return (
     <>
       <td className={`px-5 py-3.5 text-right text-sm font-mono tabular-nums ${emphasized ? 'font-semibold text-(--fgColor-default)' : 'text-(--fgColor-muted)'}`}>
@@ -134,12 +45,12 @@ function UsageCells({ row, emphasized = false }: { row: ConsumptionMetrics; emph
 export function DailyConsumptionTable({
   data,
   models,
-  sourceRows,
+  commercialByDay,
 }: DailyConsumptionTableProps) {
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const rows = useMemo(
-    () => buildDailyConsumptionRows(data, models, sourceRows),
-    [data, models, sourceRows]
+    () => buildDailyConsumptionRows(data, models, commercialByDay),
+    [data, models, commercialByDay]
   );
   const columnCount = 5;
 

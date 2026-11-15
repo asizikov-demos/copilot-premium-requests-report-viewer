@@ -18,7 +18,7 @@ import { ActionList, ActionMenu, Button, Checkbox, NavList, Tooltip } from '@pri
 
 import { PRICING } from '@/constants/pricing';
 import { AnalysisProvider, useAnalysisContext } from '@/context/AnalysisContext';
-import { useUsageBasedBillingScope } from '@/hooks/useUsageBasedBillingScope';
+import { getBillingCostLabels } from '@/utils/billingLabels';
 import { aggregateAutoModeSavings } from '@/utils/autoModeSavings';
 import { aggregateDailyConsumption } from '@/utils/dailyConsumption';
 import { formatCurrency } from '@/utils/formatters';
@@ -84,8 +84,9 @@ function DataAnalysisInner() {
     dailyCumulativeData,
     codingAgentAnalysis,
     codeReviewAnalysis,
-    aggregateProcessedData,
-    baseProcessed,
+    modelDailyArtifacts,
+    reportHasCostCenters: hasCostCenters,
+    reportHasOrganizations: hasOrganizations,
     availableMonths,
     hasMultipleMonthsData,
     selectedMonths,
@@ -99,17 +100,9 @@ function DataAnalysisInner() {
     billingArtifacts
   } = useAnalysisContext();
 
-  const hasCostCenters = useMemo(() => {
-    return baseProcessed.some((row) => row.costCenter);
-  }, [baseProcessed]);
-
-  const hasOrganizations = useMemo(() => {
-    return baseProcessed.some((row) => row.organization);
-  }, [baseProcessed]);
-
   const aicMetricsAvailable = billingArtifacts?.hasAnyAicData === true;
-  const billingRows = aggregateProcessedData;
-  const { quantityColumnLabel, costLabels } = useUsageBasedBillingScope(billingArtifacts);
+  const quantityColumnLabel = 'AI Credits';
+  const costLabels = getBillingCostLabels();
   const unitCostLabel = `1 AI Credit = ${formatCurrency(PRICING.AI_CREDIT_USD_VALUE)}`;
   const monthlyQuotaDisplay = useMemo(() => {
     if (analysis.quotaBreakdown.mixed) {
@@ -157,11 +150,7 @@ function DataAnalysisInner() {
   const aggregatedCosts = costMetricsAvailable && billingArtifacts ? billingArtifacts.totals : null;
 
   const modelRows = useMemo<ModelDetailsRow[]>(() => {
-    const byModel = new Map<string, number>();
-    for (const row of aggregateProcessedData) {
-      byModel.set(row.model, (byModel.get(row.model) ?? 0) + row.creditsUsed);
-    }
-    return [...byModel.entries()].map(([model, credits]) => {
+    return Object.entries(usageArtifacts.modelTotals).map(([model, credits]) => {
       const totals = billingArtifacts?.billingByModel.get(model);
       return {
         model,
@@ -170,8 +159,9 @@ function DataAnalysisInner() {
         discount: totals?.discount ?? 0,
         net: totals?.net ?? 0,
       };
-    }).sort((left, right) => right.credits - left.credits);
-  }, [aggregateProcessedData, billingArtifacts]);
+    }).sort((left, right) => right.credits - left.credits ||
+      (modelDailyArtifacts.modelFirstSeen.get(left.model) ?? 0) - (modelDailyArtifacts.modelFirstSeen.get(right.model) ?? 0));
+  }, [usageArtifacts, billingArtifacts, modelDailyArtifacts]);
   const modelPage = modelPageState?.rows === modelRows ? modelPageState.page : 0;
   const modelPageCount = Math.ceil(modelRows.length / MODEL_DETAILS_PAGE_SIZE);
   const activeModelPage = Math.min(modelPage, Math.max(modelPageCount - 1, 0));
@@ -195,15 +185,15 @@ function DataAnalysisInner() {
   const modelChartUnitLabel = 'AI Credits';
   const modelChartTotalDisplay = modelChartTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const productCosts = useMemo(() => aggregateProductCosts(billingRows), [billingRows]);
+  const productCosts = useMemo(() => aggregateProductCosts(modelDailyArtifacts.productCosts), [modelDailyArtifacts]);
   const dailyConsumption = useMemo(
-    () => aggregateDailyConsumption(billingRows, aggregateProcessedData),
-    [billingRows, aggregateProcessedData]
+    () => aggregateDailyConsumption(modelDailyArtifacts.dailyConsumption, modelDailyArtifacts.months),
+    [modelDailyArtifacts]
   );
   const showProductCosts = costMetricsAvailable;
   const autoModeSavingsRows = useMemo(
-    () => aggregateAutoModeSavings(billingRows),
-    [billingRows]
+    () => aggregateAutoModeSavings(modelDailyArtifacts.autoModeSavings),
+    [modelDailyArtifacts]
   );
   const autoModeSavingsTotal = useMemo(() => {
     return autoModeSavingsRows.reduce(
@@ -224,7 +214,7 @@ function DataAnalysisInner() {
           <span className="hidden sm:inline text-(--fgColor-disabled)">|</span>
           <span>Report window: <span className="font-semibold text-(--fgColor-default)">{analysis.timeFrame.start} to {analysis.timeFrame.end}</span></span>
           <span className="hidden sm:inline text-(--fgColor-disabled)">|</span>
-          <span>Total rows: <span className="font-semibold text-(--fgColor-default)">{aggregateProcessedData.length.toLocaleString()}</span></span>
+          <span>Total rows: <span className="font-semibold text-(--fgColor-default)">{modelDailyArtifacts.rowCount.toLocaleString()}</span></span>
         </div>
       </section>
 
@@ -363,7 +353,7 @@ function DataAnalysisInner() {
                       {formatCurrency(aggregatedCosts.net)}
                     </p>
                     <p className="text-sm text-(--fgColor-muted) text-center mt-1">
-                      {aggregateProcessedData.reduce((sum, r) => sum + r.creditsUsed, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} AI Credits
+                      {modelChartTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} AI Credits
                     </p>
                     <p className="text-xs text-(--fgColor-muted) text-center mt-0.5">
                       {unitCostLabel}

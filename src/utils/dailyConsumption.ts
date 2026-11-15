@@ -1,6 +1,21 @@
-import type { ProcessedData } from '@/types/csv';
+import { PRICING } from '@/constants/pricing';
+import type { DailyModelUsageDatum } from '@/utils/ingestion/analytics';
+import type { ModelDailyArtifacts } from '@/utils/ingestion/ModelDailyAggregator';
 
 import { buildBillingMonthDates } from './dateKeys';
+
+interface ConsumptionMetrics {
+  consumption: number;
+  includedCredits: number;
+  additionalCredits: number;
+  grossAmount: number;
+  additionalUsage: number;
+}
+
+export interface DailyConsumptionRow extends ConsumptionMetrics {
+  date: string;
+  models: (ConsumptionMetrics & { model: string })[];
+}
 
 export interface DailyConsumptionDatum {
   date: string;
@@ -9,31 +24,54 @@ export interface DailyConsumptionDatum {
 }
 
 export function aggregateDailyConsumption(
-  rows: ProcessedData[],
-  periodRows: ProcessedData[] = rows
+  byDay: ReadonlyMap<string, DailyConsumptionDatum>,
+  months: readonly string[]
 ): DailyConsumptionDatum[] {
-  const byDay = new Map<string, DailyConsumptionDatum>();
-
-  for (const row of rows) {
-    if (row.discountAmount === undefined && row.netAmount === undefined) {
-      continue;
-    }
-
-    const day = byDay.get(row.dateKey) ?? {
-      date: row.dateKey,
-      included: 0,
-      additional: 0,
-    };
-    day.included += row.discountAmount ?? 0;
-    day.additional += row.netAmount ?? 0;
-    byDay.set(row.dateKey, day);
-  }
-
-  if (byDay.size === 0 || periodRows.length === 0) {
+  if (byDay.size === 0 || months.length === 0) {
     return [];
   }
 
-  return buildBillingMonthDates(periodRows.map(row => row.monthKey)).map(date =>
+  return buildBillingMonthDates(months).map(date =>
     byDay.get(date) ?? { date, included: 0, additional: 0 }
   );
+}
+
+function createMetrics(consumption: number, grossAmount: number, additionalUsage: number): ConsumptionMetrics {
+  const additionalCredits = Math.min(consumption, additionalUsage / PRICING.AI_CREDIT_USD_VALUE);
+  return {
+    consumption, includedCredits: Math.max(consumption - additionalCredits, 0),
+    additionalCredits, grossAmount, additionalUsage,
+  };
+}
+
+export function buildDailyConsumptionRows(
+  data: DailyModelUsageDatum[],
+  models: string[],
+  commercialByDay: ModelDailyArtifacts['commercialByDay']
+): DailyConsumptionRow[] {
+  return data.map(datum => {
+    const dateModels = commercialByDay.get(datum.date);
+    const modelRows = models.map(model => {
+      const consumption = Number(datum[model] ?? 0);
+      const commercial = dateModels?.get(model);
+      return {
+        model,
+        ...createMetrics(
+          consumption,
+          commercial?.grossAmount ?? consumption * PRICING.AI_CREDIT_USD_VALUE,
+          commercial?.additionalUsage ?? 0
+        ),
+      };
+    }).filter(row => row.consumption > 0)
+      .sort((left, right) => right.consumption - left.consumption || left.model.localeCompare(right.model));
+    return {
+      date: datum.date,
+      models: modelRows,
+      ...createMetrics(
+        datum.totalCredits,
+        modelRows.reduce((total, row) => total + row.grossAmount, 0),
+        modelRows.reduce((total, row) => total + row.additionalUsage, 0)
+      ),
+    };
+  });
 }

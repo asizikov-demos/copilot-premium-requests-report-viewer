@@ -2,10 +2,17 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import type { ReactElement } from 'react';
 import userEvent from '@testing-library/user-event';
 
-import { ModelBucketDistributionCharts } from '@/components/charts/ModelBucketDistributionCharts';
+import { ModelBucketDistributionCharts as BucketCharts } from '@/components/charts/ModelBucketDistributionCharts';
 import { PRICING } from '@/constants/pricing';
 import { formatCurrency } from '@/utils/formatters';
 import { getModelColor } from '@/utils/modelColors';
+import type { NormalizedRow } from '@/utils/ingestion/types';
+
+import { makeModelDailyArtifacts } from '../helpers/modelDailyArtifacts';
+
+function ModelBucketDistributionCharts({ rows }: { rows: Partial<NormalizedRow>[] }) {
+  return <BucketCharts buckets={makeModelDailyArtifacts(rows).buckets} />;
+}
 
 jest.mock('recharts', () => {
   const actual = jest.requireActual<typeof import('recharts')>('recharts');
@@ -20,11 +27,11 @@ jest.mock('recharts', () => {
 describe('ModelBucketDistributionCharts', () => {
   it('includes case-insensitive bucket prefixes and names every populated chart', () => {
     render(<ModelBucketDistributionCharts rows={[
-      { user: 'test-user-one', model: 'auto: Claude Sonnet 5', creditsUsed: 2 },
-      { user: 'test-user-two', model: 'AUTO: Claude Sonnet 5', creditsUsed: 3 },
-      { user: 'test-user-one', model: 'fusion (standard): test-model-one', creditsUsed: 1 },
-      { user: 'test-user-one', model: 'FUSION (HIGH): test-model-one', creditsUsed: 1 },
-      { user: 'test-user-one', model: 'Fusion (Max): test-model-one', creditsUsed: 1 },
+      { user: 'test-user-one', model: 'auto: Claude Sonnet 5', quantity: 2 },
+      { user: 'test-user-two', model: 'AUTO: Claude Sonnet 5', quantity: 3 },
+      { user: 'test-user-one', model: 'fusion (standard): test-model-one', quantity: 1 },
+      { user: 'test-user-one', model: 'FUSION (HIGH): test-model-one', quantity: 1 },
+      { user: 'test-user-one', model: 'Fusion (Max): test-model-one', quantity: 1 },
     ]} />);
     const auto = within(screen.getByRole('region', { name: 'Auto model distribution' }));
     expect(auto.getByText('5.00')).toBeInTheDocument();
@@ -38,8 +45,8 @@ describe('ModelBucketDistributionCharts', () => {
 
   it('shows model, gross USD cost, and credit share above the ring in its tooltip', async () => {
     const { container } = render(<ModelBucketDistributionCharts rows={[
-      { user: 'test-user-one', model: 'Auto: test-model-one', creditsUsed: 300, aicGrossAmount: 2 },
-      { user: 'test-user-one', model: 'Auto: test-model-two', creditsUsed: 100, aicGrossAmount: 1 },
+      { user: 'test-user-one', model: 'Auto: test-model-one', quantity: 300, aicGrossAmount: 2 },
+      { user: 'test-user-one', model: 'Auto: test-model-two', quantity: 100, aicGrossAmount: 1 },
     ]} />);
     fireEvent.mouseEnter(container.querySelector('.recharts-pie-sector')!);
     await waitFor(() => {
@@ -53,16 +60,16 @@ describe('ModelBucketDistributionCharts', () => {
 
   it('aggregates credits within the four exact prefix buckets and trims model names', () => {
     render(<ModelBucketDistributionCharts rows={[
-      { user: 'test-user-one', model: 'Auto: Claude Sonnet 5', creditsUsed: 1.25 },
-      { user: 'test-user-one', model: 'Auto:  Claude Sonnet 5 ', creditsUsed: 1.75 },
-      { user: 'test-user-one', model: 'Auto: GPT-6 Luna', creditsUsed: 1 },
-      { user: 'test-user-one', model: 'Fusion (Standard): Claude Sonnet 5', creditsUsed: 5 },
-      { user: 'test-user-one', model: 'Fusion (High): Claude Sonnet 5', creditsUsed: 6 },
-      { user: 'test-user-one', model: 'Fusion (Max): Claude Sonnet 5', creditsUsed: 7 },
-      { user: 'test-user-one', model: 'Claude Sonnet 5', creditsUsed: 100 },
-      { user: 'test-user-one', model: 'Fusion (Ultra): Claude Sonnet 5', creditsUsed: 100 },
-      { user: 'test-user-one', model: 'Not Auto: Claude Sonnet 5', creditsUsed: 100 },
-      { user: 'test-user-one', model: 'Auto: test-model-zero', creditsUsed: 0 },
+      { user: 'test-user-one', model: 'Auto: Claude Sonnet 5', quantity: 1.25 },
+      { user: 'test-user-one', model: 'Auto:  Claude Sonnet 5 ', quantity: 1.75 },
+      { user: 'test-user-one', model: 'Auto: GPT-6 Luna', quantity: 1 },
+      { user: 'test-user-one', model: 'Fusion (Standard): Claude Sonnet 5', quantity: 5 },
+      { user: 'test-user-one', model: 'Fusion (High): Claude Sonnet 5', quantity: 6 },
+      { user: 'test-user-one', model: 'Fusion (Max): Claude Sonnet 5', quantity: 7 },
+      { user: 'test-user-one', model: 'Claude Sonnet 5', quantity: 100 },
+      { user: 'test-user-one', model: 'Fusion (Ultra): Claude Sonnet 5', quantity: 100 },
+      { user: 'test-user-one', model: 'Not Auto: Claude Sonnet 5', quantity: 100 },
+      { user: 'test-user-one', model: 'Auto: test-model-zero', quantity: 0 },
     ]} />);
 
     expect(screen.getAllByRole('region')).toHaveLength(4);
@@ -83,9 +90,9 @@ describe('ModelBucketDistributionCharts', () => {
 
   it('renders proportional ring sectors with consistent colors for the underlying model', () => {
     const { container } = render(<ModelBucketDistributionCharts rows={[
-      { user: 'test-user-one', model: 'Auto: Claude Sonnet 5', creditsUsed: 3 },
-      { user: 'test-user-one', model: 'Auto: GPT-6 Luna', creditsUsed: 1 },
-      { user: 'test-user-one', model: 'Fusion (High): Claude Sonnet 5', creditsUsed: 2 },
+      { user: 'test-user-one', model: 'Auto: Claude Sonnet 5', quantity: 3 },
+      { user: 'test-user-one', model: 'Auto: GPT-6 Luna', quantity: 1 },
+      { user: 'test-user-one', model: 'Fusion (High): Claude Sonnet 5', quantity: 2 },
     ]} />);
     const sectors = container.querySelectorAll('.recharts-pie-sector path');
     expect(sectors).toHaveLength(3);
@@ -97,12 +104,12 @@ describe('ModelBucketDistributionCharts', () => {
 
   it('shows empty buckets and updates totals and models when filtered rows change', () => {
     const { rerender } = render(<ModelBucketDistributionCharts rows={[
-      { user: 'test-user-one', model: 'Auto: test-model-one', creditsUsed: 0.125 },
+      { user: 'test-user-one', model: 'Auto: test-model-one', quantity: 0.125 },
     ]} />);
     expect(screen.getAllByRole('heading', { name: 'No model usage' })).toHaveLength(3);
     expect(screen.getByRole('listitem')).toHaveTextContent(`test-model-one${formatCurrency(0.125 * PRICING.AI_CREDIT_USD_VALUE)}100.0%`);
     rerender(<ModelBucketDistributionCharts rows={[
-      { user: 'test-user-one', model: 'Fusion (Max): test-model-two', creditsUsed: 9.5 },
+      { user: 'test-user-one', model: 'Fusion (Max): test-model-two', quantity: 9.5 },
     ]} />);
     expect(screen.queryByText('test-model-one')).not.toBeInTheDocument();
     expect(screen.getByRole('listitem')).toHaveTextContent(`test-model-two${formatCurrency(9.5 * PRICING.AI_CREDIT_USD_VALUE)}100.0%`);
@@ -123,7 +130,7 @@ describe('ModelBucketDistributionCharts', () => {
     render(<ModelBucketDistributionCharts rows={Array.from({ length: 20 }, (_, index) => ({
       user: 'test-user-one',
       model: `Auto: test-model-with-a-long-name-${index}`,
-      creditsUsed: 1000000,
+      quantity: 1000000,
     }))} />);
     const list = screen.getByRole('list', { name: 'Auto model gross cost (USD) and AI Credits share' });
     expect(list).not.toHaveClass('max-h-40', 'overflow-y-auto');
@@ -160,9 +167,9 @@ describe('ModelBucketDistributionCharts', () => {
 
   it('uses reported gross USD amounts, preserves explicit zero, and leaves rings in credits', () => {
     render(<ModelBucketDistributionCharts rows={[
-      { user: 'test-user-one', model: 'Auto: test-model-one', creditsUsed: 300, aicGrossAmount: 2 },
-      { user: 'test-user-one', model: 'Auto: test-model-one', creditsUsed: 100, aicGrossAmount: 0.5 },
-      { user: 'test-user-one', model: 'Auto: test-model-two', creditsUsed: 100, aicGrossAmount: 0 },
+      { user: 'test-user-one', model: 'Auto: test-model-one', quantity: 300, aicGrossAmount: 2 },
+      { user: 'test-user-one', model: 'Auto: test-model-one', quantity: 100, aicGrossAmount: 0.5 },
+      { user: 'test-user-one', model: 'Auto: test-model-two', quantity: 100, aicGrossAmount: 0 },
     ]} />);
     const auto = within(screen.getByRole('region', { name: 'Auto model distribution' }));
     expect(auto.getByText('500.00')).toBeInTheDocument();
@@ -172,13 +179,13 @@ describe('ModelBucketDistributionCharts', () => {
 
   it('counts unique attributed users per bucket and updates with the selected rows', () => {
     const { rerender } = render(<ModelBucketDistributionCharts rows={[
-      { user: 'test-user-one', model: 'Auto: test-model-one', creditsUsed: 2 },
-      { user: 'test-user-one', model: 'Auto: test-model-two', creditsUsed: 3 },
-      { user: 'test-user-two', model: 'Auto: test-model-one', creditsUsed: 1 },
-      { user: '', model: 'Auto: test-model-one', creditsUsed: 5 },
-      { user: ' ', model: 'Auto: test-model-one', creditsUsed: 5 },
-      { user: 'test-user-three', model: 'Auto: test-model-one', creditsUsed: 5, isUnattributedUsage: true },
-      { user: 'test-user-one', model: 'Fusion (High): test-model-one', creditsUsed: 2 },
+      { user: 'test-user-one', model: 'Auto: test-model-one', quantity: 2 },
+      { user: 'test-user-one', model: 'Auto: test-model-two', quantity: 3 },
+      { user: 'test-user-two', model: 'Auto: test-model-one', quantity: 1 },
+      { user: '', model: 'Auto: test-model-one', quantity: 5 },
+      { user: ' ', model: 'Auto: test-model-one', quantity: 5 },
+      { user: 'test-user-three', model: 'Auto: test-model-one', quantity: 5, isUnattributedUsage: true },
+      { user: 'test-user-one', model: 'Fusion (High): test-model-one', quantity: 2 },
     ]} />);
     expect(within(screen.getByRole('region', { name: 'Auto model distribution' })).getByText('2 unique users')).toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'Fusion (High) model distribution' })).getByText('1 unique user')).toBeInTheDocument();
@@ -186,7 +193,7 @@ describe('ModelBucketDistributionCharts', () => {
     expect(screen.queryByText(/Legend: gross cost/)).not.toBeInTheDocument();
 
     rerender(<ModelBucketDistributionCharts rows={[
-      { user: 'test-user-two', model: 'Auto: test-model-one', creditsUsed: 1 },
+      { user: 'test-user-two', model: 'Auto: test-model-one', quantity: 1 },
     ]} />);
     expect(within(screen.getByRole('region', { name: 'Auto model distribution' })).getByText('1 unique user')).toBeInTheDocument();
     expect(screen.getAllByText('0 unique users')).toHaveLength(3);

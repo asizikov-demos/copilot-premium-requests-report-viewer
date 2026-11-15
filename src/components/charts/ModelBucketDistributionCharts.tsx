@@ -7,50 +7,24 @@ import { Blankslate } from '@primer/react/experimental';
 import { Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 
 import { bgColor } from '@/constants/primerTokens';
-import { PRICING } from '@/constants/pricing';
-import type { ProcessedData } from '@/types/csv';
+import { MODEL_BUCKETS, type ModelBucket } from '@/utils/ingestion/ModelDailyAggregator';
 import { formatCurrency, formatDecimalQuantity } from '@/utils/formatters';
 import { getModelColor } from '@/utils/modelColors';
 
 import { chartTooltipContentStyle, chartTooltipLabelStyle } from './chartTooltipStyles';
 
 interface ModelBucketDistributionChartsProps {
-  rows: Pick<ProcessedData, 'model' | 'creditsUsed' | 'aicGrossAmount' | 'user' | 'isUnattributedUsage'>[];
+  buckets: ModelBucket[];
 }
 
-const BUCKETS = [
-  { label: 'Auto', prefix: 'Auto:' },
-  { label: 'Fusion (Standard)', prefix: 'Fusion (Standard):' },
-  { label: 'Fusion (High)', prefix: 'Fusion (High):' },
-  { label: 'Fusion (Max)', prefix: 'Fusion (Max):' },
-];
 const MODEL_PREVIEW_COUNT = 5;
 
-export function ModelBucketDistributionCharts({ rows }: ModelBucketDistributionChartsProps) {
+export function ModelBucketDistributionCharts({ buckets }: ModelBucketDistributionChartsProps) {
   const listId = useId();
   const [expandedBuckets, setExpandedBuckets] = useState<Set<string>>(new Set());
   const distributions = useMemo(() => {
-    const creditsByBucket = BUCKETS.map(() => new Map<string, { credits: number; grossAmount: number }>());
-    const usersByBucket = BUCKETS.map(() => new Set<string>());
-    for (const row of rows) {
-      const bucketIndex = BUCKETS.findIndex(({ prefix }) => row.model.toLowerCase().startsWith(prefix.toLowerCase()));
-      if (bucketIndex === -1) continue;
-
-      if (row.user.trim() && !row.isUnattributedUsage) {
-        usersByBucket[bucketIndex].add(row.user);
-      }
-
-      const model = row.model.slice(BUCKETS[bucketIndex].prefix.length).trim();
-      const creditsByModel = creditsByBucket[bucketIndex];
-      const previous = creditsByModel.get(model);
-      creditsByModel.set(model, {
-        credits: (previous?.credits ?? 0) + row.creditsUsed,
-        grossAmount: (previous?.grossAmount ?? 0) + (row.aicGrossAmount ?? row.creditsUsed * PRICING.AI_CREDIT_USD_VALUE),
-      });
-    }
-
-    return BUCKETS.map((bucket, index) => {
-      const models = [...creditsByBucket[index]]
+    return MODEL_BUCKETS.map((bucket, index) => {
+      const models = [...buckets[index].models]
         .filter(([, { credits }]) => credits > 0)
         .map(([model, amounts]) => ({ model, ...amounts, fill: getModelColor(model) }))
         .sort((left, right) => right.credits - left.credits || left.model.localeCompare(right.model));
@@ -58,10 +32,10 @@ export function ModelBucketDistributionCharts({ rows }: ModelBucketDistributionC
         ...bucket,
         models,
         total: models.reduce((sum, model) => sum + model.credits, 0),
-        uniqueUsers: usersByBucket[index].size,
+        uniqueUsers: buckets[index].users.size,
       };
     });
-  }, [rows]);
+  }, [buckets]);
 
   return (
     <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-4">
