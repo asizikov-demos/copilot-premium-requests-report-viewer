@@ -69,7 +69,9 @@ describe('checked-in AI-credit sample', () => {
       expect(result.rowsProcessed).toBe(1693);
       expect(result.warnings).toEqual([]);
       // Captured from main before removing partition/provenance fields.
-      expect(createHash('sha256').update(JSON.stringify(canonical(result.outputs))).digest('hex'))
+      const { detailPages, ...originalOutputs } = result.outputs;
+      expect(detailPages).toBeDefined();
+      expect(createHash('sha256').update(JSON.stringify(canonical(originalOutputs))).digest('hex'))
         .toBe('8626084213ec5418eeebd9393d460706e816f2c23d8e01a6efe305256e69fab9');
     } finally {
       globalThis.FileReader = originalReader;

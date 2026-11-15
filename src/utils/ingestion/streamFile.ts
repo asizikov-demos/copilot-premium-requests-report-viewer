@@ -6,7 +6,7 @@ export type { AggregatorId } from './registry';
 export type { RowFilter } from './types';
 
 export const REPORT_AGGREGATOR_IDS = [
-  'quota', 'usage', 'dailyBuckets', 'featureUsage', 'billing', 'billingPages', 'tokens', 'modelDaily',
+  'quota', 'usage', 'dailyBuckets', 'featureUsage', 'billing', 'billingPages', 'tokens', 'modelDaily', 'detailPages',
 ] as const satisfies readonly AggregatorId[];
 
 export interface StreamFileOptions {

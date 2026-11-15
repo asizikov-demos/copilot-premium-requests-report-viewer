@@ -4,6 +4,7 @@ import React, { createContext, useContext, useMemo, useState, ReactNode } from '
 
 import { PRICING } from '@/constants/pricing';
 import { useArtifactAnalysis } from '@/hooks/useArtifactAnalysis';
+import type { DetailPagesArtifacts } from '@/utils/ingestion/DetailPagesAggregator';
 import { 
   IngestionResult, 
   QuotaArtifacts, 
@@ -34,6 +35,7 @@ interface PlanInfoEntry {
 }
 
 interface AnalysisContextValue {
+  detailPagesArtifacts: DetailPagesArtifacts;
   modelDailyArtifacts: ModelDailyArtifacts;
   reportHasOrganizations: boolean;
   reportHasCostCenters: boolean;
@@ -119,7 +121,9 @@ export function AnalysisProvider({ ingestionResult, filename, sourceFile, onRese
     const outputs = ingestionResult.outputs;
     if (!outputs.billingPages) throw new Error('Missing billingPages output in ingestion result');
     if (!outputs.modelDaily) throw new Error('Missing modelDaily output in ingestion result');
+    if (!outputs.detailPages) throw new Error('Missing detailPages output in ingestion result');
     return {
+      detailPagesArtifacts: outputs.detailPages as DetailPagesArtifacts,
       billingPagesArtifacts: outputs.billingPages as BillingPagesArtifacts,
       quotaArtifacts: outputs.quota as QuotaArtifacts,
       usageArtifacts: outputs.usage as UsageArtifacts,

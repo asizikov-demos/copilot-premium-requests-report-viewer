@@ -17,6 +17,7 @@ import { makeNormalizedRow } from '../helpers/makeNormalizedRow';
 import { aggregateRows } from '../helpers/aggregateRows';
 import { BillingAggregator, BillingPagesAggregator } from '@/utils/ingestion';
 import { makeModelDailyArtifacts } from '../helpers/modelDailyArtifacts';
+import { DetailPagesAggregator } from '@/utils/ingestion/DetailPagesAggregator';
 
 jest.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div data-testid="chart-container">{children}</div>,
@@ -33,6 +34,7 @@ jest.mock('recharts', () => ({
 
 function createContextValue(rows: NormalizedRow[] = []) {
   return {
+    detailPagesArtifacts: aggregateRows(new DetailPagesAggregator(), rows),
     modelDailyArtifacts: makeModelDailyArtifacts(),
     reportHasOrganizations: false,
     reportHasCostCenters: false,

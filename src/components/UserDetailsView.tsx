@@ -4,13 +4,12 @@ import React, { useContext, useMemo } from 'react';
 import { Banner } from '@primer/react';
 
 import { UserDetailsHeader } from '@/components/UserDetailsHeader';
-import { DetailStreamStatus } from '@/components/DetailStreamStatus';
-import { useDetailStream, type DetailResult } from '@/hooks/useDetailStream';
 import { UserConsumptionMetrics } from '@/components/UserConsumptionMetrics';
 import { TOKEN_COLUMNS } from '@/components/TokenValue';
 import { DailyConsumptionChart } from '@/components/charts/DailyConsumptionChart';
 import { PRICING } from '@/constants/pricing';
-import { AnalysisContext } from '@/context/AnalysisContext';
+import { AnalysisContext, useAnalysisContext } from '@/context/AnalysisContext';
+import { selectUserDetails, type UserDetailResult } from '@/utils/ingestion/DetailPagesAggregator';
 import { UserDailyStackedChart } from '@/components/charts/UserDailyStackedChart';
 import { utcDateLabelFormatter } from '@/components/charts/chartTooltipStyles';
 import type { UserSummary } from '@/utils/analytics';
@@ -87,8 +86,8 @@ function UserDailyUsageTooltip({ active, payload, label, valueUnitLabel = 'AI Cr
 export function UserDetailsView({
   ...props
 }: UserDetailsViewProps) {
-  const { data, error, progress, reportMonth } = useDetailStream({ user: props.user });
-  if (!data) return <DetailStreamStatus error={error} progress={progress} onBack={props.onBack} />;
+  const { detailPagesArtifacts, reportMonth } = useAnalysisContext();
+  const data = useMemo(() => selectUserDetails(detailPagesArtifacts, props.user), [detailPagesArtifacts, props.user]);
   return <UserDetailsContent {...props} data={data} reportMonth={reportMonth} />;
 }
 
@@ -99,7 +98,7 @@ export function UserDetailsContent({
   onBack,
   data,
   reportMonth,
-}: UserDetailsViewProps & { data: DetailResult; reportMonth?: string }) {
+}: UserDetailsViewProps & { data: UserDetailResult; reportMonth?: string }) {
   const analysisCtx = useContext(AnalysisContext);
   const { details, tokens } = data;
   const usageArtifacts = analysisCtx?.usageArtifacts;
@@ -213,7 +212,6 @@ export function UserDetailsContent({
 
   return (
     <div className="space-y-6">
-      {data.warnings?.length ? <Banner variant="warning" title="Report warnings" description={data.warnings.join('; ')} /> : null}
       <UserDetailsHeader
         user={user}
         planName={
