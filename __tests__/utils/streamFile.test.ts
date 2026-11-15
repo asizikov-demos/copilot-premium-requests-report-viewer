@@ -3,6 +3,8 @@ import { streamFile } from '@/utils/ingestion/streamFile';
 import { UNASSIGNED_BILLING_GROUP, type NormalizedRow } from '@/utils/ingestion/types';
 import type { IngestionResponse } from '@/utils/ingestion/workerProtocol';
 
+import { createStreamingFile as createFile, MockFileReader } from '../helpers/streamingFile';
+
 jest.mock('@/utils/ingestion/createIngestionWorker', () => ({
   createIngestionWorker: jest.fn(),
 }));
@@ -14,27 +16,6 @@ const csv = [
   '2026-07-02,test-user-two,copilot_ai_credit,test-model-one,5,test-org-one,test-cost-center-two',
   '2026-07-03,test-user-one,copilot_ai_credit,test-model-one,7,,',
 ].join('\n');
-
-interface FileChunk {
-  content: string;
-}
-
-class MockFileReader {
-  onload: ((event: { target: { result: string } }) => void) | null = null;
-
-  readAsText(chunk: FileChunk): void {
-    this.onload?.({ target: { result: chunk.content } });
-  }
-}
-
-function createFile(content: string): File {
-  const file = new File([content], 'test-usage.csv');
-  Object.defineProperties(file, {
-    size: { value: content.length },
-    slice: { value: (start = 0, end = content.length) => ({ content: content.slice(start, end) }) },
-  });
-  return file;
-}
 
 describe('streamFile without Worker support', () => {
   const originalFileReader = globalThis.FileReader;
@@ -94,6 +75,15 @@ describe('streamFile without Worker support', () => {
     const result = await streamFile(file, ['rawData'], { user: 'test-user-three' });
     expect(result.rowsProcessed).toBe(0);
     expect(result.outputs.rawData).toEqual([]);
+  });
+
+  it('cancels the main-thread fallback before processing another chunk', async () => {
+    const controller = new AbortController();
+    const onProgress = jest.fn(() => controller.abort());
+    await expect(streamFile(createFile(csv), ['usage'], undefined, {
+      chunkSize: 64, signal: controller.signal, onProgress,
+    })).rejects.toMatchObject({ name: 'AbortError' });
+    expect(onProgress).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -157,5 +147,22 @@ describe('streamFile worker transport', () => {
     }
     await rejection;
     expect(terminate).toHaveBeenCalledTimes(1);
+  });
+
+  it('terminates an in-flight worker when cancelled', async () => {
+    const controller = new AbortController();
+    const result = streamFile(new File([csv], 'test-report.csv'), ['usage'], undefined, { signal: controller.signal });
+    await Promise.resolve();
+    controller.abort();
+    await expect(result).rejects.toMatchObject({ name: 'AbortError' });
+    expect(terminate).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not create a worker for a request cancelled before start', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    await expect(streamFile(new File([csv], 'test-report.csv'), ['usage'], undefined, { signal: controller.signal }))
+      .rejects.toMatchObject({ name: 'AbortError' });
+    expect(createIngestionWorker).not.toHaveBeenCalled();
   });
 });

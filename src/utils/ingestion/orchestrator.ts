@@ -46,6 +46,7 @@ export function ingestStream(
   }
   
   let rowsProcessed = 0;
+  let rowsScanned = 0;
   let sawLegacyRows = false;
   let sawSupportedRows = false;
   let failed = false;
@@ -62,6 +63,11 @@ export function ingestStream(
     dynamicTyping: false,
     chunkSize,
     chunk: ({ data, errors }, parser) => {
+      if (opts.signal?.aborted) {
+        failed = true;
+        parser.abort();
+        return;
+      }
       // Handle parse errors
       if (errors.length > 0) {
         failed = true;
@@ -72,6 +78,7 @@ export function ingestStream(
       
       // Process each row in chunk
       for (const rawRow of data as Record<string, unknown>[]) {
+        rowsScanned++;
         const unitType = typeof rawRow.unit_type === 'string' ? rawRow.unit_type : undefined;
         const sku = typeof rawRow.sku === 'string' ? rawRow.sku : undefined;
         if (isLegacyRequestRow(unitType, sku)) {
@@ -121,7 +128,7 @@ export function ingestStream(
         // Progress callback
         if (progressResolution > 0 && rowsProcessed % progressResolution === 0) {
           const progress: IngestionProgress = {
-            rowsProcessed
+            rowsProcessed, rowsScanned
           };
           onProgress?.(progress);
         }
@@ -131,6 +138,7 @@ export function ingestStream(
       for (const aggregator of aggregators) {
         aggregator.onChunkEnd?.();
       }
+      onProgress?.({ rowsProcessed, rowsScanned });
     },
     complete: () => {
       if (failed) return;
