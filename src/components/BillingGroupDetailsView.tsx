@@ -48,9 +48,9 @@ export interface BillingGroupDetailsViewProps {
 }
 
 export function BillingGroupDetailsView(props: BillingGroupDetailsViewProps) {
-  const { data, error, progress, months } = useDetailStream({ [props.groupKind]: props.groupName });
+  const { data, error, progress, reportMonth } = useDetailStream({ [props.groupKind]: props.groupName });
   if (!data) return <DetailStreamStatus error={error} progress={progress} onBack={props.onBack} />;
-  return <BillingGroupDetailsContent {...props} data={data} months={months} />;
+  return <BillingGroupDetailsContent {...props} data={data} reportMonth={reportMonth} />;
 }
 
 export function BillingGroupDetailsContent({
@@ -59,13 +59,13 @@ export function BillingGroupDetailsContent({
   groupsLabel,
   detailIdPrefix,
   data,
-  months,
+  reportMonth,
   quantityColumnLabel,
   costLabels,
   hasAicGross,
   showUsers = false,
   onBack,
-}: BillingGroupDetailsViewProps & { data: DetailResult; months: string[] }) {
+}: BillingGroupDetailsViewProps & { data: DetailResult; reportMonth?: string }) {
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [userSearch, setUserSearch] = useState('');
   const [userPage, setUserPage] = useState(0);
@@ -73,8 +73,8 @@ export function BillingGroupDetailsContent({
   const { details } = data;
   const { productCosts, dailyRows, totals } = details;
   const dailyConsumption = useMemo(
-    () => selectDetailTimeline(details, months).dailyConsumption,
-    [details, months]
+    () => selectDetailTimeline(details, reportMonth).dailyConsumption,
+    [details, reportMonth]
   );
   const userCount = details.userRows.length;
   const userRows = useMemo(() => showUsers ? details.userRows : [], [showUsers, details.userRows]);
@@ -101,7 +101,7 @@ export function BillingGroupDetailsContent({
 
   const chartData = useMemo((): BillingGroupDailyChartDatum[] => {
     const byDate = new Map(dailyRows.map(row => [row.date, row]));
-    return buildBillingMonthDates(months).map(date => {
+    return buildBillingMonthDates(reportMonth).map(date => {
       const row = byDate.get(date);
       const datum: BillingGroupDailyChartDatum = { date, totalCredits: row?.quantity ?? 0 };
 
@@ -114,7 +114,7 @@ export function BillingGroupDetailsContent({
 
       return datum;
     });
-  }, [dailyRows, months, productLabels]);
+  }, [dailyRows, reportMonth, productLabels]);
 
   const showCosts = totals.gross > 0 || totals.net > 0;
   const detailColSpan = 2 + (hasAicGross ? 1 : 0) + (showCosts ? 3 : 0);

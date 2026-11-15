@@ -291,7 +291,7 @@ describe('DataAnalysis billing summary', () => {
     expect(screen.getByText('51–51 of 51')).toBeInTheDocument();
   });
 
-  it('places daily consumption below product costs and filters its reported amounts by billing month', () => {
+  it('places full-month daily consumption below product costs without a month filter', () => {
     const ingestionResult = createIngestionResultFromRawRows([
       {
         date: '2026-06-30T23:59:59Z',
@@ -304,7 +304,7 @@ describe('DataAnalysis billing summary', () => {
         net_amount: '0.75',
       },
       {
-        date: '2026-07-01',
+        date: '2026-06-01',
         username: 'test-user-two',
         product: 'spark',
         sku: 'copilot_ai_credit',
@@ -327,30 +327,12 @@ describe('DataAnalysis billing summary', () => {
     expect(JSON.parse(screen.getByTestId('daily-consumption-chart').textContent ?? '')).toEqual([
       ...Array.from({ length: 30 }, (_, index) => ({
         date: `2026-06-${String(index + 1).padStart(2, '0')}`,
-        included: index === 29 ? 1.25 : 0,
-        additional: index === 29 ? 0.75 : 0,
-      })),
-      ...Array.from({ length: 31 }, (_, index) => ({
-        date: `2026-07-${String(index + 1).padStart(2, '0')}`,
-        included: index === 0 ? 2.5 : 0,
-        additional: index === 0 ? 1.5 : 0,
+        included: index === 29 ? 1.25 : index === 0 ? 2.5 : 0,
+        additional: index === 29 ? 0.75 : index === 0 ? 1.5 : 0,
       })),
     ]);
 
-    const period = screen.getByRole('group', { name: 'Billing Period' });
-    const monthCheckbox = within(period)
-      .getAllByRole<HTMLInputElement>('checkbox')
-      .find((checkbox) => checkbox.value === '2026-07');
-    expect(monthCheckbox).toBeDefined();
-    fireEvent.click(monthCheckbox!);
-    expect(monthCheckbox).toBeChecked();
-    expect(JSON.parse(screen.getByTestId('daily-consumption-chart').textContent ?? '')).toEqual(
-      Array.from({ length: 31 }, (_, index) => ({
-        date: `2026-07-${String(index + 1).padStart(2, '0')}`,
-        included: index === 0 ? 2.5 : 0,
-        additional: index === 0 ? 1.5 : 0,
-      }))
-    );
+    expect(screen.queryByRole('group', { name: 'Billing Period' })).not.toBeInTheDocument();
   });
 
   it('marks the active report section with aria-current', () => {
@@ -374,15 +356,13 @@ describe('DataAnalysis billing summary', () => {
     expect(screen.getByRole('button', { name: 'Navigate to section: Users' })).toBeInTheDocument();
   });
 
-  it('collapses accessible navigation without losing the active view or billing period', () => {
+  it('collapses accessible navigation without losing the active view', () => {
     const rows = [
       makeBillingRow({ date: '2026-03-01' }),
-      makeBillingRow({ date: '2026-04-01' }),
+      makeBillingRow({ date: '2026-03-02' }),
     ];
     const { unmount } = render(<DataAnalysis ingestionResult={createIngestionResultFromRawRows(rows)} filename="test-report.csv" onReset={jest.fn()} />);
     const nav = screen.getByRole('navigation', { name: 'Report sections' });
-    const month = within(screen.getByRole('group', { name: 'Billing Period' })).getAllByRole('checkbox')[0];
-    fireEvent.click(month);
     fireEvent.click(within(nav).getByRole('button', { name: 'Users' }));
     const toggle = screen.getByRole('button', { name: 'Collapse sidebar' });
     toggle.focus();
@@ -394,7 +374,6 @@ describe('DataAnalysis billing summary', () => {
     expect(toggle).toHaveAttribute('aria-controls', nav.id);
     expect(within(nav).getByRole('button', { name: 'Users' })).toHaveAttribute('aria-current', 'page');
     expect(within(nav).getByRole('button', { name: 'Users' }).querySelector('.sr-only')).toHaveTextContent('Users');
-    expect(month).toBeChecked();
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
     expect(within(nav).getByRole('button', { name: 'Users' }).querySelector('.sr-only')).toBeNull();

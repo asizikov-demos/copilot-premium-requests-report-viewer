@@ -67,7 +67,7 @@ describe('unattributed AI-credit usage', () => {
       feature.onRow(row, ctx);
     }
     const usageOut = usage.finalize(ctx);
-    const quotaOut = quota.finalize(ctx);
+    const quotaOut = quota.finalize();
     const dailyOut = daily.finalize(ctx);
     const analysis = deriveAnalysisFromArtifacts(usageOut, quotaOut, dailyOut);
     const adoption = analyzeCodeReviewAdoptionFromArtifacts(usageOut, quotaOut);

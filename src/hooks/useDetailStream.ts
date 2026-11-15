@@ -22,11 +22,10 @@ interface DetailState {
 // File identity scopes cached aggregates to the upload; replacing it releases the cache.
 const cache = new WeakMap<File, Map<string, DetailResult>>();
 
-export function useDetailStream(filter: Omit<RowFilter, 'months'>) {
+export function useDetailStream(filter: RowFilter) {
   const context = useContext(AnalysisContext);
   const file = context?.sourceFile;
-  const monthKey = JSON.stringify([...(context?.selectedMonths ?? [])].sort());
-  const filterKey = JSON.stringify([filter.user, filter.organization, filter.costCenter, monthKey]);
+  const filterKey = JSON.stringify([filter.user, filter.organization, filter.costCenter]);
   const [state, setState] = useState<DetailState & { key?: string; file?: File }>({});
   const user = filter.user;
   const organization = filter.organization;
@@ -39,7 +38,7 @@ export function useDetailStream(filter: Omit<RowFilter, 'months'>) {
     const controller = new AbortController();
     const update = (next: DetailState) => setState({ ...next, key: filterKey, file });
     streamFile(file, ['details', 'tokens'], {
-      user, organization, costCenter, months: JSON.parse(monthKey) as string[],
+      user, organization, costCenter,
     }, {
       signal: controller.signal,
       onProgress: progress => {
@@ -66,7 +65,7 @@ export function useDetailStream(filter: Omit<RowFilter, 'months'>) {
       });
     });
     return () => controller.abort();
-  }, [file, filterKey, user, organization, costCenter, monthKey]);
+  }, [file, filterKey, user, organization, costCenter]);
 
   const current = file ? cache.get(file)?.get(filterKey) : undefined;
   const scopedState = state.key === filterKey && state.file === file ? state : {};
@@ -74,6 +73,6 @@ export function useDetailStream(filter: Omit<RowFilter, 'months'>) {
     ...scopedState,
     data: current ?? scopedState.data,
     error: file ? scopedState.error : 'The uploaded file is unavailable. Upload the report again to view details.',
-    months: context?.selectedMonths.length ? context.selectedMonths : context?.availableMonths.map(month => month.value) ?? [],
+    reportMonth: context?.reportMonth,
   };
 }

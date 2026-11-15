@@ -73,7 +73,7 @@ describe('BillingGroupDetailsView', () => {
   ])('places full-period USD consumption above product spend for a $groupLabel', ({ groupName, groupLabel, groupsLabel }) => {
     const periodRows = [
       ...rows,
-      makeRow({ day: '2026-04-15', organization: 'test-org-two', costCenter: 'test-cost-center-two', netAmount: 100 }),
+      makeRow({ day: '2026-03-15', organization: 'test-org-two', costCenter: 'test-cost-center-two', netAmount: 100 }),
     ];
     const props = {
       groupName,
@@ -97,11 +97,6 @@ describe('BillingGroupDetailsView', () => {
         date: `2026-03-${String(index + 1).padStart(2, '0')}`,
         included: index === 0 ? 0.04 : 0,
         additional: index === 0 ? 0.12 : index === 2 ? 0.08 : 0,
-      })),
-      ...Array.from({ length: 30 }, (_, index) => ({
-        date: `2026-04-${String(index + 1).padStart(2, '0')}`,
-        included: 0,
-        additional: 0,
       })),
     ]);
 

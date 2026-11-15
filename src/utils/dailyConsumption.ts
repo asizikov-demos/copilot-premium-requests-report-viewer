@@ -25,13 +25,13 @@ export interface DailyConsumptionDatum {
 
 export function aggregateDailyConsumption(
   byDay: ReadonlyMap<string, DailyConsumptionDatum>,
-  months: readonly string[]
+  reportMonth: string | undefined
 ): DailyConsumptionDatum[] {
-  if (byDay.size === 0 || months.length === 0) {
+  if (byDay.size === 0) {
     return [];
   }
 
-  return buildBillingMonthDates(months).map(date =>
+  return buildBillingMonthDates(reportMonth).map(date =>
     byDay.get(date) ?? { date, included: 0, additional: 0 }
   );
 }

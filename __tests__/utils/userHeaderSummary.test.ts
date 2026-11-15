@@ -32,17 +32,17 @@ describe('buildUserHeaderSummary', () => {
     ], 'unknown', true).cloudAgentUsed).toBe(true);
   });
 
-  it('falls back to a per-month quota split without billing data and omits the period length across months', () => {
+  it('falls back to the monthly quota split without billing data', () => {
     const rows = [
-      makeUsageRow({ day: '2026-05-31T00:00:00Z'.slice(0, 10), quantity: 2000 }),
+      makeUsageRow({ day: '2026-06-30T00:00:00Z'.slice(0, 10), quantity: 2000 }),
       makeUsageRow({ day: '2026-06-01T00:00:00Z'.slice(0, 10), quantity: 100, model: 'Code Review model' }),
     ];
 
     const summary = buildUserHeaderSummary(rows, 1900, false);
 
-    expect(summary.includedConsumed).toBe(2000);
-    expect(summary.additionalConsumed).toBe(100);
-    expect(summary.daysInPeriod).toBeNull();
+    expect(summary.includedConsumed).toBe(1900);
+    expect(summary.additionalConsumed).toBe(200);
+    expect(summary.daysInPeriod).toBe(30);
     expect(summary.totalCost).toBeNull();
     expect(summary.codeReviewUsed).toBe(true);
   });

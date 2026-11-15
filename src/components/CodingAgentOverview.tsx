@@ -12,7 +12,6 @@ import {
   buildDailyCodingAgentUsageFromArtifacts,
   buildAgentBillingRows,
 } from '@/utils/ingestion';
-import { filterDailySeriesByMonths } from '@/utils/analytics/filters';
 
 import { AgentUsersTable, type AgentUsageTableRow } from './charts/AgentUsersTable';
 import { CodingAgentUsageChart } from './charts/CodingAgentUsageChart';
@@ -32,23 +31,22 @@ export function CodingAgentOverview({
 }: CodingAgentOverviewProps) {
   const isMobile = useIsMobile();
   const [showChart, setShowChart] = useState(true);
-  const { billingPagesArtifacts, billingArtifacts, dailyBucketsArtifacts, selectedMonths } = useAnalysisContext();
+  const { billingPagesArtifacts, billingArtifacts, dailyBucketsArtifacts } = useAnalysisContext();
   const quantityColumnLabel = 'AI Credits';
   const valueUnitLabel = 'AI Credits';
   const costLabels = useMemo(() => getBillingCostLabels(), []);
    
-  // Memoize daily coding agent data, filtered by selected billing months
   const dailyCodingAgentData = useMemo(() => {
     return dailyBucketsArtifacts
-      ? filterDailySeriesByMonths(buildDailyCodingAgentUsageFromArtifacts(dailyBucketsArtifacts), selectedMonths)
+      ? buildDailyCodingAgentUsageFromArtifacts(dailyBucketsArtifacts)
       : [];
-  }, [dailyBucketsArtifacts, selectedMonths]);
+  }, [dailyBucketsArtifacts]);
 
   const dailyCodeReviewData = useMemo(() => {
     return dailyBucketsArtifacts
-      ? filterDailySeriesByMonths(buildDailyCodeReviewUsageFromArtifacts(dailyBucketsArtifacts), selectedMonths)
+      ? buildDailyCodeReviewUsageFromArtifacts(dailyBucketsArtifacts)
       : [];
-  }, [dailyBucketsArtifacts, selectedMonths]);
+  }, [dailyBucketsArtifacts]);
 
   const codingAgentTableRows = useMemo<AgentUsageTableRow[]>(() => {
     return buildAgentBillingRows(billingPagesArtifacts.codingAgent);

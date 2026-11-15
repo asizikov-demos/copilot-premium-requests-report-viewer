@@ -6,8 +6,6 @@
 import { getQuotaTier, shouldReplaceQuotaValue } from '@/utils/analytics/quota';
 import { isSupportedUsageUnitType } from '@/utils/unitType';
 
-import { MonthlyAggregator } from './MonthlyAggregator';
-import { mergeQuotaArtifacts } from './selectors';
 import {
   Aggregator,
   AggregatorContext,
@@ -16,15 +14,13 @@ import {
   SpecialUsageBucketKey
 } from './types';
 
-class QuotaPartialAggregator implements Aggregator<QuotaArtifacts> {
+export class QuotaAggregator implements Aggregator<QuotaArtifacts> {
   readonly id = 'quota';
   
   private quotaByUser = new Map<string, number | 'unknown'>();
   private conflicts = new Map<string, Set<number | 'unknown'>>();
   private distinctQuotas = new Set<number>();
   private specialBucketQuotas = new Map<SpecialUsageBucketKey, 0>();
-  private observations = new Map<string, Map<number | 'unknown', number>>();
-  private sequence = 0;
   
   init(_ctx: AggregatorContext): void {
     void _ctx;
@@ -33,11 +29,9 @@ class QuotaPartialAggregator implements Aggregator<QuotaArtifacts> {
     this.conflicts.clear();
     this.distinctQuotas.clear();
     this.specialBucketQuotas.clear();
-    this.observations.clear();
-    this.sequence = 0;
   }
 
-  onRow(row: NormalizedRow, _ctx: AggregatorContext, sequence = this.sequence++): void {
+  onRow(row: NormalizedRow, _ctx: AggregatorContext): void {
     void _ctx;
     if (row.isUnattributedUsage && row.usageBucket) {
       this.specialBucketQuotas.set(row.usageBucket, 0);
@@ -48,9 +42,6 @@ class QuotaPartialAggregator implements Aggregator<QuotaArtifacts> {
     
     const existing = this.quotaByUser.get(row.user);
     const current = row.quotaValue ?? 'unknown';
-    const observations = this.observations.get(row.user) ?? new Map<number | 'unknown', number>();
-    if (!observations.has(current)) observations.set(current, sequence);
-    this.observations.set(row.user, observations);
     
     if (existing !== undefined && existing !== current) {
       // Conflict detected
@@ -69,8 +60,7 @@ class QuotaPartialAggregator implements Aggregator<QuotaArtifacts> {
       }
     }
   }
-  
-  finalize(ctx: AggregatorContext): QuotaArtifacts {
+  finalize(): QuotaArtifacts {
     const distinctTiers = new Set(
       Array.from(this.distinctQuotas)
         .map((quota) => getQuotaTier(quota))
@@ -88,13 +78,6 @@ class QuotaPartialAggregator implements Aggregator<QuotaArtifacts> {
       hasMixedQuotas,
       hasMixedLicenses,
       specialBucketQuotas: this.specialBucketQuotas,
-      observations: this.observations,
     };
-  }
-}
-
-export class QuotaAggregator extends MonthlyAggregator<QuotaArtifacts> {
-  constructor() {
-    super('quota', () => new QuotaPartialAggregator(), mergeQuotaArtifacts);
   }
 }

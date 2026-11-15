@@ -92,7 +92,6 @@ describe('buildDailyModelUsageFromArtifacts with fractional AI credits', () => {
     const dailyBucketsArtifacts = makeDailyBucketsArtifacts([], {
       dateRange: { min: '2025-06-01', max: '2025-06-01' },
       dailyUserModelTotals: undefined,
-      months: ['2025-06'],
     });
 
     const result = buildDailyModelUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
@@ -142,7 +141,6 @@ describe('buildDailyModelUsageFromArtifacts with fractional AI credits', () => {
     const usageArtifacts = makeUsageFromModelTotals({ [model]: 0 });
     const dailyBucketsArtifacts = makeDailyBucketsFromNested([date], [{}]);
     dailyBucketsArtifacts.dateRange = { min: date, max: date };
-    dailyBucketsArtifacts.months = ['2026-07'];
     dailyBucketsArtifacts.dailyBucketModelTotals = new Map([
       [date, new Map([
         ['unattributed_ai_credit', new Map([[model, 18021.665685]])],
@@ -156,7 +154,7 @@ describe('buildDailyModelUsageFromArtifacts with fractional AI credits', () => {
   });
 
   it('builds dense multi-day UTC date-keyed AIC model totals for multiple models', () => {
-    const dates = ['2025-06-30', '2025-07-01', '2025-07-02'];
+    const dates = ['2025-06-28', '2025-06-29', '2025-06-30'];
     const dailyData: Array<Record<string, Record<string, number>>> = [
       { 'test-user-one': { 'test-model-one': 2, 'test-model-two': 1 } },
       {},
@@ -166,11 +164,11 @@ describe('buildDailyModelUsageFromArtifacts with fractional AI credits', () => {
     const dailyBucketsArtifacts = makeDailyBucketsFromNested(dates, dailyData);
 
     const fullMonthResult = buildDailyModelUsageFromArtifacts(dailyBucketsArtifacts, usageArtifacts);
-    expect(fullMonthResult).toHaveLength(61);
+    expect(fullMonthResult).toHaveLength(30);
     expect(fullMonthResult[0].date).toBe('2025-06-01');
-    expect(fullMonthResult[60].date).toBe('2025-07-31');
-    const result = fullMonthResult.slice(29, 32);
-    expect(result.map((row) => row.date)).toEqual(['2025-06-30', '2025-07-01', '2025-07-02']);
+    expect(fullMonthResult[29].date).toBe('2025-06-30');
+    const result = fullMonthResult.slice(27, 30);
+    expect(result.map((row) => row.date)).toEqual(dates);
     expect(result[0]['test-model-one']).toBe(2);
     expect(result[0]['test-model-two']).toBe(1);
     expect(result[0].totalCredits).toBe(3);

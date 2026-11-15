@@ -106,7 +106,7 @@ export function makeQuotaArtifacts(entries: MakeQuotaEntry[]): QuotaArtifacts {
       ctx
     );
   }
-  return aggregator.finalize(ctx);
+  return aggregator.finalize();
 }
 
 export interface MakeDailyBucketEntry {
@@ -121,7 +121,7 @@ export interface MakeDailyBucketEntry {
  * Build a {@link DailyBucketsArtifacts} object from flat daily usage entries.
  *
  * Produces daily totals and model totals matching DailyBucketsAggregator output.
- * Use `overrides` for empty fixtures that need an explicit range, month list, or
+ * Use `overrides` for empty fixtures that need an explicit range or
  * intentionally missing optional artifact.
  * Date handling is string-based (UTC-safe) and does not use local timezone conversion.
  */
@@ -131,7 +131,6 @@ export function makeDailyBucketsArtifacts(
 ): DailyBucketsArtifacts {
   const dailyUserTotals = new Map<string, Map<string, number>>();
   const dailyUserModelTotals = new Map<string, Map<string, Map<string, number>>>();
-  const months = new Set<string>();
   let min: string | null = null;
   let max: string | null = null;
 
@@ -161,7 +160,6 @@ export function makeDailyBucketsArtifacts(
 
     if (!min || e.date < min) min = e.date;
     if (!max || e.date > max) max = e.date;
-    months.add(e.date.slice(0, 7));
   }
 
   const artifacts: DailyBucketsArtifacts = {
@@ -170,7 +168,6 @@ export function makeDailyBucketsArtifacts(
     dailyBucketTotals: new Map(),
     dailyBucketModelTotals: new Map(),
     dateRange: min && max ? { min, max } : null,
-    months: Array.from(months).sort(),
   };
 
   return { ...artifacts, ...overrides };

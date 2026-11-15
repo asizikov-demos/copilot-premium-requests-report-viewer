@@ -5,12 +5,12 @@ export interface UserHeaderSummary {
   organizations: string[];
   costCenters: string[];
   daysActive: number;
-  /** Days in the billing month; null when usage spans multiple months. */
+  /** Days in the billing month; null when there are no report rows. */
   daysInPeriod: number | null;
   totalConsumed: number;
   /**
    * Billed split when billing columns exist (discounted vs. net credits);
-   * otherwise a per-month split against the quota. Null when neither is available.
+   * otherwise a split against the quota. Null when neither is available.
    */
   includedConsumed: number | null;
   additionalConsumed: number | null;
@@ -39,7 +39,7 @@ function daysInUtcMonth(monthKey: string): number {
 }
 
 export class UserHeaderAccumulator {
-  private monthlyCredits = new Map<string, number>();
+  private reportMonth?: string;
   private activeDays = new Set<string>();
   private organizations = new Set<string>();
   private costCenters = new Set<string>();
@@ -51,8 +51,7 @@ export class UserHeaderAccumulator {
   private codeReviewUsed = false;
 
   add(row: HeaderUsage): void {
-    const month = row.day.slice(0, 7);
-    this.monthlyCredits.set(month, (this.monthlyCredits.get(month) ?? 0) + row.quantity);
+    this.reportMonth ??= row.day.slice(0, 7);
     this.totalConsumed += row.quantity;
     this.gross += row.grossAmount ?? 0;
     this.discount += row.discountAmount ?? 0;
@@ -68,8 +67,8 @@ export class UserHeaderAccumulator {
     return {
       organizations: [...this.organizations].sort(), costCenters: [...this.costCenters].sort(),
       daysActive: this.activeDays.size,
-      daysInPeriod: this.monthlyCredits.size === 1 ? daysInUtcMonth([...this.monthlyCredits.keys()][0]) : null,
-      monthlyCredits: this.monthlyCredits, totalConsumed: this.totalConsumed,
+      daysInPeriod: this.reportMonth ? daysInUtcMonth(this.reportMonth) : null,
+      totalConsumed: this.totalConsumed,
       gross: this.gross, discount: this.discount, net: this.net,
       cloudAgentUsed: this.cloudAgentUsed, codeReviewUsed: this.codeReviewUsed,
     };
@@ -87,12 +86,8 @@ export function summarizeUserHeader(
     includedConsumed = data.discount / PRICING.AI_CREDIT_USD_VALUE;
     additionalConsumed = data.net / PRICING.AI_CREDIT_USD_VALUE;
   } else if (quota !== 'unknown') {
-    includedConsumed = 0;
-    additionalConsumed = 0;
-    for (const credits of data.monthlyCredits.values()) {
-      includedConsumed += Math.min(credits, quota);
-      additionalConsumed += Math.max(0, credits - quota);
-    }
+    includedConsumed = Math.min(data.totalConsumed, quota);
+    additionalConsumed = Math.max(0, data.totalConsumed - quota);
   }
 
   return {

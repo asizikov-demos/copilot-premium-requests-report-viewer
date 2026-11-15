@@ -121,8 +121,7 @@ export function ingestStream(
           (rowFilter.organization !== undefined &&
             (normalized.organization || UNASSIGNED_BILLING_GROUP) !== rowFilter.organization) ||
           (rowFilter.costCenter !== undefined &&
-            (normalized.costCenter || UNASSIGNED_BILLING_GROUP) !== rowFilter.costCenter) ||
-          (rowFilter.months?.length && !rowFilter.months.includes(normalized.day.slice(0, 7)))
+            (normalized.costCenter || UNASSIGNED_BILLING_GROUP) !== rowFilter.costCenter)
         )) continue;
         
         // Dispatch to all aggregators

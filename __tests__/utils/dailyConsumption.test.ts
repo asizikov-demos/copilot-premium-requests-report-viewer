@@ -5,14 +5,14 @@ import { makeNormalizedRow } from '../helpers/makeNormalizedRow';
 import { makeModelDailyArtifacts } from '../helpers/modelDailyArtifacts';
 
 function aggregateDailyConsumption(rows: NormalizedRow[], periodRows = rows) {
-  return selectDailyConsumption(makeModelDailyArtifacts(rows).dailyConsumption, periodRows.map(row => row.day.slice(0, 7)));
+  return selectDailyConsumption(makeModelDailyArtifacts(rows).dailyConsumption, periodRows[0]?.day.slice(0, 7));
 }
 
 describe('aggregateDailyConsumption', () => {
   it('sums reported USD amounts across users, products, and unattributed usage in UTC day order', () => {
     const rows = [
       makeNormalizedRow({
-        day: '2026-07-01',
+        day: '2026-06-01',
         discountAmount: 0,
         netAmount: 2.3456,
       }),
@@ -42,13 +42,12 @@ describe('aggregateDailyConsumption', () => {
     ];
 
     const result = aggregateDailyConsumption(rows);
-    expect(result).toHaveLength(61);
-    expect(result[0]).toEqual({ date: '2026-06-01', included: 0, additional: 0 });
+    expect(result).toHaveLength(30);
+    expect(result[0]).toEqual({ date: '2026-06-01', included: 0, additional: 2.3456 });
     expect(result[29].date).toBe('2026-06-30');
     expect(result[29].included).toBeCloseTo(6.2345);
     expect(result[29].additional).toBe(3.5);
-    expect(result[30]).toEqual({ date: '2026-07-01', included: 0, additional: 2.3456 });
-    expect(result[60]).toEqual({ date: '2026-07-31', included: 0, additional: 0 });
+    expect(result[28]).toEqual({ date: '2026-06-29', included: 0, additional: 0 });
   });
 
   it('retains reported zeros and optional monetary fields without inferring costs', () => {
@@ -83,18 +82,18 @@ describe('aggregateDailyConsumption', () => {
     expect(result[days - 1]).toEqual({ date: `${month}-${days}`, included: 0, additional: 0 });
   });
 
-  it('uses the report period even when the user has no usage in its boundary months', () => {
+  it('uses the full report month even when the user has no usage on its boundary days', () => {
     const userRows = [
       makeNormalizedRow({ day: '2025-12-15', netAmount: 1 }),
     ];
     const result = aggregateDailyConsumption(userRows, [
       ...userRows,
-      makeNormalizedRow({ day: '2025-11-20', user: 'test-user-two' }),
-      makeNormalizedRow({ day: '2026-01-10', user: 'test-user-two' }),
+      makeNormalizedRow({ day: '2025-12-01', user: 'test-user-two' }),
+      makeNormalizedRow({ day: '2025-12-31', user: 'test-user-two' }),
     ]);
-    expect(result).toHaveLength(92);
-    expect(result[0]).toEqual({ date: '2025-11-01', included: 0, additional: 0 });
-    expect(result[91]).toEqual({ date: '2026-01-31', included: 0, additional: 0 });
+    expect(result).toHaveLength(31);
+    expect(result[0]).toEqual({ date: '2025-12-01', included: 0, additional: 0 });
+    expect(result[30]).toEqual({ date: '2025-12-31', included: 0, additional: 0 });
     expect(result.filter(day => day.additional !== 0)).toEqual([
       { date: '2025-12-15', included: 0, additional: 1 },
     ]);
@@ -105,22 +104,22 @@ describe('aggregateDailyConsumption', () => {
     expect(aggregateDailyConsumption([makeNormalizedRow({ inputTokens: 100 })])).toEqual([]);
   });
 
-  it('preserves the timeline for unordered duplicate months without mutating report rows', () => {
+  it('preserves the timeline for unordered report dates without mutating report rows', () => {
     const userRows = [
       makeNormalizedRow({ day: '2025-12-15', netAmount: 1 }),
     ];
     const periodRows = [
-      makeNormalizedRow({ day: '2026-01-20' }),
+      makeNormalizedRow({ day: '2025-12-20' }),
       ...userRows,
-      makeNormalizedRow({ day: '2025-11-20' }),
-      makeNormalizedRow({ day: '2026-01-10' }),
+      makeNormalizedRow({ day: '2025-12-21' }),
+      makeNormalizedRow({ day: '2025-12-10' }),
     ];
     const originalRows = [...periodRows];
     const result = aggregateDailyConsumption(userRows, periodRows);
 
-    expect(result).toHaveLength(92);
-    expect(result[0]).toEqual({ date: '2025-11-01', included: 0, additional: 0 });
-    expect(result[91]).toEqual({ date: '2026-01-31', included: 0, additional: 0 });
+    expect(result).toHaveLength(31);
+    expect(result[0]).toEqual({ date: '2025-12-01', included: 0, additional: 0 });
+    expect(result[30]).toEqual({ date: '2025-12-31', included: 0, additional: 0 });
     expect(result.filter(day => day.additional !== 0)).toEqual([
       { date: '2025-12-15', included: 0, additional: 1 },
     ]);

@@ -29,15 +29,15 @@ export function detailFixture(rows: NormalizedRow[]) {
 
 export function UserDetailsView({ rows, ...props }: UserDetailsViewProps & { rows: NormalizedRow[] }) {
   const context = useContext(AnalysisContext);
-  const months = context?.dailyBucketsArtifacts?.months ?? rows.map(row => row.day.slice(0, 7));
-  return <UserDetailsContent {...props} months={months}
+  const reportMonth = context?.reportMonth ?? rows[0]?.day.slice(0, 7);
+  return <UserDetailsContent {...props} reportMonth={reportMonth}
     data={detailFixture(rows.filter(row => row.user === props.user))} />;
 }
 
 export function BillingGroupDetailsView({ rows, periodRows = rows, ...props }:
   Omit<BillingGroupDetailsViewProps, 'groupKind'> & { rows: NormalizedRow[]; periodRows?: NormalizedRow[] }) {
   return <BillingGroupDetailsContent {...props} groupKind={props.groupLabel === 'organization' ? 'organization' : 'costCenter'}
-    data={detailFixture(rows)} months={periodRows.map(row => row.day.slice(0, 7))} />;
+    data={detailFixture(rows)} reportMonth={periodRows[0]?.day.slice(0, 7)} />;
 }
 
 export function UserConsumptionMetrics({ rows, periodRows = rows, tokensAvailable = true }: {
@@ -46,5 +46,5 @@ export function UserConsumptionMetrics({ rows, periodRows = rows, tokensAvailabl
   tokensAvailable?: boolean;
 }) {
   return <ConsumptionMetrics metrics={buildUserConsumption(rows, tokensAvailable)}
-    months={periodRows.map(row => row.day.slice(0, 7))} />;
+    reportMonth={periodRows[0]?.day.slice(0, 7)} />;
 }

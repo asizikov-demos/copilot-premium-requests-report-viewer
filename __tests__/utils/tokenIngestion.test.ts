@@ -1,7 +1,6 @@
 import { PRICING } from '@/constants/pricing';
 import {
   BillingAggregator,
-  filterTokenArtifactsByMonths,
   normalizeRow,
   TokenAggregator,
 } from '@/utils/ingestion';
@@ -107,7 +106,7 @@ describe('token normalization', () => {
 
 describe('token artifacts', () => {
   const rows = [
-    makeNormalizedRow({ day: '2026-07-01', model: 'test-model-two', inputTokens: 50, outputTokens: 5 }),
+    makeNormalizedRow({ day: '2026-06-01', model: 'test-model-two', inputTokens: 50, outputTokens: 5 }),
     makeNormalizedRow({ day: '2026-06-30', model: 'test-model-one', inputTokens: 100, outputTokens: 20, cacheReadTokens: 0, cacheWriteTokens: 4 }),
     makeNormalizedRow({ day: '2026-06-30', user: 'test-user-two', model: 'test-model-one', inputTokens: 0 }),
     makeNormalizedRow({ day: '2026-06-30', model: 'test-model-one' }),
@@ -134,28 +133,9 @@ describe('token artifacts', () => {
     expect(artifacts.byUser.get('test-user-two')).toMatchObject({ inputTokens: 0, rowCount: 1 });
     expect([...artifacts.byUser.keys()]).toEqual(['test-user-one', 'test-user-two']);
     expect(artifacts.specialBuckets.get('unattributed_ai_credit')?.inputTokens).toBe(13);
-    expect([...artifacts.byDay.keys()]).toEqual(['2026-06-30', '2026-07-01']);
+    expect([...artifacts.byDay.keys()]).toEqual(['2026-06-01', '2026-06-30']);
     expect(artifacts.byDay.get('2026-06-30')?.byModel.get('test-model-one')?.inputTokens).toBe(110);
     expect(artifacts.byDay.get('2026-06-30')?.byUser.get('test-user-one')?.inputTokens).toBe(100);
-  });
-
-  it('filters every dimension by UTC month without requiring raw rows or mutating totals', () => {
-    const artifacts = aggregate();
-    const june = filterTokenArtifactsByMonths(artifacts, ['2026-06', '2026-06']);
-    expect(june.totals).toMatchObject({ inputTokens: 113, outputTokens: 20, rowCount: 5 });
-    expect(june.totals.reportedRows.inputTokens).toBe(4);
-    expect(june.byUser.get('test-user-one')?.inputTokens).toBe(100);
-    expect(june.byModel.get('test-model-two')?.inputTokens).toBe(3);
-    expect(june.specialBuckets.get('unattributed_ai_credit')?.inputTokens).toBe(13);
-    expect([...june.byDay.keys()]).toEqual(['2026-06-30']);
-    expect(artifacts).toEqual(aggregate());
-    expect(filterTokenArtifactsByMonths(artifacts, [])).toBe(artifacts);
-    const { byMonth: _byMonth, ...totals } = artifacts;
-    void _byMonth;
-    expect(filterTokenArtifactsByMonths(artifacts, ['2026-06', '2026-07'])).toEqual(totals);
-    expect(filterTokenArtifactsByMonths(artifacts, ['2026-08'])).toMatchObject({
-      hasAnyTokenData: false, totals: { rowCount: 0 }, byModel: new Map(), byDay: new Map(),
-    });
   });
 
   it('distinguishes all-zero counts from legacy reports with no counts', () => {

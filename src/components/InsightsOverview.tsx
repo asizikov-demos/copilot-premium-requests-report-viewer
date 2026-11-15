@@ -17,7 +17,6 @@ interface InsightsOverviewProps {
   quotaArtifacts: QuotaArtifacts;
   usageArtifacts: UsageArtifacts;
   featureUsageArtifacts: FeatureUsageArtifacts;
-  months: readonly string[];
 }
 
 type Category = 'powerUsers' | 'averageUsers' | 'lowAdoptionUsers';
@@ -28,7 +27,7 @@ const categories: { id: Category; title: string; threshold: string; dot: string;
   { id: 'lowAdoptionUsers', title: 'Low adoption', threshold: `<${CONSUMPTION_THRESHOLDS.averageMinPct}% of quota`, dot: 'bg-(--bgColor-danger-emphasis)', description: 'Low consumption is a conversation starter, not a measure of productivity.' },
 ];
 
-export function InsightsOverview({ quotaArtifacts, usageArtifacts, featureUsageArtifacts, months }: InsightsOverviewProps) {
+export function InsightsOverview({ quotaArtifacts, usageArtifacts, featureUsageArtifacts }: InsightsOverviewProps) {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const detailHeading = useRef<HTMLHeadingElement>(null);
   const returnTarget = useRef<HTMLButtonElement | null>(null);
@@ -41,7 +40,6 @@ export function InsightsOverview({ quotaArtifacts, usageArtifacts, featureUsageA
   const classifiedUsers = categories.reduce((total, category) => total + insightsData[category.id].length, 0);
   const unknownQuotaUsers = totalUsers - classifiedUsers;
   const advisories = useMemo(() => buildAdvisoriesFromCategories(insightsData.lowAdoptionUsers, totalUsers), [insightsData, totalUsers]);
-  const monthsInScope = months;
   const selected = categories.find(category => category.id === selectedCategory);
   const features = [
     { name: 'Code Review', ...featureUtilization.codeReview },
@@ -61,11 +59,7 @@ export function InsightsOverview({ quotaArtifacts, usageArtifacts, featureUsageA
         <h2 className="text-2xl font-semibold tracking-tight text-(--fgColor-default)">Consumption Insights</h2>
         <p className="mt-1.5 text-sm text-(--fgColor-muted)">Understand consumption. Find the right follow-up.</p>
       </div>
-      {monthsInScope.length > 1 ? (
-        <div className="rounded-md border border-(--borderColor-default) bg-(--bgColor-muted) p-5 text-sm text-(--fgColor-muted)">
-          Select one billing month to compare AI Credit consumption with monthly quotas.
-        </div>
-      ) : selected && selectedCategory ? (
+      {selected && selectedCategory ? (
         <div className="space-y-4">
           <Button leadingVisual={ArrowLeftIcon} onClick={() => setSelectedCategory(null)}>
             Back to overview

@@ -13,7 +13,6 @@ import { makeNormalizedRow } from '../helpers/makeNormalizedRow';
 function propsFor(rows: NormalizedRow[]) {
   const usageArtifacts = aggregateRows(new UsageAggregator(), rows);
   return {
-    months: [...new Set(rows.map(row => row.day.slice(0, 7)))],
     usageArtifacts,
     quotaArtifacts: aggregateRows(new QuotaAggregator(), rows),
     featureUsageArtifacts: aggregateRows(new FeatureUsageAggregator(), rows),
@@ -106,13 +105,10 @@ describe('InsightsOverview', () => {
     expect(screen.getByText('No users in this consumption group.')).toBeInTheDocument();
   });
 
-  it('requires one billing month and updates the selected group after a period change', async () => {
+  it('updates the selected group when a different report is loaded', async () => {
     const user = userEvent.setup();
     const laterRow = makeQuotaRow({ user: 'test-user-later', quantity: 10, day: '2025-07-01' });
-    const { rerender } = render(<InsightsOverview {...propsFor([...rows, laterRow])} />);
-    expect(screen.getByText(/Select one billing month/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Low adoption/ })).not.toBeInTheDocument();
-    rerender(<InsightsOverview {...propsFor(rows)} />);
+    const { rerender } = render(<InsightsOverview {...propsFor(rows)} />);
     await user.click(screen.getByRole('button', { name: /Low adoption.*Explore/ }));
     expect(screen.getByText('test-user-low')).toBeInTheDocument();
     rerender(<InsightsOverview {...propsFor([laterRow])} />);

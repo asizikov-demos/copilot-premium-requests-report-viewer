@@ -14,7 +14,7 @@ import {
   SidebarCollapseIcon,
   SidebarExpandIcon,
 } from '@primer/octicons-react';
-import { ActionList, ActionMenu, Button, Checkbox, NavList, Tooltip } from '@primer/react';
+import { ActionList, ActionMenu, Button, NavList, Tooltip } from '@primer/react';
 
 import { PRICING } from '@/constants/pricing';
 import { AnalysisProvider, useAnalysisContext } from '@/context/AnalysisContext';
@@ -87,15 +87,11 @@ function DataAnalysisInner() {
     modelDailyArtifacts,
     reportHasCostCenters: hasCostCenters,
     reportHasOrganizations: hasOrganizations,
-    availableMonths,
-    hasMultipleMonthsData,
-    selectedMonths,
-    setSelectedMonths,
+    reportMonth,
     planInfo,
     filename,
     quotaArtifacts,
     usageArtifacts,
-    dailyBucketsArtifacts,
     featureUsageArtifacts,
     billingArtifacts
   } = useAnalysisContext();
@@ -150,7 +146,8 @@ function DataAnalysisInner() {
   const aggregatedCosts = costMetricsAvailable && billingArtifacts ? billingArtifacts.totals : null;
 
   const modelRows = useMemo<ModelDetailsRow[]>(() => {
-    return Object.entries(usageArtifacts.modelTotals).map(([model, credits]) => {
+    return [...modelDailyArtifacts.models].map(model => {
+      const credits = usageArtifacts.modelTotals[model];
       const totals = billingArtifacts?.billingByModel.get(model);
       return {
         model,
@@ -159,8 +156,7 @@ function DataAnalysisInner() {
         discount: totals?.discount ?? 0,
         net: totals?.net ?? 0,
       };
-    }).sort((left, right) => right.credits - left.credits ||
-      (modelDailyArtifacts.modelFirstSeen.get(left.model) ?? 0) - (modelDailyArtifacts.modelFirstSeen.get(right.model) ?? 0));
+    }).sort((left, right) => right.credits - left.credits);
   }, [usageArtifacts, billingArtifacts, modelDailyArtifacts]);
   const modelPage = modelPageState?.rows === modelRows ? modelPageState.page : 0;
   const modelPageCount = Math.ceil(modelRows.length / MODEL_DETAILS_PAGE_SIZE);
@@ -187,8 +183,8 @@ function DataAnalysisInner() {
 
   const productCosts = useMemo(() => aggregateProductCosts(modelDailyArtifacts.productCosts), [modelDailyArtifacts]);
   const dailyConsumption = useMemo(
-    () => aggregateDailyConsumption(modelDailyArtifacts.dailyConsumption, modelDailyArtifacts.months),
-    [modelDailyArtifacts]
+    () => aggregateDailyConsumption(modelDailyArtifacts.dailyConsumption, reportMonth),
+    [modelDailyArtifacts, reportMonth]
   );
   const showProductCosts = costMetricsAvailable;
   const autoModeSavingsRows = useMemo(
@@ -274,39 +270,6 @@ function DataAnalysisInner() {
         </ActionMenu>
       </div>
 
-      {hasMultipleMonthsData && (
-        <div className="mb-6 rounded-md border border-(--borderColor-default) bg-(--bgColor-default) p-4">
-          <fieldset aria-describedby="billing-period-hint">
-            <legend className="block text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider mb-2">
-              Billing Period
-            </legend>
-            <div className="flex flex-wrap gap-x-4 gap-y-1">
-              {availableMonths.map(month => (
-                <label
-                  key={month.value}
-                  className="flex items-center gap-2 px-1 py-1 text-sm text-(--fgColor-default) rounded-md cursor-pointer hover:bg-(--control-transparent-bgColor-hover)"
-                >
-                  <Checkbox
-                    value={month.value}
-                    checked={selectedMonths.includes(month.value)}
-                    onChange={(e) => {
-                      const { checked, value } = e.target;
-                      setSelectedMonths(availableMonths
-                        .map(option => option.value)
-                        .filter(option => option === value ? checked : selectedMonths.includes(option)));
-                    }}
-                  />
-                  {month.label}
-                </label>
-              ))}
-            </div>
-            <p id="billing-period-hint" className="mt-2 text-xs text-(--fgColor-muted)">
-              Leave all unchecked to include every month
-            </p>
-          </fieldset>
-        </div>
-      )}
-
       <div className="flex gap-6">
         {/* Main Content */}
         <div className="flex-1 min-w-0">
@@ -334,7 +297,6 @@ function DataAnalysisInner() {
               quotaArtifacts={quotaArtifacts}
               usageArtifacts={usageArtifacts}
               featureUsageArtifacts={featureUsageArtifacts}
-              months={dailyBucketsArtifacts.months ?? []}
             />
           ) : view === 'modelTrends' ? (
             <ModelUsageTrendsOverview />

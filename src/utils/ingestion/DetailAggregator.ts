@@ -31,7 +31,6 @@ export interface DetailDailyModelRow extends Omit<CostTotals, 'quantity'> {
 export interface DetailArtifacts {
   hasBillingData: boolean;
   models: string[];
-  months: string[];
   header: ReturnType<UserHeaderAccumulator['finalize']>;
   consumption: UserConsumption;
   totals: CostTotals;
@@ -73,7 +72,6 @@ export class DetailAggregator implements Aggregator<DetailArtifacts> {
   private costCenters = new Map<string, CostTotals & { name: string }>();
   private users = new Map<string, CostTotals & { user: string }>();
   private models = new Set<string>();
-  private months = new Set<string>();
   private dailyModels = new Map<string, DetailDailyModelRow>();
   private dailyModelTotals = new Map<string, Record<string, number>>();
   private cache = new Map<string, { input: number; read: number; write: number; reportedRows: number; totalRows: number }>();
@@ -83,9 +81,7 @@ export class DetailAggregator implements Aggregator<DetailArtifacts> {
   private hasBillingData = false;
 
   onRow(row: NormalizedRow): void {
-    const monthKey = row.day.slice(0, 7);
     this.header.add(row);
-    this.months.add(monthKey);
     this.models.add(row.model);
     this.hasBillingData ||= [row.grossAmount, row.discountAmount, row.netAmount, row.aicGrossAmount]
       .some(value => value !== undefined);
@@ -173,7 +169,7 @@ export class DetailAggregator implements Aggregator<DetailArtifacts> {
       }
     }
     return {
-      hasBillingData: this.hasBillingData, models: [...this.models].sort(), months: [...this.months].sort(),
+      hasBillingData: this.hasBillingData, models: [...this.models].sort(),
       header: this.header.finalize(), consumption: { credits: this.credits, creditsByModel: this.creditsByModel },
       totals: this.totals, productCosts: getPopulatedProductCosts(this.products), dailyRows, dailyModels,
       costCenterCosts: [...this.costCenters.values()].sort((a, b) => b.net - a.net || a.name.localeCompare(b.name)),
@@ -183,16 +179,11 @@ export class DetailAggregator implements Aggregator<DetailArtifacts> {
   }
 }
 
-export function selectDetailTimeline(details: DetailArtifacts, months: readonly string[]) {
-  const dates = buildBillingMonthDates(months);
+export function selectDetailTimeline(details: DetailArtifacts, reportMonth: string | undefined) {
+  const dates = buildBillingMonthDates(reportMonth);
   const byDay = new Map(details.dailyConsumption.map(day => [day.date, day]));
   let cumulative = 0;
-  let month = '';
   const userDailyData = details.models.length === 0 ? [] : dates.map(date => {
-    if (date.slice(0, 7) !== month) {
-      month = date.slice(0, 7);
-      cumulative = 0;
-    }
     const point: { date: string; totalCumulative: number; [model: string]: string | number } = {
       date, totalCumulative: 0,
     };

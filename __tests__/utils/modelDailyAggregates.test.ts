@@ -6,7 +6,7 @@ import { aggregateDailyConsumption, buildDailyConsumptionRows } from '@/utils/da
 import { buildBillingMonthDates } from '@/utils/dateKeys';
 import {
   BillingAggregator, DailyBucketsAggregator, UsageAggregator, buildDailyModelUsageFromArtifacts,
-  mergeModelDailyArtifacts, ModelDailyAggregator, MODEL_BUCKETS, selectModelDailyArtifacts,
+  ModelDailyAggregator, MODEL_BUCKETS,
 } from '@/utils/ingestion';
 import { createAggregators } from '@/utils/ingestion/registry';
 import { REPORT_AGGREGATOR_IDS } from '@/utils/ingestion/streamFile';
@@ -20,21 +20,21 @@ import { makeModelDailyArtifacts } from '../helpers/modelDailyArtifacts';
 const rows = [
   makeNormalizedRow({ day: '2026-07-14', model: 'Auto: test-model-one', quantity: 30, billingQuantity: 15,
     grossAmount: 0.5, discountAmount: 0.25, aicGrossAmount: 0 }),
-  makeNormalizedRow({ day: '2026-06-30', model: 'Auto: test-model-two', quantity: 20,
+  makeNormalizedRow({ day: '2026-07-30', model: 'Auto: test-model-two', quantity: 20,
     grossAmount: 1, discountAmount: 2, organization: 'test-org-one', costCenter: 'test-cost-center-one' }),
-  makeNormalizedRow({ day: '2026-08-03', model: 'Auto: test-model-one', quantity: 10, grossAmount: 0.5, netAmount: 0.125 }),
-  makeNormalizedRow({ day: '2026-06-30', model: 'Auto: test-model-one', quantity: 15,
+  makeNormalizedRow({ day: '2026-07-03', model: 'Auto: test-model-one', quantity: 10, grossAmount: 0.5, netAmount: 0.125 }),
+  makeNormalizedRow({ day: '2026-07-30', model: 'Auto: test-model-one', quantity: 15,
     grossAmount: 0.5, netAmount: 0, aicGrossAmount: 0.25 }),
   makeNormalizedRow({ day: '2026-07-14', user: 'test-user-two', model: 'auto: test-model-one', quantity: 5,
     grossAmount: 0, netAmount: -0.125, aicGrossAmount: 0 }),
-  makeNormalizedRow({ day: '2026-08-03', user: 'test-user-two', model: 'Fusion (High): test-model-one',
+  makeNormalizedRow({ day: '2026-07-03', user: 'test-user-two', model: 'Fusion (High): test-model-one',
     quantity: 40, netAmount: 0.25, aicGrossAmount: 0.5 }),
   makeNormalizedRow({ day: '2026-07-14', user: '', isUnattributedUsage: true, usageBucket: 'unattributed_ai_credit',
     model: 'Fusion (High): test-model-one', quantity: 5, inputTokens: 10 }),
   makeNormalizedRow({ day: '2026-07-14', model: 'Fusion (Max): test-model-three', quantity: 0, inputTokens: 0 }),
-  makeNormalizedRow({ day: '2026-06-30', model: 'test-model-three', sku: 'coding_agent_ai_credit', quantity: 4,
+  makeNormalizedRow({ day: '2026-07-30', model: 'test-model-three', sku: 'coding_agent_ai_credit', quantity: 4,
     grossAmount: 0.25, netAmount: 0.25 }),
-  makeNormalizedRow({ day: '2026-08-03', model: 'Code Review', quantity: 2, product: 'code_quality', grossAmount: 0.25 }),
+  makeNormalizedRow({ day: '2026-07-03', model: 'Code Review', quantity: 2, product: 'code_quality', grossAmount: 0.25 }),
 ];
 
 function run<T>(aggregator: Aggregator<T>, input: NormalizedRow[]): T {
@@ -51,7 +51,7 @@ function metrics(consumption: number, grossAmount: number, additionalUsage: numb
 
 // Frozen row-scan oracle: preserve the pre-migration page calculations independently of the aggregators.
 function legacyView(input: NormalizedRow[]) {
-  const dates = buildBillingMonthDates(input.map(row => row.day.slice(0, 7)));
+  const dates = buildBillingMonthDates(input[0]?.day.slice(0, 7));
   const models = [...new Set(input.map(row => row.model))].sort();
   const products = PRODUCT_CATEGORY_ORDER.map(category => {
     const selected = input.filter(row => classifyProductCategory(row.model, row.product, row.sku) === category);
@@ -127,13 +127,11 @@ function approximate(value: unknown): unknown {
   return value;
 }
 
-describe('month-keyed model and daily page parity', () => {
-  it.each([{ months: [] }, { months: ['2026-07'] }, { months: ['2026-08', '2026-06'] }, { months: ['2026-09'] }])(
-    'matches the previous row-based views for selected months $months', ({ months: selectedMonths }) => {
-      const artifacts = makeModelDailyArtifacts(rows);
+describe('single-month model and daily page parity', () => {
+  it.each([rows, []])('matches the previous row-based views for %j', (...selected) => {
+      const artifacts = makeModelDailyArtifacts(selected);
       const before = deserialize(serialize(artifacts));
-      const selected = rows.filter(row => !selectedMonths.length || selectedMonths.includes(row.day.slice(0, 7)));
-      const page = selectModelDailyArtifacts(artifacts, selectedMonths);
+      const page = artifacts;
       const usage = run(new UsageAggregator(), selected);
       const daily = run(new DailyBucketsAggregator(), selected);
       const billing = run(new BillingAggregator(), selected);
@@ -145,7 +143,7 @@ describe('month-keyed model and daily page parity', () => {
         buckets: page.buckets.map(bucket => ({ users: bucket.users.size,
           models: [...bucket.models].map(([model, amounts]) => ({ model, ...amounts })).sort((a, b) => a.model.localeCompare(b.model)) })),
         dailyRows: buildDailyConsumptionRows(data, Object.keys(usage.modelTotals).sort(), page.commercialByDay),
-        daily: aggregateDailyConsumption(page.dailyConsumption, page.months),
+        daily: aggregateDailyConsumption(page.dailyConsumption, selected[0]?.day.slice(0, 7)),
       };
       expect(actual).toEqual(approximate(legacyView(selected)));
       for (const [model, credits] of Object.entries(usage.modelTotals)) {
@@ -154,22 +152,18 @@ describe('month-keyed model and daily page parity', () => {
           .toBeCloseTo(selected.filter(row => row.model === model).reduce((sum, row) => sum + (row.netAmount ?? 0), 0));
       }
       expect(artifacts).toEqual(before);
-      const { byMonth, ...whole } = artifacts;
-      expect(mergeModelDailyArtifacts([...byMonth.values()])).toEqual(whole);
     }
   );
 
-  it('keeps global metadata, stable ties, and only the selected month partials', () => {
+  it('keeps global metadata and stable ties in source order', () => {
     const artifacts = makeModelDailyArtifacts(rows);
     expect(artifacts).toMatchObject({ hasOrganizations: true, hasCostCenters: true, rowCount: rows.length });
-    const july = selectModelDailyArtifacts(artifacts, ['2026-07', '2026-07']);
-    expect(july).toMatchObject({ hasOrganizations: false, hasCostCenters: false, rowCount: 4, months: ['2026-07'] });
-    expect([...july.commercialByDay.keys()]).toEqual(['2026-07-14']);
-    expect(july.buckets[0].users.size).toBe(2);
-    expect(july.buckets[2].users.size).toBe(0);
+    expect([...artifacts.commercialByDay.keys()]).toEqual(['2026-07-14', '2026-07-30', '2026-07-03']);
+    expect(artifacts.buckets[0].users.size).toBe(2);
+    expect(artifacts.buckets[2].users.size).toBe(1);
     const tied = makeModelDailyArtifacts([
       { day: '2026-06-30', model: 'Auto: test-model-one', grossAmount: 1 },
-      { day: '2026-07-01', model: 'Auto: test-model-two', grossAmount: 1 },
+      { day: '2026-06-01', model: 'Auto: test-model-two', grossAmount: 1 },
       { day: '2026-06-30', model: 'Auto: test-model-three', grossAmount: 1 },
     ]);
     expect(aggregateAutoModeSavings(tied.autoModeSavings).map(row => row.model))
@@ -178,13 +172,11 @@ describe('month-keyed model and daily page parity', () => {
 
   it('retains aggregate cardinality rather than rows and survives the worker serialization boundary', () => {
     const aggregator = new ModelDailyAggregator();
-    const ctx = { pricing: PRICING };
     const row = makeNormalizedRow({ model: 'Auto: test-model-one', quantity: 2, grossAmount: 0 });
-    for (let index = 0; index < 20000; index++) aggregator.onRow(row, ctx);
+    for (let index = 0; index < 20000; index++) aggregator.onRow(row);
     row.quantity = 999;
-    const artifacts = deserialize(serialize(aggregator.finalize(ctx))) as ReturnType<typeof aggregator.finalize>;
+    const artifacts = deserialize(serialize(aggregator.finalize())) as ReturnType<typeof aggregator.finalize>;
     expect(artifacts.rowCount).toBe(20000);
-    expect(artifacts.byMonth.size).toBe(1);
     expect(artifacts.commercialByDay.size).toBe(1);
     expect(artifacts.commercialByDay.get('2025-06-01')?.size).toBe(1);
     expect(artifacts.buckets[0].models.size).toBe(1);

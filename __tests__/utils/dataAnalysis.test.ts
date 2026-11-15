@@ -1,16 +1,11 @@
-import { buildMonthListFromArtifacts } from '@/utils/ingestion/analytics';
-import { selectArtifacts } from '../helpers/normalizedArtifacts';
 import { PRICING } from '@/constants/pricing';
 import { CSVData } from '@/types/csv';
-import type { NormalizedRow } from '@/utils/ingestion';
 
 import { normalizeRows } from '../helpers/normalizeRows';
 import { analyzeRows } from '../helpers/normalizedArtifacts';
 import { validCSVData } from '../fixtures/validCSVData';
 import {
-  buildMinimalDailyBucketsArtifact,
-  createMockCSVData,
-  makeUsageRow
+  createMockCSVData
 } from '../helpers/testUtils';
 
 // Explicit model credits interface to remove implicit any usage
@@ -214,114 +209,6 @@ describe('CSV Data Processing', () => {
       expect(result.quotaBreakdown.enterprise).toEqual(['test-user-one']);
       expect(result.quotaBreakdown.unknown).toEqual([]);
       expect(result.quotaBreakdown.business).toEqual(['test-user-two']);
-    });
-  });
-
-  describe('Date Filtering Functions', () => {
-    const createTestDataForDate = (dateString: string): NormalizedRow => {
-      const timestamp = new Date(dateString);
-      return makeUsageRow({
-        day: timestamp.toISOString().slice(0, 10),
-        user: 'test-user-one',
-        model: 'test-model',
-        quantity: 1.0,
-        quotaValue: 100,
-      });
-    };
-
-    describe('getAvailableMonths (artifact-based)', () => {
-      it('should return available months from data', () => {
-        const data = [
-          createTestDataForDate('2025-06-15T10:00:00Z'),
-          createTestDataForDate('2025-07-15T10:00:00Z'),
-          createTestDataForDate('2025-06-20T10:00:00Z'),
-          createTestDataForDate('2025-08-15T10:00:00Z')
-        ];
-
-        const artifacts = buildMinimalDailyBucketsArtifact(data);
-        const months = buildMonthListFromArtifacts(artifacts);
-        expect(months).toEqual([
-          { value: '2025-06', label: 'June 2025' },
-          { value: '2025-07', label: 'July 2025' },
-          { value: '2025-08', label: 'August 2025' }
-        ]);
-      });
-
-      it('should return empty array for no data', () => {
-        const artifacts = buildMinimalDailyBucketsArtifact([]);
-        const months = buildMonthListFromArtifacts(artifacts);
-        expect(months).toEqual([]);
-      });
-
-      it('should handle single month', () => {
-        const data = [
-          createTestDataForDate('2025-06-15T10:00:00Z'),
-          createTestDataForDate('2025-06-20T10:00:00Z')
-        ];
-
-        const artifacts = buildMinimalDailyBucketsArtifact(data);
-        const months = buildMonthListFromArtifacts(artifacts);
-        expect(months).toEqual([
-          { value: '2025-06', label: 'June 2025' }
-        ]);
-      });
-    });
-
-    describe('hasMultipleMonths (artifact-based)', () => {
-      it('should return true for data spanning multiple months', () => {
-        const data = [
-          createTestDataForDate('2025-06-15T10:00:00Z'),
-          createTestDataForDate('2025-07-15T10:00:00Z')
-        ];
-
-        const artifacts = buildMinimalDailyBucketsArtifact(data);
-        const months = buildMonthListFromArtifacts(artifacts);
-        expect(months.length > 1).toBe(true);
-      });
-
-      it('should return false for data in single month', () => {
-        const data = [
-          createTestDataForDate('2025-06-15T10:00:00Z'),
-          createTestDataForDate('2025-06-20T10:00:00Z')
-        ];
-
-        const artifacts = buildMinimalDailyBucketsArtifact(data);
-        const months = buildMonthListFromArtifacts(artifacts);
-        expect(months.length > 1).toBe(false);
-      });
-
-      it('should return false for empty data', () => {
-        const artifacts = buildMinimalDailyBucketsArtifact([]);
-        const months = buildMonthListFromArtifacts(artifacts);
-        expect(months.length > 1).toBe(false);
-      });
-    });
-
-    describe('filterBySelectedMonths', () => {
-      const testData = [
-        createTestDataForDate('2025-06-15T10:00:00Z'),
-        createTestDataForDate('2025-07-15T10:00:00Z'),
-        createTestDataForDate('2025-08-15T10:00:00Z'),
-        createTestDataForDate('2025-06-20T10:00:00Z')
-      ];
-
-      it('should filter by selected months', () => {
-        const filtered = selectArtifacts(testData, ['2025-06', '2025-08']);
-        expect([...filtered.dailyBucketsArtifacts.dailyUserTotals.keys()].sort()).toEqual([
-          '2025-06-15', '2025-06-20', '2025-08-15',
-        ]);
-        expect(filtered.usageArtifacts.users[0].totalCredits).toBe(3);
-      });
-
-      it('should return all data when no months selected', () => {
-        const filtered = selectArtifacts(testData, []);
-        expect(filtered.usageArtifacts.users[0].totalCredits).toBe(4);
-      });
-
-      it('should return empty array when no data matches selected months', () => {
-        const filtered = selectArtifacts(testData, ['2025-12']);
-        expect(filtered.usageArtifacts.users).toEqual([]);
-      });
     });
   });
 
