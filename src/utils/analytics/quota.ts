@@ -1,6 +1,6 @@
 import { BUSINESS_QUOTA_VALUES, ENTERPRISE_QUOTA_VALUES, KNOWN_QUOTA_VALUES } from '@/constants/pricing';
 
-export interface QuotaBreakdownResult {
+interface QuotaBreakdownResult {
   unknown: string[];
   business: string[];
   enterprise: string[];
@@ -8,7 +8,7 @@ export interface QuotaBreakdownResult {
   suggestedPlan: 'business' | 'enterprise' | null;
 }
 
-export type QuotaTier = 'business' | 'enterprise';
+type QuotaTier = 'business' | 'enterprise';
 
 export function getQuotaTier(quotaValue: number | 'unknown' | undefined): QuotaTier | null {
   if (typeof quotaValue !== 'number') {
@@ -26,11 +26,11 @@ export function getQuotaTier(quotaValue: number | 'unknown' | undefined): QuotaT
   return null;
 }
 
-export function isBusinessQuotaValue(quotaValue: number | 'unknown' | undefined): boolean {
+function isBusinessQuotaValue(quotaValue: number | 'unknown' | undefined): boolean {
   return getQuotaTier(quotaValue) === 'business';
 }
 
-export function isEnterpriseQuotaValue(quotaValue: number | 'unknown' | undefined): boolean {
+function isEnterpriseQuotaValue(quotaValue: number | 'unknown' | undefined): boolean {
   return getQuotaTier(quotaValue) === 'enterprise';
 }
 

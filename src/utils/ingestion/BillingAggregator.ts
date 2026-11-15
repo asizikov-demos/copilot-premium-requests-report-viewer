@@ -37,5 +37,3 @@ export class BillingAggregator implements Aggregator<BillingArtifacts> {
     return this.accumulator.finalize();
   }
 }
-
-export default BillingAggregator;

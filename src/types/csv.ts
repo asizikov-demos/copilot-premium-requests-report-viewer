@@ -76,7 +76,7 @@ export interface CodingAgentAnalysis {
 }
 
 // Code Review Adoption types
-export interface CodeReviewUser {
+interface CodeReviewUser {
   user: string;
   totalCredits: number;
   codeReviewCredits: number;

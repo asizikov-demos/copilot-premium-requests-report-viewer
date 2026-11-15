@@ -43,7 +43,7 @@ const FALLBACK_HUES: DataVizHue[] = [
  * Get the Primer data visualization hue for a model.
  * Returns a predefined hue for known models, or a consistent hash-based hue for unknown ones.
  */
-export function getModelHue(model: string): DataVizHue {
+function getModelHue(model: string): DataVizHue {
   const hue = MODEL_HUES[model];
   if (hue) {
     return hue;

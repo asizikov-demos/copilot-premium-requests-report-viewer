@@ -2,8 +2,6 @@ import type { AggregatorId } from './registry';
 import type { IngestionProgress, IngestionResult } from './types';
 import type { IngestionRequest, IngestionResponse } from './workerProtocol';
 
-export type { AggregatorId } from './registry';
-
 export const REPORT_AGGREGATOR_IDS = [
   'quota', 'usage', 'dailyBuckets', 'featureUsage', 'billing', 'billingPages', 'tokens', 'modelDaily', 'detailPages',
 ] as const satisfies readonly AggregatorId[];

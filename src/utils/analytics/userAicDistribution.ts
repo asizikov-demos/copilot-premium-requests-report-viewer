@@ -20,7 +20,7 @@ export interface UserAicGroup {
   shareOfGrossCost: number;
 }
 
-export interface UserAicDistribution {
+interface UserAicDistribution {
   groups: UserAicGroup[];
   totalUsers: number;
   activeUsers: number;
