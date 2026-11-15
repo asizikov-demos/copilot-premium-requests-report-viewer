@@ -1,6 +1,6 @@
 /**
  * Analytics derivations directly from ingestion artifacts.
- * This module replaces ProcessedData scans with O(1)/O(n) passes over
+ * This module uses O(1)/O(n) passes over
  * already aggregated usage/quota/bucket artifacts produced during streaming ingestion.
  *
  * Phase 1 scope (todos 1-3):
@@ -9,8 +9,7 @@
  *  - mirror the shape of existing AnalysisResults to enable incremental adoption
  */
 
-import { PRICING } from '@/constants/pricing';
-import type { AnalysisResults, ProcessedData } from '@/types/csv';
+import type { AnalysisResults } from '@/types/csv';
 import type { CodeReviewAnalysis } from '@/types/csv';
 import { CodingAgentAnalysis, UserDailyData } from '@/types/csv';
 import { classifyConsumptionUser } from '@/utils/analytics/insights';
@@ -21,17 +20,12 @@ import { isCodeReviewModel, isCodingAgentModel } from '@/utils/productClassifica
 import {
   UNATTRIBUTED_AI_CREDIT_BUCKET,
   type DailyBucketsArtifacts,
-  type Aggregator,
   type FeatureUsageArtifacts,
-  type TokenArtifacts,
   type QuotaArtifacts,
   type UsageArtifacts,
 } from './types';
-import { TokenAggregator } from './TokenAggregator';
-import { buildNormalizedRowFromProcessedData } from './adapters';
 
 export type { DailyBucketsArtifacts } from './types';
-export { buildNormalizedRowFromProcessedData } from './adapters';
 
 // Legacy DailyCodingAgentUsageDatum type recreated locally (originally from codingAgent.ts)
 export interface DailyCodingAgentUsageDatum { date: string; dailyCredits: number; cumulativeCredits: number; }
@@ -77,23 +71,6 @@ function collectFeatureUsers(
 export function buildTimeFrame(daily: DailyBucketsArtifacts): { start: string; end: string } {
   if (!daily.dateRange) return { start: '', end: '' };
   return { start: daily.dateRange.min, end: daily.dateRange.max };
-}
-
-/**
- * Runs an aggregator over ProcessedData rows using the shared normalized
- * row adapter and standard pricing context, then returns the finalized artifact.
- */
-function runAggregatorOverProcessedData<T>(aggregator: Aggregator<T>, processed: ProcessedData[]): T {
-  const ctx = { pricing: PRICING };
-  aggregator.init?.(ctx);
-  for (const row of processed) {
-    aggregator.onRow(buildNormalizedRowFromProcessedData(row), ctx);
-  }
-  return aggregator.finalize(ctx);
-}
-
-export function buildTokenArtifactsFromProcessedData(processed: ProcessedData[]): TokenArtifacts {
-  return runAggregatorOverProcessedData(new TokenAggregator(), processed);
 }
 
 /**
@@ -412,7 +389,7 @@ export function buildFeatureUtilizationFromArtifacts(featureUsage: FeatureUsageA
 // -----------------------------
 // Consumption Categories From Artifacts
 // -----------------------------
-/** Build user consumption categories without scanning processedData. */
+/** Build user consumption categories from aggregate totals. */
 export function buildConsumptionCategoriesFromArtifacts(
   usage: UsageArtifacts,
   quota: QuotaArtifacts

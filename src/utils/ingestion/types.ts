@@ -245,7 +245,7 @@ export interface DailyBucketsArtifacts {
   dailyBucketModelTotals?: Map<string, Map<SpecialUsageBucketKey, Map<string, number>>>;
   /**
    * Sorted list of distinct months (YYYY-MM) encountered while streaming rows.
-   * Enables month filter derivation without scanning processedData.
+   * Enables month filter derivation directly from aggregate metadata.
    */
   months?: string[];
 }
@@ -280,7 +280,7 @@ export interface FeatureUsageArtifacts {
  * Billing aggregation results.
  * Sums provided billing columns (gross, discount, net) exactly as supplied in the CSV
  * without recomputation. This enables O(1) access to billing summaries and per-user
- * billing breakdowns without retaining every normalized row (eliminating RawDataAggregator dependency).
+ * billing breakdowns without retaining normalized rows.
  */
 export interface BillingUserTotals {
   user: string;

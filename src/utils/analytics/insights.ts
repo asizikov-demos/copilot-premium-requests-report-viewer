@@ -1,8 +1,3 @@
-import type { ProcessedData } from '@/types/csv';
-import { buildUserQuotaMapFromRows } from '@/utils/analytics/quota';
-
-import type { UserSummary } from './types';
-
 export interface UserConsumptionCategory {
   user: string;
   totalCredits: number;
@@ -41,22 +36,4 @@ export function classifyConsumptionUser(
   if (consumptionPercentage >= CONSUMPTION_THRESHOLDS.powerMinPct) category = 'power';
   else if (consumptionPercentage >= CONSUMPTION_THRESHOLDS.averageMinPct) category = 'average';
   return { consumptionPercentage, category };
-}
-
-export function categorizeUserConsumption(userData: UserSummary[], processedData: ProcessedData[]): InsightsOverviewData {
-  const userQuotaMap = buildUserQuotaMapFromRows(processedData);
-  const categorized = userData.map(u => {
-    const quota = userQuotaMap.get(u.user) ?? 'unknown';
-    return {
-      user: u.user,
-      totalCredits: u.totalCredits,
-      quota,
-      ...classifyConsumptionUser(u.totalCredits, quota)
-    };
-  }).sort((a,b) => b.consumptionPercentage - a.consumptionPercentage);
-  return {
-    powerUsers: categorized.filter(c => c.category === 'power'),
-    averageUsers: categorized.filter(c => c.category === 'average'),
-    lowAdoptionUsers: categorized.filter(c => c.category === 'low')
-  };
 }

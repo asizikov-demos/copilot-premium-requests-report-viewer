@@ -1,9 +1,7 @@
-import type { TokenCounts } from './tokens';
-
 // CSV FORMAT (expanded billing export)
 // Uses daily date (YYYY-MM-DD) & additional commercial + cost fields.
 export interface CSVData {
-  date: string; // YYYY-MM-DD (UTC day) — convert to midnight UTC timestamp
+  date: string; // Source billing date, normalized to a UTC day without local conversion
   username: string;
   product?: string;
   sku?: string;
@@ -30,37 +28,6 @@ export interface CSVData {
   total_output_tokens?: string;
   total_cache_read_tokens?: string;
   total_cache_creation_tokens?: string;
-}
-
-// Processed record produced from CSV row.
-export interface ProcessedData extends TokenCounts {
-  timestamp: Date; // Normalized UTC timestamp (date + T00:00:00Z)
-  user: string; // username from CSV
-  model: string; // normalized raw model name (prefixes like 'Auto: ' stripped later in analytics if needed)
-  creditsUsed: number; // parsed AI-credit quantity
-  totalQuota: string; // original string (numeric or 'Unknown')
-  quotaValue: number | 'unknown'; // Parsed quota value using pricing constants/logic
-  // Cached UTC-derived keys
-  iso: string; // Full UTC ISO string (timestamp.toISOString())
-  dateKey: string; // YYYY-MM-DD (first 10 chars of ISO) for fast daily grouping
-  monthKey: string; // YYYY-MM (first 7 chars of ISO) for fast monthly grouping
-  epoch: number; // Milliseconds since epoch (timestamp.getTime()) for arithmetic
-  // Extended fields from CSV
-  product?: string;
-  sku?: string;
-  unitType?: string;
-  usageUnit?: 'ai_credit' | 'unknown';
-  billingQuantity?: number;
-  organization?: string;
-  costCenter?: string;
-  appliedCostPerQuantity?: number;
-  grossAmount?: number;
-  discountAmount?: number;
-  netAmount?: number;
-  aicQuantity?: number;
-  aicGrossAmount?: number;
-  isUnattributedUsage?: boolean;
-  usageBucket?: 'unattributed_ai_credit';
 }
 
 export interface AnalysisResults {
@@ -124,12 +91,4 @@ export interface CodeReviewAnalysis {
   totalCodeReviewCredits: number;
   adoptionRate: number;
   users: CodeReviewUser[];
-}
-
-export interface CodingAgentOverviewProps {
-  codingAgentUsers: CodingAgentUser[];
-  totalUniqueUsers: number;
-  adoptionRate: number;
-  processedData: ProcessedData[];
-  onBack: () => void;
 }

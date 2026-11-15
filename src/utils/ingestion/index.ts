@@ -16,8 +16,6 @@ export * from './billingAccumulator';
 export * from './FeatureUsageAggregator';
 export * from './TokenAggregator';
 export * from './TokenAccumulator';
-export * from './RawDataAggregator';
-export * from './adapters';
 export * from './analytics';
 export * from './selectors';
 export * from './ModelDailyAggregator';
