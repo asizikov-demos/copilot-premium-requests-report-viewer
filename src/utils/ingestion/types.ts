@@ -293,12 +293,38 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
 function approxEqual(left: number, right: number): boolean {
-  return Math.abs(left - right) <= 1e-9;
+  const delta = Math.abs(left - right);
+  const scale = Math.max(1, Math.abs(left), Math.abs(right));
+  return delta <= 1e-9 * scale;
 }
 
 function sumNumberValues(value: Record<string, unknown>): number {
-  return Object.values(value).reduce((total, entry) => total + (typeof entry === 'number' ? entry : 0), 0);
+  return Object.values(value).reduce<number>((total, entry) => {
+    return total + (isFiniteNumber(entry) ? entry : 0);
+  }, 0);
+}
+
+function sumMapValues<K>(value: Map<K, number>): number {
+  return Array.from(value.values()).reduce<number>((total, entry) => {
+    return total + (isFiniteNumber(entry) ? entry : 0);
+  }, 0);
+}
+
+function isValidNumericMap(value: unknown): value is Map<string, number> {
+  return value instanceof Map && Array.from(value.entries()).every(([key, entry]) => typeof key === 'string' && isFiniteNumber(entry));
+}
+
+function isValidNestedModelMap(value: unknown): value is Map<string, Map<string, number>> {
+  return value instanceof Map && Array.from(value.entries()).every(([key, entry]) => typeof key === 'string' && isValidNumericMap(entry));
+}
+
+function isValidDayKeyedMap(value: unknown, isValidDayEntry: (entry: unknown) => boolean): boolean {
+  return value instanceof Map && Array.from(value.entries()).every(([day, entry]) => typeof day === 'string' && isValidDayEntry(entry));
 }
 
 export function isQuotaArtifacts(value: unknown): value is QuotaArtifacts {
@@ -320,6 +346,7 @@ export function isUsageArtifacts(value: unknown): value is UsageArtifacts {
   return (
     Array.isArray(value.users) &&
     isRecord(value.modelTotals) &&
+    Object.values(value.modelTotals).every(isFiniteNumber) &&
     typeof value.userCount === 'number' &&
     typeof value.modelCount === 'number' &&
     (value.organizations === undefined || Array.isArray(value.organizations)) &&
@@ -332,12 +359,12 @@ export function isDailyBucketsArtifacts(value: unknown): value is DailyBucketsAr
   if (!isRecord(value)) return false;
 
   return (
-    value.dailyUserTotals instanceof Map &&
-    (value.dailyCodingAgentTotals === undefined || value.dailyCodingAgentTotals instanceof Map) &&
+    isValidDayKeyedMap(value.dailyUserTotals, isValidNumericMap) &&
+    (value.dailyCodingAgentTotals === undefined || isValidNumericMap(value.dailyCodingAgentTotals)) &&
     (value.dateRange === null || isRecord(value.dateRange)) &&
-    (value.dailyUserModelTotals === undefined || value.dailyUserModelTotals instanceof Map) &&
-    (value.dailyBucketTotals === undefined || value.dailyBucketTotals instanceof Map) &&
-    (value.dailyBucketModelTotals === undefined || value.dailyBucketModelTotals instanceof Map) &&
+    (value.dailyUserModelTotals === undefined || isValidDayKeyedMap(value.dailyUserModelTotals, isValidNestedModelMap)) &&
+    (value.dailyBucketTotals === undefined || isValidDayKeyedMap(value.dailyBucketTotals, isValidNumericMap)) &&
+    (value.dailyBucketModelTotals === undefined || isValidDayKeyedMap(value.dailyBucketModelTotals, isValidNestedModelMap)) &&
     (value.months === undefined || Array.isArray(value.months))
   );
 }
@@ -367,8 +394,15 @@ export function isFeatureUsageArtifacts(value: unknown): value is FeatureUsageAr
 export function isBillingArtifacts(value: unknown): value is BillingArtifacts {
   if (!isRecord(value)) return false;
 
+  const totalsAreValid = isRecord(value.totals)
+    && typeof value.totals.gross === 'number'
+    && typeof value.totals.discount === 'number'
+    && typeof value.totals.net === 'number'
+    && typeof value.totals.aicQuantity === 'number'
+    && typeof value.totals.aicGrossAmount === 'number';
+
   return (
-    isRecord(value.totals) &&
+    totalsAreValid &&
     Array.isArray(value.users) &&
     value.userMap instanceof Map &&
     value.orgTotals instanceof Map &&
@@ -382,14 +416,21 @@ export function isBillingArtifacts(value: unknown): value is BillingArtifacts {
 export function isTokenArtifacts(value: unknown): value is TokenArtifacts {
   if (!isRecord(value)) return false;
 
+  const totalsAreValid = isRecord(value.totals)
+    && typeof value.totals.rowCount === 'number'
+    && isRecord(value.totals.reportedRows)
+    && typeof value.totals.reportedRows.inputTokens === 'number'
+    && typeof value.totals.reportedRows.outputTokens === 'number'
+    && typeof value.totals.reportedRows.cacheReadTokens === 'number'
+    && typeof value.totals.reportedRows.cacheWriteTokens === 'number';
+
   return (
     typeof value.hasAnyTokenData === 'boolean' &&
-    isRecord(value.totals) &&
-    typeof value.totals.rowCount === 'number' &&
+    totalsAreValid &&
     value.byModel instanceof Map &&
     value.byUser instanceof Map &&
     value.specialBuckets instanceof Map &&
-    (value.byDay === undefined || value.byDay instanceof Map)
+    value.byDay instanceof Map
   );
 }
 
@@ -406,12 +447,16 @@ export function getArtifactContractIssues(outputs: Record<string, unknown>): str
       .filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
     const distinctKnown = Array.from(quota.distinctQuotas)
       .filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
+    const conflictValues = Array.from(quota.conflicts.values())
+      .flatMap((set) => Array.from(set))
+      .filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
+    const historicalQuotas = new Set<number>([...numericQuotas, ...conflictValues]);
 
     if (numericQuotas.some((value) => !distinctKnown.includes(value))) {
       issues.push('quotaByUser contains quota values not present in distinctQuotas');
     }
-    if (distinctKnown.some((value) => !numericQuotas.includes(value))) {
-      issues.push('distinctQuotas contains values not present in quotaByUser');
+    if (distinctKnown.some((value) => !historicalQuotas.has(value))) {
+      issues.push('distinctQuotas contains values not present in quotaByUser or quota conflicts');
     }
     if (quota.specialBucketQuotas && Array.from(quota.specialBucketQuotas.values()).some(value => value !== 0)) {
       issues.push('quota artifact specialBucketQuotas must be zero-valued');
@@ -424,8 +469,18 @@ export function getArtifactContractIssues(outputs: Record<string, unknown>): str
   } else if (!isUsageArtifacts(usage)) {
     issues.push('usage artifact has an invalid shape');
   } else {
-    const userTotal = usage.users.reduce((total, user) => total + (isRecord(user) && typeof user.totalCredits === 'number' ? user.totalCredits : 0), 0);
-    const specialTotal = (usage.specialBuckets ?? []).reduce((total, bucket) => total + (isRecord(bucket) && typeof bucket.totalCredits === 'number' ? bucket.totalCredits : 0), 0);
+    const userTotal = usage.users.reduce<number>((total, user) => {
+      if (!isRecord(user) || !isFiniteNumber(user.totalCredits)) {
+        return total;
+      }
+      return total + user.totalCredits;
+    }, 0);
+    const specialTotal = (usage.specialBuckets ?? []).reduce<number>((total, bucket) => {
+      if (!isRecord(bucket) || !isFiniteNumber(bucket.totalCredits)) {
+        return total;
+      }
+      return total + bucket.totalCredits;
+    }, 0);
     const modelTotal = sumNumberValues(usage.modelTotals);
     if (!approxEqual(userTotal + specialTotal, modelTotal)) {
       issues.push('usage artifact totals drift between user totals and model totals');
@@ -440,8 +495,16 @@ export function getArtifactContractIssues(outputs: Record<string, unknown>): str
         issues.push('usage artifact contains a user entry without a valid user name');
         continue;
       }
-      const userModelTotal = Object.values(user.modelBreakdown ?? {}).reduce((total, value) => total + (typeof value === 'number' ? value : 0), 0);
-      if (typeof user.totalCredits === 'number' && !approxEqual(userModelTotal, user.totalCredits)) {
+      if (!isRecord(user.modelBreakdown) || !Object.values(user.modelBreakdown).every(isFiniteNumber)) {
+        issues.push(`usage artifact for ${user.user} is missing a valid modelBreakdown`);
+        continue;
+      }
+      if (!isFiniteNumber(user.totalCredits)) {
+        issues.push(`usage artifact for ${user.user} is missing a valid totalCredits value`);
+        continue;
+      }
+      const userModelTotal = sumNumberValues(user.modelBreakdown);
+      if (!approxEqual(userModelTotal, user.totalCredits)) {
         issues.push(`usage artifact for ${user.user} drifts between modelBreakdown and totalCredits`);
       }
     }
@@ -454,13 +517,33 @@ export function getArtifactContractIssues(outputs: Record<string, unknown>): str
     issues.push('dailyBuckets artifact has an invalid shape');
   } else {
     const months = dailyBuckets.months ?? [];
+    const dailyMonths = new Set<string>();
+    for (const day of dailyBuckets.dailyUserTotals.keys()) {
+      dailyMonths.add(day.slice(0, 7));
+    }
+    for (const day of dailyBuckets.dailyUserModelTotals?.keys() ?? []) {
+      dailyMonths.add(day.slice(0, 7));
+    }
+    for (const day of dailyBuckets.dailyBucketTotals?.keys() ?? []) {
+      dailyMonths.add(day.slice(0, 7));
+    }
+    for (const day of dailyBuckets.dailyBucketModelTotals?.keys() ?? []) {
+      dailyMonths.add(day.slice(0, 7));
+    }
     const hasDailyData = dailyBuckets.dailyUserTotals.size > 0
-      || dailyBuckets.dailyCodingAgentTotals?.size > 0
-      || dailyBuckets.dailyBucketTotals?.size > 0
-      || dailyBuckets.dailyBucketModelTotals?.size > 0
-      || dailyBuckets.dailyUserModelTotals?.size > 0;
+      || (dailyBuckets.dailyCodingAgentTotals?.size ?? 0) > 0
+      || (dailyBuckets.dailyBucketTotals?.size ?? 0) > 0
+      || (dailyBuckets.dailyBucketModelTotals?.size ?? 0) > 0
+      || (dailyBuckets.dailyUserModelTotals?.size ?? 0) > 0;
     if (months.length === 0 && hasDailyData) {
       issues.push('dailyBuckets artifact is missing the canonical month list');
+    }
+    if (months.length > 0) {
+      for (const month of dailyMonths) {
+        if (!months.includes(month)) {
+          issues.push(`dailyBuckets artifact month list is missing daily data for ${month}`);
+        }
+      }
     }
     if (months.some((month, index) => index > 0 && month < months[index - 1])) {
       issues.push('dailyBuckets artifact month keys are not sorted in ascending order');
@@ -471,10 +554,9 @@ export function getArtifactContractIssues(outputs: Record<string, unknown>): str
 
     if (dailyBuckets.dailyUserModelTotals) {
       for (const [day, users] of dailyBuckets.dailyUserTotals) {
-        const perUserModelTotals = dailyBuckets.dailyUserModelTotals.get(day);
-        if (!perUserModelTotals) continue;
+        const perUserModelTotals = dailyBuckets.dailyUserModelTotals.get(day) ?? new Map();
         for (const [user, total] of users) {
-          const modelTotal = Array.from((perUserModelTotals.get(user) ?? new Map()).values()).reduce((sum, value) => sum + value, 0);
+          const modelTotal = sumMapValues(perUserModelTotals.get(user) ?? new Map());
           if (!approxEqual(modelTotal, total)) {
             issues.push(`dailyBuckets artifact drifts for ${day}/${user} between dailyUserTotals and dailyUserModelTotals`);
           }
@@ -484,10 +566,9 @@ export function getArtifactContractIssues(outputs: Record<string, unknown>): str
 
     if (dailyBuckets.dailyBucketTotals && dailyBuckets.dailyBucketModelTotals) {
       for (const [day, bucketTotals] of dailyBuckets.dailyBucketTotals) {
-        const perBucketModelTotals = dailyBuckets.dailyBucketModelTotals.get(day);
-        if (!perBucketModelTotals) continue;
+        const perBucketModelTotals = dailyBuckets.dailyBucketModelTotals.get(day) ?? new Map();
         for (const [bucket, total] of bucketTotals) {
-          const modelTotal = Array.from((perBucketModelTotals.get(bucket) ?? new Map()).values()).reduce((sum, value) => sum + value, 0);
+          const modelTotal = sumMapValues(perBucketModelTotals.get(bucket) ?? new Map());
           if (!approxEqual(modelTotal, total)) {
             issues.push(`dailyBuckets artifact drifts for ${day}/${String(bucket)} between dailyBucketTotals and dailyBucketModelTotals`);
           }
