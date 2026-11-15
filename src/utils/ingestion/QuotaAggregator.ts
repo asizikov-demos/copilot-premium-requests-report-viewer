@@ -6,6 +6,8 @@
 import { getQuotaTier, shouldReplaceQuotaValue } from '@/utils/analytics/quota';
 import { isSupportedUsageUnitType } from '@/utils/unitType';
 
+import { MonthlyAggregator } from './MonthlyAggregator';
+import { mergeQuotaArtifacts } from './selectors';
 import {
   Aggregator,
   AggregatorContext,
@@ -14,13 +16,15 @@ import {
   SpecialUsageBucketKey
 } from './types';
 
-export class QuotaAggregator implements Aggregator<QuotaArtifacts> {
+class QuotaPartialAggregator implements Aggregator<QuotaArtifacts> {
   readonly id = 'quota';
   
   private quotaByUser = new Map<string, number | 'unknown'>();
   private conflicts = new Map<string, Set<number | 'unknown'>>();
   private distinctQuotas = new Set<number>();
   private specialBucketQuotas = new Map<SpecialUsageBucketKey, 0>();
+  private observations = new Map<string, Map<number | 'unknown', number>>();
+  private sequence = 0;
   
   init(_ctx: AggregatorContext): void {
     void _ctx;
@@ -29,19 +33,24 @@ export class QuotaAggregator implements Aggregator<QuotaArtifacts> {
     this.conflicts.clear();
     this.distinctQuotas.clear();
     this.specialBucketQuotas.clear();
+    this.observations.clear();
+    this.sequence = 0;
   }
-  
-  onRow(row: NormalizedRow, _ctx: AggregatorContext): void {
+
+  onRow(row: NormalizedRow, _ctx: AggregatorContext, sequence = this.sequence++): void {
     void _ctx;
     if (row.isUnattributedUsage && row.usageBucket) {
       this.specialBucketQuotas.set(row.usageBucket, 0);
       return;
     }
 
-    if (row.quotaValue === undefined || !isSupportedUsageUnitType(row.unitType, row.sku)) return;
+    if (!isSupportedUsageUnitType(row.unitType, row.sku)) return;
     
     const existing = this.quotaByUser.get(row.user);
-    const current = row.quotaValue;
+    const current = row.quotaValue ?? 'unknown';
+    const observations = this.observations.get(row.user) ?? new Map<number | 'unknown', number>();
+    if (!observations.has(current)) observations.set(current, sequence);
+    this.observations.set(row.user, observations);
     
     if (existing !== undefined && existing !== current) {
       // Conflict detected
@@ -78,7 +87,14 @@ export class QuotaAggregator implements Aggregator<QuotaArtifacts> {
       distinctQuotas: this.distinctQuotas,
       hasMixedQuotas,
       hasMixedLicenses,
-      specialBucketQuotas: this.specialBucketQuotas
+      specialBucketQuotas: this.specialBucketQuotas,
+      observations: this.observations,
     };
+  }
+}
+
+export class QuotaAggregator extends MonthlyAggregator<QuotaArtifacts> {
+  constructor() {
+    super('quota', () => new QuotaPartialAggregator(), mergeQuotaArtifacts);
   }
 }

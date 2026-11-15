@@ -2,7 +2,7 @@ import type { ProcessedData } from '@/types/csv';
 import { shouldReplaceQuotaValue } from '@/utils/analytics/quota';
 import { isSupportedUsageUnitType } from '@/utils/unitType';
 
-import { buildNormalizedRowFromProcessedData } from './analytics';
+import { buildNormalizedRowFromProcessedData } from './adapters';
 import {
   BillingArtifacts,
   BillingFieldTotals,
@@ -103,8 +103,10 @@ export class BillingAccumulator {
   private billingByModel = new Map<string, BillingGroupTotals>();
   private hasAnyBillingData = false;
   private hasAnyAicData = false;
+  private userOrder = new Map<string, number>();
+  private sequence = 0;
 
-  addRow(row: BillingAccumulatorRow): void {
+  addRow(row: BillingAccumulatorRow, sequence = this.sequence++): void {
     const billingRow = {
       ...row,
       quantity: row.billingQuantity ?? row.quantity,
@@ -126,11 +128,11 @@ export class BillingAccumulator {
       if (!entry) {
         entry = { user: billingRow.user, quantity: 0 };
         this.userMap.set(billingRow.user, entry);
+        this.userOrder.set(billingRow.user, sequence);
       }
-      const incomingQuota = billingRow.quotaValue;
+      const incomingQuota = billingRow.quotaValue ?? 'unknown';
       if (
         isSupportedUsageUnitType(billingRow.unitType, billingRow.sku)
-        && incomingQuota !== undefined
         && shouldReplaceQuotaValue(entry.quotaValue, incomingQuota)
       ) {
         entry.quotaValue = incomingQuota;
@@ -160,6 +162,7 @@ export class BillingAccumulator {
       hasAnyBillingData: this.hasAnyBillingData,
       hasAnyAicData: this.hasAnyAicData,
       specialBuckets: Array.from(this.specialBucketMap.values()),
+      userOrder: this.userOrder,
     };
   }
 }

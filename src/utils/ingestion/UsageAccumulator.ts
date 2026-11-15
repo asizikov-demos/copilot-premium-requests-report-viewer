@@ -4,6 +4,7 @@ import {
   type SpecialUsageBucketKey,
   type UsageArtifacts,
   type UserAggregate,
+  type UsageMergeOrder,
 } from './types';
 import { isCodingAgentModel } from '@/utils/productClassification';
 
@@ -37,8 +38,10 @@ export class UsageAccumulator {
   private organizations = new Set<string>();
   private costCenters = new Set<string>();
   private specialBuckets = new Map<SpecialUsageBucketKey, SpecialUsageBucketAggregate>();
+  private mergeOrder = new Map<string, UsageMergeOrder>();
+  private sequence = 0;
 
-  addRow(row: UsageAccumulationRow): void {
+  addRow(row: UsageAccumulationRow, sequence = this.sequence++): void {
     if (row.isUnattributedUsage && row.usageBucket) {
       let bucket = this.specialBuckets.get(row.usageBucket);
       if (!bucket) {
@@ -59,6 +62,17 @@ export class UsageAccumulator {
     }
 
     const { user, model, sku, quantity, organization, costCenter } = row;
+    const order = this.mergeOrder.get(user) ?? {
+      first: sequence,
+      modelFirstSeen: new Map<string, number>(),
+      modelLastSeen: new Map<string, number>(),
+      codingAgentFirstSeen: new Map<string, number>(),
+    };
+    if (!order.modelFirstSeen.has(model)) order.modelFirstSeen.set(model, sequence);
+    if (quantity !== 0) order.modelLastSeen.set(model, sequence);
+    if (organization && order.organization === undefined) order.organization = sequence;
+    if (costCenter && order.costCenter === undefined) order.costCenter = sequence;
+    this.mergeOrder.set(user, order);
 
     this.userTotals.set(user, (this.userTotals.get(user) || 0) + quantity);
 
@@ -71,6 +85,7 @@ export class UsageAccumulator {
     modelMap.set(model, newModelTotal);
 
     if (isCodingAgentModel(model, sku)) {
+      if (!order.codingAgentFirstSeen.has(model)) order.codingAgentFirstSeen.set(model, sequence);
       this.userCodingAgentTotals.set(
         user,
         (this.userCodingAgentTotals.get(user) ?? 0) + quantity
@@ -152,6 +167,7 @@ export class UsageAccumulator {
       organizations: Array.from(this.organizations).sort((left, right) => left.localeCompare(right)),
       costCenters: Array.from(this.costCenters).sort((left, right) => left.localeCompare(right)),
       specialBuckets: Array.from(this.specialBuckets.values()),
+      mergeOrder: this.mergeOrder,
     };
   }
 }

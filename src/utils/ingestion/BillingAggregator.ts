@@ -17,8 +17,10 @@ import {
   NormalizedRow,
 } from './types';
 import { BillingAccumulator } from './billingAccumulator';
+import { MonthlyAggregator } from './MonthlyAggregator';
+import { mergeBillingArtifacts } from './selectors';
 
-export class BillingAggregator implements Aggregator<BillingArtifacts> {
+class BillingPartialAggregator implements Aggregator<BillingArtifacts> {
   readonly id = 'billing';
 
   private accumulator = new BillingAccumulator();
@@ -28,14 +30,20 @@ export class BillingAggregator implements Aggregator<BillingArtifacts> {
     this.accumulator = new BillingAccumulator();
   }
 
-  onRow(row: NormalizedRow, _ctx: AggregatorContext): void {
+  onRow(row: NormalizedRow, _ctx: AggregatorContext, sequence?: number): void {
     void _ctx;
-    this.accumulator.addRow(row);
+    this.accumulator.addRow(row, sequence);
   }
 
   finalize(_ctx: AggregatorContext): BillingArtifacts {
     void _ctx;
     return this.accumulator.finalize();
+  }
+}
+
+export class BillingAggregator extends MonthlyAggregator<BillingArtifacts> {
+  constructor() {
+    super('billing', () => new BillingPartialAggregator(), mergeBillingArtifacts);
   }
 }
 
