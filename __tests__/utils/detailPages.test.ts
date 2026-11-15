@@ -9,23 +9,20 @@ import { aggregateDailyConsumption } from '@/utils/dailyConsumption';
 import { buildBillingMonthDates, enumerateDatesInclusive } from '@/utils/dateKeys';
 import { normalizeRows } from '../helpers/normalizeRows';
 import { buildUserDailyModelDataFromArtifacts } from '@/utils/ingestion/analytics';
-import { selectDetailArtifacts, selectDetailTimeline, type CompactDetailArtifacts } from '@/utils/ingestion/DetailAggregator';
+import { selectDetailTimeline } from '@/utils/ingestion/DetailAggregator';
 import { DetailPagesAggregator, selectUserDetails, selectBillingGroupDetails } from '@/utils/ingestion/DetailPagesAggregator';
-import { streamFile } from '@/utils/ingestion/streamFile';
-import type { RowFilter, TokenArtifacts } from '@/utils/ingestion/types';
 import { aggregateProductCosts } from '@/utils/productCosts';
 import { summarizeUserHeader } from '@/utils/userHeaderSummary';
 
 import { buildUserHeaderSummary } from '../helpers/detailFixtures';
 import { buildDailyBucketsArtifactsFromRows, buildUsageArtifactsFromRows } from '../helpers/normalizedArtifacts';
 import { buildUserConsumption } from '../helpers/consumptionReference';
-import { createStreamingFile, MockFileReader } from '../helpers/streamingFile';
 import { makeModelDailyArtifacts } from '../helpers/modelDailyArtifacts';
 import { aggregateRows } from '../helpers/aggregateRows';
 
 const csv = readFileSync(path.join(process.cwd(), '__tests__/fixtures/detail-usage.csv'), 'utf8');
 const rows = normalizeRows(Papa.parse<CSVData>(csv, { header: true, skipEmptyLines: true }).data);
-const filters: RowFilter[] = [
+const filters: { user?: string; organization?: string; costCenter?: string }[] = [
   { user: 'test-user-one' },
   { organization: 'test-org-one' },
   { costCenter: 'test-cost-center-one' },
@@ -33,36 +30,24 @@ const filters: RowFilter[] = [
   { costCenter: 'Unassigned' },
 ];
 
-describe('filtered detail stream parity', () => {
-  const originalReader = globalThis.FileReader;
-  beforeEach(() => {
-    globalThis.FileReader = MockFileReader as unknown as typeof FileReader;
-  });
-  afterEach(() => {
-    globalThis.FileReader = originalReader;
-  });
-  it.each(filters)('matches row-based view models for %j', async filter => {
+const precomputed = aggregateRows(new DetailPagesAggregator(), rows);
+
+describe('precomputed detail views', () => {
+  it.each(filters)('matches row-based view models for %j', filter => {
       const periodRows = rows;
       const selected = periodRows.filter(row =>
         (filter.user === undefined || row.user === filter.user) &&
         (filter.organization === undefined || (row.organization || 'Unassigned') === filter.organization) &&
         (filter.costCenter === undefined || (row.costCenter || 'Unassigned') === filter.costCenter));
-      const result = await streamFile(createStreamingFile(csv), ['details', 'tokens'], filter, { chunkSize: 128 });
-      expect(result.warnings).toEqual([]);
-      expect(result.rowsProcessed).toBe(selected.length);
-      const details = selectDetailArtifacts(result.outputs.details as CompactDetailArtifacts);
-      const tokens = result.outputs.tokens as TokenArtifacts;
-      const precomputed = aggregateRows(new DetailPagesAggregator(), rows);
       const data = filter.user
         ? selectUserDetails(precomputed, filter.user)
         : selectBillingGroupDetails(precomputed, filter.organization ? 'organization' : 'costCenter',
           (filter.organization ?? filter.costCenter)!);
-      expect(data.details).toEqual(details);
-      if ('tokens' in data) expect(data.tokens).toEqual(tokens);
+      const { details } = data;
       const reportMonth = '2026-07';
       const modelDaily = makeModelDailyArtifacts(selected);
       expect(details.productCosts).toEqual(aggregateProductCosts(modelDaily.productCosts));
-      expect({ ...details.consumption, tokens }).toEqual(buildUserConsumption(selected));
+      if ('tokens' in data) expect({ ...details.consumption, tokens: data.tokens }).toEqual(buildUserConsumption(selected));
       expect(selectDetailTimeline(details, reportMonth).dailyConsumption)
         .toEqual(aggregateDailyConsumption(modelDaily.dailyConsumption, reportMonth));
       expect(summarizeUserHeader(details.header, PRICING.BUSINESS_AI_CREDIT_QUOTA, true))
@@ -94,9 +79,8 @@ describe('filtered detail stream parity', () => {
     },
   );
 
-  it('combines complete cache counts across cost centers without treating missing counts as zero', async () => {
-    const result = await streamFile(createStreamingFile(csv), ['details'], { user: 'test-user-one' });
-    const details = selectDetailArtifacts(result.outputs.details as CompactDetailArtifacts);
+  it('combines complete cache counts across cost centers without treating missing counts as zero', () => {
+    const { details } = selectUserDetails(precomputed, 'test-user-one');
     expect(details.dailyModels.filter(row => row.date === '2026-07-10')).toEqual([
       expect.objectContaining({ credits: 2, rowSpan: 2, isFirstInDate: true,
         cacheSuccessRate: { percent: 60, reportedRows: 2, totalRows: 3 } }),
@@ -110,16 +94,15 @@ describe('filtered detail stream parity', () => {
     expect(timeline.find(row => row.date === '2026-07-31')?.totalCumulative).toBe(16);
   });
 
-  it('keeps token-only exports usable and returns no invented activity for no-match filters', async () => {
+  it('keeps token-only exports usable and rejects missing detail scopes', () => {
     const tokenCsv = 'date,username,sku,model,quantity,input\n2026-07-01,test-user-one,copilot_ai_credit,test-model-one,1,20';
-    const file = createStreamingFile(tokenCsv);
-    const result = await streamFile(file, ['details', 'tokens'], { user: 'test-user-one' });
-    const details = selectDetailArtifacts(result.outputs.details as CompactDetailArtifacts);
+    const tokenRows = normalizeRows(Papa.parse<CSVData>(tokenCsv, { header: true }).data);
+    const artifacts = aggregateRows(new DetailPagesAggregator(), tokenRows);
+    const { details, tokens } = selectUserDetails(artifacts, 'test-user-one');
     expect(details.hasBillingData).toBe(false);
     expect(summarizeUserHeader(details.header, 'unknown', false).totalCost).toBeNull();
-    expect((result.outputs.tokens as TokenArtifacts).totals.inputTokens).toBe(20);
-    const empty = await streamFile(file, ['details'], { user: 'test-user-two' });
-    expect(selectDetailTimeline(selectDetailArtifacts(empty.outputs.details as CompactDetailArtifacts), '2026-07'))
-      .toEqual({ userDailyData: [], dailyConsumption: [] });
+    expect(tokens.totals.inputTokens).toBe(20);
+    expect(() => selectUserDetails(artifacts, 'test-user-two')).toThrow('Missing precomputed details');
+    expect(() => selectBillingGroupDetails(artifacts, 'organization', 'test-org-two')).toThrow('Missing precomputed details');
   });
 });

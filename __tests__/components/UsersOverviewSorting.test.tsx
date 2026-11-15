@@ -13,7 +13,6 @@ import { createAggregators } from '@/utils/ingestion/registry';
 import { REPORT_AGGREGATOR_IDS } from '@/utils/ingestion/streamFile';
 
 import { makeNormalizedRow } from '../helpers/makeNormalizedRow';
-import { createStreamingFile, MockFileReader } from '../helpers/streamingFile';
 
 beforeAll(() => {
   global.ResizeObserver = class {
@@ -489,7 +488,6 @@ describe('UsersOverview - sorting', () => {
       }),
     ];
 
-    globalThis.FileReader = MockFileReader as unknown as typeof FileReader;
     const outputs: Record<string, unknown> = {};
     for (const aggregator of createAggregators(REPORT_AGGREGATOR_IDS)) {
       const context = { pricing: PRICING };
@@ -499,8 +497,7 @@ describe('UsersOverview - sorting', () => {
     }
     render(
       <AnalysisProvider ingestionResult={{ outputs, rowsProcessed: 1, durationMs: 1, warnings: [] }}
-        filename="test-report.csv" onReset={jest.fn()}
-        sourceFile={createStreamingFile('date,username,sku,model,quantity\n2025-01-01,test-user-one,copilot_ai_credit,gpt-4,10')}>
+        filename="test-report.csv" onReset={jest.fn()}>
       <UsersOverview
         userData={userData}
         billingArtifacts={aggregateRows(new BillingAggregator(), sourceRows)}

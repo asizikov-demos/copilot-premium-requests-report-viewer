@@ -64,7 +64,7 @@ function buildPublicAssetUrl(assetPath: string): string {
 }
 
 interface CSVUploaderProps {
-  onDataLoad: (result: IngestionResult, filename: string, sourceFile: File) => void;
+  onDataLoad: (result: IngestionResult, filename: string) => void;
   onError: (error: string) => void;
   error?: string;
 }
@@ -93,7 +93,7 @@ export function CSVUploader({ onDataLoad, onError, error }: CSVUploaderProps) {
     setTotalRowsProcessed(0);
 
     try {
-      const result = await streamFile(file, REPORT_AGGREGATOR_IDS, undefined, {
+      const result = await streamFile(file, REPORT_AGGREGATOR_IDS, {
         chunkSize: 1024 * 1024,
         progressResolution: 1000,
         onProgress: (progressInfo) => {
@@ -108,7 +108,7 @@ export function CSVUploader({ onDataLoad, onError, error }: CSVUploaderProps) {
       }
       setProgress(100);
       await new Promise(resolve => setTimeout(resolve, 200));
-      onDataLoad(result, file.name, file);
+      onDataLoad(result, file.name);
     } catch (error) {
       onError(error instanceof Error ? error.message : 'Failed to process CSV file');
     } finally {

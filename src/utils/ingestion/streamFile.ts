@@ -1,9 +1,8 @@
 import type { AggregatorId } from './registry';
-import type { IngestionProgress, IngestionResult, RowFilter } from './types';
+import type { IngestionProgress, IngestionResult } from './types';
 import type { IngestionRequest, IngestionResponse } from './workerProtocol';
 
 export type { AggregatorId } from './registry';
-export type { RowFilter } from './types';
 
 export const REPORT_AGGREGATOR_IDS = [
   'quota', 'usage', 'dailyBuckets', 'featureUsage', 'billing', 'billingPages', 'tokens', 'modelDaily', 'detailPages',
@@ -20,14 +19,12 @@ export interface StreamFileOptions {
 export async function streamFile(
   file: File,
   aggregatorIds: readonly AggregatorId[],
-  rowFilter?: RowFilter,
   options: StreamFileOptions = {},
 ): Promise<IngestionResult> {
   options.signal?.throwIfAborted();
   const request: IngestionRequest = {
     file,
     aggregatorIds,
-    rowFilter,
     chunkSize: options.chunkSize,
     progressResolution: options.progressResolution,
   };
@@ -35,7 +32,7 @@ export async function streamFile(
   if (typeof Worker === 'undefined') {
     const { runFileIngestion } = await import('./runFileIngestion');
     return new Promise((resolve, reject) => {
-      const abort = () => reject(new DOMException('Detail loading cancelled', 'AbortError'));
+      const abort = () => reject(new DOMException('CSV ingestion cancelled', 'AbortError'));
       options.signal?.addEventListener('abort', abort, { once: true });
       if (options.signal?.aborted) {
         abort();
@@ -61,7 +58,7 @@ export async function streamFile(
     };
     const abort = () => {
       cleanup();
-      reject(new DOMException('Detail loading cancelled', 'AbortError'));
+      reject(new DOMException('CSV ingestion cancelled', 'AbortError'));
     };
     const fail = (message: string) => {
       cleanup();

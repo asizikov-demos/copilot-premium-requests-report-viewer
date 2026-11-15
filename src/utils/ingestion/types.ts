@@ -121,21 +121,11 @@ export interface Aggregator<TOutput = unknown> {
 }
 
 /**
- * AND-combined normalized-row predicates that can cross the worker boundary.
- */
-export interface RowFilter {
-  user?: string;
-  organization?: string;
-  costCenter?: string;
-}
-
-/**
  * Configuration options for ingestion pipeline.
  */
 export interface IngestOptions {
   signal?: AbortSignal;
   chunkSize?: number;
-  rowFilter?: RowFilter;
   progressResolution?: number;  // rows between progress callbacks
   onProgress?: (progress: IngestionProgress) => void;
   onComplete: (result: IngestionResult) => void;

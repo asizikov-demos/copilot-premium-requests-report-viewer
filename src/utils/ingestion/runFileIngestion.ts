@@ -12,7 +12,6 @@ export function runFileIngestion(
       signal,
       chunkSize: request.chunkSize,
       progressResolution: request.progressResolution,
-      rowFilter: request.rowFilter,
       onProgress: progress => respond({ type: 'progress', progress }),
       onComplete: result => {
         try {

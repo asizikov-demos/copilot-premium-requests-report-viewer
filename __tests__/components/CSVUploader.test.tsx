@@ -78,7 +78,7 @@ describe('CSVUploader', () => {
   });
 
   it('announces processing and prevents browsing or additional drops while busy', async () => {
-    mockStreamFile.mockImplementation((_file, _ids, _filter, options?: StreamFileOptions) => {
+    mockStreamFile.mockImplementation((_file, _ids, options?: StreamFileOptions) => {
       options?.onProgress?.({ rowsProcessed: 1000 });
       return new Promise(() => {});
     });
@@ -122,12 +122,11 @@ describe('CSVUploader', () => {
     await user.upload(hiddenInput, mockFile);
 
     await waitFor(() => {
-      expect(mockOnDataLoad).toHaveBeenCalledWith(expect.objectContaining({ rowsProcessed: newFormatRows.length }), 'new-format.csv', mockFile);
+      expect(mockOnDataLoad).toHaveBeenCalledWith(expect.objectContaining({ rowsProcessed: newFormatRows.length }), 'new-format.csv');
     });
     expect(mockStreamFile).toHaveBeenCalledWith(
       mockFile,
       expect.arrayContaining(['tokens']),
-      undefined,
       expect.any(Object)
     );
   });
@@ -244,7 +243,7 @@ describe('CSVUploader', () => {
     });
 
     await waitFor(() => {
-      expect(mockOnDataLoad).toHaveBeenCalledWith(expect.objectContaining({ rowsProcessed: validCSVData.length }), 'test.csv', mockFile);
+      expect(mockOnDataLoad).toHaveBeenCalledWith(expect.objectContaining({ rowsProcessed: validCSVData.length }), 'test.csv');
     });
   });
 
@@ -268,8 +267,7 @@ describe('CSVUploader', () => {
       expect(global.fetch).toHaveBeenCalledWith(expect.stringMatching(/\/data\/ai-credits-example\.csv$/));
       expect(mockOnDataLoad).toHaveBeenCalledWith(
         expect.objectContaining({ rowsProcessed: 1 }),
-        'ai-credits-example.csv',
-        expect.any(File)
+        'ai-credits-example.csv'
       );
     });
   });
@@ -304,8 +302,7 @@ describe('CSVUploader', () => {
     await waitFor(() => {
       expect(mockOnDataLoad).toHaveBeenCalledWith(
         expect.objectContaining({ rowsProcessed: 1 }),
-        'ai-credits-example.csv',
-        expect.any(File)
+        'ai-credits-example.csv'
       );
     });
   });

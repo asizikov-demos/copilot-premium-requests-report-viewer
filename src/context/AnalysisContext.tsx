@@ -24,7 +24,6 @@ type ViewType = 'overview' | 'users' | 'costCenters' | 'organizations' | 'coding
 interface AnalysisProviderProps {
   ingestionResult: IngestionResult;
   filename: string;
-  sourceFile?: File;
   onReset: () => void;
   children: ReactNode;
 }
@@ -39,7 +38,6 @@ interface AnalysisContextValue {
   modelDailyArtifacts: ModelDailyArtifacts;
   reportHasOrganizations: boolean;
   reportHasCostCenters: boolean;
-  sourceFile?: File;
   // Aggregator outputs (new architecture)
   quotaArtifacts: QuotaArtifacts;
   usageArtifacts: UsageArtifacts;
@@ -112,7 +110,7 @@ function requireFeatureUsageArtifacts(value: unknown): FeatureUsageArtifacts {
 // in components that want to gracefully fallback when provider is absent in tests.
 export const AnalysisContext = createContext<AnalysisContextValue | null>(null);
 
-export function AnalysisProvider({ ingestionResult, filename, sourceFile, onReset, children }: AnalysisProviderProps) {
+export function AnalysisProvider({ ingestionResult, filename, onReset, children }: AnalysisProviderProps) {
   // Local UI state that was previously in DataAnalysis
   const [view, setView] = useState<ViewType>('overview');
 
@@ -170,7 +168,6 @@ export function AnalysisProvider({ ingestionResult, filename, sourceFile, onRese
     ...artifacts,
     reportHasOrganizations: artifacts.modelDailyArtifacts.hasOrganizations,
     reportHasCostCenters: artifacts.modelDailyArtifacts.hasCostCenters,
-    sourceFile,
     analysis,
     userData,
     allModels,

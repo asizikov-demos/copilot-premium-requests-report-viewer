@@ -14,7 +14,6 @@ import {
   IngestOptions,
   IngestionResult,
   IngestionProgress,
-  UNASSIGNED_BILLING_GROUP
 } from './types';
 
 /**
@@ -29,7 +28,6 @@ export function ingestStream(
   const {
     chunkSize = 1024 * 1024,
     progressResolution = 1000,
-    rowFilter,
     onProgress,
     onComplete,
     onError
@@ -116,13 +114,6 @@ export function ingestStream(
         const normalized = normalizeRow(rawRow, warnings, { normalizeDate: dateNormalizer });
         if (!normalized) continue;
         sawSupportedRows = true;
-        if (rowFilter && (
-          (rowFilter.user !== undefined && normalized.user !== rowFilter.user) ||
-          (rowFilter.organization !== undefined &&
-            (normalized.organization || UNASSIGNED_BILLING_GROUP) !== rowFilter.organization) ||
-          (rowFilter.costCenter !== undefined &&
-            (normalized.costCenter || UNASSIGNED_BILLING_GROUP) !== rowFilter.costCenter)
-        )) continue;
         
         // Dispatch to all aggregators
         for (const aggregator of aggregators) {

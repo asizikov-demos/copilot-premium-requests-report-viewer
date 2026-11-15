@@ -1,7 +1,6 @@
 import { BillingAggregator } from './BillingAggregator';
 import { BillingPagesAggregator } from './BillingPagesAggregator';
 import { DailyBucketsAggregator } from './DailyBucketsAggregator';
-import { DetailAggregator } from './DetailAggregator';
 import { DetailPagesAggregator } from './DetailPagesAggregator';
 import { FeatureUsageAggregator } from './FeatureUsageAggregator';
 import { QuotaAggregator } from './QuotaAggregator';
@@ -11,7 +10,6 @@ import { UsageAggregator } from './UsageAggregator';
 import type { Aggregator } from './types';
 
 const aggregatorRegistry = {
-  details: () => new DetailAggregator(),
   detailPages: () => new DetailPagesAggregator(),
   quota: () => new QuotaAggregator(),
   usage: () => new UsageAggregator(),

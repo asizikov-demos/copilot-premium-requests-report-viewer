@@ -1,6 +1,5 @@
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import Papa from 'papaparse';
 
 import { DataAnalysis } from '@/components/DataAnalysis';
 import { PRICING } from '@/constants/pricing';
@@ -13,7 +12,6 @@ import type { BillingArtifacts, IngestionResult, NormalizedRow, UsageArtifacts }
 
 import { newFormatRows } from '../fixtures/newFormatCSVData';
 import { ingestRows } from '../helpers/aggregateRows';
-import { createStreamingFile, MockFileReader } from '../helpers/streamingFile';
 
 jest.mock('@/components/charts/DailyConsumptionChart', () => ({
   DailyConsumptionChart: ({ data }: { data: DailyConsumptionDatum[] }) => (
@@ -23,7 +21,6 @@ jest.mock('@/components/charts/DailyConsumptionChart', () => ({
 
 // Mock ResizeObserver for Recharts ResponsiveContainer in JSDOM
 beforeAll(() => {
-  globalThis.FileReader = MockFileReader as unknown as typeof FileReader;
   global.ResizeObserver = class {
     observe() {}
     unobserve() {}
@@ -187,7 +184,7 @@ describe('DataAnalysis billing summary', () => {
       },
     ];
     const ingestionResult = createIngestionResultFromRawRows(sourceRows);
-    render(<DataAnalysis ingestionResult={ingestionResult} sourceFile={createStreamingFile(Papa.unparse(sourceRows))}
+    render(<DataAnalysis ingestionResult={ingestionResult}
       filename="billing-export.csv" onReset={() => {}} />);
     fireEvent.click(screen.getAllByRole('button', { name: view })[0]);
     const groupRow = screen.getByRole('button', { name: new RegExp(groupName) }).closest('tr');
@@ -219,7 +216,7 @@ describe('DataAnalysis billing summary', () => {
       })
     ));
     render(<DataAnalysis ingestionResult={createIngestionResultFromRawRows(rows)}
-      sourceFile={createStreamingFile(Papa.unparse(rows))} filename="organization.csv" onReset={jest.fn()} />);
+      filename="organization.csv" onReset={jest.fn()} />);
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Organizations' })[0]);
     const organizationRow = screen.getByRole('button', { name: 'test-org-one' }).closest('tr');
