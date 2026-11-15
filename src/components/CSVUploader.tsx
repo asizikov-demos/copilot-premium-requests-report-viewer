@@ -4,18 +4,9 @@ import { useId, useRef, useState } from 'react';
 import { FileIcon, LinkExternalIcon, LockIcon, UploadIcon } from '@primer/octicons-react';
 import { Banner, Button, Heading, Link, ProgressBar, Spinner, Stack, Text } from '@primer/react';
 
-import {
-  ingestStream,
-  QuotaAggregator,
-  UsageAggregator,
-  DailyBucketsAggregator,
-  FeatureUsageAggregator,
-  BillingAggregator,
-  TokenAggregator,
-  RawDataAggregator,
-  IngestionResult
-} from '@/utils/ingestion';
 import { getBasePath } from '@/constants/deployment';
+import { REPORT_AGGREGATOR_IDS, streamFile } from '@/utils/ingestion/streamFile';
+import type { IngestionResult } from '@/utils/ingestion/types';
 
 const SAMPLE_DATA_FILENAME = 'ai-credits-example.csv';
 
@@ -73,7 +64,7 @@ function buildPublicAssetUrl(assetPath: string): string {
 }
 
 interface CSVUploaderProps {
-  onDataLoad: (result: IngestionResult, filename: string) => void;
+  onDataLoad: (result: IngestionResult, filename: string, sourceFile: File) => void;
   onError: (error: string) => void;
   error?: string;
 }
@@ -90,7 +81,7 @@ export function CSVUploader({ onDataLoad, onError, error }: CSVUploaderProps) {
 
   const isBusy = isLoading || isSampleLoading;
 
-  const startIngestion = (file: File) => {
+  const startIngestion = async (file: File) => {
     if (!file || !file.name.toLowerCase().endsWith('.csv')) {
       onError('Please select a CSV file');
       return;
@@ -101,55 +92,30 @@ export function CSVUploader({ onDataLoad, onError, error }: CSVUploaderProps) {
     setProgress(0);
     setTotalRowsProcessed(0);
 
-    // Create all aggregators including raw data collector for adapter
-    const quotaAggregator = new QuotaAggregator();
-    const usageAggregator = new UsageAggregator();
-    const dailyBucketsAggregator = new DailyBucketsAggregator();
-    const featureUsageAggregator = new FeatureUsageAggregator();
-    const billingAggregator = new BillingAggregator();
-    const tokenAggregator = new TokenAggregator();
-    const rawDataAggregator = new RawDataAggregator();
-
-    // Single-pass streaming ingestion with all aggregators
-    ingestStream(
-      file,
-      [quotaAggregator, usageAggregator, dailyBucketsAggregator, featureUsageAggregator, billingAggregator, tokenAggregator, rawDataAggregator],
-      {
-        chunkSize: 1024 * 1024, // 1MB chunks for smooth UI
+    try {
+      const result = await streamFile(file, REPORT_AGGREGATOR_IDS, undefined, {
+        chunkSize: 1024 * 1024,
         progressResolution: 1000,
         onProgress: (progressInfo) => {
           setTotalRowsProcessed(progressInfo.rowsProcessed);
           // Estimate progress percentage
           setProgress(prev => Math.min(prev + 5, 90));
-        },
-        onComplete: (result) => {
-          setProgress(100);
-          
-          // Check if CSV is empty
-          if (result.rowsProcessed === 0) {
-            onError(result.warnings[0] ?? 'CSV file is empty');
-            setIsLoading(false);
-            setProgress(0);
-            setTotalRowsProcessed(0);
-            return;
-          }
-          
-          // Small delay to show 100% before transitioning
-          setTimeout(() => {
-            onDataLoad(result, file.name);
-            setIsLoading(false);
-            setProgress(0);
-            setTotalRowsProcessed(0);
-          }, 200);
-        },
-        onError: (errorMsg) => {
-          onError(errorMsg);
-          setIsLoading(false);
-          setProgress(0);
-          setTotalRowsProcessed(0);
         }
+      });
+      if (result.rowsProcessed === 0) {
+        onError(result.warnings[0] ?? 'CSV file is empty');
+        return;
       }
-    );
+      setProgress(100);
+      await new Promise(resolve => setTimeout(resolve, 200));
+      onDataLoad(result, file.name, file);
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Failed to process CSV file');
+    } finally {
+      setIsLoading(false);
+      setProgress(0);
+      setTotalRowsProcessed(0);
+    }
   };
 
   const loadSampleData = async () => {
@@ -165,7 +131,7 @@ export function CSVUploader({ onDataLoad, onError, error }: CSVUploaderProps) {
 
       const blob = await response.blob();
       const sampleFile = new File([blob], SAMPLE_DATA_FILENAME, { type: 'text/csv' });
-      startIngestion(sampleFile);
+      await startIngestion(sampleFile);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to load sample data';
       onError(message);

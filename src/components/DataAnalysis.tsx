@@ -40,6 +40,7 @@ import styles from './DataAnalysis.module.css';
 interface DataAnalysisProps {
   ingestionResult: import('@/utils/ingestion').IngestionResult;
   filename: string;
+  sourceFile?: File;
   onReset: () => void;
 }
 
@@ -641,7 +642,7 @@ function DataAnalysisInner() {
 export function DataAnalysis(props: DataAnalysisProps) {
   const { ingestionResult, filename, onReset } = props;
   return (
-    <AnalysisProvider ingestionResult={ingestionResult} filename={filename} onReset={onReset}>
+    <AnalysisProvider ingestionResult={ingestionResult} filename={filename} sourceFile={props.sourceFile} onReset={onReset}>
       <DataAnalysisInner />
     </AnalysisProvider>
   );

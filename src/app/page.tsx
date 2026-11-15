@@ -11,12 +11,14 @@ import { IngestionResult } from '@/utils/ingestion';
 export default function Home() {
   const [ingestionResult, setIngestionResult] = useState<IngestionResult | null>(null);
   const [filename, setFilename] = useState<string>('');
+  const [sourceFile, setSourceFile] = useState<File | undefined>();
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [error, setError] = useState<string>('');
 
-  const handleDataLoad = (result: IngestionResult, filename: string) => {
+  const handleDataLoad = (result: IngestionResult, filename: string, file: File) => {
     setIngestionResult(result);
     setFilename(filename);
+    setSourceFile(file);
     setIsDataLoaded(true);
     setError('');
   };
@@ -29,6 +31,7 @@ export default function Home() {
   const handleReset = () => {
     setIngestionResult(null);
     setFilename('');
+    setSourceFile(undefined);
     setIsDataLoaded(false);
     setError('');
   };
@@ -57,7 +60,7 @@ export default function Home() {
         {!isDataLoaded ? (
           <CSVUploader onDataLoad={handleDataLoad} onError={handleError} error={error} />
         ) : ingestionResult ? (
-          <DataAnalysis ingestionResult={ingestionResult} filename={filename} onReset={handleReset} />
+          <DataAnalysis ingestionResult={ingestionResult} filename={filename} sourceFile={sourceFile} onReset={handleReset} />
         ) : null}
       </div>
 
