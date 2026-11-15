@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useMemo, useState, ReactNode } from 'react';
 
-import { PRICING } from '@/constants/pricing';
 import { useArtifactAnalysis } from '@/hooks/useArtifactAnalysis';
 import type { DetailPagesArtifacts } from '@/utils/ingestion/DetailPagesAggregator';
 import { 
@@ -18,7 +17,6 @@ import {
 } from '@/utils/ingestion';
 
 // Types
-type CopilotPlan = 'business' | 'enterprise';
 type ViewType = 'overview' | 'users' | 'costCenters' | 'organizations' | 'codingAgent' | 'insights' | 'modelTrends' | 'aiUsage';
 
 interface AnalysisProviderProps {
@@ -26,11 +24,6 @@ interface AnalysisProviderProps {
   filename: string;
   onReset: () => void;
   children: ReactNode;
-}
-
-interface PlanInfoEntry {
-  name: string;
-  monthlyQuota: number;
 }
 
 interface AnalysisContextValue {
@@ -56,14 +49,12 @@ interface AnalysisContextValue {
 
   reportMonth?: string;
 
-  // Thresholds & state
-  selectedPlan: CopilotPlan;
+  // UI state
   view: ViewType;
   setView: (v: ViewType) => void;
 
   // Derived UI helpers
   isDetailViewActive: boolean;
-  planInfo: Record<CopilotPlan, PlanInfoEntry>;
 
   // Misc
   filename: string;
@@ -148,20 +139,6 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
     dailyBucketsArtifacts: artifacts.dailyBucketsArtifacts
   });
 
-  // Use the suggested plan from data (auto-derived from report content)
-  const selectedPlan = analysis.quotaBreakdown.suggestedPlan ?? 'business';
-
-  const planInfo: Record<CopilotPlan, PlanInfoEntry> = useMemo(() => ({
-    business: {
-      name: 'Copilot Business',
-      monthlyQuota: PRICING.BUSINESS_AI_CREDIT_QUOTA
-    },
-    enterprise: {
-      name: 'Copilot Enterprise',
-      monthlyQuota: PRICING.ENTERPRISE_AI_CREDIT_QUOTA
-    }
-  }), []);
-
   const isDetailViewActive = view !== 'overview';
 
   const value: AnalysisContextValue = {
@@ -175,11 +152,9 @@ export function AnalysisProvider({ ingestionResult, filename, onReset, children 
     codingAgentAnalysis,
     codeReviewAnalysis,
     reportMonth,
-    selectedPlan,
     view,
     setView,
     isDetailViewActive,
-    planInfo,
     filename,
     onReset
   };

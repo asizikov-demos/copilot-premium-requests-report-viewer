@@ -87,7 +87,6 @@ function DataAnalysisInner() {
     reportHasCostCenters: hasCostCenters,
     reportHasOrganizations: hasOrganizations,
     reportMonth,
-    planInfo,
     filename,
     quotaArtifacts,
     usageArtifacts,
@@ -99,18 +98,6 @@ function DataAnalysisInner() {
   const quantityColumnLabel = 'AI Credits';
   const costLabels = getBillingCostLabels();
   const unitCostLabel = `1 AI Credit = ${formatCurrency(PRICING.AI_CREDIT_USD_VALUE)}`;
-  const monthlyQuotaDisplay = useMemo(() => {
-    if (analysis.quotaBreakdown.mixed) {
-      return 'Mixed';
-    }
-
-    const distinctQuotas = Array.from(quotaArtifacts.distinctQuotas);
-    if (distinctQuotas.length === 1) {
-      return distinctQuotas[0].toLocaleString();
-    }
-
-    return 'Unknown';
-  }, [analysis.quotaBreakdown.mixed, quotaArtifacts.distinctQuotas]);
 
   const navItems = useMemo(() => {
     const items = [...NAV_ITEMS];
@@ -269,9 +256,7 @@ function DataAnalysisInner() {
         </ActionMenu>
       </div>
 
-      <div className="flex gap-6">
-        {/* Main Content */}
-        <div className="flex-1 min-w-0">
+      <div className="w-full min-w-0">
           {view === 'users' ? (
             <UsersOverview
               userData={userData}
@@ -558,32 +543,6 @@ function DataAnalysisInner() {
               </div>
             </div>
           )}
-        </div>
-
-        {/* Right Summary Panel */}
-        <aside className="hidden xl:block w-56 shrink-0">
-          <div className={`${styles.summary} bg-(--bgColor-default) border border-(--borderColor-default) rounded-md p-5 opacity-0 animate-slide-in-right`} style={{ animationDelay: '250ms' }}>
-            <div className="space-y-4">
-              <h3 className="text-xs font-bold text-(--fgColor-muted) uppercase tracking-wider">Summary</h3>
-
-              <div className="flex items-center justify-between p-3 bg-(--bgColor-muted) rounded-md border border-(--borderColor-default)">
-                <span className="text-xs font-medium text-(--fgColor-muted)">Monthly Quota</span>
-                <span className="text-sm font-bold text-(--fgColor-default)">
-                  {monthlyQuotaDisplay}
-                </span>
-              </div>
-
-              {analysis.quotaBreakdown.suggestedPlan && !analysis.quotaBreakdown.mixed && (
-                <div className="p-3 rounded-md border border-(--borderColor-accent-muted) bg-(--bgColor-accent-muted) text-(--fgColor-default)">
-                  <p className="text-xs">
-                    Auto-selected <span className="font-semibold">{planInfo[analysis.quotaBreakdown.suggestedPlan].name}</span>
-                  </p>
-                </div>
-              )}
-
-            </div>
-          </div>
-        </aside>
       </div>
       </div>
     </div>

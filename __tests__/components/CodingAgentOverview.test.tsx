@@ -74,15 +74,10 @@ function createContextValue(rows: NormalizedRow[] = []) {
     dailyAicCumulativeData: [],
     codingAgentAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodingAgentCredits: 0, adoptionRate: 0, users: [] },
     codeReviewAnalysis: { totalUsers: 0, totalUniqueUsers: 0, totalCodeReviewCredits: 0, adoptionRate: 0, users: [] },
-    selectedPlan: 'business' as const,
     view: 'codingAgent' as const,
     setView: jest.fn(),
     isDetailViewActive: true,
     chartData: [],
-    planInfo: {
-      business: { name: 'Copilot Business', monthlyQuota: PRICING.BUSINESS_AI_CREDIT_QUOTA },
-      enterprise: { name: 'Copilot Enterprise', monthlyQuota: PRICING.ENTERPRISE_AI_CREDIT_QUOTA },
-    },
     filename: 'report.csv',
     onReset: jest.fn(),
   };
