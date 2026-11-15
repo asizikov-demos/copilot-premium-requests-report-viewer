@@ -17,7 +17,9 @@ import {
   NormalizedRow,
   MonthlyAggregates,
   selectCoreArtifacts,
-  buildProcessedDataFromRows
+  buildProcessedDataFromRows,
+  selectBillingPagesArtifacts,
+  type BillingPagesArtifacts,
 } from '@/utils/ingestion';
 
 // Types
@@ -45,6 +47,7 @@ interface AnalysisContextValue {
   dailyBucketsArtifacts: DailyBucketsArtifacts;
   featureUsageArtifacts: FeatureUsageArtifacts;
   billingArtifacts?: BillingArtifacts; // new billing summary artifacts
+  billingPagesArtifacts: BillingPagesArtifacts;
   tokenArtifacts?: TokenArtifacts | null;
   
   // Raw & processed (adapter bridge - to be phased out)
@@ -126,6 +129,7 @@ export function AnalysisProvider({ ingestionResult, filename, sourceFile, onRese
   const monthlyAggregates = useMemo<MonthlyAggregates>(() => {
     requireFeatureUsageArtifacts(ingestionResult.outputs.featureUsage);
     return {
+      billingPages: ingestionResult.outputs.billingPages as MonthlyAggregates['billingPages'],
       quota: ingestionResult.outputs.quota as MonthlyAggregates['quota'],
       usage: ingestionResult.outputs.usage as MonthlyAggregates['usage'],
       dailyBuckets: ingestionResult.outputs.dailyBuckets as MonthlyAggregates['dailyBuckets'],
@@ -152,6 +156,11 @@ export function AnalysisProvider({ ingestionResult, filename, sourceFile, onRese
     () => selectCoreArtifacts(monthlyAggregates, selectedMonths),
     [monthlyAggregates, selectedMonths]
   );
+  const billingPagesArtifacts = useMemo(() => {
+    const artifacts = monthlyAggregates.billingPages;
+    if (!artifacts) throw new Error('Missing billingPages output in ingestion result');
+    return selectBillingPagesArtifacts(artifacts, selectedMonths);
+  }, [monthlyAggregates, selectedMonths]);
 
   const {
     analysis,
@@ -194,6 +203,7 @@ export function AnalysisProvider({ ingestionResult, filename, sourceFile, onRese
     dailyBucketsArtifacts: scopedArtifacts.dailyBucketsArtifacts,
     featureUsageArtifacts: scopedArtifacts.featureUsageArtifacts,
     billingArtifacts: scopedArtifacts.billingArtifacts,
+    billingPagesArtifacts,
     tokenArtifacts: scopedArtifacts.tokenArtifacts,
     // Legacy adapter bridge
     baseProcessed,

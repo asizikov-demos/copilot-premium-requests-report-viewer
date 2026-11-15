@@ -1,14 +1,11 @@
 'use client';
 
-import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeftIcon } from '@primer/octicons-react';
 import { Button } from '@primer/react';
 
-import { AnalysisContext } from '@/context/AnalysisContext';
-import type { ProcessedData } from '@/types/csv';
-import type { UserSummary } from '@/utils/analytics';
 import { buildAdvisoriesFromCategories } from '@/utils/analytics/advisory';
-import { categorizeUserConsumption, CONSUMPTION_THRESHOLDS } from '@/utils/analytics/insights';
+import { CONSUMPTION_THRESHOLDS } from '@/utils/analytics/insights';
 import { formatDecimalQuantity } from '@/utils/formatters';
 import { buildConsumptionCategoriesFromArtifacts, buildFeatureUtilizationFromArtifacts } from '@/utils/ingestion/analytics';
 import type { QuotaArtifacts, UsageArtifacts, FeatureUsageArtifacts } from '@/utils/ingestion/types';
@@ -17,11 +14,10 @@ import { UserCategoryTable } from './analysis/UserCategoryTable';
 import { AdvisorySection } from './insights/AdvisorySection';
 
 interface InsightsOverviewProps {
-  userData: UserSummary[];
-  processedData: ProcessedData[];
-  quotaArtifacts?: QuotaArtifacts;
-  usageArtifacts?: UsageArtifacts;
+  quotaArtifacts: QuotaArtifacts;
+  usageArtifacts: UsageArtifacts;
   featureUsageArtifacts: FeatureUsageArtifacts;
+  months: readonly string[];
 }
 
 type Category = 'powerUsers' | 'averageUsers' | 'lowAdoptionUsers';
@@ -32,26 +28,20 @@ const categories: { id: Category; title: string; threshold: string; dot: string;
   { id: 'lowAdoptionUsers', title: 'Low adoption', threshold: `<${CONSUMPTION_THRESHOLDS.averageMinPct}% of quota`, dot: 'bg-(--bgColor-danger-emphasis)', description: 'Low consumption is a conversation starter, not a measure of productivity.' },
 ];
 
-export function InsightsOverview({ userData, processedData, quotaArtifacts, usageArtifacts, featureUsageArtifacts }: InsightsOverviewProps) {
+export function InsightsOverview({ quotaArtifacts, usageArtifacts, featureUsageArtifacts, months }: InsightsOverviewProps) {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const analysisContext = useContext(AnalysisContext);
-  const effectiveQuota = quotaArtifacts ?? analysisContext?.quotaArtifacts;
-  const effectiveUsage = usageArtifacts ?? analysisContext?.usageArtifacts;
   const detailHeading = useRef<HTMLHeadingElement>(null);
   const returnTarget = useRef<HTMLButtonElement | null>(null);
   const returnCategory = useRef<Category | null>(null);
 
-  const insightsData = useMemo(() => effectiveUsage && effectiveQuota
-    ? buildConsumptionCategoriesFromArtifacts(effectiveUsage, effectiveQuota)
-    : categorizeUserConsumption(userData, processedData),
-  [effectiveUsage, effectiveQuota, userData, processedData]);
+  const insightsData = useMemo(() => buildConsumptionCategoriesFromArtifacts(usageArtifacts, quotaArtifacts),
+    [usageArtifacts, quotaArtifacts]);
   const featureUtilization = useMemo(() => buildFeatureUtilizationFromArtifacts(featureUsageArtifacts), [featureUsageArtifacts]);
-  const totalUsers = effectiveUsage?.userCount ?? userData.length;
+  const totalUsers = usageArtifacts.userCount;
   const classifiedUsers = categories.reduce((total, category) => total + insightsData[category.id].length, 0);
   const unknownQuotaUsers = totalUsers - classifiedUsers;
   const advisories = useMemo(() => buildAdvisoriesFromCategories(insightsData.lowAdoptionUsers, totalUsers), [insightsData, totalUsers]);
-  const monthsInScope = analysisContext?.dailyBucketsArtifacts?.months
-    ?? Array.from(new Set(processedData.map(row => row.monthKey)));
+  const monthsInScope = months;
   const selected = categories.find(category => category.id === selectedCategory);
   const features = [
     { name: 'Code Review', ...featureUtilization.codeReview },

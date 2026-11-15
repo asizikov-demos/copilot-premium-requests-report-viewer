@@ -8,6 +8,7 @@ import type { CSVData } from '@/types/csv';
 import type { DailyConsumptionDatum } from '@/utils/dailyConsumption';
 import {
   BillingAggregator,
+  BillingPagesAggregator,
   DailyBucketsAggregator,
   FeatureUsageAggregator,
   QuotaAggregator,
@@ -48,6 +49,7 @@ function createIngestionResultFromRawRows(rows: CSVData[]): IngestionResult {
     new DailyBucketsAggregator(),
     new FeatureUsageAggregator(),
     new BillingAggregator(),
+    new BillingPagesAggregator(),
     new RawDataAggregator(),
   ];
   const ctx: AggregatorContext = { pricing: PRICING };
@@ -86,7 +88,8 @@ function createIngestionResultWithBillingArtifacts(billingArtifacts: BillingArti
         featureUsers: { codeReview: new Set(), codingAgent: new Set(), spark: new Set(), codeQuality: new Set() },
         specialTotals: { unattributedCodeReview: 0, unattributedCodeQuality: 0 }
       },
-      'billing': billingArtifacts
+      'billing': billingArtifacts,
+      'billingPages': new BillingPagesAggregator().finalize(),
     },
     rowsProcessed: 0,
     durationMs: 100,

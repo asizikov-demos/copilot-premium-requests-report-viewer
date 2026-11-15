@@ -3,35 +3,19 @@ import { render, screen, within } from '@testing-library/react';
 import { AnalysisContext } from '@/context/AnalysisContext';
 import { CodingAgentOverview } from '@/components/CodingAgentOverview';
 import { PRICING } from '@/constants/pricing';
-import type { CodeReviewAnalysis, CodingAgentUser, ProcessedData } from '@/types/csv';
+import type { CodeReviewAnalysis, CodingAgentUser } from '@/types/csv';
 import type {
   BillingArtifacts,
+  NormalizedRow,
   FeatureUsageArtifacts,
   QuotaArtifacts,
   UsageArtifacts,
 } from '@/utils/ingestion';
 
 import { makeDailyBucketsArtifacts } from '../helpers/makeArtifacts';
-
-function buildProcessedRow(partial: Partial<ProcessedData>): ProcessedData {
-  const timestamp = new Date('2026-03-01T00:00:00Z');
-
-  return {
-    timestamp,
-    user: 'test-user-one',
-    model: 'Coding Agent model',
-    creditsUsed: 0,
-    totalQuota: String(PRICING.ENTERPRISE_AI_CREDIT_QUOTA),
-    quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
-    iso: timestamp.toISOString(),
-    dateKey: '2026-03-01',
-    monthKey: '2026-03',
-    epoch: timestamp.getTime(),
-    usageUnit: 'ai_credit',
-    billingQuantity: 0,
-    ...partial,
-  };
-}
+import { makeNormalizedRow } from '../helpers/makeNormalizedRow';
+import { aggregateRows } from '../helpers/aggregateRows';
+import { BillingAggregator, BillingPagesAggregator } from '@/utils/ingestion';
 
 jest.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div data-testid="chart-container">{children}</div>,
@@ -46,7 +30,7 @@ jest.mock('recharts', () => ({
   Legend: () => <div data-testid="legend" />,
 }));
 
-function createContextValue() {
+function createContextValue(rows: NormalizedRow[] = []) {
   return {
     quotaArtifacts: {
       quotaByUser: new Map(),
@@ -69,10 +53,11 @@ function createContextValue() {
       featureUsers: { codeReview: new Set(), codingAgent: new Set(), spark: new Set(), codeQuality: new Set() },
       specialTotals: { unattributedCodeReview: 0, unattributedCodeQuality: 0 },
     } as FeatureUsageArtifacts,
-    billingArtifacts: undefined as BillingArtifacts | undefined,
-    baseProcessed: [] as ProcessedData[],
-    processedData: [] as ProcessedData[],
-    aggregateProcessedData: [] as ProcessedData[],
+    billingArtifacts: aggregateRows(new BillingAggregator(), rows) as BillingArtifacts | undefined,
+    billingPagesArtifacts: aggregateRows(new BillingPagesAggregator(), rows),
+    baseProcessed: [],
+    processedData: [],
+    aggregateProcessedData: [],
     analysis: {
       timeFrame: { start: '', end: '' },
       totalUniqueUsers: 0,
@@ -134,11 +119,10 @@ describe('CodingAgentOverview', () => {
 
     render(
       <AnalysisContext.Provider value={{
-        ...createContextValue(),
-        aggregateProcessedData: [
-          buildProcessedRow({ user: 'test-user-one', model: 'Code Review beta', creditsUsed: 8 }),
-          buildProcessedRow({ user: 'test-user-two', model: 'code review v1', creditsUsed: 5 }),
-        ],
+        ...createContextValue([
+          makeNormalizedRow({ user: 'test-user-one', model: 'Code Review beta', quantity: 8 }),
+          makeNormalizedRow({ user: 'test-user-two', model: 'code review v1', quantity: 5 }),
+        ]),
       }}>
         <CodingAgentOverview
           codingAgentUsers={codingAgentUsers}
@@ -161,31 +145,31 @@ describe('CodingAgentOverview', () => {
   });
 
   it('renders usage-based agent tables in AI Credits with billing columns', () => {
-    const aggregateProcessedData: ProcessedData[] = [
-      buildProcessedRow({
+    const rows: NormalizedRow[] = [
+      makeNormalizedRow({
         user: 'test-user-one',
         model: 'Coding Agent model',
-        creditsUsed: 12.34,
+        quantity: 12.34,
         billingQuantity: 12.34,
         aicQuantity: 12.34,
         grossAmount: 0.1234,
         discountAmount: 0.1,
         netAmount: 0.0234,
       }),
-      buildProcessedRow({
+      makeNormalizedRow({
         user: 'test-user-one',
         model: 'Code Review model',
-        creditsUsed: 3.5,
+        quantity: 3.5,
         billingQuantity: 3.5,
         aicQuantity: 3.5,
         grossAmount: 0.035,
         discountAmount: 0.01,
         netAmount: 0.025,
       }),
-      buildProcessedRow({
+      makeNormalizedRow({
         user: '',
         model: 'Code Review model',
-        creditsUsed: 2,
+        quantity: 2,
         billingQuantity: 2,
         aicQuantity: 2,
         grossAmount: 0.02,
@@ -195,10 +179,10 @@ describe('CodingAgentOverview', () => {
         isUnattributedUsage: true,
         usageBucket: 'unattributed_ai_credit',
       }),
-      buildProcessedRow({
+      makeNormalizedRow({
         user: '',
         model: 'Coding Agent model',
-        creditsUsed: 4,
+        quantity: 4,
         billingQuantity: 4,
         aicQuantity: 4,
         grossAmount: 0.04,
@@ -248,8 +232,7 @@ describe('CodingAgentOverview', () => {
     render(
       <AnalysisContext.Provider
         value={{
-          ...createContextValue(),
-          aggregateProcessedData,
+          ...createContextValue(rows),
           dailyBucketsArtifacts: makeDailyBucketsArtifacts([], {
             dailyUserModelTotals,
             dateRange: { min: '2026-03-01', max: '2026-03-01' },

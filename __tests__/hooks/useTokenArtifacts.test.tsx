@@ -5,6 +5,7 @@ import { PRICING } from '@/constants/pricing';
 import { AnalysisProvider, useAnalysisContext } from '@/context/AnalysisContext';
 import {
   BillingAggregator,
+  BillingPagesAggregator,
   DailyBucketsAggregator,
   FeatureUsageAggregator,
   QuotaAggregator,
@@ -24,7 +25,7 @@ function createResult(includeRaw: boolean, includeTokens: boolean): IngestionRes
   ];
   const aggregators: Aggregator[] = [
     new UsageAggregator(), new QuotaAggregator(), new DailyBucketsAggregator(), new FeatureUsageAggregator(),
-    new BillingAggregator(),
+    new BillingAggregator(), new BillingPagesAggregator(),
     ...(includeRaw ? [new RawDataAggregator()] : []),
     ...(includeTokens ? [new TokenAggregator()] : []),
   ];

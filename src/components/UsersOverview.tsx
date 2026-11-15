@@ -8,12 +8,10 @@ import { getQuotaTier } from '@/utils/analytics/quota';
 import { getBillingCostLabels } from '@/utils/billingLabels';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useSortableTable } from '@/hooks/useSortableTable';
-import { ProcessedData } from '@/types/csv';
 import type { UserSummary } from '@/utils/analytics';
 import { formatCurrency } from '@/utils/formatters';
 import {
   BillingArtifacts,
-  buildBillingArtifactsFromProcessedData,
   getUserQuota,
   QuotaArtifacts,
   UsageArtifacts,
@@ -48,14 +46,13 @@ function formatUserCount(count: number): string {
 
 interface UsersOverviewProps {
   userData: UserSummary[];
-  processedData: ProcessedData[];
   dailyCumulativeData: DailyCumulativeData[];
   quotaArtifacts: QuotaArtifacts;
   usageArtifacts: UsageArtifacts;
   billingArtifacts?: BillingArtifacts;
 }
 
-export function UsersOverview({ userData, processedData, dailyCumulativeData, quotaArtifacts, usageArtifacts, billingArtifacts }: UsersOverviewProps) {
+export function UsersOverview({ userData, dailyCumulativeData, quotaArtifacts, usageArtifacts, billingArtifacts }: UsersOverviewProps) {
   const [showChart, setShowChart] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedOrganization, setSelectedOrganization] = useState(ALL_FILTERS_VALUE);
@@ -67,14 +64,10 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
 
   type ColumnKey = 'plan' | 'totalCredits' | 'aicGrossAmount' | 'gross' | 'discount' | 'net';
 
-  const effectiveBillingArtifacts = useMemo(() => (
-    billingArtifacts ?? buildBillingArtifactsFromProcessedData(processedData)
-  ), [billingArtifacts, processedData]);
-
-  const userCosts = effectiveBillingArtifacts.userMap;
+  const userCosts = billingArtifacts?.userMap;
 
   const hasCosts = useMemo(() => {
-    for (const costs of userCosts.values()) {
+    for (const costs of userCosts?.values() ?? []) {
       if ((costs.gross ?? 0) > 0 || (costs.net ?? 0) > 0) {
         return true;
       }
@@ -102,7 +95,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
 
     if (column === 'totalCredits') return userCredits.get(row.user) ?? row.totalCredits;
     if (column === 'gross' || column === 'discount' || column === 'net' || column === 'aicGrossAmount') {
-      return userCosts.get(row.user)?.[column] ?? 0;
+      return userCosts?.get(row.user)?.[column] ?? 0;
     }
     return 0;
   }, [quotaArtifacts, userCosts, userCredits]);
@@ -414,7 +407,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
             <div className="p-4 space-y-2 sm:hidden">
               {paginatedUserData.map((user) => {
                 const credits = userCredits.get(user.user) ?? user.totalCredits;
-                const costs = userCosts.get(user.user);
+                const costs = userCosts?.get(user.user);
                 const planDisplay = getUserPlanDisplayName(user.user);
 
                 return (
@@ -526,7 +519,7 @@ export function UsersOverview({ userData, processedData, dailyCumulativeData, qu
                     {credits.toFixed(2)}
                   </td>
                   {(() => {
-                    const costs = userCosts.get(user.user);
+                    const costs = userCosts?.get(user.user);
                     return (
                       <>
                         {hasCosts && (

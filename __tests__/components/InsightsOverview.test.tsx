@@ -3,31 +3,30 @@ import userEvent from '@testing-library/user-event';
 
 import { InsightsOverview } from '@/components/InsightsOverview';
 import { PRICING } from '@/constants/pricing';
-import type { ProcessedData } from '@/types/csv';
 import {
-  buildFeatureUsageArtifactsFromProcessedData,
-  buildQuotaArtifactsFromProcessedData,
-  buildUsageArtifactsFromProcessedData,
-} from '../helpers/processedArtifacts';
+  FeatureUsageAggregator, QuotaAggregator, UsageAggregator, type NormalizedRow,
+} from '@/utils/ingestion';
 
-import { makeProcessedData } from '../helpers/testUtils';
+import { aggregateRows } from '../helpers/aggregateRows';
+import { makeNormalizedRow } from '../helpers/makeNormalizedRow';
 
-function propsFor(rows: ProcessedData[]) {
-  const usageArtifacts = buildUsageArtifactsFromProcessedData(rows);
+function propsFor(rows: NormalizedRow[]) {
+  const usageArtifacts = aggregateRows(new UsageAggregator(), rows);
   return {
-    processedData: rows,
-    userData: usageArtifacts.users,
+    months: [...new Set(rows.map(row => row.day.slice(0, 7)))],
     usageArtifacts,
-    quotaArtifacts: buildQuotaArtifactsFromProcessedData(rows),
-    featureUsageArtifacts: buildFeatureUsageArtifactsFromProcessedData(rows),
+    quotaArtifacts: aggregateRows(new QuotaAggregator(), rows),
+    featureUsageArtifacts: aggregateRows(new FeatureUsageAggregator(), rows),
   };
 }
 
+const makeQuotaRow = (partial: Partial<NormalizedRow>) => makeNormalizedRow({ unitType: 'ai-credits', quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA, ...partial });
+
 const rows = [
-  makeProcessedData({ user: 'test-user-power', creditsUsed: PRICING.BUSINESS_AI_CREDIT_QUOTA, model: 'Code Review' }),
-  makeProcessedData({ user: 'test-user-average', creditsUsed: PRICING.BUSINESS_AI_CREDIT_QUOTA * 0.6 }),
-  makeProcessedData({ user: 'test-user-low', creditsUsed: PRICING.BUSINESS_AI_CREDIT_QUOTA * 0.1 }),
-  makeProcessedData({ user: 'test-user-unknown', creditsUsed: 10, quotaValue: 'unknown' }),
+  makeQuotaRow({ user: 'test-user-power', quantity: PRICING.BUSINESS_AI_CREDIT_QUOTA, model: 'Code Review' }),
+  makeQuotaRow({ user: 'test-user-average', quantity: PRICING.BUSINESS_AI_CREDIT_QUOTA * 0.6 }),
+  makeQuotaRow({ user: 'test-user-low', quantity: PRICING.BUSINESS_AI_CREDIT_QUOTA * 0.1 }),
+  makeQuotaRow({ user: 'test-user-unknown', quantity: 10, quotaValue: 'unknown' }),
 ];
 
 describe('InsightsOverview', () => {
@@ -59,7 +58,7 @@ describe('InsightsOverview', () => {
 
   it('searches the full group, paginates results, and handles no matches', async () => {
     const user = userEvent.setup();
-    const manyRows = Array.from({ length: 55 }, (_, index) => makeProcessedData({ user: `test-user-${index}`, creditsUsed: index }));
+    const manyRows = Array.from({ length: 55 }, (_, index) => makeQuotaRow({ user: `test-user-${index}`, quantity: index }));
     render(<InsightsOverview {...propsFor(manyRows)} />);
     await user.click(screen.getByRole('button', { name: /Low adoption.*Explore/ }));
     const usersTable = within(screen.getByRole('table'));
@@ -88,10 +87,10 @@ describe('InsightsOverview', () => {
 
   it('retains unattributed feature credits without counting them as users', () => {
     const props = propsFor([
-      makeProcessedData({ user: 'test-user-one', model: 'Code Review', creditsUsed: 20 }),
-      makeProcessedData({ user: '', model: 'Code Review', creditsUsed: 30, isUnattributedUsage: true, usageBucket: 'unattributed_ai_credit' }),
+      makeQuotaRow({ user: 'test-user-one', model: 'Code Review', quantity: 20 }),
+      makeQuotaRow({ user: '', model: 'Code Review', quantity: 30, isUnattributedUsage: true, usageBucket: 'unattributed_ai_credit' }),
     ]);
-    render(<InsightsOverview {...props} processedData={[]} />);
+    render(<InsightsOverview {...props} />);
     expect(screen.getByRole('img', { name: 'Code Review: 1 of 1 users' })).toBeInTheDocument();
     expect(screen.getByText('50.00 AI Credits')).toBeInTheDocument();
     expect(screen.getByText('20.0 credits / active user')).toBeInTheDocument();
@@ -109,7 +108,7 @@ describe('InsightsOverview', () => {
 
   it('requires one billing month and updates the selected group after a period change', async () => {
     const user = userEvent.setup();
-    const laterRow = makeProcessedData({ user: 'test-user-later', creditsUsed: 10, timestamp: new Date('2025-07-01T00:00:00Z') });
+    const laterRow = makeQuotaRow({ user: 'test-user-later', quantity: 10, day: '2025-07-01' });
     const { rerender } = render(<InsightsOverview {...propsFor([...rows, laterRow])} />);
     expect(screen.getByText(/Select one billing month/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Low adoption/ })).not.toBeInTheDocument();
@@ -121,10 +120,4 @@ describe('InsightsOverview', () => {
     expect(screen.getByText('test-user-later')).toBeInTheDocument();
   });
 
-  it('retains the row-based fallback when optional usage artifacts are absent', () => {
-    const props = propsFor(rows);
-    render(<InsightsOverview userData={props.userData} processedData={rows} featureUsageArtifacts={props.featureUsageArtifacts} />);
-    expect(screen.getByRole('button', { name: /Power users.*1 \/ 4 users/ })).toBeInTheDocument();
-    expect(screen.getByText(/1 user has an unknown quota/)).toBeInTheDocument();
-  });
 });

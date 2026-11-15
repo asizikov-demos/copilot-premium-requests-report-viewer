@@ -4,13 +4,9 @@ import React, { useMemo, useState } from 'react';
 import { ChevronRightIcon } from '@primer/octicons-react';
 import { Link } from '@primer/react';
 
-import type { ProcessedData } from '@/types/csv';
-import type { BillingGroupTotals } from '@/utils/ingestion';
+import { buildBillingGroupRows, type BillingGroupTotals, type BillingPageGroup } from '@/utils/ingestion';
 import { formatCurrency, formatDecimalQuantity } from '@/utils/formatters';
 import {
-  accumulateProductCost,
-  createEmptyProductCostMap,
-  getPopulatedProductCosts,
   ProductCost,
 } from '@/utils/productCosts';
 
@@ -24,73 +20,20 @@ export interface BillingGroupRow {
   products: ProductCost[];
 }
 
-export interface BillingGroupEntry {
-  credits: number;
-  productBuckets: ReturnType<typeof createEmptyProductCostMap>;
-  users?: Set<string>;
-}
-
-interface UseBillingGroupRowsBaseOptions {
-  sourceRows: ProcessedData[];
-  getGroupName: (row: ProcessedData) => string;
-  getTotals: (name: string) => BillingGroupTotals | undefined;
-  updateEntry?: (entry: BillingGroupEntry, row: ProcessedData) => void;
-}
-
-interface UseBillingGroupRowsWithExtrasOptions<TExtra extends object> extends UseBillingGroupRowsBaseOptions {
-  getExtraFields: (entry: BillingGroupEntry) => TExtra;
-}
-
-export function useBillingGroupRows(options: UseBillingGroupRowsBaseOptions): BillingGroupRow[];
-export function useBillingGroupRows<TExtra extends object>(options: UseBillingGroupRowsWithExtrasOptions<TExtra>): Array<BillingGroupRow & TExtra>;
-export function useBillingGroupRows<TExtra extends object>(
-  options: UseBillingGroupRowsBaseOptions | UseBillingGroupRowsWithExtrasOptions<TExtra>
-): Array<BillingGroupRow | (BillingGroupRow & TExtra)> {
-  const {
-    sourceRows,
-    getGroupName,
-    getTotals,
-    updateEntry,
-  } = options;
-  const getExtraFields = 'getExtraFields' in options ? options.getExtraFields : undefined;
-
-  return useMemo(() => {
-    const map = new Map<string, BillingGroupEntry>();
-
-    for (const row of sourceRows) {
-      const groupName = getGroupName(row);
-      let entry = map.get(groupName);
-      if (!entry) {
-        entry = {
-          credits: 0,
-          productBuckets: createEmptyProductCostMap(),
-        };
-        map.set(groupName, entry);
-      }
-
-      updateEntry?.(entry, row);
-      entry.credits += row.creditsUsed;
-      accumulateProductCost(entry.productBuckets, row);
-    }
-
-    return Array.from(map.entries())
-      .map(([name, data]) => {
-        const totals = getTotals(name);
-
-        const baseRow: BillingGroupRow = {
-          name,
-          credits: data.credits,
-          gross: totals?.gross ?? 0,
-          discount: totals?.discount ?? 0,
-          net: totals?.net ?? 0,
-          aicGrossAmount: totals?.aicGrossAmount ?? 0,
-          products: getPopulatedProductCosts(data.productBuckets),
-        };
-
-        return getExtraFields ? { ...baseRow, ...getExtraFields(data) } : baseRow;
-      })
-      .sort((a, b) => b.net - a.net);
-  }, [sourceRows, getGroupName, getTotals, updateEntry, getExtraFields]);
+export function useBillingGroupRows(
+  groups: Map<string, BillingPageGroup>,
+  billingTotals: Map<string, BillingGroupTotals> | undefined,
+): Array<BillingGroupRow & { users: number }> {
+  return useMemo(() => buildBillingGroupRows(groups).map(row => {
+    const totals = billingTotals?.get(row.name);
+    return {
+      ...row,
+      gross: totals?.gross ?? 0,
+      discount: totals?.discount ?? 0,
+      net: totals?.net ?? 0,
+      aicGrossAmount: totals?.aicGrossAmount ?? 0,
+    };
+  }).sort((a, b) => b.net - a.net), [groups, billingTotals]);
 }
 
 interface BillingGroupExtraColumn<T extends BillingGroupRow> {
