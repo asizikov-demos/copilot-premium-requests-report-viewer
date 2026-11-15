@@ -5,9 +5,7 @@ import { render, screen } from '@testing-library/react';
 import type { ContextType, ReactElement } from 'react';
 import ts from 'typescript';
 
-import { BillingGroupDetailsView } from '@/components/BillingGroupDetailsView';
-import { UserConsumptionMetrics } from '@/components/UserConsumptionMetrics';
-import { UserDetailsView } from '@/components/UserDetailsView';
+import { BillingGroupDetailsView, UserConsumptionMetrics, UserDetailsView } from '../helpers/detailFixtures';
 import { CodingAgentUsageChart } from '@/components/charts/CodingAgentUsageChart';
 import { DailyConsumptionChart } from '@/components/charts/DailyConsumptionChart';
 import { ModelDailyStackedChart } from '@/components/charts/ModelDailyStackedChart';

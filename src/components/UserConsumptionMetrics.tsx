@@ -4,9 +4,8 @@ import { useMemo, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 import { borderColor, fgColor } from '@/constants/primerTokens';
-import type { ProcessedData } from '@/types/csv';
 import type { TokenCounts } from '@/types/tokens';
-import { buildUserConsumption } from '@/utils/analytics/userConsumption';
+import type { UserConsumption } from '@/types/consumption';
 import { buildBillingMonthDates } from '@/utils/dateKeys';
 
 import { chartTooltipContentStyle, chartTooltipLabelStyle, utcDateTickFormatter } from './charts/chartTooltipStyles';
@@ -17,13 +16,11 @@ function formatCredits(value: number | undefined): string {
   return value === undefined ? 'N/A' : value.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 
-export function UserConsumptionMetrics({ rows, periodRows = rows, tokensAvailable = true }: {
-  rows: ProcessedData[];
-  periodRows?: ProcessedData[];
-  tokensAvailable?: boolean;
+export function UserConsumptionMetrics({ metrics, months }: {
+  metrics: UserConsumption;
+  months: string[];
 }) {
   const [selectedModel, setSelectedModel] = useState('');
-  const metrics = useMemo(() => buildUserConsumption(rows, tokensAvailable), [rows, tokensAvailable]);
   const models = useMemo(() => [...metrics.creditsByModel.keys()].sort(), [metrics]);
   const effectiveModel = models.includes(selectedModel) ? selectedModel : '';
   const hasTokens = metrics.tokens?.hasAnyTokenData === true;
@@ -33,7 +30,7 @@ export function UserConsumptionMetrics({ rows, periodRows = rows, tokensAvailabl
       (right.quantity ?? -1) - (left.quantity ?? -1) || leftName.localeCompare(rightName)), [metrics]);
   const trend = useMemo(() => {
     if (!metrics.tokens?.hasAnyTokenData) return [];
-    return buildBillingMonthDates(periodRows.map(row => row.monthKey))
+    return buildBillingMonthDates(months)
       .map(date => {
         const day = metrics.tokens?.byDay.get(date);
         const totals = effectiveModel ? day?.byModel.get(effectiveModel) : day?.totals;
@@ -47,7 +44,7 @@ export function UserConsumptionMetrics({ rows, periodRows = rows, tokensAvailabl
         }
         return point;
       });
-  }, [metrics, effectiveModel, periodRows]);
+  }, [metrics, effectiveModel, months]);
 
   if (!hasTokens && !hasCredits) return null;
 

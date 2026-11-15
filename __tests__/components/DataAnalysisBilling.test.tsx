@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import Papa from 'papaparse';
 
 import { DataAnalysis } from '@/components/DataAnalysis';
 import { PRICING } from '@/constants/pricing';
@@ -17,6 +18,7 @@ import {
 import type { AggregatorContext, BillingArtifacts, IngestionResult, NormalizedRow, UsageArtifacts } from '@/utils/ingestion/types';
 
 import { newFormatRows } from '../fixtures/newFormatCSVData';
+import { createStreamingFile, MockFileReader } from '../helpers/streamingFile';
 
 jest.mock('@/components/charts/DailyConsumptionChart', () => ({
   DailyConsumptionChart: ({ data }: { data: DailyConsumptionDatum[] }) => (
@@ -26,6 +28,7 @@ jest.mock('@/components/charts/DailyConsumptionChart', () => ({
 
 // Mock ResizeObserver for Recharts ResponsiveContainer in JSDOM
 beforeAll(() => {
+  globalThis.FileReader = MockFileReader as unknown as typeof FileReader;
   global.ResizeObserver = class {
     observe() {}
     unobserve() {}
@@ -186,8 +189,8 @@ describe('DataAnalysis billing summary', () => {
   it.each([
     { view: 'Cost Centers', groupName: 'test-cost-center-one' },
     { view: 'Organizations', groupName: 'test-org-one' },
-  ])('scopes $view detail USD consumption to the group on the full selected report period', ({ view, groupName }) => {
-    const ingestionResult = createIngestionResultFromRawRows([
+  ])('scopes $view detail USD consumption to the group on the full selected report period', async ({ view, groupName }) => {
+    const sourceRows: CSVData[] = [
       {
         date: '2026-06-30T23:59:59Z',
         username: 'test-user-one',
@@ -212,14 +215,16 @@ describe('DataAnalysis billing summary', () => {
         discount_amount: '100',
         net_amount: '50',
       },
-    ]);
-    render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
+    ];
+    const ingestionResult = createIngestionResultFromRawRows(sourceRows);
+    render(<DataAnalysis ingestionResult={ingestionResult} sourceFile={createStreamingFile(Papa.unparse(sourceRows))}
+      filename="billing-export.csv" onReset={() => {}} />);
     fireEvent.click(screen.getAllByRole('button', { name: view })[0]);
     const groupRow = screen.getByRole('button', { name: new RegExp(groupName) }).closest('tr');
     expect(groupRow).not.toBeNull();
     fireEvent.click(within(groupRow!).getByRole('button', { name: 'View details' }));
 
-    const consumption = screen.getByRole('region', { name: 'Daily Consumption (USD)' });
+    const consumption = await screen.findByRole('region', { name: 'Daily Consumption (USD)' });
     const productTable = screen.getByRole('table', { name: 'Spend per product' });
     expect(consumption.compareDocumentPosition(productTable) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(JSON.parse(within(consumption).getByTestId('daily-consumption-chart').textContent ?? '')).toEqual([
@@ -241,13 +246,14 @@ describe('DataAnalysis billing summary', () => {
       .find((checkbox) => checkbox.value === '2026-06');
     expect(monthCheckbox).toBeDefined();
     fireEvent.click(monthCheckbox!);
+    await screen.findByRole('region', { name: 'Daily Consumption (USD)' });
     const chartData = JSON.parse(screen.getByTestId('daily-consumption-chart').textContent ?? '');
     expect(chartData).toHaveLength(30);
     expect(chartData[0]).toEqual({ date: '2026-06-01', included: 0, additional: 0 });
     expect(chartData[29]).toEqual({ date: '2026-06-30', included: 1.25, additional: 0.75 });
   });
 
-  it('shows 50-user pages in organization details', () => {
+  it('shows 50-user pages in organization details', async () => {
     const rows = Array.from({ length: 51 }, (_, index) => (
       makeBillingRow({
         username: `test-user-${index.toString().padStart(3, '0')}`,
@@ -257,14 +263,15 @@ describe('DataAnalysis billing summary', () => {
         quantity: '1',
       })
     ));
-    render(<DataAnalysis ingestionResult={createIngestionResultFromRawRows(rows)} filename="organization.csv" onReset={jest.fn()} />);
+    render(<DataAnalysis ingestionResult={createIngestionResultFromRawRows(rows)}
+      sourceFile={createStreamingFile(Papa.unparse(rows))} filename="organization.csv" onReset={jest.fn()} />);
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Organizations' })[0]);
     const organizationRow = screen.getByRole('button', { name: 'test-org-one' }).closest('tr');
     expect(organizationRow).not.toBeNull();
     fireEvent.click(within(organizationRow!).getByRole('button', { name: 'View details' }));
 
-    const usersTable = within(screen.getByRole('table', { name: 'Users' }));
+    const usersTable = within(await screen.findByRole('table', { name: 'Users' }));
     expect(usersTable.getAllByRole('row')).toHaveLength(51);
     expect(usersTable.getByText('test-user-000')).toBeInTheDocument();
     expect(usersTable.queryByText('test-user-050')).not.toBeInTheDocument();

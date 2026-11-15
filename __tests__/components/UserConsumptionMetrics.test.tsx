@@ -2,7 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { Bar } from 'recharts';
 
-import { UserConsumptionMetrics } from '@/components/UserConsumptionMetrics';
+import { UserConsumptionMetrics } from '../helpers/detailFixtures';
 import { buildProcessedDataFromRawRows } from '@/utils/ingestion/adapters';
 
 jest.mock('recharts', () => ({

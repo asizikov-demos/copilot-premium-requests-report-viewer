@@ -1,4 +1,4 @@
-import { buildUserHeaderSummary } from '@/utils/userHeaderSummary';
+import { buildUserHeaderSummary } from '../helpers/detailFixtures';
 
 import { makeProcessedData } from '../helpers/testUtils';
 

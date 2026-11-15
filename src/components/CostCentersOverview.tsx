@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 import { BillingGroupDetailsView } from '@/components/BillingGroupDetailsView';
 import { BillingGroupTable, createDetailsColumn, useBillingGroupRows } from '@/components/BillingGroupTable';
@@ -22,13 +22,6 @@ export function CostCentersOverview() {
 
   const hasCosts = costCenterRows.some(r => r.gross > 0 || r.net > 0);
 
-  const selectedCostCenterRows = useMemo(
-    () => (selectedCostCenter === null
-      ? []
-      : billingRows.filter((row) => (row.costCenter || UNASSIGNED_BILLING_GROUP) === selectedCostCenter)),
-    [billingRows, selectedCostCenter]
-  );
-
   if (selectedCostCenter !== null) {
     return (
       <BillingGroupDetailsView
@@ -36,8 +29,7 @@ export function CostCentersOverview() {
         groupLabel="cost center"
         groupsLabel="cost centers"
         detailIdPrefix="cost-center-daily-details"
-        rows={selectedCostCenterRows}
-        periodRows={aggregateProcessedData}
+        groupKind="costCenter"
         quantityColumnLabel={quantityColumnLabel}
         costLabels={costLabels}
         hasAicGross={false}

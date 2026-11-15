@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 import { BillingGroupDetailsView } from '@/components/BillingGroupDetailsView';
 import { BillingGroupEntry, BillingGroupRow, BillingGroupTable, createDetailsColumn, useBillingGroupRows } from '@/components/BillingGroupTable';
@@ -33,13 +33,6 @@ export function OrganizationsOverview() {
 
   const hasCosts = orgRows.some(r => r.gross > 0 || r.net > 0);
 
-  const selectedOrganizationRows = useMemo(
-    () => (selectedOrganization === null
-      ? []
-      : billingRows.filter((row) => (row.organization || UNASSIGNED_BILLING_GROUP) === selectedOrganization)),
-    [billingRows, selectedOrganization]
-  );
-
   if (selectedOrganization !== null) {
     return (
       <BillingGroupDetailsView
@@ -47,8 +40,7 @@ export function OrganizationsOverview() {
         groupLabel="organization"
         groupsLabel="organizations"
         detailIdPrefix="organization-daily-details"
-        rows={selectedOrganizationRows}
-        periodRows={aggregateProcessedData}
+        groupKind="organization"
         quantityColumnLabel={quantityColumnLabel}
         costLabels={costLabels}
         hasAicGross={false}

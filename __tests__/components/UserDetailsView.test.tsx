@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
-import { UserDetailsView } from '@/components/UserDetailsView';
+import { UserDetailsView } from '../helpers/detailFixtures';
 import { PRICING } from '@/constants/pricing';
 import { AnalysisContext } from '@/context/AnalysisContext';
 import type { ProcessedData } from '@/types/csv';
@@ -732,7 +732,7 @@ describe('UserDetailsView', () => {
     expect(screen.queryByTestId('reference-line')).not.toBeInTheDocument();
   });
 
-  it('does not rebuild daily model chart data when the artifacts are unavailable', () => {
+  it('builds daily model chart data from detail aggregates when overview artifacts are unavailable', () => {
     const processedData = [makeProcessedData({
       timestamp: new Date('2025-06-30T23:59:59Z'),
       model: 'test-model-one',
@@ -762,6 +762,6 @@ describe('UserDetailsView', () => {
       </AnalysisContext.Provider>
     );
 
-    expect(screen.queryByTestId('composed-chart')).not.toBeInTheDocument();
+    expect(screen.getByTestId('composed-chart')).toHaveAttribute('data-chart', expect.stringContaining('"test-model-one":2'));
   });
 });

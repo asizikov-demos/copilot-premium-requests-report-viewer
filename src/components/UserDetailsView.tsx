@@ -1,8 +1,11 @@
 'use client';
 
 import React, { useContext, useMemo } from 'react';
+import { Banner } from '@primer/react';
 
 import { UserDetailsHeader } from '@/components/UserDetailsHeader';
+import { DetailStreamStatus } from '@/components/DetailStreamStatus';
+import { useDetailStream, type DetailResult } from '@/hooks/useDetailStream';
 import { UserConsumptionMetrics } from '@/components/UserConsumptionMetrics';
 import { TOKEN_COLUMNS } from '@/components/TokenValue';
 import { DailyConsumptionChart } from '@/components/charts/DailyConsumptionChart';
@@ -10,24 +13,16 @@ import { PRICING } from '@/constants/pricing';
 import { AnalysisContext } from '@/context/AnalysisContext';
 import { UserDailyStackedChart } from '@/components/charts/UserDailyStackedChart';
 import { utcDateLabelFormatter } from '@/components/charts/chartTooltipStyles';
-import type { ProcessedData } from '@/types/csv';
 import type { UserSummary } from '@/utils/analytics';
 import { getQuotaTier, isKnownQuotaValue } from '@/utils/analytics/quota';
 import {
-  buildUserDailyModelDataFromArtifacts,
-  buildTokenArtifactsFromProcessedData,
   getUserQuota,
 } from '@/utils/ingestion';
 import { generateModelColors } from '@/utils/modelColors';
 import { getBillingCostLabels } from '@/utils/billingLabels';
-import { aggregateDailyConsumption } from '@/utils/dailyConsumption';
 import { formatCurrency } from '@/utils/formatters';
-import { aggregateProductCosts } from '@/utils/productCosts';
-import { buildUserHeaderSummary } from '@/utils/userHeaderSummary';
-import {
-  getUserData,
-  getUserOrgMetadata,
-} from '@/utils/userCalculations';
+import { summarizeUserHeader } from '@/utils/userHeaderSummary';
+import { selectDetailTimeline } from '@/utils/ingestion/DetailAggregator';
 
 interface TooltipEntry {
   dataKey: string;
@@ -42,51 +37,13 @@ interface TooltipProps {
   valueUnitLabel?: string;
 }
 
-interface UserCostCenterCost {
-  name: string;
-  quantity: number;
-  gross: number;
-  discount: number;
-  net: number;
-  aicGrossAmount: number;
-}
-
-interface CacheSuccessRate {
-  percent: number;
-  reportedRows: number;
-  totalRows: number;
-}
-
 const TOKEN_BREAKDOWN_ORDER = ['inputTokens', 'cacheReadTokens', 'cacheWriteTokens', 'outputTokens'];
 const TOKEN_BREAKDOWN_COLUMNS = [...TOKEN_COLUMNS].sort(
   (left, right) => TOKEN_BREAKDOWN_ORDER.indexOf(left.field) - TOKEN_BREAKDOWN_ORDER.indexOf(right.field)
 );
 
-function getCacheSuccessRate(rows: ProcessedData[]): CacheSuccessRate | undefined {
-  const reportedRows = rows.filter(
-    row =>
-      row.inputTokens !== undefined &&
-      row.cacheReadTokens !== undefined &&
-      row.cacheWriteTokens !== undefined
-  );
-  if (reportedRows.length === 0) return undefined;
-
-  const inputTokens = reportedRows.reduce((total, row) => total + (row.inputTokens ?? 0), 0);
-  const cacheReadTokens = reportedRows.reduce((total, row) => total + (row.cacheReadTokens ?? 0), 0);
-  const cacheWriteTokens = reportedRows.reduce((total, row) => total + (row.cacheWriteTokens ?? 0), 0);
-  const totalTokens = inputTokens + cacheReadTokens + cacheWriteTokens;
-  if (totalTokens === 0) return undefined;
-
-  return {
-    percent: (cacheReadTokens / totalTokens) * 100,
-    reportedRows: reportedRows.length,
-    totalRows: rows.length,
-  };
-}
-
 export interface UserDetailsViewProps {
   user: string;
-  processedData: ProcessedData[];
   userQuotaValue: number | 'unknown';
   userAggregate?: UserSummary | null;
   onBack: () => void;
@@ -128,42 +85,36 @@ function UserDailyUsageTooltip({ active, payload, label, valueUnitLabel = 'AI Cr
 }
 
 export function UserDetailsView({
+  ...props
+}: UserDetailsViewProps) {
+  const { data, error, progress, months } = useDetailStream({ user: props.user });
+  if (!data) return <DetailStreamStatus error={error} progress={progress} onBack={props.onBack} />;
+  return <UserDetailsContent {...props} data={data} months={months} />;
+}
+
+export function UserDetailsContent({
   user,
-  processedData,
   userQuotaValue,
   userAggregate,
   onBack,
-}: UserDetailsViewProps) {
+  data,
+  months,
+}: UserDetailsViewProps & { data: DetailResult; months: string[] }) {
   const analysisCtx = useContext(AnalysisContext);
-
+  const { details, tokens } = data;
   const usageArtifacts = analysisCtx?.usageArtifacts;
-  const dailyBucketsArtifacts = analysisCtx?.dailyBucketsArtifacts;
   const quotaArtifacts = analysisCtx?.quotaArtifacts;
 
   const artifactUserQuota = quotaArtifacts ? getUserQuota(quotaArtifacts, user) : undefined;
   const effectiveUserQuotaValue = artifactUserQuota !== undefined ? artifactUserQuota : userQuotaValue;
 
-  const userData = useMemo(() => getUserData(processedData, user), [processedData, user]);
-  const hasBillingData = useMemo(
-    () => userData.some(
-      (row) =>
-        row.grossAmount !== undefined ||
-        row.netAmount !== undefined ||
-        row.discountAmount !== undefined ||
-        row.aicGrossAmount !== undefined
-    ),
-    [userData]
-  );
+  const hasBillingData = details.hasBillingData;
   const userQuantityColumnLabel = 'AI Credits';
   const chartValueUnitLabel = 'AI Credits';
   const userCostLabels = useMemo(() => getBillingCostLabels(), []);
 
-  const userDailyData = useMemo(() => {
-    if (usageArtifacts && dailyBucketsArtifacts?.dailyUserModelTotals) {
-      return buildUserDailyModelDataFromArtifacts(dailyBucketsArtifacts, usageArtifacts, user);
-    }
-    return [];
-  }, [user, usageArtifacts, dailyBucketsArtifacts]);
+  const { userDailyData, dailyConsumption } = useMemo(
+    () => selectDetailTimeline(details, months), [details, months]);
 
   const effectiveUserAggregate = useMemo(
     () => userAggregate === undefined
@@ -179,10 +130,10 @@ export function UserDetailsView({
       };
     }
 
-    return getUserOrgMetadata(processedData, user);
-  }, [effectiveUserAggregate, processedData, user]);
+    return { organization: undefined, costCenter: undefined };
+  }, [effectiveUserAggregate]);
 
-  const userModels = useMemo(() => Array.from(new Set(userData.map((entry) => entry.model))).sort(), [userData]);
+  const userModels = details.models;
   const modelColors = useMemo(() => generateModelColors(userModels), [userModels]);
 
   const quotaValue = isKnownQuotaValue(effectiveUserQuotaValue)
@@ -209,138 +160,16 @@ export function UserDetailsView({
     [userModels, modelUsageTotals]
   );
 
-  type DailyModelRow = {
-    date: string;
-    model: string;
-    costCenter?: string;
-    credits: number;
-    gross: number;
-    discount: number;
-    net: number;
-    aicGrossAmount: number;
-    isFirstInDate: boolean;
-    rowSpan: number;
-    cacheSuccessRate?: CacheSuccessRate;
-  };
-
   const showAicGross = false;
-  const showTokens = analysisCtx?.tokenArtifacts !== null &&
-    userData.some(row => TOKEN_COLUMNS.some(({ field }) => row[field] !== undefined));
-  const userTokenTotals = useMemo(
-    () => showTokens ? buildTokenArtifactsFromProcessedData(userData).totals : null,
-    [showTokens, userData]
-  );
+  const showTokens = analysisCtx?.tokenArtifacts !== null && tokens.hasAnyTokenData;
+  const userTokenTotals = showTokens ? tokens.totals : null;
   const totalReportedTokens = userTokenTotals
     ? TOKEN_BREAKDOWN_COLUMNS.reduce((total, { field }) => total + (userTokenTotals[field] ?? 0), 0)
     : 0;
-  const hasUserCostCenters = userData.some(row => Boolean(row.costCenter));
-
-  const dailyBreakdownRows = useMemo((): DailyModelRow[] => {
-    if (!hasBillingData && !showTokens) return [];
-
-    const dailyModelRows = new Map<string, ProcessedData[]>();
-    for (const row of userData) {
-      const key = `${row.dateKey}||${row.model}`;
-      const rows = dailyModelRows.get(key) ?? [];
-      rows.push(row);
-      dailyModelRows.set(key, rows);
-    }
-
-    const cacheSuccessRates = new Map(
-      Array.from(dailyModelRows, ([key, rows]) => [key, getCacheSuccessRate(rows)] as const)
-    );
-
-    // Aggregate by date + model + cost center so cost-center changes remain visible.
-    type Key = string;
-    const agg = new Map<Key, { date: string; model: string; costCenter?: string; credits: number; gross: number; discount: number; net: number; aicGrossAmount: number }>();
-    for (const row of userData) {
-      const key = `${row.dateKey}||${row.model}||${row.costCenter ?? ''}`;
-      const quantity = row.creditsUsed;
-      const existing = agg.get(key);
-      if (existing) {
-        existing.credits += quantity;
-        existing.gross += row.grossAmount ?? 0;
-        existing.discount += row.discountAmount ?? 0;
-        existing.net += row.netAmount ?? 0;
-        existing.aicGrossAmount += row.aicGrossAmount ?? 0;
-      } else {
-        agg.set(key, {
-          date: row.dateKey,
-          model: row.model,
-          costCenter: row.costCenter,
-          credits: quantity,
-          gross: row.grossAmount ?? 0,
-          discount: row.discountAmount ?? 0,
-          net: row.netAmount ?? 0,
-          aicGrossAmount: row.aicGrossAmount ?? 0,
-        });
-      }
-    }
-
-    // Sort by date asc, then model
-    const sorted = Array.from(agg.values()).sort((a, b) => {
-      if (a.date !== b.date) return a.date.localeCompare(b.date);
-      if (a.model !== b.model) return a.model.localeCompare(b.model);
-      return (a.costCenter ?? '').localeCompare(b.costCenter ?? '');
-    });
-
-    // Count rows per date for rowSpan
-    const dateSpan = new Map<string, number>();
-    for (const r of sorted) dateSpan.set(r.date, (dateSpan.get(r.date) ?? 0) + 1);
-
-    const seenDates = new Set<string>();
-    return sorted.map((r) => {
-      const isFirst = !seenDates.has(r.date);
-      if (isFirst) seenDates.add(r.date);
-      return {
-        ...r,
-        cacheSuccessRate: cacheSuccessRates.get(`${r.date}||${r.model}`),
-        isFirstInDate: isFirst,
-        rowSpan: dateSpan.get(r.date) ?? 1,
-      };
-    });
-  }, [hasBillingData, showTokens, userData]);
-
-  const productCosts = useMemo(() => {
-    if (!hasBillingData) return [];
-    return aggregateProductCosts(userData);
-  }, [hasBillingData, userData]);
-
-  const dailyConsumption = useMemo(
-    () => aggregateDailyConsumption(userData, analysisCtx?.aggregateProcessedData ?? processedData),
-    [userData, analysisCtx?.aggregateProcessedData, processedData]
-  );
-
-  const costCenterCosts = useMemo((): UserCostCenterCost[] => {
-    if (!hasBillingData) return [];
-
-    const totals = new Map<string, UserCostCenterCost>();
-
-    for (const row of userData) {
-      if (!row.costCenter) {
-        continue;
-      }
-
-      const entry = totals.get(row.costCenter) ?? {
-        name: row.costCenter,
-        quantity: 0,
-        gross: 0,
-        discount: 0,
-        net: 0,
-        aicGrossAmount: 0,
-      };
-      entry.quantity += row.creditsUsed;
-      entry.gross += row.grossAmount ?? 0;
-      entry.discount += row.discountAmount ?? 0;
-      entry.net += row.netAmount ?? 0;
-      entry.aicGrossAmount += row.aicGrossAmount ?? 0;
-      totals.set(row.costCenter, entry);
-    }
-
-    return Array.from(totals.values()).sort(
-      (left, right) => right.net - left.net || left.name.localeCompare(right.name)
-    );
-  }, [hasBillingData, userData]);
+  const hasUserCostCenters = details.header.costCenters.length > 0;
+  const dailyBreakdownRows = hasBillingData || showTokens ? details.dailyModels : [];
+  const productCosts = hasBillingData ? details.productCosts : [];
+  const costCenterCosts = hasBillingData ? details.costCenterCosts : [];
 
   const planInfo = {
     business: { name: 'Copilot Business', monthlyQuota: PRICING.BUSINESS_AI_CREDIT_QUOTA },
@@ -364,14 +193,14 @@ export function UserDetailsView({
 
   const headerSummary = useMemo(
     () => {
-      const summary = buildUserHeaderSummary(userData, quotaValue, hasBillingData);
+      const summary = summarizeUserHeader(details.header, quotaValue, hasBillingData);
       return {
         ...summary,
         organizations: summary.organizations.length > 0 ? summary.organizations : organization ? [organization] : [],
         costCenters: summary.costCenters.length > 0 ? summary.costCenters : costCenter ? [costCenter] : [],
       };
     },
-    [userData, quotaValue, hasBillingData, organization, costCenter]
+    [details.header, quotaValue, hasBillingData, organization, costCenter]
   );
 
   const handleCopyUser = async () => {
@@ -384,6 +213,7 @@ export function UserDetailsView({
 
   return (
     <div className="space-y-6">
+      {data.warnings?.length ? <Banner variant="warning" title="Report warnings" description={data.warnings.join('; ')} /> : null}
       <UserDetailsHeader
         user={user}
         planName={
@@ -595,9 +425,8 @@ export function UserDetailsView({
 
       <UserConsumptionMetrics
         key={user}
-        rows={userData}
-        periodRows={analysisCtx?.aggregateProcessedData ?? processedData}
-        tokensAvailable={analysisCtx?.tokenArtifacts !== null}
+        metrics={{ ...details.consumption, tokens: analysisCtx?.tokenArtifacts !== null ? tokens : undefined }}
+        months={months}
       />
 
       {/* Daily Model Usage Breakdown table — standalone card */}
