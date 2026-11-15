@@ -90,7 +90,7 @@ Pay special attention to billing date handling, pricing/quota constants, optiona
    - user/model/cost aggregation loops
    - overage and pricing calculations
    - table/card/chart/filter UI primitives
-   - test artifact and processed-data builders
+   - test normalized-row fixtures and artifact builders
 5. Search existing open issues with the `[duplication]` title prefix before creating a new issue. Also inspect recently closed `[duplication]` issues and closing comments, and do not recreate rejected patterns or duplicate root problems.
 6. Before creating any issue, red-team the finding as a likely false positive:
    - Trace the proposed helper, adapter, or abstraction through the fields and behavior actually consumed downstream. Structural type compatibility, wider projections, or extra fields alone are not evidence of behavior change.
@@ -104,7 +104,7 @@ A finding group is atomic when it has one root problem and one coherent implemen
 
 Good atomic groups:
 
-- "Centralize CSV row to ProcessedData conversion"
+- "Reuse normalized CSV ingestion and month-keyed aggregate selectors"
 - "Replace inline coding-agent model checks with productClassification helpers"
 - "Extract shared date/month/week bucketing helpers"
 
