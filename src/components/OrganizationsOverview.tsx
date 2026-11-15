@@ -3,33 +3,21 @@
 import { useState } from 'react';
 
 import { BillingGroupDetailsView } from '@/components/BillingGroupDetailsView';
-import { BillingGroupEntry, BillingGroupRow, BillingGroupTable, createDetailsColumn, useBillingGroupRows } from '@/components/BillingGroupTable';
+import { BillingGroupRow, BillingGroupTable, createDetailsColumn, useBillingGroupRows } from '@/components/BillingGroupTable';
 import { useAnalysisContext } from '@/context/AnalysisContext';
 import { useUsageBasedBillingScope } from '@/hooks/useUsageBasedBillingScope';
-import { UNASSIGNED_BILLING_GROUP } from '@/utils/ingestion';
 
 interface OrganizationRow extends BillingGroupRow {
   users: number;
 }
 
 export function OrganizationsOverview() {
-  const { aggregateProcessedData, billingArtifacts } = useAnalysisContext();
-  const { billingRows, scopedBillingArtifacts, quantityColumnLabel, costLabels } =
-    useUsageBasedBillingScope(aggregateProcessedData, billingArtifacts);
+  const { billingPagesArtifacts, billingArtifacts } = useAnalysisContext();
+  const { scopedBillingArtifacts, quantityColumnLabel, costLabels } =
+    useUsageBasedBillingScope(billingArtifacts);
   const [selectedOrganization, setSelectedOrganization] = useState<string | null>(null);
 
-  const orgRows = useBillingGroupRows<{ users: number }>({
-    sourceRows: billingRows,
-    getGroupName: (row) => row.organization || UNASSIGNED_BILLING_GROUP,
-    getTotals: (name) => scopedBillingArtifacts?.orgTotals.get(name),
-    updateEntry: (entry: BillingGroupEntry, row) => {
-      if (!row.isUnattributedUsage) {
-        entry.users ??= new Set<string>();
-        entry.users.add(row.user);
-      }
-    },
-    getExtraFields: (entry) => ({ users: entry.users?.size ?? 0 }),
-  });
+  const orgRows = useBillingGroupRows(billingPagesArtifacts.organizations, scopedBillingArtifacts?.orgTotals);
 
   const hasCosts = orgRows.some(r => r.gross > 0 || r.net > 0);
 

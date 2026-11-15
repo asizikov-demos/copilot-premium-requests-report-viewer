@@ -1,4 +1,5 @@
 import { BillingAggregator } from './BillingAggregator';
+import { BillingPagesAggregator } from './BillingPagesAggregator';
 import { DailyBucketsAggregator } from './DailyBucketsAggregator';
 import { DetailAggregator } from './DetailAggregator';
 import { FeatureUsageAggregator } from './FeatureUsageAggregator';
@@ -15,6 +16,7 @@ const aggregatorRegistry = {
   dailyBuckets: () => new DailyBucketsAggregator(),
   featureUsage: () => new FeatureUsageAggregator(),
   billing: () => new BillingAggregator(),
+  billingPages: () => new BillingPagesAggregator(),
   tokens: () => new TokenAggregator(),
   rawData: () => new RawDataAggregator(),
 };

@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
 import { DataAnalysis } from '@/components/DataAnalysis';
-import type { IngestionResult } from '@/utils/ingestion';
+import { BillingPagesAggregator, type IngestionResult } from '@/utils/ingestion';
 
 import { makeDailyBucketsArtifacts } from '../helpers/makeArtifacts';
 
@@ -20,6 +20,7 @@ beforeAll(() => {
 function createIngestionResultWithoutRawData(): IngestionResult {
   return {
     outputs: {
+      billingPages: new BillingPagesAggregator().finalize(),
       quota: { quotaByUser: new Map(), conflicts: new Map(), distinctQuotas: new Set(), hasMixedQuotas: false, hasMixedLicenses: false },
       usage: { users: [], modelTotals: {}, userCount: 0, modelCount: 0 },
       dailyBuckets: makeDailyBucketsArtifacts(),

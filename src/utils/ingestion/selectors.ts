@@ -1,6 +1,7 @@
 import { getQuotaTier, shouldReplaceQuotaValue } from '@/utils/analytics/quota';
 
 import { BillingAccumulator } from './billingAccumulator';
+import type { BillingPagesArtifacts } from './BillingPagesAggregator';
 import { TokenAccumulator, mergeTokenBreakdown } from './TokenAccumulator';
 import { addModelCredits, UsageAccumulator } from './UsageAccumulator';
 import type {
@@ -20,6 +21,7 @@ export interface CoreArtifacts {
 }
 
 export interface MonthlyAggregates {
+  billingPages: MonthlyArtifacts<BillingPagesArtifacts>;
   usage: MonthlyArtifacts<UsageArtifacts>;
   quota: MonthlyArtifacts<QuotaArtifacts>;
   dailyBuckets: MonthlyArtifacts<DailyBucketsArtifacts>;

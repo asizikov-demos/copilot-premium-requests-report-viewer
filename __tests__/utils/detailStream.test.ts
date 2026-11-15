@@ -8,7 +8,7 @@ import type { CSVData } from '@/types/csv';
 import { aggregateDailyConsumption } from '@/utils/dailyConsumption';
 import { buildBillingMonthDates, enumerateDatesInclusive } from '@/utils/dateKeys';
 import { buildProcessedDataFromRawRows } from '@/utils/ingestion/adapters';
-import { buildDailyBucketsArtifactsFromProcessedData, buildUsageArtifactsFromProcessedData, buildUserDailyModelDataFromArtifacts } from '@/utils/ingestion/analytics';
+import { buildUserDailyModelDataFromArtifacts } from '@/utils/ingestion/analytics';
 import { selectDetailTimeline, type DetailArtifacts } from '@/utils/ingestion/DetailAggregator';
 import { streamFile } from '@/utils/ingestion/streamFile';
 import type { RowFilter, TokenArtifacts } from '@/utils/ingestion/types';
@@ -16,6 +16,7 @@ import { aggregateProductCosts } from '@/utils/productCosts';
 import { summarizeUserHeader } from '@/utils/userHeaderSummary';
 
 import { buildUserHeaderSummary } from '../helpers/detailFixtures';
+import { buildDailyBucketsArtifactsFromProcessedData, buildUsageArtifactsFromProcessedData } from '../helpers/processedArtifacts';
 import { buildUserConsumption } from '../helpers/legacyUserConsumption';
 import { createStreamingFile, MockFileReader } from '../helpers/streamingFile';
 

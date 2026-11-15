@@ -84,7 +84,6 @@ function DataAnalysisInner() {
     dailyCumulativeData,
     codingAgentAnalysis,
     codeReviewAnalysis,
-    processedData,
     aggregateProcessedData,
     baseProcessed,
     availableMonths,
@@ -95,6 +94,7 @@ function DataAnalysisInner() {
     filename,
     quotaArtifacts,
     usageArtifacts,
+    dailyBucketsArtifacts,
     featureUsageArtifacts,
     billingArtifacts
   } = useAnalysisContext();
@@ -108,8 +108,8 @@ function DataAnalysisInner() {
   }, [baseProcessed]);
 
   const aicMetricsAvailable = billingArtifacts?.hasAnyAicData === true;
-  const { billingRows, quantityColumnLabel, costLabels } =
-    useUsageBasedBillingScope(aggregateProcessedData, billingArtifacts);
+  const billingRows = aggregateProcessedData;
+  const { quantityColumnLabel, costLabels } = useUsageBasedBillingScope(billingArtifacts);
   const unitCostLabel = `1 AI Credit = ${formatCurrency(PRICING.AI_CREDIT_USD_VALUE)}`;
   const monthlyQuotaDisplay = useMemo(() => {
     if (analysis.quotaBreakdown.mixed) {
@@ -323,7 +323,6 @@ function DataAnalysisInner() {
           {view === 'users' ? (
             <UsersOverview
               userData={userData}
-              processedData={processedData}
               dailyCumulativeData={dailyCumulativeData}
               quotaArtifacts={quotaArtifacts}
               usageArtifacts={usageArtifacts}
@@ -342,9 +341,10 @@ function DataAnalysisInner() {
             />
           ) : view === 'insights' ? (
             <InsightsOverview
-              userData={userData}
-              processedData={processedData}
+              quotaArtifacts={quotaArtifacts}
+              usageArtifacts={usageArtifacts}
               featureUsageArtifacts={featureUsageArtifacts}
+              months={dailyBucketsArtifacts.months ?? []}
             />
           ) : view === 'modelTrends' ? (
             <ModelUsageTrendsOverview />

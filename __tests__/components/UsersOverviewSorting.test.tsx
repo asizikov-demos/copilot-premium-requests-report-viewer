@@ -5,14 +5,14 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { UsersOverview } from '@/components/UsersOverview';
 import { AnalysisProvider } from '@/context/AnalysisContext';
 import { PRICING } from '@/constants/pricing';
-import type { ProcessedData } from '@/types/csv';
+import { BillingAggregator, type NormalizedRow } from '@/utils/ingestion';
+import { aggregateRows } from '../helpers/aggregateRows';
 import type { UserSummary } from '@/utils/analytics';
 import type { QuotaArtifacts, UsageArtifacts } from '@/utils/ingestion';
-import { buildNormalizedRowFromProcessedData } from '@/utils/ingestion/analytics';
 import { createAggregators } from '@/utils/ingestion/registry';
 import { REPORT_AGGREGATOR_IDS } from '@/utils/ingestion/streamFile';
 
-import { makeProcessedData } from '../helpers/testUtils';
+import { makeNormalizedRow } from '../helpers/makeNormalizedRow';
 import { createStreamingFile, MockFileReader } from '../helpers/streamingFile';
 
 beforeAll(() => {
@@ -76,11 +76,11 @@ describe('UsersOverview - sorting', () => {
     const quotaArtifacts = makeQuota([
       { user: 'test-user-one', quota: PRICING.BUSINESS_AI_CREDIT_QUOTA },
     ]);
-    const processedData = [
-      makeProcessedData({ user: 'test-user-one', model: 'test-model-one',
-        timestamp: new Date('2026-06-30T00:00:00Z'), creditsUsed: 1500 }),
-      makeProcessedData({ user: 'test-user-one', model: 'test-model-one',
-        timestamp: new Date('2026-07-01T00:00:00Z'), creditsUsed: 1500 }),
+    const sourceRows = [
+      makeNormalizedRow({ user: 'test-user-one', model: 'test-model-one',
+        day: '2026-06-30T00:00:00Z', quantity: 1500 }),
+      makeNormalizedRow({ user: 'test-user-one', model: 'test-model-one',
+        day: '2026-07-01T00:00:00Z', quantity: 1500 }),
     ];
     const props = {
       userData,
@@ -92,7 +92,7 @@ describe('UsersOverview - sorting', () => {
       usageArtifacts: makeUsage(userData),
     };
 
-    const { rerender } = render(<UsersOverview {...props} processedData={processedData} />);
+    const { rerender } = render(<UsersOverview {...props} billingArtifacts={aggregateRows(new BillingAggregator(), sourceRows)} />);
     expect(screen.queryByText('1,900 quota')).not.toBeInTheDocument();
     const table = within(screen.getByRole('table', { name: 'Users' }));
     expect(table.getByRole('columnheader', { name: 'Plan' })).toBeInTheDocument();
@@ -100,7 +100,7 @@ describe('UsersOverview - sorting', () => {
     expect(table.getByText('3000.00')).toHaveClass('text-(--fgColor-default)');
     expect(table.queryByText('(+1100.0)')).not.toBeInTheDocument();
 
-    rerender(<UsersOverview {...props} processedData={[processedData[0]]} />);
+    rerender(<UsersOverview {...props} billingArtifacts={aggregateRows(new BillingAggregator(), [sourceRows[0]])} />);
     expect(screen.queryByText('1,900 quota')).not.toBeInTheDocument();
     expect(within(screen.getByRole('table', { name: 'Users' })).queryByText('(+1100.0)')).not.toBeInTheDocument();
   });
@@ -122,7 +122,7 @@ describe('UsersOverview - sorting', () => {
     render(
       <UsersOverview
         userData={userData}
-        processedData={[]}
+        billingArtifacts={aggregateRows(new BillingAggregator(), [])}
         dailyCumulativeData={[{ date: '2026-03-01T00:00:00Z', 'test-user-one': 10, 'test-user-two': 20, 'test-user-three': 30, 'test-user-four': 5 }]}
         quotaArtifacts={quotaArtifacts}
         usageArtifacts={makeUsage(userData)}
@@ -155,40 +155,40 @@ describe('UsersOverview - sorting', () => {
       { user: 'test-user-three', quota: PRICING.ENTERPRISE_AI_CREDIT_QUOTA },
     ]);
 
-    const timestamp = new Date('2026-03-01T00:00:00Z');
+    const day = '2026-03-01T00:00:00Z';
 
     render(
       <UsersOverview
         userData={userData}
-        processedData={[
-          makeProcessedData({
-            timestamp,
+        billingArtifacts={aggregateRows(new BillingAggregator(), [
+          makeNormalizedRow({
+            day,
             user: 'test-user-one',
             model: 'Coding Agent model',
-            creditsUsed: 10,
+            quantity: 10,
             quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
             grossAmount: 0.09,
             aicGrossAmount: 0.09,
           }),
-          makeProcessedData({
-            timestamp,
+          makeNormalizedRow({
+            day,
             user: 'test-user-two',
             model: 'Coding Agent model',
-            creditsUsed: 20,
+            quantity: 20,
             quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
             grossAmount: 0.18,
             aicGrossAmount: 0.18,
           }),
-          makeProcessedData({
-            timestamp,
+          makeNormalizedRow({
+            day,
             user: 'test-user-three',
             model: 'Coding Agent model',
-            creditsUsed: 30,
+            quantity: 30,
             quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
             grossAmount: 0.12,
             aicGrossAmount: 0.12,
           }),
-        ]}
+        ])}
         dailyCumulativeData={[{
           date: '2026-03-01T00:00:00Z',
           'test-user-one': 10,
@@ -219,12 +219,12 @@ describe('UsersOverview - sorting', () => {
       { user: 'test-user-one', totalCredits: 10, modelBreakdown: { 'gpt-4': 10 } },
     ];
     const quotaArtifacts = makeQuota([{ user: 'test-user-one', quota: PRICING.BUSINESS_AI_CREDIT_QUOTA }]);
-    const timestamp = new Date('2026-03-01T00:00:00Z');
-    const processedData: ProcessedData[] = [makeProcessedData({
-      timestamp,
+    const day = '2026-03-01T00:00:00Z';
+    const sourceRows: NormalizedRow[] = [makeNormalizedRow({
+      day,
       user: 'test-user-one',
       model: 'gpt-4',
-      creditsUsed: 10,
+      quantity: 10,
       quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA,
       grossAmount: 0,
       aicGrossAmount: 0,
@@ -233,7 +233,7 @@ describe('UsersOverview - sorting', () => {
     render(
       <UsersOverview
         userData={userData}
-        processedData={processedData}
+        billingArtifacts={aggregateRows(new BillingAggregator(), sourceRows)}
         dailyCumulativeData={[{ date: '2026-03-01T00:00:00Z', 'test-user-one': 10 }]}
         quotaArtifacts={quotaArtifacts}
         usageArtifacts={makeUsage(userData)}
@@ -256,17 +256,17 @@ describe('UsersOverview - sorting', () => {
       { user: 'test-user-two', quota: PRICING.ENTERPRISE_AI_CREDIT_QUOTA },
       { user: 'test-user-three', quota: 'unknown' },
     ]);
-    const timestamp = new Date('2026-06-01T00:00:00Z');
+    const day = '2026-06-01T00:00:00Z';
 
     render(
       <UsersOverview
         userData={userData}
-        processedData={[
-          makeProcessedData({
-            timestamp,
+        billingArtifacts={aggregateRows(new BillingAggregator(), [
+          makeNormalizedRow({
+            day,
             user: 'test-user-one',
             model: 'Auto: Claude Haiku 4.5',
-            creditsUsed: 10,
+            quantity: 10,
             quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA,
             sku: 'copilot_ai_credit',
             unitType: 'ai-credits',
@@ -277,11 +277,11 @@ describe('UsersOverview - sorting', () => {
             netAmount: 0,
             aicGrossAmount: 0.1,
           }),
-          makeProcessedData({
-            timestamp,
+          makeNormalizedRow({
+            day,
             user: 'test-user-two',
             model: 'Auto: Claude Haiku 4.5',
-            creditsUsed: 20,
+            quantity: 20,
             quotaValue: PRICING.ENTERPRISE_AI_CREDIT_QUOTA,
             sku: 'copilot_ai_credit',
             unitType: 'ai-credits',
@@ -292,11 +292,11 @@ describe('UsersOverview - sorting', () => {
             netAmount: 0,
             aicGrossAmount: 0.2,
           }),
-          makeProcessedData({
-            timestamp,
+          makeNormalizedRow({
+            day,
             user: 'test-user-three',
             model: 'Auto: Claude Haiku 4.5',
-            creditsUsed: 30,
+            quantity: 30,
             quotaValue: 'unknown',
             sku: 'copilot_ai_credit',
             unitType: 'ai-credits',
@@ -307,7 +307,7 @@ describe('UsersOverview - sorting', () => {
             netAmount: 0,
             aicGrossAmount: 0.3,
           }),
-        ]}
+        ])}
         dailyCumulativeData={[{
           date: '2026-06-01',
           'test-user-one': 10,
@@ -348,7 +348,7 @@ describe('UsersOverview - sorting', () => {
 
     const usageArtifacts = makeUsage(userData);
 
-    const processedData: ProcessedData[] = [];
+    const sourceRows: NormalizedRow[] = [];
     const dailyCumulativeData = [
       {
         date: '2025-01-01T00:00:00Z',
@@ -361,7 +361,7 @@ describe('UsersOverview - sorting', () => {
     render(
       <UsersOverview
         userData={userData}
-        processedData={processedData}
+        billingArtifacts={aggregateRows(new BillingAggregator(), sourceRows)}
         dailyCumulativeData={dailyCumulativeData}
         quotaArtifacts={quotaArtifacts}
         usageArtifacts={usageArtifacts}
@@ -425,7 +425,7 @@ describe('UsersOverview - sorting', () => {
     render(
       <UsersOverview
         userData={userData}
-        processedData={[]}
+        billingArtifacts={aggregateRows(new BillingAggregator(), [])}
         dailyCumulativeData={[{
           date: '2025-01-01T00:00:00Z',
           'test-user-one': 1,
@@ -476,13 +476,13 @@ describe('UsersOverview - sorting', () => {
       { user: 'test-user-two', quota: PRICING.ENTERPRISE_AI_CREDIT_QUOTA },
     ]);
 
-    const timestamp = new Date('2025-01-01T00:00:00Z');
-    const processedData: ProcessedData[] = [
-      makeProcessedData({
-        timestamp,
+    const day = '2025-01-01T00:00:00Z';
+    const sourceRows: NormalizedRow[] = [
+      makeNormalizedRow({
+        day,
         user: 'test-user-one',
         model: 'gpt-4',
-        creditsUsed: 10,
+        quantity: 10,
         quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA,
         organization: 'test-org-one',
         costCenter: 'test-cost-center-one',
@@ -494,7 +494,7 @@ describe('UsersOverview - sorting', () => {
     for (const aggregator of createAggregators(REPORT_AGGREGATOR_IDS)) {
       const context = { pricing: PRICING };
       aggregator.init?.(context);
-      processedData.forEach(row => aggregator.onRow(buildNormalizedRowFromProcessedData(row), context));
+      sourceRows.forEach(row => aggregator.onRow(row, context));
       outputs[aggregator.id] = aggregator.finalize(context);
     }
     render(
@@ -503,7 +503,7 @@ describe('UsersOverview - sorting', () => {
         sourceFile={createStreamingFile('date,username,sku,model,quantity\n2025-01-01,test-user-one,copilot_ai_credit,gpt-4,10')}>
       <UsersOverview
         userData={userData}
-        processedData={processedData}
+        billingArtifacts={aggregateRows(new BillingAggregator(), sourceRows)}
         dailyCumulativeData={[{ date: '2025-01-01T00:00:00Z', 'test-user-one': 10, 'test-user-two': 20 }]}
         quotaArtifacts={quotaArtifacts}
         usageArtifacts={makeUsage(userData)}
