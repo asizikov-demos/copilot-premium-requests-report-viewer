@@ -1,57 +1,34 @@
-import { filterBySelectedMonths, filterDailySeriesByMonths, getAvailableMonths, getMonthKey } from '@/utils/analytics/filters';
+import { filterDailySeriesByMonths } from '@/utils/analytics/filters';
+import { buildMonthListFromArtifacts } from '@/utils/ingestion';
 
-import type { ProcessedData } from '@/types/csv';
+import { makeUsageRow } from '../helpers/makeNormalizedRow';
+import { buildDailyBucketsArtifactsFromRows, selectArtifacts } from '../helpers/normalizedArtifacts';
 
-function createProcessedData(timestamp: string, monthKey = ''): ProcessedData {
-  const date = new Date(timestamp);
-  return {
-    timestamp: date,
-    user: 'test-user-one',
-    model: 'test-model-one',
-    creditsUsed: 1,
-    totalQuota: 'Unknown',
-    quotaValue: 'unknown',
-    iso: date.toISOString(),
-    dateKey: date.toISOString().slice(0, 10),
-    monthKey,
-    epoch: date.getTime()
-  };
-}
+describe('analytics month filters', () => {
+  const rows = [
+    makeUsageRow({ day: '2025-07-01', quantity: 2 }),
+    makeUsageRow({ day: '2025-06-30', quantity: 3 }),
+    makeUsageRow({ day: '2025-07-15', quantity: 4 }),
+  ];
 
-describe('analytics filters month helpers', () => {
-  it('derives fallback month keys from UTC timestamps', () => {
-    expect(getMonthKey(createProcessedData('2025-06-30T23:59:59Z'))).toBe('2025-06');
-    expect(getMonthKey(createProcessedData('2025-07-01T00:00:00Z'))).toBe('2025-07');
-  });
-
-  it('prefers cached row month keys when available', () => {
-    expect(getMonthKey(createProcessedData('2025-06-30T23:59:59Z', '2025-08'))).toBe('2025-08');
-  });
-
-  it('uses shared month labels for available months', () => {
-    const months = getAvailableMonths([
-      createProcessedData('2025-07-01T00:00:00Z'),
-      createProcessedData('2025-06-30T23:59:59Z'),
-      createProcessedData('2025-07-15T00:00:00Z')
-    ]);
-
-    expect(months).toEqual([
+  it('uses shared month labels for distinct UTC artifact months', () => {
+    expect(buildMonthListFromArtifacts(buildDailyBucketsArtifactsFromRows(rows))).toEqual([
       { value: '2025-06', label: 'June 2025' },
-      { value: '2025-07', label: 'July 2025' }
+      { value: '2025-07', label: 'July 2025' },
     ]);
   });
 
-  it('filters selected months using the shared month key fallback', () => {
-    const june = createProcessedData('2025-06-30T23:59:59Z');
-    const july = createProcessedData('2025-07-01T00:00:00Z');
-
-    expect(filterBySelectedMonths([june, july], ['2025-06'])).toEqual([june]);
+  it('selects UTC month partitions instead of cached row dates', () => {
+    const june = selectArtifacts(rows, ['2025-06']);
+    expect([...june.dailyBucketsArtifacts.dailyUserTotals.keys()]).toEqual(['2025-06-30']);
+    expect(june.usageArtifacts.users[0].totalCredits).toBe(3);
+    expect(selectArtifacts(rows, []).usageArtifacts.users[0].totalCredits).toBe(9);
+    expect(selectArtifacts(rows, ['2025-08']).usageArtifacts.users).toEqual([]);
   });
 
   it('filters daily series by the UTC date string month key', () => {
     const june = { date: '2025-06-30', value: 1 };
     const july = { date: '2025-07-01', value: 2 };
-
     expect(filterDailySeriesByMonths([june, july], ['2025-06'])).toEqual([june]);
     expect(filterDailySeriesByMonths([june, july], [])).toEqual([june, july]);
   });

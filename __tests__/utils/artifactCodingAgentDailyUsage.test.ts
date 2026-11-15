@@ -4,8 +4,8 @@ import {
 } from '@/utils/ingestion';
 
 import { makeDailyBucketsArtifacts } from '../helpers/makeArtifacts';
-import { makeProcessedData } from '../helpers/testUtils';
-import { buildDailyBucketsArtifactsFromProcessedData } from '../helpers/processedArtifacts';
+import { makeUsageRow } from '../helpers/testUtils';
+import { buildDailyBucketsArtifactsFromRows } from '../helpers/normalizedArtifacts';
 
 describe('buildDailyCodingAgentUsageFromArtifacts', () => {
   test('aggregates per day and carries cumulative totals through month end', () => {
@@ -62,18 +62,18 @@ describe('buildDailyCodingAgentUsageFromArtifacts', () => {
   });
 
   test('includes daily rows identified by the Coding Agent SKU', () => {
-    const artifacts = buildDailyBucketsArtifactsFromProcessedData([
-      makeProcessedData({
-        timestamp: new Date('2026-03-01T00:00:00Z'),
+    const artifacts = buildDailyBucketsArtifactsFromRows([
+      makeUsageRow({
+        day: '2026-03-01T00:00:00Z'.slice(0, 10),
         model: 'Claude Sonnet 5',
         sku: 'coding_agent_ai_credit',
-        creditsUsed: 3.5,
+        quantity: 3.5,
       }),
-      makeProcessedData({
-        timestamp: new Date('2026-03-01T00:00:00Z'),
+      makeUsageRow({
+        day: '2026-03-01T00:00:00Z'.slice(0, 10),
         model: 'GPT-5',
         sku: 'copilot_ai_credit',
-        creditsUsed: 4,
+        quantity: 4,
       }),
     ]);
 

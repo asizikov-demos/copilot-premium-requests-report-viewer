@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 
 import { BillingGroupDetailsView } from '../helpers/detailFixtures';
-import type { ProcessedData } from '@/types/csv';
+import type { NormalizedRow } from '@/utils/ingestion';
 import { getBillingCostLabels } from '@/utils/billingLabels';
 import type { DailyConsumptionDatum } from '@/utils/dailyConsumption';
 
@@ -11,19 +11,14 @@ jest.mock('@/components/charts/DailyConsumptionChart', () => ({
   ),
 }));
 
-function makeRow(overrides: Partial<ProcessedData> & { dateKey: string }): ProcessedData {
-  const timestamp = new Date(`${overrides.dateKey}T00:00:00Z`);
-
+function makeRow(overrides: Partial<NormalizedRow> & { day: string }): NormalizedRow {
   return {
-    timestamp,
+    date: overrides.day,
     user: 'test-user-one',
     model: 'Test Model',
-    creditsUsed: 1,
-    totalQuota: '300',
+    quantity: 1,
+    quotaRaw: '300',
     quotaValue: 300,
-    iso: timestamp.toISOString(),
-    monthKey: overrides.dateKey.slice(0, 7),
-    epoch: timestamp.getTime(),
     organization: 'test-org-one',
     grossAmount: 0,
     discountAmount: 0,
@@ -32,21 +27,21 @@ function makeRow(overrides: Partial<ProcessedData> & { dateKey: string }): Proce
   };
 }
 
-const rows: ProcessedData[] = [
+const rows: NormalizedRow[] = [
   makeRow({
-    dateKey: '2026-03-01',
+    day: '2026-03-01',
     user: 'test-user-one',
     model: 'Test Model',
-    creditsUsed: 4,
+    quantity: 4,
     grossAmount: 0.16,
     discountAmount: 0.04,
     netAmount: 0.12,
   }),
   makeRow({
-    dateKey: '2026-03-03',
+    day: '2026-03-03',
     user: 'test-user-two',
     model: 'Coding Agent model',
-    creditsUsed: 2,
+    quantity: 2,
     grossAmount: 0.08,
     discountAmount: 0,
     netAmount: 0.08,
@@ -78,7 +73,7 @@ describe('BillingGroupDetailsView', () => {
   ])('places full-period USD consumption above product spend for a $groupLabel', ({ groupName, groupLabel, groupsLabel }) => {
     const periodRows = [
       ...rows,
-      makeRow({ dateKey: '2026-04-15', organization: 'test-org-two', costCenter: 'test-cost-center-two', netAmount: 100 }),
+      makeRow({ day: '2026-04-15', organization: 'test-org-two', costCenter: 'test-cost-center-two', netAmount: 100 }),
     ];
     const props = {
       groupName,
@@ -118,8 +113,8 @@ describe('BillingGroupDetailsView', () => {
 
   it.each([
     { rows: [] },
-    { rows: [makeRow({ dateKey: '2026-03-15', grossAmount: undefined, discountAmount: undefined, netAmount: undefined, inputTokens: 100 })] },
-    { rows: [makeRow({ dateKey: '2026-03-15', grossAmount: 1, discountAmount: undefined, netAmount: undefined })] },
+    { rows: [makeRow({ day: '2026-03-15', grossAmount: undefined, discountAmount: undefined, netAmount: undefined, inputTokens: 100 })] },
+    { rows: [makeRow({ day: '2026-03-15', grossAmount: 1, discountAmount: undefined, netAmount: undefined })] },
   ])('omits the USD chart without reported daily monetary amounts (%#)', ({ rows }) => {
     render(
       <BillingGroupDetailsView
@@ -252,7 +247,7 @@ describe('BillingGroupDetailsView', () => {
           rows={[
             ...rows,
             makeRow({
-              dateKey: '2026-03-02',
+              day: '2026-03-02',
               user: 'test-user-three',
               isUnattributedUsage: true,
               usageBucket: 'unattributed_ai_credit',
@@ -286,9 +281,9 @@ describe('BillingGroupDetailsView', () => {
     it('paginates users in 50-row pages', () => {
       const paginatedRows = Array.from({ length: 51 }, (_, index) => (
         makeRow({
-          dateKey: '2026-03-01',
+          day: '2026-03-01',
           user: `test-user-${index.toString().padStart(3, '0')}`,
-          creditsUsed: 1,
+          quantity: 1,
         })
       ));
 

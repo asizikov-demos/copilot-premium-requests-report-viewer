@@ -23,7 +23,6 @@ function createMockIngestionResult(rows: unknown[]): IngestionResult {
       'quota': { quotaByUser: new Map(), conflicts: new Map(), distinctQuotas: new Set(), hasMixedQuotas: false, hasMixedLicenses: false },
       'usage': { userTotals: new Map(), modelBreakdown: new Map(), globalModelTotals: new Map(), topModelPerUser: new Map() },
       'dailyBuckets': { dailyUserTotals: new Map(), startDate: new Date(), endDate: new Date() },
-      'rawData': rows
     },
     rowsProcessed: rows.length,
     durationMs: 100,

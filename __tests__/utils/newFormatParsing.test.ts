@@ -1,41 +1,40 @@
 import { PRICING } from '@/constants/pricing';
 import type { CSVData } from '@/types/csv';
-import { buildProcessedDataFromRawRows, buildProcessedDataFromRows } from '@/utils/ingestion';
 import { normalizeRow } from '@/utils/ingestion/normalizeRow';
 import type { NormalizedRow } from '@/utils/ingestion/types';
 
 import { newFormatRows } from '../fixtures/newFormatCSVData';
-import { processCSVData } from '../helpers/processCSVData';
+import { normalizeRows } from '../helpers/normalizeRows';
 
 describe('AI-credit billing export', () => {
   it('maps quantity, net billing, quota, and organization without request conversion', () => {
-    const processed = processCSVData(newFormatRows);
+    const processed = normalizeRows(newFormatRows);
     expect(processed).toHaveLength(2);
     expect(processed[0]).toMatchObject({
       user: 'test-user-one',
       model: 'Claude Sonnet 4',
-      creditsUsed: 3.6,
+      quantity: 3.6,
       billingQuantity: 3.6,
       usageUnit: 'ai_credit',
       quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA,
-      totalQuota: String(PRICING.BUSINESS_AI_CREDIT_QUOTA),
+      quotaRaw: String(PRICING.BUSINESS_AI_CREDIT_QUOTA),
       product: 'copilot',
       organization: 'test-org-one',
       costCenter: 'test-cost-center-one',
       appliedCostPerQuantity: PRICING.AI_CREDIT_USD_VALUE,
       netAmount: 0.036,
     });
-    expect(processed[0].timestamp.toISOString()).toBe('2025-10-01T00:00:00.000Z');
+    expect(processed[0].day).toBe('2025-10-01');
     expect(processed[1]).toMatchObject({
       user: 'test-user-two',
-      creditsUsed: 12,
+      quantity: 12,
       quotaValue: 'unknown',
-      totalQuota: 'Unknown',
+      quotaRaw: 'Unknown',
     });
   });
 
   it('normalizes US dates to UTC and retains fractional AI credits', () => {
-    const processed = processCSVData([{
+    const processed = normalizeRows([{
       date: '5/29/26',
       username: 'test-user-one',
       product: 'copilot',
@@ -51,9 +50,9 @@ describe('AI-credit billing export', () => {
       cache_read: '1000',
     }]);
 
-    expect(processed[0].dateKey).toBe('2026-05-29');
-    expect(processed[0].monthKey).toBe('2026-05');
-    expect(processed[0].creditsUsed).toBeCloseTo(96.9990345);
+    expect(processed[0].day).toBe('2026-05-29');
+    expect(processed[0].day.slice(0, 7)).toBe('2026-05');
+    expect(processed[0].quantity).toBeCloseTo(96.9990345);
     expect(processed[0].aicQuantity).toBeCloseTo(96.9990345);
     expect(processed[0].netAmount).toBe(0.12);
     expect(processed[0].inputTokens).toBe(100);
@@ -62,7 +61,7 @@ describe('AI-credit billing export', () => {
   });
 
   it('uses primary billing quantity and gross even when legacy AIC fields disagree', () => {
-    const processed = processCSVData([{
+    const processed = normalizeRows([{
       date: '2026-06-01',
       username: 'test-user-one',
       product: 'copilot',
@@ -78,7 +77,7 @@ describe('AI-credit billing export', () => {
       aic_gross_amount: '999',
     }]);
     expect(processed[0]).toMatchObject({
-      creditsUsed: 42.726213,
+      quantity: 42.726213,
       billingQuantity: 42.726213,
       aicQuantity: 42.726213,
       aicGrossAmount: 0.42726213,
@@ -87,7 +86,7 @@ describe('AI-credit billing export', () => {
   });
 
   it('retains unattributed AI credits as a special bucket', () => {
-    const processed = processCSVData([{
+    const processed = normalizeRows([{
       date: '2026-07-01',
       username: '',
       product: 'copilot',
@@ -100,7 +99,7 @@ describe('AI-credit billing export', () => {
     }]);
     expect(processed[0]).toMatchObject({
       user: '',
-      creditsUsed: 12.5,
+      quantity: 12.5,
       aicQuantity: 12.5,
       usageBucket: 'unattributed_ai_credit',
       isUnattributedUsage: true,
@@ -120,41 +119,23 @@ describe('AI-credit billing export', () => {
       aic_quantity: '8.5',
     };
     expect(normalizeRow(row, warnings)).toBeNull();
-    expect(buildProcessedDataFromRawRows([row])).toEqual([]);
+    expect(normalizeRows([row])).toEqual([]);
     expect(warnings).toEqual([expect.stringContaining('Unsupported usage unit')]);
-  });
-
-  it('reconstructs timestamps from normalized UTC days', () => {
-    const rows: NormalizedRow[] = [{
-      date: '5/29/26',
-      day: '2026-05-29',
-      user: 'test-user-one',
-      model: 'test-model',
-      quantity: 2,
-      quotaRaw: String(PRICING.BUSINESS_AI_CREDIT_QUOTA),
-      quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA,
-      usageUnit: 'ai_credit',
-    }];
-    expect(buildProcessedDataFromRows(rows)[0]).toMatchObject({
-      dateKey: '2026-05-29',
-      monthKey: '2026-05',
-      creditsUsed: 2,
-    });
   });
 
   it('warns and skips malformed dates without throwing', () => {
     const warnings: string[] = [];
-    expect(buildProcessedDataFromRows([{
+    expect(normalizeRow({
       date: 'not-a-date',
-      day: 'not-a-date',
-      user: 'test-user-one',
+      username: 'test-user-one',
       model: 'test-model',
-      quantity: 2,
-    }], warnings)).toEqual([]);
+      quantity: '2',
+      unit_type: 'ai-credits',
+    }, warnings)).toBeNull();
     expect(warnings).toEqual(['Unrecognized date format for user=test-user-one date=not-a-date']);
   });
 
-  it('keeps raw CSV wrappers aligned with normalized conversion', () => {
+  it('trims usernames during normalization', () => {
     const rows: CSVData[] = [{
       ...newFormatRows[0],
       username: ' test-user-one ',
@@ -162,10 +143,7 @@ describe('AI-credit billing export', () => {
     const warnings: string[] = [];
     const normalized = rows.map(row => normalizeRow(row, warnings))
       .filter((row): row is NormalizedRow => row !== null);
-    const canonical = buildProcessedDataFromRows(normalized);
     expect(warnings).toEqual([]);
-    expect(processCSVData(rows)).toEqual(canonical);
-    expect(buildProcessedDataFromRawRows(rows)).toEqual(canonical);
-    expect(canonical[0].user).toBe('test-user-one');
+    expect(normalized[0].user).toBe('test-user-one');
   });
 });

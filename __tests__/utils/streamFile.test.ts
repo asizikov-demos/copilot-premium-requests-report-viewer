@@ -1,6 +1,6 @@
 import { createIngestionWorker } from '@/utils/ingestion/createIngestionWorker';
 import { streamFile } from '@/utils/ingestion/streamFile';
-import { UNASSIGNED_BILLING_GROUP, type NormalizedRow } from '@/utils/ingestion/types';
+import { UNASSIGNED_BILLING_GROUP, type DailyBucketsArtifacts, type UsageArtifacts } from '@/utils/ingestion/types';
 import type { IngestionResponse } from '@/utils/ingestion/workerProtocol';
 
 import { createStreamingFile as createFile, MockFileReader } from '../helpers/streamingFile';
@@ -30,7 +30,7 @@ describe('streamFile without Worker support', () => {
 
   it('re-streams a File and applies user, group, and UTC month filters before aggregation', async () => {
     const file = createFile(csv);
-    const result = await streamFile(file, ['rawData'], {
+    const result = await streamFile(file, ['usage', 'dailyBuckets'], {
       user: 'test-user-one',
       organization: 'test-org-one',
       costCenter: 'test-cost-center-one',
@@ -38,33 +38,35 @@ describe('streamFile without Worker support', () => {
     }, { chunkSize: 64 });
 
     expect(result.rowsProcessed).toBe(1);
-    expect(result.outputs.rawData).toEqual([
-      expect.objectContaining({ user: 'test-user-one', day: '2026-07-01', quantity: 3 }),
+    expect((result.outputs.usage as UsageArtifacts).users).toEqual([
+      expect.objectContaining({ user: 'test-user-one', totalCredits: 3 }),
     ]);
+    expect([...(result.outputs.dailyBuckets as DailyBucketsArtifacts).dailyUserTotals.keys()])
+      .toEqual(['2026-07-01']);
     expect(result.warnings).toEqual([]);
 
-    const unassigned = await streamFile(file, ['rawData'], {
+    const unassigned = await streamFile(file, ['usage'], {
       costCenter: UNASSIGNED_BILLING_GROUP,
       months: [],
     });
-    expect(unassigned.outputs.rawData).toEqual([
-      expect.objectContaining({ quantity: 7 }),
+    expect((unassigned.outputs.usage as UsageArtifacts).users).toEqual([
+      expect.objectContaining({ user: 'test-user-one', totalCredits: 7 }),
     ]);
   });
 
   it('returns empty outputs when no rows match, without retaining unfiltered rows', async () => {
     const file = createFile(csv);
-    const result = await streamFile(file, ['rawData'], { user: 'test-user-three' });
+    const result = await streamFile(file, ['usage'], { user: 'test-user-three' });
     expect(result.rowsProcessed).toBe(0);
-    expect(result.outputs.rawData).toEqual([]);
-    expect((await streamFile(file, ['rawData'])).outputs.rawData as NormalizedRow[]).toHaveLength(4);
+    expect((result.outputs.usage as UsageArtifacts).users).toEqual([]);
+    expect((await streamFile(file, ['usage'])).rowsProcessed).toBe(4);
   });
 
   it('rejects parser errors instead of resolving a partial result', async () => {
     const file = createFile(
       'date,username,sku,model,quantity\n2026-07-01,test-user-one,copilot_ai_credit,test-model-one,1,extra',
     );
-    await expect(streamFile(file, ['rawData'])).rejects.toThrow('CSV parsing error:');
+    await expect(streamFile(file, ['usage'])).rejects.toThrow('CSV parsing error:');
   });
 
   it('does not misclassify a filtered mixed export as legacy-only', async () => {
@@ -72,9 +74,9 @@ describe('streamFile without Worker support', () => {
       csv,
       '2026-07-04,test-user-two,copilot_premium_request,test-model-one,1,,',
     ].join('\n'));
-    const result = await streamFile(file, ['rawData'], { user: 'test-user-three' });
+    const result = await streamFile(file, ['usage'], { user: 'test-user-three' });
     expect(result.rowsProcessed).toBe(0);
-    expect(result.outputs.rawData).toEqual([]);
+    expect((result.outputs.usage as UsageArtifacts).users).toEqual([]);
   });
 
   it('cancels the main-thread fallback before processing another chunk', async () => {

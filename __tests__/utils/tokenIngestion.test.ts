@@ -1,15 +1,13 @@
 import { PRICING } from '@/constants/pricing';
 import {
   BillingAggregator,
-  buildNormalizedRowFromProcessedData,
-  buildProcessedDataFromRows,
-  buildTokenArtifactsFromProcessedData,
   filterTokenArtifactsByMonths,
   normalizeRow,
   TokenAggregator,
 } from '@/utils/ingestion';
 
 import { makeNormalizedRow } from '../helpers/makeNormalizedRow';
+import { buildTokenArtifactsFromRows } from '../helpers/normalizedArtifacts';
 
 const rawRow = {
   date: '2026-06-30T23:59:59Z',
@@ -21,7 +19,7 @@ const rawRow = {
 };
 
 describe('token normalization', () => {
-  it('parses canonical fields and preserves zeros through both row adapters', () => {
+  it('parses canonical fields and preserves zeros through token aggregation', () => {
     const warnings: string[] = [];
     const row = normalizeRow({
       ...rawRow, input: ' 100 ', output: '20', cache_read: '0', cache_write: '5',
@@ -31,10 +29,8 @@ describe('token normalization', () => {
 
     const expected = { inputTokens: 100, outputTokens: 20, cacheReadTokens: 0, cacheWriteTokens: 5 };
     expect(row).toMatchObject(expected);
-    const processed = buildProcessedDataFromRows([row]);
-    expect(processed[0]).toMatchObject({ ...expected, dateKey: '2026-06-30', monthKey: '2026-06' });
-    expect(buildNormalizedRowFromProcessedData(processed[0])).toMatchObject(expected);
-    expect(buildTokenArtifactsFromProcessedData(processed).totals).toMatchObject(expected);
+    expect(row.day).toBe('2026-06-30');
+    expect(buildTokenArtifactsFromRows([row]).totals).toMatchObject(expected);
     expect(warnings).toEqual([]);
   });
 
@@ -174,14 +170,6 @@ describe('token artifacts', () => {
     });
     aggregator.init();
     expect(aggregator.finalize()).toEqual(new TokenAggregator().finalize());
-  });
-
-  it('reconstructs identical artifacts through the processed-data bridge', () => {
-    const aggregator = new TokenAggregator();
-    const datedRows = rows.map(row => ({ ...row, date: row.day }));
-    datedRows.forEach(row => aggregator.onRow(row));
-    expect(buildTokenArtifactsFromProcessedData(buildProcessedDataFromRows(datedRows)))
-      .toEqual(aggregator.finalize());
   });
 
   it('rejects invalid normalized counts supplied outside CSV ingestion', () => {

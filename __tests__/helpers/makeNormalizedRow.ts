@@ -1,8 +1,9 @@
 import type { NormalizedRow } from '@/utils/ingestion';
+import { PRICING } from '@/constants/pricing';
 
 export function makeNormalizedRow(partial: Partial<NormalizedRow> = {}): NormalizedRow {
   return {
-    date: partial.date ?? '2025-06-01T00:00:00Z',
+    date: partial.date ?? partial.day ?? '2025-06-01T00:00:00Z',
     day: partial.day ?? '2025-06-01',
     user: partial.user ?? 'test-user-one',
     model: partial.model ?? 'test-model',
@@ -29,4 +30,15 @@ export function makeNormalizedRow(partial: Partial<NormalizedRow> = {}): Normali
     isUnattributedUsage: partial.isUnattributedUsage ?? false,
     usageBucket: partial.usageBucket,
   };
+}
+
+export function makeUsageRow(partial: Partial<NormalizedRow> = {}): NormalizedRow {
+  return makeNormalizedRow({
+    quantity: 0,
+    quotaValue: PRICING.BUSINESS_AI_CREDIT_QUOTA,
+    quotaRaw: String(PRICING.BUSINESS_AI_CREDIT_QUOTA),
+    unitType: 'ai-credits',
+    usageUnit: 'ai_credit',
+    ...partial,
+  });
 }

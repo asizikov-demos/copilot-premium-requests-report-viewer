@@ -22,9 +22,8 @@ export interface UserHeaderSummary {
 }
 
 interface HeaderUsage {
-  monthKey: string;
-  dateKey: string;
-  creditsUsed: number;
+  day: string;
+  quantity: number;
   model: string;
   sku?: string;
   organization?: string;
@@ -52,12 +51,13 @@ export class UserHeaderAccumulator {
   private codeReviewUsed = false;
 
   add(row: HeaderUsage): void {
-    this.monthlyCredits.set(row.monthKey, (this.monthlyCredits.get(row.monthKey) ?? 0) + row.creditsUsed);
-    this.totalConsumed += row.creditsUsed;
+    const month = row.day.slice(0, 7);
+    this.monthlyCredits.set(month, (this.monthlyCredits.get(month) ?? 0) + row.quantity);
+    this.totalConsumed += row.quantity;
     this.gross += row.grossAmount ?? 0;
     this.discount += row.discountAmount ?? 0;
     this.net += row.netAmount ?? 0;
-    if (row.creditsUsed > 0) this.activeDays.add(row.dateKey);
+    if (row.quantity > 0) this.activeDays.add(row.day);
     if (row.organization) this.organizations.add(row.organization);
     if (row.costCenter) this.costCenters.add(row.costCenter);
     this.cloudAgentUsed ||= isCodingAgentModel(row.model, row.sku);

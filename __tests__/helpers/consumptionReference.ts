@@ -1,7 +1,7 @@
-import type { ProcessedData } from '@/types/csv';
+import type { NormalizedRow } from '@/utils/ingestion';
 import type { CreditTotals, UserConsumption } from '@/types/consumption';
 import { getEffectiveAicQuantity } from '@/utils/aicFields';
-import { buildTokenArtifactsFromProcessedData } from '@/utils/ingestion/analytics';
+import { buildTokenArtifactsFromRows } from './normalizedArtifacts';
 
 function emptyCredits(): CreditTotals {
   return { rowCount: 0, reportedRows: 0 };
@@ -14,7 +14,7 @@ function addCredits(target: CreditTotals, value: number | undefined): void {
   target.reportedRows++;
 }
 
-function creditQuantity(row: ProcessedData): number | undefined {
+function creditQuantity(row: NormalizedRow): number | undefined {
   if (row.aicQuantity !== undefined || row.aicGrossAmount !== undefined) {
     return getEffectiveAicQuantity(row);
   }
@@ -23,7 +23,7 @@ function creditQuantity(row: ProcessedData): number | undefined {
 }
 
 export function buildUserConsumption(
-  rows: ProcessedData[],
+  rows: NormalizedRow[],
   includeTokens = true
 ): UserConsumption {
   const credits = emptyCredits();
@@ -38,7 +38,7 @@ export function buildUserConsumption(
   }
 
   return {
-    tokens: includeTokens ? buildTokenArtifactsFromProcessedData(rows) : undefined,
+    tokens: includeTokens ? buildTokenArtifactsFromRows(rows) : undefined,
     credits,
     creditsByModel,
   };

@@ -84,7 +84,7 @@ export class DetailAggregator implements Aggregator<DetailArtifacts> {
 
   onRow(row: NormalizedRow): void {
     const monthKey = row.day.slice(0, 7);
-    this.header.add({ ...row, monthKey, dateKey: row.day, creditsUsed: row.quantity });
+    this.header.add(row);
     this.months.add(monthKey);
     this.models.add(row.model);
     this.hasBillingData ||= [row.grossAmount, row.discountAmount, row.netAmount, row.aicGrossAmount]

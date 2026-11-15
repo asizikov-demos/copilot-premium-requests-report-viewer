@@ -7,13 +7,13 @@ import { streamFile } from '@/utils/ingestion/streamFile';
 import type { IngestionResult } from '@/utils/ingestion/types';
 
 import { detailFixture } from '../helpers/detailFixtures';
-import { makeProcessedData } from '../helpers/testUtils';
+import { makeUsageRow } from '../helpers/testUtils';
 
 jest.mock('@/utils/ingestion/streamFile', () => ({ streamFile: jest.fn() }));
 const mockedStream = jest.mocked(streamFile);
 
 function output(): IngestionResult {
-  const { details, tokens } = detailFixture([makeProcessedData({ inputTokens: 10 })]);
+  const { details, tokens } = detailFixture([makeUsageRow({ inputTokens: 10 })]);
   return { outputs: { details, tokens }, rowsProcessed: 1, durationMs: 1, warnings: [] };
 }
 

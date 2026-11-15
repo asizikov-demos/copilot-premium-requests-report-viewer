@@ -13,7 +13,6 @@ import {
   DailyBucketsAggregator,
   FeatureUsageAggregator,
   QuotaAggregator,
-  RawDataAggregator,
   UsageAggregator,
   normalizeRow,
 } from '@/utils/ingestion';
@@ -52,7 +51,6 @@ function createIngestionResultFromRawRows(rows: CSVData[]): IngestionResult {
     new BillingAggregator(),
     new BillingPagesAggregator(),
     new ModelDailyAggregator(),
-    new RawDataAggregator(),
   ];
   const ctx: AggregatorContext = { pricing: PRICING };
 
@@ -156,7 +154,6 @@ function makeUsageBasedRows(): CSVData[] {
 describe('DataAnalysis billing summary', () => {
   it('renders model totals, row counts, and navigation from aggregates without retained rows', () => {
     const ingestionResult = createIngestionResultFromRawRows(makeAicRows());
-    delete ingestionResult.outputs.rawData;
     render(<DataAnalysis ingestionResult={ingestionResult} filename="test-report.csv" onReset={jest.fn()} />);
     expect(screen.getByRole('region', { name: 'Report information' })).toHaveTextContent('Total rows: 3');
     expect(screen.getAllByRole('button', { name: 'Organizations' }).length).toBeGreaterThan(0);
@@ -450,7 +447,7 @@ describe('DataAnalysis billing summary', () => {
     const ingestionResult = createIngestionResultFromRawRows(newFormatRows);
     render(<DataAnalysis ingestionResult={ingestionResult} filename="billing-export.csv" onReset={() => {}} />);
 
-    // Wait for provider effects & rendering. Billing summary may appear once processedData is built.
+    // Wait for the billing summary to render from streamed artifacts.
     await waitFor(() => {
       const billing = screen.getByLabelText('billing-summary');
       expect(billing).toBeInTheDocument();
