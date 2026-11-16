@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '@/components/primitives/TablePagination';
+import { paginateRows, TablePagination } from '@/components/primitives/TablePagination';
 import type { BillingCostLabels } from '@/utils/billingLabels';
 import { formatCurrency, formatDecimalQuantity } from '@/utils/formatters';
 
@@ -34,12 +34,7 @@ export function AgentUsersTable({
 }: AgentUsersTableProps) {
   const [paginationState, setPaginationState] = React.useState({ rows, page: 0 });
   const currentPage = paginationState.rows === rows ? paginationState.page : 0;
-  const pageCount = Math.ceil(rows.length / DEFAULT_TABLE_PAGE_SIZE);
-  const activePage = Math.min(currentPage, Math.max(pageCount - 1, 0));
-  const visibleRows = rows.slice(
-    activePage * DEFAULT_TABLE_PAGE_SIZE,
-    (activePage + 1) * DEFAULT_TABLE_PAGE_SIZE
-  );
+  const { pageItems: visibleRows, activePage } = paginateRows(rows, currentPage);
 
   return (
     <div className="bg-(--bgColor-default) border border-(--borderColor-default) rounded-md overflow-hidden">

@@ -21,7 +21,7 @@ import { UsersConsumptionHeatmap } from './charts/UsersConsumptionHeatmap';
 import { UserDetailsView } from './UserDetailsView';
 import { SortableColumnHeader } from './primitives/SortableColumnHeader';
 import { SelectPanelDropdown } from './primitives/SelectPanelDropdown';
-import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from './primitives/TablePagination';
+import { paginateRows, TablePagination } from './primitives/TablePagination';
 
 type DailyCumulativeData = { date: string; [user: string]: string | number };
 const ALL_FILTERS_VALUE = '__all__';
@@ -205,12 +205,9 @@ export function UsersOverview({ userData, dailyCumulativeData, quotaArtifacts, u
 
   const heatmapTitle = `User Consumption Density Over Time (${chartUsers.length} users)`;
   
-  // Pagination calculations
-  const totalPages = Math.max(1, Math.ceil(sortedUserData.length / DEFAULT_TABLE_PAGE_SIZE));
-  const activePage = Math.min(currentPage, totalPages - 1);
-  const paginatedUserData = useMemo(() => 
-    sortedUserData.slice(activePage * DEFAULT_TABLE_PAGE_SIZE, (activePage + 1) * DEFAULT_TABLE_PAGE_SIZE),
-    [sortedUserData, activePage]
+  const { pageItems: paginatedUserData, activePage } = useMemo(
+    () => paginateRows(sortedUserData, currentPage),
+    [sortedUserData, currentPage]
   );
   const selectedUserAggregate = useMemo(
     () => userData.find((entry) => entry.user === selectedUser),

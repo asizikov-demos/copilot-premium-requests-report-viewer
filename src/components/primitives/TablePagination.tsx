@@ -2,6 +2,38 @@ import { Pagination } from '@primer/react';
 
 export const DEFAULT_TABLE_PAGE_SIZE = 50;
 
+interface PaginationState {
+  activePage: number;
+  pageCount: number;
+}
+
+interface PaginatedRows<T> extends PaginationState {
+  pageItems: T[];
+}
+
+function getPaginationState(itemCount: number, currentPage: number, pageSize: number): PaginationState {
+  const pageCount = Math.ceil(itemCount / pageSize);
+
+  return {
+    pageCount,
+    activePage: Math.min(Math.max(currentPage, 0), Math.max(pageCount - 1, 0)),
+  };
+}
+
+export function paginateRows<T>(
+  rows: readonly T[],
+  currentPage: number,
+  pageSize = DEFAULT_TABLE_PAGE_SIZE
+): PaginatedRows<T> {
+  const { activePage, pageCount } = getPaginationState(rows.length, currentPage, pageSize);
+
+  return {
+    pageItems: rows.slice(activePage * pageSize, (activePage + 1) * pageSize),
+    activePage,
+    pageCount,
+  };
+}
+
 interface TablePaginationProps {
   ariaLabel: string;
   currentPage: number;
@@ -17,12 +49,11 @@ export function TablePagination({
   onPageChange,
   pageSize = DEFAULT_TABLE_PAGE_SIZE,
 }: TablePaginationProps) {
-  const pageCount = Math.ceil(itemCount / pageSize);
+  const { pageCount, activePage } = getPaginationState(itemCount, currentPage, pageSize);
   if (pageCount <= 1) {
     return null;
   }
 
-  const activePage = Math.min(Math.max(currentPage, 0), pageCount - 1);
   const firstItem = activePage * pageSize + 1;
   const lastItem = Math.min((activePage + 1) * pageSize, itemCount);
 

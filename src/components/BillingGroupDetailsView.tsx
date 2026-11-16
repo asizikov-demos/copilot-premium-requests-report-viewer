@@ -9,7 +9,7 @@ import { useAnalysisContext } from '@/context/AnalysisContext';
 import { selectBillingGroupDetails } from '@/utils/ingestion/DetailPagesAggregator';
 import type { DetailArtifacts } from '@/utils/ingestion/DetailAggregator';
 import { ModelDailyStackedChart } from '@/components/charts/ModelDailyStackedChart';
-import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '@/components/primitives/TablePagination';
+import { paginateRows, TablePagination } from '@/components/primitives/TablePagination';
 import { dataVizColor } from '@/constants/primerTokens';
 import type { BillingCostLabels } from '@/utils/billingLabels';
 import { buildBillingMonthDates } from '@/utils/dateKeys';
@@ -86,14 +86,9 @@ export function BillingGroupDetailsContent({
 
     return query === '' ? userRows : userRows.filter((row) => row.user.toLowerCase().includes(query));
   }, [userRows, userSearch]);
-  const totalUserPages = Math.max(1, Math.ceil(filteredUserRows.length / DEFAULT_TABLE_PAGE_SIZE));
-  const activeUserPage = Math.min(userPage, totalUserPages - 1);
-  const paginatedUserRows = useMemo(
-    () => filteredUserRows.slice(
-      activeUserPage * DEFAULT_TABLE_PAGE_SIZE,
-      (activeUserPage + 1) * DEFAULT_TABLE_PAGE_SIZE
-    ),
-    [activeUserPage, filteredUserRows]
+  const { pageItems: paginatedUserRows, activePage: activeUserPage } = useMemo(
+    () => paginateRows(filteredUserRows, userPage),
+    [filteredUserRows, userPage]
   );
 
   const productLabels = useMemo(() => productCosts.map((product) => product.label), [productCosts]);

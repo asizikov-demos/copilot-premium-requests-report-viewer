@@ -64,6 +64,35 @@ function makeUsage(users: UserSummary[]): UsageArtifacts {
 }
 
 describe('UsersOverview - sorting', () => {
+  it('shows matching users after filtering from a later page', () => {
+    const userData: UserSummary[] = Array.from({ length: 51 }, (_, index) => ({
+      user: `test-user-${String(index).padStart(3, '0')}`,
+      totalCredits: index + 1,
+      modelBreakdown: { 'test-model-one': index + 1 },
+    }));
+
+    render(
+      <UsersOverview
+        userData={userData}
+        billingArtifacts={aggregateRows(new BillingAggregator(), [])}
+        dailyCumulativeData={[{ date: '2026-03-01T00:00:00Z' }]}
+        quotaArtifacts={makeQuota([])}
+        usageArtifacts={makeUsage(userData)}
+      />
+    );
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Page 2' })[0]);
+    const usersTable = within(screen.getByRole('table', { name: 'Users' }));
+    expect(usersTable.getByRole('button', { name: 'test-user-000' })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search users' }), {
+      target: { value: 'test-user-050' },
+    });
+
+    expect(usersTable.getByRole('button', { name: 'test-user-050' })).toBeInTheDocument();
+    expect(usersTable.queryByRole('button', { name: 'test-user-000' })).not.toBeInTheDocument();
+  });
+
   it('shows plan names and plain AI Credits totals without overage indicators', () => {
     const userData: UserSummary[] = [{
       user: 'test-user-one',
