@@ -9,9 +9,10 @@ import { aggregateDailyConsumption } from '@/utils/dailyConsumption';
 import { buildBillingMonthDates, enumerateDatesInclusive } from '@/utils/dateKeys';
 import { normalizeRows } from '../helpers/normalizeRows';
 import { buildUserDailyModelDataFromArtifacts } from '@/utils/ingestion/analytics';
+import { BillingAccumulator } from '@/utils/ingestion/billingAccumulator';
 import { selectDetailTimeline } from '@/utils/ingestion/DetailAggregator';
 import { DetailPagesAggregator, selectUserDetails, selectBillingGroupDetails } from '@/utils/ingestion/DetailPagesAggregator';
-import { aggregateProductCosts } from '@/utils/productCosts';
+import { accumulateProductCost, aggregateProductCosts, createEmptyProductCostMap, getPopulatedProductCosts } from '@/utils/productCosts';
 import { summarizeUserHeader } from '@/utils/userHeaderSummary';
 
 import { buildUserHeaderSummary } from '../helpers/detailFixtures';
@@ -19,6 +20,7 @@ import { buildDailyBucketsArtifactsFromRows, buildUsageArtifactsFromRows } from 
 import { buildUserConsumption } from '../helpers/consumptionReference';
 import { makeModelDailyArtifacts } from '../helpers/modelDailyArtifacts';
 import { aggregateRows } from '../helpers/aggregateRows';
+import { makeNormalizedRow } from '../helpers/makeNormalizedRow';
 
 const csv = readFileSync(path.join(process.cwd(), '__tests__/fixtures/detail-usage.csv'), 'utf8');
 const rows = normalizeRows(Papa.parse<CSVData>(csv, { header: true, skipEmptyLines: true }).data);
@@ -33,6 +35,59 @@ const filters: { user?: string; organization?: string; costCenter?: string }[] =
 const precomputed = aggregateRows(new DetailPagesAggregator(), rows);
 
 describe('precomputed detail views', () => {
+  it('keeps product, billing-group user, and user cost-center sums identical to BillingAccumulator', () => {
+    const billingRows = [
+      makeNormalizedRow({
+        date: '2026-07-01', day: '2026-07-01', user: 'test-user-one', model: 'test-model-one',
+        organization: 'test-org-one', costCenter: 'test-cost-center-one',
+        grossAmount: 0.1, discountAmount: 0.01, netAmount: 0.09, aicQuantity: 1, aicGrossAmount: 0.1,
+      }),
+      makeNormalizedRow({
+        date: '2026-07-02', day: '2026-07-02', user: 'test-user-one', model: 'test-model-one',
+        organization: 'test-org-one', costCenter: 'test-cost-center-two',
+        grossAmount: 0.2, discountAmount: 0.02, netAmount: 0.18, aicQuantity: 2, aicGrossAmount: 0.2,
+      }),
+      makeNormalizedRow({
+        date: '2026-07-03', day: '2026-07-03', user: 'test-user-two', model: 'test-model-one',
+        organization: 'test-org-one', costCenter: 'test-cost-center-one',
+        grossAmount: 0.3, discountAmount: 0.03, netAmount: 0.27, aicQuantity: 3, aicGrossAmount: 0.3,
+      }),
+      makeNormalizedRow({
+        date: '2026-07-04', day: '2026-07-04', user: '', model: 'test-model-one',
+        organization: 'test-org-one', costCenter: 'test-cost-center-one',
+        grossAmount: 0.4, discountAmount: 0.04, netAmount: 0.36, aicQuantity: 4, aicGrossAmount: 0.4,
+        isUnattributedUsage: true, usageBucket: 'unattributed_ai_credit',
+      }),
+    ];
+    const billing = new BillingAccumulator();
+    billingRows.forEach(row => billing.addRow(row));
+    const expected = billing.finalize();
+
+    const productBuckets = createEmptyProductCostMap();
+    billingRows.forEach(row => accumulateProductCost(productBuckets, row));
+    const productTotals = getPopulatedProductCosts(productBuckets).reduce((totals, product) => ({
+      gross: totals.gross + product.gross,
+      discount: totals.discount + product.discount,
+      net: totals.net + product.net,
+      aicQuantity: totals.aicQuantity + product.aicQuantity,
+      aicGrossAmount: totals.aicGrossAmount + product.aicGrossAmount,
+    }), { gross: 0, discount: 0, net: 0, aicQuantity: 0, aicGrossAmount: 0 });
+    expect(productTotals).toEqual(expected.totals);
+
+    const details = aggregateRows(new DetailPagesAggregator(), billingRows);
+    const groupDetails = selectBillingGroupDetails(details, 'organization', 'test-org-one').details;
+    expect(groupDetails.userRows.map(({ user, gross, discount, net }) => ({ user, gross, discount, net })).sort((a, b) => a.user.localeCompare(b.user)))
+      .toEqual(expected.users.map(({ user, gross, discount, net }) => ({ user, gross, discount, net })).sort((a, b) => a.user.localeCompare(b.user)));
+
+    const userBilling = new BillingAccumulator();
+    billingRows.filter(row => row.user === 'test-user-one').forEach(row => userBilling.addRow(row));
+    const userCostCenters = selectUserDetails(details, 'test-user-one').details.costCenterCosts;
+    expect(userCostCenters.map(({ name, gross, discount, net }) => ({ name, gross, discount, net })).sort((a, b) => a.name.localeCompare(b.name)))
+      .toEqual([...userBilling.finalize().costCenterTotals].map(([name, totals]) => ({
+        name, gross: totals.gross, discount: totals.discount, net: totals.net,
+      })).sort((a, b) => a.name.localeCompare(b.name)));
+  });
+
   it.each(filters)('matches row-based view models for %j', filter => {
       const periodRows = rows;
       const selected = periodRows.filter(row =>

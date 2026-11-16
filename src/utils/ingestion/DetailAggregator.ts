@@ -9,8 +9,9 @@ import {
 } from '@/utils/productCosts';
 import { UserHeaderAccumulator } from '@/utils/userHeaderSummary';
 
+import { addBillingFields } from './billingAccumulator';
 import { TOKEN_FIELDS } from './tokenFields';
-import type { Aggregator, NormalizedRow } from './types';
+import type { Aggregator, BillingFieldTotals, NormalizedRow } from './types';
 
 interface CostTotals {
   quantity: number;
@@ -47,10 +48,14 @@ export interface DetailArtifacts {
 
 interface ModelBucket {
   quantity: number;
-  costs: Map<string, number>;
+  costs: Map<string, PackedBillingFields>;
   cacheOffset: number;
   /** User scopes only: row count, four token sums, four reported-row counts. */
   tokenOffset?: number;
+}
+
+interface PackedBillingFields extends Partial<BillingFieldTotals> {
+  offset: number;
 }
 
 export interface CompactDetailArtifacts {
@@ -74,10 +79,21 @@ function emptyCosts(): CostTotals {
 
 function addCosts(target: CostTotals, row: NormalizedRow): void {
   target.quantity += row.quantity;
-  target.gross += row.grossAmount ?? 0;
-  target.discount += row.discountAmount ?? 0;
-  target.net += row.netAmount ?? 0;
-  target.aicGrossAmount += row.aicGrossAmount ?? 0;
+  addBillingFields(target, row, false);
+}
+
+function createPackedBillingFields(values: number[], offset: number): PackedBillingFields {
+  return {
+    offset,
+    get gross() { return values[offset + 1]; },
+    set gross(value) { values[offset + 1] = value; },
+    get discount() { return values[offset + 2]; },
+    set discount(value) { values[offset + 2] = value; },
+    get net() { return values[offset + 3]; },
+    set net(value) { values[offset + 3] = value; },
+    get aicGrossAmount() { return values[offset + 4]; },
+    set aicGrossAmount(value) { values[offset + 4] = value; },
+  };
 }
 
 function addCredits(target: CreditTotals, quantity: number | undefined): void {
@@ -154,13 +170,13 @@ export class DetailAggregator implements Aggregator<CompactDetailArtifacts> {
     }
     const center = row.costCenter ?? '';
     let costs = model.costs.get(center);
-    if (costs === undefined) model.costs.set(center, costs = this.allocate(5));
+    if (costs === undefined) {
+      costs = createPackedBillingFields(this.values, this.allocate(5));
+      model.costs.set(center, costs);
+    }
     // quantity, gross, discount, net, AI-credit gross; no presentation fields.
-    this.values[costs] += row.quantity;
-    this.values[costs + 1] += row.grossAmount ?? 0;
-    this.values[costs + 2] += row.discountAmount ?? 0;
-    this.values[costs + 3] += row.netAmount ?? 0;
-    this.values[costs + 4] += row.aicGrossAmount ?? 0;
+    this.values[costs.offset] += row.quantity;
+    addBillingFields(costs, row, false);
     const cache = model.cacheOffset;
     // input, cache read, cache write, complete rows, all rows.
     this.values[cache + 4]++;
@@ -203,11 +219,14 @@ export function selectDetailArtifacts(compact: CompactDetailArtifacts): DetailAr
   const dailyRows = sortedDays.length === 0 ? [] : enumerateDatesInclusive(sortedDays[0], sortedDays.at(-1)!).map(date => {
     const bucket = compact.dailyProducts.get(date);
     const products = bucket ? getPopulatedProductCosts(bucket) : [];
-    return products.reduce((totals, product) => ({
-      ...totals, quantity: totals.quantity + product.credits,
-      gross: totals.gross + product.gross, discount: totals.discount + product.discount,
-      net: totals.net + product.net, aicGrossAmount: totals.aicGrossAmount + product.aicGrossAmount,
-    }), { ...emptyCosts(), date, products });
+    return products.reduce((totals, product) => {
+      totals.quantity += product.credits;
+      addBillingFields(totals, {
+        grossAmount: product.gross, discountAmount: product.discount, netAmount: product.net,
+        aicGrossAmount: product.aicGrossAmount,
+      }, false);
+      return totals;
+    }, { ...emptyCosts(), date, products });
   });
   const dailyModels: DetailDailyModelRow[] = [];
   const dailyModelTotals = new Map<string, Record<string, number>>();
@@ -227,10 +246,11 @@ export function selectDetailArtifacts(compact: CompactDetailArtifacts): DetailAr
       const cacheSuccessRate = reportedRows > 0 && total > 0
         ? { percent: read / total * 100, reportedRows, totalRows } : undefined;
       for (const [costCenter, costs] of bucket.costs) {
+        const costOffset = costs.offset;
         dailyModels.push({
           date, model, costCenter: costCenter || undefined,
-          credits: values[costs], gross: values[costs + 1], discount: values[costs + 2], net: values[costs + 3],
-          aicGrossAmount: values[costs + 4], isFirstInDate: false, rowSpan: 1,
+          credits: values[costOffset], gross: values[costOffset + 1], discount: values[costOffset + 2], net: values[costOffset + 3],
+          aicGrossAmount: values[costOffset + 4], isFirstInDate: false, rowSpan: 1,
           ...(cacheSuccessRate ? { cacheSuccessRate } : {}),
         });
       }

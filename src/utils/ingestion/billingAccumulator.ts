@@ -56,9 +56,13 @@ function createBillingGroupTotals(): BillingGroupTotals {
   };
 }
 
-type BillingFieldTarget = BillingFieldTotals | BillingUserTotals | SpecialBillingBucketTotals;
+type BillingFieldTarget = Partial<BillingFieldTotals>;
 
-function addBillingFields(target: BillingFieldTarget, row: BillingAccumulatorRow): AccumulationSignals {
+export function addBillingFields(
+  target: BillingFieldTarget,
+  row: Pick<NormalizedRow, 'grossAmount' | 'discountAmount' | 'netAmount' | 'aicQuantity' | 'aicGrossAmount'>,
+  includeAicQuantity = true,
+): AccumulationSignals {
   let sawBilling = false;
   let sawAicGross = false;
 
@@ -74,7 +78,7 @@ function addBillingFields(target: BillingFieldTarget, row: BillingAccumulatorRow
     target.net = (target.net || 0) + row.netAmount;
     sawBilling = true;
   }
-  if (typeof row.aicQuantity === 'number') {
+  if (includeAicQuantity && typeof row.aicQuantity === 'number') {
     target.aicQuantity = (target.aicQuantity || 0) + row.aicQuantity;
   }
   if (typeof row.aicGrossAmount === 'number') {
