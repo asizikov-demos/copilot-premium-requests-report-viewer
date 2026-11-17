@@ -308,6 +308,14 @@ describe('BillingGroupDetailsView', () => {
       expect(usersTable.getAllByRole('row')).toHaveLength(2);
       expect(usersTable.getByText('test-user-050')).toBeInTheDocument();
       expect(screen.getByText('51–51 of 51')).toBeInTheDocument();
+
+      fireEvent.change(screen.getByRole('textbox', { name: 'Search users' }), {
+        target: { value: 'test-user-001' },
+      });
+
+      expect(usersTable.getAllByRole('row')).toHaveLength(2);
+      expect(usersTable.getByText('test-user-001')).toBeInTheDocument();
+      expect(usersTable.queryByText('test-user-050')).not.toBeInTheDocument();
     });
 
     it('shows an empty state when no user matches the search query', () => {
