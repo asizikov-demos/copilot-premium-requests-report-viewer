@@ -39,6 +39,52 @@ interface AccumulationSignals {
   sawAicGross: boolean;
 }
 
+export interface BillingFieldTarget {
+  gross?: number;
+  discount?: number;
+  net?: number;
+  aicQuantity?: number;
+  aicGrossAmount?: number;
+}
+
+type BillingFieldSource = Pick<
+  NormalizedRow,
+  'grossAmount' | 'discountAmount' | 'netAmount' | 'aicQuantity' | 'aicGrossAmount'
+>;
+
+type BillingFieldName = keyof BillingFieldTarget;
+
+function forEachBillingField(
+  row: BillingFieldSource,
+  includeAicQuantity: boolean,
+  add: (field: BillingFieldName, amount: number) => void,
+): AccumulationSignals {
+  let sawBilling = false;
+  let sawAicGross = false;
+
+  if (typeof row.grossAmount === 'number') {
+    add('gross', row.grossAmount);
+    sawBilling = true;
+  }
+  if (typeof row.discountAmount === 'number') {
+    add('discount', row.discountAmount);
+    sawBilling = true;
+  }
+  if (typeof row.netAmount === 'number') {
+    add('net', row.netAmount);
+    sawBilling = true;
+  }
+  if (includeAicQuantity && typeof row.aicQuantity === 'number') {
+    add('aicQuantity', row.aicQuantity);
+  }
+  if (typeof row.aicGrossAmount === 'number') {
+    add('aicGrossAmount', row.aicGrossAmount);
+    sawAicGross = true;
+  }
+
+  return { sawBilling, sawAicGross };
+}
+
 function createBillingFieldTotals(): BillingFieldTotals {
   return {
     gross: 0,
@@ -56,33 +102,24 @@ function createBillingGroupTotals(): BillingGroupTotals {
   };
 }
 
-type BillingFieldTarget = BillingFieldTotals | BillingUserTotals | SpecialBillingBucketTotals;
+export function addBillingFields(
+  target: BillingFieldTarget,
+  row: BillingFieldSource,
+  includeAicQuantity = true,
+): AccumulationSignals {
+  return forEachBillingField(row, includeAicQuantity, (field, amount) => {
+    target[field] = (target[field] ?? 0) + amount;
+  });
+}
 
-function addBillingFields(target: BillingFieldTarget, row: BillingAccumulatorRow): AccumulationSignals {
-  let sawBilling = false;
-  let sawAicGross = false;
-
-  if (typeof row.grossAmount === 'number') {
-    target.gross = (target.gross || 0) + row.grossAmount;
-    sawBilling = true;
-  }
-  if (typeof row.discountAmount === 'number') {
-    target.discount = (target.discount || 0) + row.discountAmount;
-    sawBilling = true;
-  }
-  if (typeof row.netAmount === 'number') {
-    target.net = (target.net || 0) + row.netAmount;
-    sawBilling = true;
-  }
-  if (typeof row.aicQuantity === 'number') {
-    target.aicQuantity = (target.aicQuantity || 0) + row.aicQuantity;
-  }
-  if (typeof row.aicGrossAmount === 'number') {
-    target.aicGrossAmount = (target.aicGrossAmount || 0) + row.aicGrossAmount;
-    sawAicGross = true;
-  }
-
-  return { sawBilling, sawAicGross };
+export function addPackedBillingFields(values: number[], offset: number, row: BillingFieldSource): void {
+  forEachBillingField(row, false, (field, amount) => {
+    const slot = field === 'gross' ? 1
+      : field === 'discount' ? 2
+        : field === 'net' ? 3
+          : 4;
+    values[offset + slot] += amount;
+  });
 }
 
 function addGroupRow(groups: Map<string, BillingGroupTotals>, key: string, row: BillingAccumulatorRow): void {
