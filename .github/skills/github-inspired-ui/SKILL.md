@@ -5,9 +5,9 @@ description: Build UI components that follow this project's Primer-based design 
 
 This skill encodes the design language for a Next.js data analytics dashboard. The aesthetic is **functional minimalism** — flat surfaces, subtle borders, restrained color, generous whitespace. The source of truth is GitHub's design system, **[Primer](https://primer.style/product/primitives/)**.
 
-Design tokens come from [`@primer/primitives`](https://www.npmjs.com/package/@primer/primitives), imported once in `src/app/globals.css` (light theme only; `<html data-color-mode="light" data-light-theme="light">` in `src/app/layout.tsx` activates it).
+Design tokens come from [`@primer/primitives`](https://www.npmjs.com/package/@primer/primitives). Both Light and GitHub Dimmed stylesheets are imported in `src/app/globals.css`. `src/app/layout.tsx` renders deterministic Light markup; `PrimerProviders` restores the saved browser preference after mount and synchronizes root theme attributes and native color scheme.
 
-Interactive controls come from [`@primer/react`](https://primer.style/product/components/) and icons from [`@primer/octicons-react`](https://primer.style/octicons/). `PrimerProviders` in `src/app/providers.tsx` wraps the app in `ThemeProvider` from `@primer/react/next` (`colorMode="day"`, `dayScheme="light"`, `contextOnly`) plus `BaseStyles`. Do not use the deprecated root `ThemeProvider` export.
+Interactive controls come from [`@primer/react`](https://primer.style/product/components/) and icons from [`@primer/octicons-react`](https://primer.style/octicons/). `PrimerProviders` in `src/app/providers.tsx` wraps the app in `ThemeProvider` from `@primer/react/next` (`dayScheme="light"`, `nightScheme="dark_dimmed"`, `contextOnly`) plus `BaseStyles`. Use `useAppTheme` for the preference and setter; do not use the deprecated root `ThemeProvider` export.
 
 ## How to Use Tokens
 
@@ -63,7 +63,7 @@ Load multiple resource files. For a brand-new page you'd typically need: `color-
 These rules apply regardless of the task. Do **not** load a resource file for these — they are always in effect:
 
 1. **No hard-coded colors.** No hex, `rgb()`, or bracket colors (`bg-[#f6f8fa]`) and no Tailwind palette utilities (`bg-gray-100`, `text-indigo-600`, `text-emerald-600`, `bg-white`, `text-white`). Always use a Primer token. If no token fits, pick the closest semantic token — do not invent a color.
-2. **No dark mode (yet).** Light theme only. Never add `dark:` prefixes; tokens will switch automatically once a dark theme is imported.
+2. **Support both Light and GitHub Dimmed.** Semantic tokens switch automatically; do not add `dark:` palette overrides. Keep chart text on a contrasting semantic surface, not directly on arbitrary series colors.
 3. **Flat structural surfaces.** Cards/panels use a border and at most `shadow-(--shadow-resting-small)`. Overlays (tooltips, popovers, menus) use `shadow-(--shadow-floating-small)`. Form inputs use `shadow-(--shadow-inset)`. No Tailwind `shadow-sm/md/lg/xl`.
 4. **No rounded-lg or rounded-xl.** Use `rounded-md` (6px = `--borderRadius-medium`). Exceptions: `rounded-full` for pills/counters/avatars, `rounded-sm` for small inline elements.
 5. **No heavy borders on structural surfaces.** Preserve semantic indicators only, e.g. `border-l-[3px]` accent indicators and `border-b-2` active tabs.

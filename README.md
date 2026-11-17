@@ -18,6 +18,7 @@ Try the Sample Data option on the upload screen to see how it works without need
 - Billed costs and daily included vs. additional usage in USD
 - Cost center and organization breakdowns
 - Consumption groups, feature adoption insights, and recommendations
+- Light (default) and GitHub Dimmed themes, switchable from the header before or after upload
 
 Upload a report covering one calendar month to compare consumption against known quotas.
 Daily charts use UTC billing dates. Cost charts appear only when monetary data
@@ -25,6 +26,12 @@ is available; token views appear when token counts are reported.
 Model ring cards keep a consistent height. Legends show the top five models;
 expanding reveals the rest in a scrollable list without resizing the card.
 Empty buckets explain the absence of usage for the selected period.
+
+The viewer restores your saved theme after loading, without resetting report
+filters or navigation. Only this preference is saved in browser local storage
+(`copilot-billing-theme`), not your report. If storage is unavailable, the toggle
+still works for the current visit. Printing temporarily uses Light for legibility
+and then restores your selected theme.
 
 ## Supported CSV Format
 

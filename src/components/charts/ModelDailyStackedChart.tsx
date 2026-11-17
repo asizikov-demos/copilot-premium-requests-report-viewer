@@ -3,9 +3,9 @@
 import React from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
-import { borderColor, dataVizColor, fgColor } from '@/constants/primerTokens';
+import { bgColor, borderColor, dataVizColor, fgColor } from '@/constants/primerTokens';
 
-import { chartTooltipContentStyle, chartTooltipLabelStyle, utcDateTickFormatter } from './chartTooltipStyles';
+import { chartTooltipContentStyle, chartTooltipItemStyle, chartTooltipLabelStyle, utcDateTickFormatter } from './chartTooltipStyles';
 
 export interface ModelDailyDatum {
   date: string;
@@ -43,6 +43,8 @@ export function ModelDailyStackedChart({
         <Tooltip
           contentStyle={chartTooltipContentStyle}
           labelStyle={chartTooltipLabelStyle}
+          itemStyle={chartTooltipItemStyle}
+          cursor={{ fill: bgColor.neutralMuted }}
           labelFormatter={(value) => value as string}
           formatter={(value, name) => [
             valueUnitLabel ? `${Number(value).toFixed(2)} ${valueUnitLabel}` : Number(value).toFixed(2),
@@ -50,7 +52,7 @@ export function ModelDailyStackedChart({
           ]}
           wrapperStyle={{ zIndex: 1000 }}
         />
-        <Legend wrapperStyle={{ fontSize: 12, color: fgColor.muted }} />
+        <Legend wrapperStyle={{ fontSize: 12 }} formatter={(value) => <span className="text-(--fgColor-default)">{value}</span>} />
         {models.map((model) => (
           <Bar
             key={model}

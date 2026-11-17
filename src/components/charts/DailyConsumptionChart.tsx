@@ -8,6 +8,7 @@ import { formatCurrency } from '@/utils/formatters';
 
 import {
   chartTooltipContentStyle,
+  chartTooltipItemStyle,
   chartTooltipLabelStyle,
   utcDateLabelFormatter,
   utcDateTickFormatter,
@@ -41,11 +42,13 @@ export function DailyConsumptionChart({ data }: DailyConsumptionChartProps) {
           labelFormatter={utcDateLabelFormatter}
           contentStyle={chartTooltipContentStyle}
           labelStyle={chartTooltipLabelStyle}
+          itemStyle={chartTooltipItemStyle}
           cursor={{ fill: bgColor.neutralMuted }}
         />
         <Legend
           itemSorter={(item) => item.dataKey === 'included' ? 0 : 1}
           wrapperStyle={{ fontSize: 12, color: fgColor.muted }}
+          formatter={(value) => <span className="text-(--fgColor-default)">{value}</span>}
         />
         <Bar dataKey="included" name="Included usage" stackId="consumption" fill={bgColor.successEmphasis} />
         <Bar dataKey="additional" name="Additional usage" stackId="consumption" fill={bgColor.dangerEmphasis} />

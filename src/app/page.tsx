@@ -1,14 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { MarkGithubIcon } from '@primer/octicons-react';
+import { MarkGithubIcon, MoonIcon, SunIcon } from '@primer/octicons-react';
 import { Button, Link } from '@primer/react';
 
 import { CSVUploader } from '@/components/CSVUploader';
 import { DataAnalysis } from '@/components/DataAnalysis';
 import { IngestionResult } from '@/utils/ingestion';
 
+import { useAppTheme } from './providers';
+
 export default function Home() {
+  const { theme, setTheme } = useAppTheme();
   const [ingestionResult, setIngestionResult] = useState<IngestionResult | null>(null);
   const [filename, setFilename] = useState<string>('');
   const [isDataLoaded, setIsDataLoaded] = useState(false);
@@ -37,17 +40,27 @@ export default function Home() {
     <main className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="bg-(--header-bgColor) sticky top-0 z-50">
-        <div className="px-6">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <MarkGithubIcon size={24} className="fill-(--header-fgColor-logo)" />
-              <h1 className="text-lg font-semibold tracking-tight text-(--header-fgColor-logo)">
+        <div className="px-4 sm:px-6">
+          <div className="flex items-center justify-between gap-3 h-16">
+            <div className="flex min-w-0 items-center gap-3">
+              <MarkGithubIcon size={24} className="shrink-0 fill-(--header-fgColor-logo)" />
+              <h1 className="truncate text-lg font-semibold tracking-tight text-(--header-fgColor-logo)">
                 Copilot Billing Report Viewer
               </h1>
             </div>
-            {isDataLoaded && (
-              <Button onClick={handleReset}>New Report</Button>
-            )}
+            <div className="flex shrink-0 items-center gap-2 print:hidden">
+              <Button
+                leadingVisual={theme === 'dimmed' ? MoonIcon : SunIcon}
+                aria-label="Light / GitHub Dimmed theme"
+                aria-pressed={theme === 'dimmed'}
+                onClick={() => setTheme(theme === 'dimmed' ? 'light' : 'dimmed')}
+              >
+                {theme === 'dimmed' ? 'Dimmed' : 'Light'}
+              </Button>
+              {isDataLoaded && (
+                <Button onClick={handleReset}>New Report</Button>
+              )}
+            </div>
           </div>
         </div>
       </header>

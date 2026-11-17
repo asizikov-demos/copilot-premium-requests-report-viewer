@@ -5,9 +5,9 @@ import { ResponsiveContainer, Tooltip, Treemap } from 'recharts';
 import type { TreemapNode } from 'recharts';
 
 import { bgColor } from '@/constants/primerTokens';
-import { getModelColor, getModelTextColor } from '@/utils/modelColors';
+import { getModelColor } from '@/utils/modelColors';
 
-import { chartTooltipContentStyle, chartTooltipLabelStyle } from './chartTooltipStyles';
+import { chartTooltipContentStyle, chartTooltipItemStyle, chartTooltipLabelStyle } from './chartTooltipStyles';
 
 interface ModelCreditsTreemapDatum {
   fullModel: string;
@@ -80,7 +80,7 @@ export function ModelCreditsTreemap({ data }: ModelCreditsTreemapProps) {
                       height={node.height - 16}
                       pointerEvents="none"
                     >
-                      <div className="h-full overflow-hidden text-xs" style={{ color: getModelTextColor(node.name) }}>
+                      <div className="max-h-full w-fit max-w-full overflow-hidden rounded-sm bg-(--bgColor-default) p-1 text-xs text-(--fgColor-default)">
                         <p className="line-clamp-2 break-words font-semibold">{node.name}</p>
                         {node.height >= 80 && (
                           <p className="mt-1 truncate tabular-nums">
@@ -104,6 +104,7 @@ export function ModelCreditsTreemap({ data }: ModelCreditsTreemapProps) {
               ]}
               contentStyle={chartTooltipContentStyle}
               labelStyle={chartTooltipLabelStyle}
+              itemStyle={chartTooltipItemStyle}
               wrapperStyle={{ zIndex: 1000 }}
             />
           </Treemap>

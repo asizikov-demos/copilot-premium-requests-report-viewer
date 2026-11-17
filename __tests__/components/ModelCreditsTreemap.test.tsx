@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactElement } from 'react';
 
 import { ModelCreditsTreemap } from '@/components/charts/ModelCreditsTreemap';
+import { PrimerProviders, useAppTheme } from '@/app/providers';
 import { getModelColor } from '@/utils/modelColors';
 
 jest.mock('recharts', () => {
@@ -85,21 +86,44 @@ describe('ModelCreditsTreemap', () => {
     expect(screen.queryByRole('img', { name: /test-model-one:/ })).not.toBeInTheDocument();
   });
 
-  it('uses a contrasting Primer foreground token for tile labels based on the model hue', () => {
+  it('keeps labels on neutral Primer surfaces instead of assuming a hue-specific text contrast', () => {
     render(
       <ModelCreditsTreemap data={[
         { fullModel: 'Claude Sonnet 4.5', credits: 50 },
         { fullModel: 'GPT-5', credits: 50 },
       ]} />
     );
-    const labelColor = (name: string) => screen.getByText(name, { selector: 'p' }).parentElement!.style.color;
-    expect(labelColor('Claude Sonnet 4.5')).toBe('var(--fgColor-onEmphasis)');
-    expect(labelColor('GPT-5')).toBe('var(--fgColor-default)');
+    for (const name of ['Claude Sonnet 4.5', 'GPT-5']) {
+      expect(screen.getByText(name, { selector: 'p' }).parentElement).toHaveClass('bg-(--bgColor-default)', 'text-(--fgColor-default)');
+    }
   });
 
   it('rounds large credit labels to two decimal places without rounding tile values', () => {
     render(<ModelCreditsTreemap data={[{ fullModel: 'test-model-one', credits: 32487904.53922278 }]} />);
     expect(screen.getByText('32,487,904.54 AI Credits')).toBeInTheDocument();
     expect(screen.getByRole('img')).toHaveAccessibleName('test-model-one: 32,487,904.54 AI Credits (100%)');
+  });
+
+  it('keeps the mounted chart, model hues and keyboard details when the theme changes', () => {
+    function ThemeSwitch() {
+      const { setTheme } = useAppTheme();
+      return <button onClick={() => setTheme('dimmed')}>Switch theme</button>;
+    }
+    localStorage.clear();
+    render(
+      <PrimerProviders>
+        <ThemeSwitch />
+        <ModelCreditsTreemap data={[{ fullModel: 'GPT-5', credits: 50 }]} />
+      </PrimerProviders>
+    );
+    const tile = screen.getByRole('img', { name: /GPT-5:/ });
+    fireEvent.focus(tile);
+    fireEvent.click(screen.getByRole('button', { name: 'Switch theme' }));
+    expect(screen.getByRole('img', { name: /GPT-5:/ })).toBe(tile);
+    expect(tile.querySelector('rect')).toHaveAttribute('fill', getModelColor('GPT-5'));
+    expect(screen.getByRole('tooltip')).toHaveTextContent('GPT-5: 50.00 AI Credits');
+    expect(document.documentElement).toHaveAttribute('data-color-mode', 'dark');
+    expect(screen.getByText('GPT-5', { selector: 'p' }).parentElement).toHaveClass('bg-(--bgColor-default)', 'text-(--fgColor-default)');
+    localStorage.clear();
   });
 });

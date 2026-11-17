@@ -44,23 +44,17 @@ function formatPercentage(value: number): string {
 }
 
 function getHeatmapCellClass(value: number, maxValue: number): string {
-  if (value === 0 || maxValue === 0) return 'bg-(--bgColor-muted) text-(--fgColor-muted)';
+  if (value === 0 || maxValue === 0) return 'bg-(--bgColor-muted)';
 
   const intensity = value / maxValue;
 
-  if (intensity >= 0.8) return 'bg-(--data-blue-color-emphasis) text-(--fgColor-onEmphasis)';
-  if (intensity >= 0.6) return 'bg-(--data-blue-color-emphasis)/75 text-(--fgColor-default)';
-  if (intensity >= 0.4) return 'bg-(--data-blue-color-emphasis)/55 text-(--fgColor-default)';
-  if (intensity >= 0.2) return 'bg-(--data-blue-color-emphasis)/35 text-(--fgColor-default)';
-  if (intensity >= 0.05) return 'bg-(--data-blue-color-emphasis)/20 text-(--fgColor-default)';
+  if (intensity >= 0.8) return 'bg-(--data-blue-color-emphasis)';
+  if (intensity >= 0.6) return 'bg-(--data-blue-color-emphasis)/75';
+  if (intensity >= 0.4) return 'bg-(--data-blue-color-emphasis)/55';
+  if (intensity >= 0.2) return 'bg-(--data-blue-color-emphasis)/35';
+  if (intensity >= 0.05) return 'bg-(--data-blue-color-emphasis)/20';
 
-  return 'bg-(--data-blue-color-muted) text-(--fgColor-default)';
-}
-
-function getSegmentLabelClass(groupKey: UserAicGroupKey): string {
-  if (groupKey === 'heavy' || groupKey === 'power') return 'text-(--fgColor-onEmphasis)';
-
-  return 'text-(--fgColor-default)';
+  return 'bg-(--data-blue-color-muted)';
 }
 
 function DistributionBar({
@@ -92,7 +86,7 @@ function DistributionBar({
               title={`${group.label}: ${formatPercentage(share)}`}
             >
               {share >= 8 ? (
-                <span className={`px-1 text-xs font-semibold ${getSegmentLabelClass(group.key)}`}>
+                <span className="rounded-sm bg-(--bgColor-default) px-1 text-xs font-semibold text-(--fgColor-default)">
                   {formatPercentage(share)}
                 </span>
               ) : null}
@@ -170,19 +164,19 @@ export function UsersAicDistributionChart({ users }: UsersAicDistributionChartPr
                   <p className="mt-0.5 text-xs font-normal text-(--fgColor-muted)">{group.description}</p>
                 </td>
                 <td className={`px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-right ${getHeatmapCellClass(group.users, maxUsers)}`}>
-                  {group.users.toLocaleString()}
+                  <span className="rounded-sm bg-(--bgColor-default) px-1 text-(--fgColor-default)">{group.users.toLocaleString()}</span>
                 </td>
                 <td className={`px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-right ${getHeatmapCellClass(group.shareOfUsers, maxUserShare)}`}>
-                  {formatPercentage(group.shareOfUsers)}
+                  <span className="rounded-sm bg-(--bgColor-default) px-1 text-(--fgColor-default)">{formatPercentage(group.shareOfUsers)}</span>
                 </td>
                 <td className={`px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-right ${getHeatmapCellClass(group.averageGrossCost, maxAverageGrossCost)}`}>
-                  {formatCurrency(group.averageGrossCost)}
+                  <span className="rounded-sm bg-(--bgColor-default) px-1 text-(--fgColor-default)">{formatCurrency(group.averageGrossCost)}</span>
                 </td>
                 <td className={`px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums font-semibold text-right ${getHeatmapCellClass(group.totalGrossCost, maxTotalGrossCost)}`}>
-                  {formatCurrency(group.totalGrossCost)}
+                  <span className="rounded-sm bg-(--bgColor-default) px-1 text-(--fgColor-default)">{formatCurrency(group.totalGrossCost)}</span>
                 </td>
                 <td className={`px-5 py-3 whitespace-nowrap text-sm font-mono tabular-nums text-right ${getHeatmapCellClass(group.shareOfGrossCost, maxGrossCostShare)}`}>
-                  {formatPercentage(group.shareOfGrossCost)}
+                  <span className="rounded-sm bg-(--bgColor-default) px-1 text-(--fgColor-default)">{formatPercentage(group.shareOfGrossCost)}</span>
                 </td>
               </tr>
             ))}
