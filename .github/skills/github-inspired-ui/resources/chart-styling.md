@@ -6,6 +6,8 @@ All chart colors come from Primer tokens via `src/constants/primerTokens.ts`. Ne
 
 Use `getModelColor(modelName)` for single lookups and `generateModelColors(models)` for batch. Known models map to Primer data-viz hues (`dataVizColor(hue)`); unknown models get a stable hue from a 17-hue fallback palette. Keep labels over model-colored fills (e.g. treemaps) on `bgColor-default` backing with `fgColor-default` text. Neither white nor default text contrasts sufficiently with every emphasis hue in both themes; do not choose text colors from light-theme luminance assumptions.
 
+Treemap labels use native SVG text and backplates, clipped to each tile, keeping label geometry and painting entirely in SVG rather than HTML `foreignObject` layout.
+
 ## Other Categorical Series
 
 Use `dataVizColor(hue)` with a distinct hue per series, e.g. `TOKEN_COLUMNS` in `src/components/TokenValue.tsx` and `PRODUCT_CATEGORY_COLORS` in `BillingGroupDetailsView.tsx`.
