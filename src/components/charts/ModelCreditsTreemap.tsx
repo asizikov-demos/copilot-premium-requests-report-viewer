@@ -1,13 +1,13 @@
 "use client";
 
 import { useId, useState } from 'react';
-import { ResponsiveContainer, Tooltip, Treemap } from 'recharts';
+import { ResponsiveContainer, Text, Tooltip, Treemap } from 'recharts';
 import type { TreemapNode } from 'recharts';
 
-import { bgColor } from '@/constants/primerTokens';
-import { getModelColor, getModelTextColor } from '@/utils/modelColors';
+import { bgColor, fgColor } from '@/constants/primerTokens';
+import { getModelColor } from '@/utils/modelColors';
 
-import { chartTooltipContentStyle, chartTooltipLabelStyle } from './chartTooltipStyles';
+import { chartTooltipContentStyle, chartTooltipItemStyle, chartTooltipLabelStyle } from './chartTooltipStyles';
 
 interface ModelCreditsTreemapDatum {
   fullModel: string;
@@ -51,6 +51,11 @@ export function ModelCreditsTreemap({ data }: ModelCreditsTreemapProps) {
               if (node.depth === 0) return <g />;
               const color = getModelColor(node.name);
               const description = `${node.name}: ${formatCredits(node.value)} AI Credits (${formatShare(node.value)})`;
+              const labelWidth = Math.min(node.width - 16, 180);
+              const nameLines = node.height >= 56 ? 2 : 1;
+              const showCredits = node.height >= 80;
+              const showShare = node.height >= 100;
+              const labelHeight = nameLines * 16 + 8 + (showCredits ? 20 : 0) + (showShare ? 20 : 0);
               return (
                 <g
                   className="group"
@@ -73,25 +78,57 @@ export function ModelCreditsTreemap({ data }: ModelCreditsTreemapProps) {
                     className="group-hover:opacity-90 group-focus:stroke-(--fgColor-default)"
                   />
                   {node.width >= 72 && node.height >= 48 && (
-                    <foreignObject
+                    <svg
                       x={node.x + 8}
                       y={node.y + 8}
                       width={node.width - 16}
                       height={node.height - 16}
                       pointerEvents="none"
+                      aria-hidden="true"
+                      overflow="hidden"
                     >
-                      <div className="h-full overflow-hidden text-xs" style={{ color: getModelTextColor(node.name) }}>
-                        <p className="line-clamp-2 break-words font-semibold">{node.name}</p>
-                        {node.height >= 80 && (
-                          <p className="mt-1 truncate tabular-nums">
-                            {formatCredits(node.value)} AI Credits
-                          </p>
-                        )}
-                        {node.height >= 100 && (
-                          <p className="mt-0.5 tabular-nums">{formatShare(node.value)}</p>
-                        )}
-                      </div>
-                    </foreignObject>
+                      <rect width={labelWidth} height={labelHeight} rx={2} fill={bgColor.default} />
+                      <Text
+                        x={4}
+                        y={4}
+                        width={labelWidth - 8}
+                        maxLines={nameLines}
+                        verticalAnchor="start"
+                        lineHeight={16}
+                        fill={fgColor.default}
+                        style={{ fontSize: '12px', fontWeight: 600, fontFamily: 'var(--fontStack-sansSerif)' }}
+                      >
+                        {node.name}
+                      </Text>
+                      {showCredits && (
+                        <Text
+                          x={4}
+                          y={nameLines * 16 + 8}
+                          width={labelWidth - 8}
+                          maxLines={1}
+                          verticalAnchor="start"
+                          fill={fgColor.default}
+                          className="tabular-nums"
+                          style={{ fontSize: '12px', fontWeight: 400, fontFamily: 'var(--fontStack-sansSerif)' }}
+                        >
+                          {`${formatCredits(node.value)} AI Credits`}
+                        </Text>
+                      )}
+                      {showShare && (
+                        <Text
+                          x={4}
+                          y={nameLines * 16 + 28}
+                          width={labelWidth - 8}
+                          maxLines={1}
+                          verticalAnchor="start"
+                          fill={fgColor.default}
+                          className="tabular-nums"
+                          style={{ fontSize: '12px', fontWeight: 400, fontFamily: 'var(--fontStack-sansSerif)' }}
+                        >
+                          {formatShare(node.value)}
+                        </Text>
+                      )}
+                    </svg>
                   )}
                 </g>
               );
@@ -104,6 +141,7 @@ export function ModelCreditsTreemap({ data }: ModelCreditsTreemapProps) {
               ]}
               contentStyle={chartTooltipContentStyle}
               labelStyle={chartTooltipLabelStyle}
+              itemStyle={chartTooltipItemStyle}
               wrapperStyle={{ zIndex: 1000 }}
             />
           </Treemap>

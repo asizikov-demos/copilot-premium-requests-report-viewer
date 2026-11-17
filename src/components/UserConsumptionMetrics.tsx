@@ -3,12 +3,12 @@
 import { useMemo, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
-import { borderColor, fgColor } from '@/constants/primerTokens';
+import { bgColor, borderColor, fgColor } from '@/constants/primerTokens';
 import type { TokenCounts } from '@/types/tokens';
 import type { UserConsumption } from '@/types/consumption';
 import { buildBillingMonthDates } from '@/utils/dateKeys';
 
-import { chartTooltipContentStyle, chartTooltipLabelStyle, utcDateTickFormatter } from './charts/chartTooltipStyles';
+import { chartTooltipContentStyle, chartTooltipItemStyle, chartTooltipLabelStyle, utcDateTickFormatter } from './charts/chartTooltipStyles';
 import { SelectPanelDropdown } from './primitives/SelectPanelDropdown';
 import { TOKEN_COLUMNS, TokenValue } from './TokenValue';
 
@@ -77,9 +77,10 @@ export function UserConsumptionMetrics({ metrics, reportMonth }: {
                   <XAxis dataKey="date" tickFormatter={utcDateTickFormatter} tick={{ fill: fgColor.muted, fontSize: 12 }} />
                   <YAxis tick={{ fill: fgColor.muted, fontSize: 12 }} tickFormatter={value => Number(value).toLocaleString(undefined, { notation: 'compact' })} />
                   <Tooltip contentStyle={chartTooltipContentStyle} labelStyle={chartTooltipLabelStyle}
+                    itemStyle={chartTooltipItemStyle} cursor={{ fill: bgColor.neutralMuted }}
                     labelFormatter={value => `${value} (UTC)`}
                     formatter={(value, name) => [Number(value).toLocaleString(), String(name)]} />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} formatter={(value) => <span className="text-(--fgColor-default)">{value}</span>} />
                   {TOKEN_COLUMNS.map(({ field, label, color }) => (
                     <Bar key={field} dataKey={field} stackId="tokens"
                       name={label} fill={color} isAnimationActive={false} />

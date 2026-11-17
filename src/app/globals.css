@@ -9,6 +9,7 @@
 @import "@primer/primitives/dist/css/functional/size/size.css";
 @import "@primer/primitives/dist/css/functional/typography/typography.css";
 @import "@primer/primitives/dist/css/functional/themes/light.css";
+@import "@primer/primitives/dist/css/functional/themes/dark-dimmed.css";
 
 @theme inline {
   --font-sans: var(--fontStack-sansSerif);

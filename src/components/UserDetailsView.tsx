@@ -65,7 +65,8 @@ function UserDailyUsageTooltip({ active, payload, label, valueUnitLabel = 'AI Cr
           <div className="mb-2">
             <p className="text-xs font-medium text-(--fgColor-muted) mb-1">Daily Usage</p>
             {modelData.map((entry: TooltipEntry, entryIndex: number) => (
-              <p key={entryIndex} className="text-xs ml-2" style={{ color: entry.color }}>
+              <p key={entryIndex} className="text-xs ml-2 text-(--fgColor-default)">
+                <span aria-hidden="true" className="mr-1 inline-block h-2 w-2 rounded-sm" style={{ backgroundColor: entry.color }} />
                 {entry.dataKey}: {entry.value.toFixed(1)} {valueUnitLabel}
               </p>
             ))}

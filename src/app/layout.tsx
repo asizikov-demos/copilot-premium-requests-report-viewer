@@ -13,7 +13,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-color-mode="light" data-light-theme="light">
+    <html lang="en" data-color-mode="light" data-light-theme="light" data-dark-theme="dark_dimmed" style={{ colorScheme: 'light' }}>
       <body className="antialiased">
         <PrimerProviders>{children}</PrimerProviders>
       </body>

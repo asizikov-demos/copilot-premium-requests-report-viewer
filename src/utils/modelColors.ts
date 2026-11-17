@@ -1,4 +1,4 @@
-import { dataVizColor, dataVizTextColor, type DataVizHue } from '@/constants/primerTokens';
+import { dataVizColor, type DataVizHue } from '@/constants/primerTokens';
 
 /**
  * Model-specific color palette for consistent data visualization.
@@ -55,11 +55,6 @@ function getModelHue(model: string): DataVizHue {
 /** Get a color for a specific model. */
 export function getModelColor(model: string): string {
   return dataVizColor(getModelHue(model));
-}
-
-/** Get the foreground token that contrasts with `getModelColor(model)`. */
-export function getModelTextColor(model: string): string {
-  return dataVizTextColor(getModelHue(model));
 }
 
 /**

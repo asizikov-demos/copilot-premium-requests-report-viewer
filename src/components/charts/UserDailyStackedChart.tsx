@@ -3,7 +3,7 @@
 import React from 'react';
 import { ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-import { borderColor, fgColor } from '@/constants/primerTokens';
+import { bgColor, borderColor, fgColor } from '@/constants/primerTokens';
 
 import { utcDateTickFormatter } from './chartTooltipStyles';
 
@@ -39,7 +39,7 @@ export function UserDailyStackedChart({ data, models, modelColors, tooltip, heig
           tick={{ fill: fgColor.muted, fontSize: 12 }}
           domain={[0, 'dataMax']}
         />
-  <Tooltip content={tooltip} />
+        <Tooltip content={tooltip} cursor={{ fill: bgColor.neutralMuted }} />
         {models.map((model) => (
           <Bar
             key={model}

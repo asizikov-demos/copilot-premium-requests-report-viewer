@@ -1,6 +1,6 @@
 # Color System
 
-All colors come from **Primer Primitives** functional tokens (`@primer/primitives/dist/css/functional/themes/light.css`), imported in `src/app/globals.css`. Browse the full list at https://primer.style/product/primitives/color.
+All colors come from **Primer Primitives** functional tokens (Light and GitHub Dimmed), imported in `src/app/globals.css`. Browse the full list at https://primer.style/product/primitives/color.
 
 **Never hard-code hex values or use Tailwind palette colors.** Pick a token by its role.
 
@@ -72,7 +72,7 @@ Primer provides 17 categorical hues as `--data-{hue}-color-emphasis` / `--data-{
 
 ## JS Helpers (`src/constants/primerTokens.ts`)
 
-Exports `fgColor`, `bgColor`, `borderColor`, `shadow`, `dataVizColor`, `dataVizTextColor` (contrasting foreground for an emphasis hue), `dataVizScale`, and the `DataVizHue` type. Values are `var(--token)` strings, valid for Recharts props, SVG `fill`/`stroke`, and inline styles. Add a key there (don't inline `var(--...)` strings in components) when a new token is needed in JS.
+Exports `fgColor`, `bgColor`, `borderColor`, `shadow`, `dataVizColor`, `dataVizScale`, and the `DataVizHue` type. Values are `var(--token)` strings, valid for Recharts props, SVG `fill`/`stroke`, and inline styles. Add a key there (don't inline `var(--...)` strings in components) when a new token is needed in JS.
 
 ## ✅ / ❌
 

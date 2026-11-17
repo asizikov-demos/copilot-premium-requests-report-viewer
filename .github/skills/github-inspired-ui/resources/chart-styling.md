@@ -4,7 +4,9 @@ All chart colors come from Primer tokens via `src/constants/primerTokens.ts`. Ne
 
 ## Model Colors (`src/utils/modelColors.ts`)
 
-Use `getModelColor(modelName)` for single lookups and `generateModelColors(models)` for batch. Known models map to Primer data-viz hues (`dataVizColor(hue)`); unknown models get a stable hue from a 17-hue fallback palette. For text drawn on a model-colored fill (e.g. treemap labels), use `getModelTextColor(modelName)`; never parse token strings as hex to compute contrast.
+Use `getModelColor(modelName)` for single lookups and `generateModelColors(models)` for batch. Known models map to Primer data-viz hues (`dataVizColor(hue)`); unknown models get a stable hue from a 17-hue fallback palette. Keep labels over model-colored fills (e.g. treemaps) on `bgColor-default` backing with `fgColor-default` text. Neither white nor default text contrasts sufficiently with every emphasis hue in both themes; do not choose text colors from light-theme luminance assumptions.
+
+Treemap labels use native SVG text and backplates, clipped to each tile, keeping label geometry and painting entirely in SVG rather than HTML `foreignObject` layout.
 
 ## Other Categorical Series
 
@@ -12,7 +14,7 @@ Use `dataVizColor(hue)` with a distinct hue per series, e.g. `TOKEN_COLUMNS` in 
 
 ## Chart Tooltip Styling (`src/components/charts/chartTooltipStyles.ts`)
 
-Apply `contentStyle={chartTooltipContentStyle} labelStyle={chartTooltipLabelStyle}`. They use `bgColor.default`, `borderColor.default`, `fgColor.default`, and `shadow.floatingSmall`.
+Apply `contentStyle={chartTooltipContentStyle} labelStyle={chartTooltipLabelStyle} itemStyle={chartTooltipItemStyle}`. They use `bgColor.default`, `borderColor.default`, `fgColor.default`, and `shadow.floatingSmall`. Legends and custom tooltips use neutral text plus series-colored swatches, not series-colored text.
 
 ## Shared Chart Element Colors
 
@@ -30,7 +32,7 @@ Apply `contentStyle={chartTooltipContentStyle} labelStyle={chartTooltipLabelStyl
 ## Sequential Scales (heatmaps, intensity)
 
 - **JS / SVG:** `dataVizScale('blue', intensity)` where `intensity` is 0..1 (muted → emphasis). Zero values use `bgColor.muted`. Build legends from the same function so they never drift.
-- **Class-based:** `bg-(--data-blue-color-muted)` for the lightest step, then `bg-(--data-blue-color-emphasis)/20 … /75`, and `bg-(--data-blue-color-emphasis)` for the strongest. Use `text-(--fgColor-onEmphasis)` only on the full-emphasis step; keep `text-(--fgColor-default)` elsewhere for contrast.
+- **Class-based:** `bg-(--data-blue-color-muted)` for the lightest step, then `bg-(--data-blue-color-emphasis)/20 … /75`, and `bg-(--data-blue-color-emphasis)` for the strongest. Put numeric labels on `bgColor-default` backing with `fgColor-default` text so their contrast does not depend on the intensity or theme.
 
 ## Recharts Conventions
 

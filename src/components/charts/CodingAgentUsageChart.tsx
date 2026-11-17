@@ -5,7 +5,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 import { borderColor, dataVizColor, fgColor } from '@/constants/primerTokens';
 
-import { chartTooltipContentStyle, chartTooltipLabelStyle, utcDateLabelFormatter, utcDateTickFormatter } from './chartTooltipStyles';
+import { chartTooltipContentStyle, chartTooltipItemStyle, chartTooltipLabelStyle, utcDateLabelFormatter, utcDateTickFormatter } from './chartTooltipStyles';
 
 export interface CodingAgentUsageDatum {
   date: string;              // YYYY-MM-DD (UTC original date fragment)
@@ -43,6 +43,8 @@ export function CodingAgentUsageChart({ data, height = '100%', valueUnitLabel = 
           ]}
           contentStyle={chartTooltipContentStyle}
           labelStyle={chartTooltipLabelStyle}
+          itemStyle={chartTooltipItemStyle}
+          cursor={{ stroke: borderColor.default }}
           wrapperStyle={{ zIndex: 1000 }}
         />
         <Line
