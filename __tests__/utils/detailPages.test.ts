@@ -15,8 +15,11 @@ import { aggregateProductCosts } from '@/utils/productCosts';
 import { summarizeUserHeader } from '@/utils/userHeaderSummary';
 
 import { buildUserHeaderSummary } from '../helpers/detailFixtures';
-import { buildDailyBucketsArtifactsFromRows, buildUsageArtifactsFromRows } from '../helpers/normalizedArtifacts';
+import {
+  buildBillingArtifactsFromRows, buildDailyBucketsArtifactsFromRows, buildUsageArtifactsFromRows,
+} from '../helpers/normalizedArtifacts';
 import { buildUserConsumption } from '../helpers/consumptionReference';
+import { makeNormalizedRow } from '../helpers/makeNormalizedRow';
 import { makeModelDailyArtifacts } from '../helpers/modelDailyArtifacts';
 import { aggregateRows } from '../helpers/aggregateRows';
 
@@ -33,6 +36,62 @@ const filters: { user?: string; organization?: string; costCenter?: string }[] =
 const precomputed = aggregateRows(new DetailPagesAggregator(), rows);
 
 describe('precomputed detail views', () => {
+  it('keeps detail billing sums aligned with the canonical billing accumulator', () => {
+    const billingRows = [
+      makeNormalizedRow({
+        date: '2026-07-12', day: '2026-07-12', model: 'test-model-one', quantity: 2,
+        user: 'test-user-one', organization: 'test-org-one', costCenter: 'test-cost-center-one',
+        grossAmount: 10, discountAmount: 2, netAmount: 8, aicQuantity: 5, aicGrossAmount: 10,
+      }),
+      makeNormalizedRow({
+        date: '2026-07-12', day: '2026-07-12', model: 'test-model-one', quantity: 3,
+        user: 'test-user-one', organization: 'test-org-one', costCenter: 'test-cost-center-one',
+        grossAmount: 20, discountAmount: 3, netAmount: 17, aicGrossAmount: 20,
+      }),
+    ];
+    const billing = buildBillingArtifactsFromRows(billingRows);
+    const details = aggregateRows(new DetailPagesAggregator(), billingRows);
+    const userDetails = selectUserDetails(details, 'test-user-one').details;
+    const orgDetails = selectBillingGroupDetails(details, 'organization', 'test-org-one').details;
+    const expectedUser = billing.userMap.get('test-user-one')!;
+    const expectedCostCenter = billing.costCenterTotals.get('test-cost-center-one')!;
+    const productTotals = userDetails.productCosts.reduce((total, product) => ({
+      gross: total.gross + product.gross,
+      discount: total.discount + product.discount,
+      net: total.net + product.net,
+      aicQuantity: total.aicQuantity + product.aicQuantity,
+      aicGrossAmount: total.aicGrossAmount + product.aicGrossAmount,
+    }), { gross: 0, discount: 0, net: 0, aicQuantity: 0, aicGrossAmount: 0 });
+
+    expect(productTotals).toEqual({
+      gross: billing.totals.gross,
+      discount: billing.totals.discount,
+      net: billing.totals.net,
+      aicQuantity: billing.totals.aicQuantity,
+      aicGrossAmount: billing.totals.aicGrossAmount,
+    });
+    expect(orgDetails.userRows).toEqual([
+      expect.objectContaining({
+        user: 'test-user-one', quantity: expectedUser.quantity, gross: expectedUser.gross,
+        discount: expectedUser.discount, net: expectedUser.net, aicGrossAmount: expectedUser.aicGrossAmount,
+      }),
+    ]);
+    expect(userDetails.costCenterCosts).toEqual([
+      expect.objectContaining({
+        name: 'test-cost-center-one', quantity: expectedCostCenter.quantity, gross: expectedCostCenter.gross,
+        discount: expectedCostCenter.discount, net: expectedCostCenter.net,
+        aicGrossAmount: expectedCostCenter.aicGrossAmount,
+      }),
+    ]);
+    expect(userDetails.dailyModels).toEqual([
+      expect.objectContaining({
+        date: '2026-07-12', model: 'test-model-one', costCenter: 'test-cost-center-one',
+        credits: 5, gross: billing.totals.gross, discount: billing.totals.discount,
+        net: billing.totals.net, aicGrossAmount: billing.totals.aicGrossAmount,
+      }),
+    ]);
+  });
+
   it.each(filters)('matches row-based view models for %j', filter => {
       const periodRows = rows;
       const selected = periodRows.filter(row =>

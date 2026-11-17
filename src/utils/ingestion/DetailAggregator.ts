@@ -2,6 +2,7 @@ import { getEffectiveAicQuantity } from '@/utils/aicFields';
 import type { CreditTotals, UserConsumption } from '@/types/consumption';
 import type { DailyConsumptionDatum } from '@/utils/dailyConsumption';
 import { buildBillingMonthDates, enumerateDatesInclusive } from '@/utils/dateKeys';
+import { addBillingFields, addPackedBillingFields } from '@/utils/ingestion/billingAccumulator';
 import {
   accumulateProductCost, getPopulatedProductCosts,
   type createEmptyProductCostMap,
@@ -74,10 +75,7 @@ function emptyCosts(): CostTotals {
 
 function addCosts(target: CostTotals, row: NormalizedRow): void {
   target.quantity += row.quantity;
-  target.gross += row.grossAmount ?? 0;
-  target.discount += row.discountAmount ?? 0;
-  target.net += row.netAmount ?? 0;
-  target.aicGrossAmount += row.aicGrossAmount ?? 0;
+  addBillingFields(target, row, false);
 }
 
 function addCredits(target: CreditTotals, quantity: number | undefined): void {
@@ -157,10 +155,7 @@ export class DetailAggregator implements Aggregator<CompactDetailArtifacts> {
     if (costs === undefined) model.costs.set(center, costs = this.allocate(5));
     // quantity, gross, discount, net, AI-credit gross; no presentation fields.
     this.values[costs] += row.quantity;
-    this.values[costs + 1] += row.grossAmount ?? 0;
-    this.values[costs + 2] += row.discountAmount ?? 0;
-    this.values[costs + 3] += row.netAmount ?? 0;
-    this.values[costs + 4] += row.aicGrossAmount ?? 0;
+    addPackedBillingFields(this.values, costs, row);
     const cache = model.cacheOffset;
     // input, cache read, cache write, complete rows, all rows.
     this.values[cache + 4]++;

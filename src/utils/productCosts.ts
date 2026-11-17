@@ -1,4 +1,5 @@
 import type { NormalizedRow } from '@/utils/ingestion/types';
+import { addBillingFields } from '@/utils/ingestion/billingAccumulator';
 
 import { classifyProductCategory, getProductDisplayLabel, ProductCategory } from '@/utils/productClassification';
 
@@ -49,11 +50,7 @@ export function accumulateProductCost(
   if (!bucket) buckets.set(category, bucket = createEmptyProductCost(category));
 
   bucket.credits += row.quantity;
-  bucket.gross += row.grossAmount ?? 0;
-  bucket.discount += row.discountAmount ?? 0;
-  bucket.net += row.netAmount ?? 0;
-  bucket.aicQuantity += row.aicQuantity ?? 0;
-  bucket.aicGrossAmount += row.aicGrossAmount ?? 0;
+  addBillingFields(bucket, row);
 }
 
 export function getPopulatedProductCosts(buckets: Map<ProductCategory, ProductCost>): ProductCost[] {
