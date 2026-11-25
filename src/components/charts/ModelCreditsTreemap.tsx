@@ -5,6 +5,7 @@ import { ResponsiveContainer, Text, Tooltip, Treemap } from 'recharts';
 import type { TreemapNode } from 'recharts';
 
 import { bgColor, fgColor } from '@/constants/primerTokens';
+import { formatDecimalQuantity } from '@/utils/formatters';
 import { getModelColor } from '@/utils/modelColors';
 
 import { chartTooltipContentStyle, chartTooltipItemStyle, chartTooltipLabelStyle } from './chartTooltipStyles';
@@ -26,11 +27,10 @@ export function ModelCreditsTreemap({ data }: ModelCreditsTreemapProps) {
     .map((item) => ({ name: item.fullModel, credits: item.credits }))
     .sort((left, right) => right.credits - left.credits);
   const total = tiles.reduce((sum, item) => sum + item.credits, 0);
-  const formatCredits = (value: number) => value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const formatShare = (value: number) => `${(value / total * 100).toLocaleString(undefined, { maximumFractionDigits: 1 })}%`;
   const focusedTile = tiles.find((tile) => tile.name === focusedModel);
   const focusedDescription = focusedTile
-    ? `${focusedTile.name}: ${formatCredits(focusedTile.credits)} AI Credits (${formatShare(focusedTile.credits)})`
+    ? `${focusedTile.name}: ${formatDecimalQuantity(focusedTile.credits)} AI Credits (${formatShare(focusedTile.credits)})`
     : null;
 
   return (
@@ -50,7 +50,7 @@ export function ModelCreditsTreemap({ data }: ModelCreditsTreemapProps) {
             content={(node: TreemapNode) => {
               if (node.depth === 0) return <g />;
               const color = getModelColor(node.name);
-              const description = `${node.name}: ${formatCredits(node.value)} AI Credits (${formatShare(node.value)})`;
+              const description = `${node.name}: ${formatDecimalQuantity(node.value)} AI Credits (${formatShare(node.value)})`;
               const labelWidth = Math.min(node.width - 16, 180);
               const nameLines = node.height >= 56 ? 2 : 1;
               const showCredits = node.height >= 80;
@@ -111,7 +111,7 @@ export function ModelCreditsTreemap({ data }: ModelCreditsTreemapProps) {
                           className="tabular-nums"
                           style={{ fontSize: '12px', fontWeight: 400, fontFamily: 'var(--fontStack-sansSerif)' }}
                         >
-                          {`${formatCredits(node.value)} AI Credits`}
+                          {`${formatDecimalQuantity(node.value)} AI Credits`}
                         </Text>
                       )}
                       {showShare && (
@@ -136,7 +136,7 @@ export function ModelCreditsTreemap({ data }: ModelCreditsTreemapProps) {
           >
             <Tooltip
               formatter={(value, name) => [
-                `${formatCredits(Number(value))} AI Credits (${formatShare(Number(value))})`,
+                `${formatDecimalQuantity(Number(value))} AI Credits (${formatShare(Number(value))})`,
                 name,
               ]}
               contentStyle={chartTooltipContentStyle}
