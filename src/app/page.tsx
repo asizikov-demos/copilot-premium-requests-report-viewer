@@ -9,6 +9,7 @@ import { DataAnalysis } from '@/components/DataAnalysis';
 import { IngestionResult } from '@/utils/ingestion';
 
 import { useAppTheme } from './providers';
+import styles from './page.module.css';
 
 export default function Home() {
   const { theme, setTheme } = useAppTheme();
@@ -39,7 +40,7 @@ export default function Home() {
   return (
     <main className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="bg-(--header-bgColor) sticky top-0 z-50">
+      <header className={`${styles.header} sticky top-0 z-50`}>
         <div className="px-4 sm:px-6">
           <div className="flex items-center justify-between gap-3 h-16">
             <div className="flex min-w-0 items-center gap-3">

@@ -39,7 +39,9 @@ panel.
 import { MarkGithubIcon } from '@primer/octicons-react';
 import { Button } from '@primer/react';
 
-<header className="bg-(--header-bgColor) sticky top-0 z-50">
+import styles from '@/app/page.module.css';
+
+<header className={`${styles.header} sticky top-0 z-50`}>
   <div className="px-6">
     <div className="flex items-center justify-between h-16">
       <div className="flex items-center gap-3">
@@ -51,3 +53,9 @@ import { Button } from '@primer/react';
   </div>
 </header>
 ```
+
+The primary header's CSS module layers `--header-bgColor` over opaque
+`--bgColor-inset`. The Dimmed header token is translucent, so using it alone lets
+scrolled content bleed through. The same-color `linear-gradient` is a flat paint
+layer, not a decorative gradient; it preserves the header token in both themes.
+The secondary report information bar already uses opaque `--bgColor-muted`.
