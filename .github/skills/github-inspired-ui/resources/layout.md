@@ -39,6 +39,8 @@ panel.
 import { MarkGithubIcon } from '@primer/octicons-react';
 import { Button } from '@primer/react';
 
+import styles from '@/app/page.module.css';
+
 <header className={`${styles.header} sticky top-0 z-50`}>
   <div className="px-6">
     <div className="flex items-center justify-between h-16">
