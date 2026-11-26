@@ -1,0 +1,4 @@
+.header {
+  background-color: var(--bgColor-inset);
+  background-image: linear-gradient(var(--header-bgColor), var(--header-bgColor));
+}
